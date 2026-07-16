@@ -493,6 +493,19 @@
   #toast.error { background: var(--danger); }
 
   .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
+
+  /* ---------- INSTALAR APP ---------- */
+  #btn-instalar {
+    display: none; background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 20px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto; align-items: center; gap: 6px;
+  }
+  #btn-instalar.visible { display: inline-flex; }
+  #btn-instalar:hover { background: rgba(255,255,255,.22); }
+  #offline-banner {
+    display: none; background: var(--amber); color: #2a1c04; text-align: center;
+    font-size: 12.5px; font-weight: 700; padding: 6px 10px;
+  }
+  #offline-banner.visible { display: block; }
 </style>
 </head>
 <body>
@@ -533,10 +546,17 @@
 
   <!-- APP -->
   <div id="app">
+    <div id="offline-banner">Sin conexión — los cambios no se pueden guardar ahora mismo</div>
     <header class="topbar">
       <div class="brand">CONTEOS <span>DIARIOS</span></div>
       <div class="topbar-fecha" id="topbar-fecha"></div>
-      <button class="btn-hoy" onclick="irAHoy()">Hoy</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button id="btn-instalar" onclick="instalarApp()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          Instalar
+        </button>
+        <button class="btn-hoy" onclick="irAHoy()">Hoy</button>
+      </div>
     </header>
     <main id="main"></main>
   </div>
@@ -554,6 +574,37 @@
   <div id="toast"></div>
 
 <script>
+/* ==========================================================================
+   CONFIGURACIÓN DE LA API
+   ==========================================================================
+   Pega aquí la URL de tu Web App de Google Apps Script, tal y como te la
+   da Google al hacer "Implementar > Nueva implementación > Aplicación web".
+   Debe terminar en /exec.
+   ========================================================================== */
+const API_URL = 'PEGA_AQUI_LA_URL_DE_TU_WEB_APP/exec';
+
+/**
+ * Llama a la API de Apps Script. Usa Content-Type: text/plain a propósito
+ * (en vez de application/json): así el navegador NO lanza una petición
+ * preflight OPTIONS, que Apps Script no sabe responder. El backend igualmente
+ * parsea el cuerpo como JSON.
+ */
+function llamarApi(accion, params) {
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: accion, params: params || {} })
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error('Error de red (' + r.status + ')');
+      return r.json();
+    })
+    .then(function (res) {
+      if (!res || !res.ok) throw new Error((res && res.error) || 'Error desconocido en el servidor');
+      return res.data;
+    });
+}
+
 /* ---------------- ESTADO ---------------- */
 const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DIAS_SEMANA_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -576,8 +627,8 @@ function intentarLogin() {
   document.getElementById('login-error').style.display = 'none';
   btn.disabled = true; spinner.style.display = 'inline-block'; btnText.textContent = 'Comprobando…';
 
-  google.script.run
-    .withSuccessHandler(function (ok) {
+  llamarApi('checkPassword', { pass: pass })
+    .then(function (ok) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
       if (ok) {
         document.getElementById('login-screen').style.display = 'none';
@@ -587,11 +638,10 @@ function intentarLogin() {
         document.getElementById('login-error').style.display = 'block';
       }
     })
-    .withFailureHandler(function (err) {
+    .catch(function (err) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
       mostrarErrorServidor(err);
-    })
-    .checkPassword(pass);
+    });
 }
 document.getElementById('login-pass').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') intentarLogin();
@@ -678,12 +728,9 @@ function renderShellPrincipal() {
 /* ---------------- CALENDARIO ---------------- */
 function cargarCalendario() {
   document.getElementById('selected-pill').textContent = formatearFechaCorta(ESTADO.fecha);
-  google.script.run
-    .withSuccessHandler(function (dias) {
-      renderCalendario(dias);
-    })
-    .withFailureHandler(mostrarErrorServidor)
-    .getMesCalendario(ESTADO.anioMes);
+  llamarApi('getMesCalendario', { anioMes: ESTADO.anioMes })
+    .then(function (dias) { renderCalendario(dias); })
+    .catch(mostrarErrorServidor);
 }
 
 function formatearFechaCorta(fecha) {
@@ -766,10 +813,9 @@ function cargarConteoDia() {
   const cont = document.getElementById('dia-contenido');
   cont.innerHTML = '<div class="loader">Cargando conteo…</div>';
   document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Cargando…</div>';
-  google.script.run
-    .withSuccessHandler(renderContenidoDia)
-    .withFailureHandler(mostrarErrorServidor)
-    .getConteoDia(ESTADO.fecha);
+  llamarApi('getConteoDia', { fecha: ESTADO.fecha })
+    .then(renderContenidoDia)
+    .catch(mostrarErrorServidor);
 }
 
 function renderContenidoDia(data) {
@@ -1094,17 +1140,16 @@ function crearSeccionPanel(seccion, dia, fecha) {
     clearTimeout(autoguardadoTimer);
     const filas = recogerFilas(tableWrap);
     marcarGuardando(panel, true);
-    google.script.run
-      .withSuccessHandler(function () {
+    llamarApi('guardarConteo', { dia: dia, filas: filas })
+      .then(function () {
         marcarGuardando(panel, false);
         if (onDone) onDone(true);
       })
-      .withFailureHandler(function (err) {
+      .catch(function (err) {
         marcarGuardando(panel, false);
         mostrarErrorServidor(err);
         if (onDone) onDone(false);
-      })
-      .guardarConteo(dia, filas);
+      });
   }
 
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
@@ -1153,17 +1198,16 @@ function crearSeccionPanel(seccion, dia, fecha) {
     // Guarda inmediatamente (sin esperar el debounce) y, si todo va bien, envía.
     autoguardarSeccion(function (ok) {
       if (!ok) { btnEnviar.disabled = false; return; }
-      google.script.run
-        .withSuccessHandler(function (res) {
+      llamarApi('enviarResumenAgencia', { dia: dia, nombreAgrupacion: seccion.nombre, fecha: fecha })
+        .then(function (res) {
           mostrarToast('Enviado a: ' + res.enviadoA.join(', ') + ' — campos vaciados para la próxima semana');
           cargarConteoDia();
           cargarCalendario();
         })
-        .withFailureHandler(function (err) {
+        .catch(function (err) {
           btnEnviar.disabled = false;
           mostrarErrorServidor(err);
-        })
-        .enviarResumenAgencia(dia, seccion.nombre, fecha);
+        });
     });
   }
 
@@ -1265,25 +1309,23 @@ function recogerFilas(tableWrap) {
 
 /* ---------------- OBSERVACIONES ---------------- */
 function guardarObservacionYRecargar(obs) {
-  google.script.run
-    .withSuccessHandler(function () {
+  llamarApi('guardarObservacion', { obs: obs })
+    .then(function () {
       mostrarToast('Guardado');
       cargarConteoDia();
       cargarCalendario();
     })
-    .withFailureHandler(mostrarErrorServidor)
-    .guardarObservacion(obs);
+    .catch(mostrarErrorServidor);
 }
 
 function eliminarObservacionYRecargar(id) {
-  google.script.run
-    .withSuccessHandler(function () {
+  llamarApi('eliminarObservacion', { id: id })
+    .then(function () {
       mostrarToast('Eliminado');
       cargarConteoDia();
       cargarCalendario();
     })
-    .withFailureHandler(mostrarErrorServidor)
-    .eliminarObservacion(id);
+    .catch(mostrarErrorServidor);
 }
 
 /* ---------------- UI HELPERS ---------------- */
@@ -1342,6 +1384,40 @@ function appPrompt(titulo, placeholder, onSubmit) {
 }
 
 function cerrarModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+
+/* ---------------- PWA: INSTALACIÓN Y SERVICE WORKER ---------------- */
+let eventoInstalacionDiferido = null;
+
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  eventoInstalacionDiferido = e;
+  document.getElementById('btn-instalar').classList.add('visible');
+});
+
+function instalarApp() {
+  if (!eventoInstalacionDiferido) return;
+  eventoInstalacionDiferido.prompt();
+  eventoInstalacionDiferido.userChoice.then(function () {
+    eventoInstalacionDiferido = null;
+    document.getElementById('btn-instalar').classList.remove('visible');
+  });
+}
+
+window.addEventListener('appinstalled', function () {
+  document.getElementById('btn-instalar').classList.remove('visible');
+});
+
+window.addEventListener('online', function () { document.getElementById('offline-banner').classList.remove('visible'); });
+window.addEventListener('offline', function () { document.getElementById('offline-banner').classList.add('visible'); });
+if (!navigator.onLine) document.getElementById('offline-banner').classList.add('visible');
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('service-worker.js').catch(function (err) {
+      console.warn('No se pudo registrar el service worker:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
