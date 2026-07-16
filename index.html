@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conteos Diarios</title>
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --panel: #ffffff;
+    --ink: #1c2430;
+    --ink-soft: #5b6472;
+    --line: #e2e5ea;
+    --navy: #1c2b45;
+    --navy-soft: #2c3e5e;
+    --amber: #d98c2b;
+    --amber-dark: #b8721e;
+    --ok: #2f8f6f;
+    --danger: #c94f4f;
+    --radius: 10px;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea { font-family: inherit; }
+
+  /* ---------- LOGIN ---------- */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,.05), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(217,140,43,.12), transparent 45%),
+      linear-gradient(160deg, var(--navy) 0%, #101a2c 100%);
+    padding: 20px;
+  }
+  #login-screen::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.025) 0px, rgba(255,255,255,.025) 1px, transparent 1px, transparent 26px);
+  }
+  .login-card {
+    position: relative; background: var(--panel); border-radius: 16px; padding: 38px 32px 32px;
+    width: 100%; max-width: 360px; box-shadow: 0 25px 60px rgba(0,0,0,.4);
+  }
+  .login-logo {
+    width: 52px; height: 52px; border-radius: 14px; margin: 0 auto 18px;
+    background: linear-gradient(150deg, var(--navy) 0%, var(--navy-soft) 100%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 18px rgba(28,43,69,.35);
+  }
+  .login-logo svg { width: 26px; height: 26px; }
+  .login-card h1 {
+    font-size: 20px; margin: 0 0 4px; letter-spacing: .2px; text-align: center;
+  }
+  .login-card p.sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 26px; text-align: center; }
+  .campo-pass { position: relative; margin-bottom: 14px; }
+  .campo-pass svg.icon-lock {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--ink-soft); pointer-events: none;
+  }
+  .login-card input {
+    width: 100%; padding: 12px 42px; border: 1px solid var(--line); border-radius: 9px;
+    font-size: 15px;
+  }
+  .login-card input:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.12); }
+  .toggle-pass {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; padding: 7px; color: var(--ink-soft); display: flex;
+  }
+  .toggle-pass:hover { color: var(--ink); }
+  .toggle-pass svg { width: 17px; height: 17px; }
+  .btn-primary {
+    width: 100%; padding: 13px 14px; border: none; border-radius: 9px; margin-top: 4px;
+    background: var(--navy); color: #fff; font-size: 15px; font-weight: 600;
+    transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary:hover { background: var(--navy-soft); }
+  .btn-primary:disabled { opacity: .75; cursor: default; }
+  .spinner {
+    width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff; animation: girar .7s linear infinite; display: none;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  #login-error {
+    color: var(--danger); font-size: 13px; margin-top: 14px; text-align: center; display: none;
+    background: #fceded; border-radius: 7px; padding: 8px 10px;
+  }
+  .login-footer {
+    text-align: center; font-size: 11.5px; color: var(--ink-soft); margin-top: 20px; opacity: .8;
+  }
+
+  /* ---------- APP SHELL ---------- */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+  header.topbar {
+    background: var(--navy); color: #fff; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    position: sticky; top: 0; z-index: 20;
+  }
+  header.topbar .brand { font-size: 15px; font-weight: 700; letter-spacing: .3px; flex: 0 0 auto; }
+  header.topbar .brand span { color: var(--amber); }
+  header.topbar .topbar-fecha {
+    flex: 1 1 auto; text-align: center; font-size: 19px; font-weight: 800;
+    text-transform: capitalize; letter-spacing: .2px; padding: 0 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  header.topbar .btn-hoy {
+    background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 20px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto;
+  }
+  header.topbar .btn-hoy:hover { background: rgba(255,255,255,.22); }
+
+  @media (max-width: 700px) {
+    header.topbar .topbar-fecha { font-size: 14px; }
+  }
+
+  main { flex: 1; padding: 24px 32px; max-width: none; width: 100%; }
+
+  /* Tres columnas: calendario pegado a la izquierda | contenido | resumen pegado a la derecha.
+     El grid ocupa TODO el ancho disponible (main ya no tiene max-width centrado),
+     así que las columnas laterales de ancho fijo quedan ancladas a los bordes
+     de la pantalla mientras la columna central (1fr) se reparte el resto. */
+  .layout-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
+  .col-contenido { min-width: 0; }
+  /* El contenido en sí se limita a un ancho legible y se centra dentro de su
+     columna, para que no quede estirado de pared a pared en pantallas anchas. */
+  .col-contenido > * { max-width: 900px; margin: 0 auto; }
+  .col-sidebar { position: sticky; top: 78px; display: flex; flex-direction: column; gap: 16px; }
+
+  @media (max-width: 1600px) {
+    .layout-grid { grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 24px; }
+  }
+
+  @media (max-width: 1400px) {
+    .layout-grid { grid-template-columns: 280px minmax(0, 1fr) 300px; gap: 22px; }
+  }
+
+  @media (max-width: 1240px) {
+    .layout-grid { grid-template-columns: 250px minmax(0, 1fr) 270px; }
+    .col-contenido > * { max-width: none; }
+  }
+
+  @media (max-width: 980px) {
+    main { padding: 16px; }
+    .layout-grid { grid-template-columns: 1fr; }
+    .col-sidebar { position: static; }
+    .col-calendario { order: -2; }
+    .col-contenido { order: -1; }
+    .col-resumen { order: 0; }
+  }
+
+  /* ---------- CALENDARIO ---------- */
+  .calendar-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px;
+  }
+  .calendar-panel-header {
+    display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    user-select: none;
+  }
+  .calendar-panel-header .titulo {
+    font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px;
+  }
+  .calendar-panel-header .selected-pill {
+    font-size: 12px; font-weight: 600; color: var(--navy); background: #eef1f7;
+    border-radius: 20px; padding: 4px 10px;
+  }
+  .calendar-panel-header .chevron { transition: transform .15s; color: var(--ink-soft); }
+  .calendar-panel.colapsado .chevron { transform: rotate(-90deg); }
+  .calendar-panel.colapsado .calendar-body { display: none; }
+  .calendar-body { margin-top: 14px; }
+
+  .calendar-nav {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  }
+  .calendar-nav .mes-label { font-weight: 700; font-size: 14px; text-transform: capitalize; }
+  .calendar-nav button {
+    background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; color: var(--navy);
+  }
+  .calendar-nav button:hover { background: #e1e5eb; }
+
+  .calendar-weekdays, .calendar-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .calendar-weekdays div {
+    text-align: center; font-size: 10.5px; font-weight: 700; color: var(--ink-soft);
+    text-transform: uppercase; padding: 4px 0;
+  }
+  .cal-day {
+    position: relative; aspect-ratio: 1; border-radius: 8px; border: 1.5px solid transparent;
+    background: #f7f8fa; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; font-size: 12.5px; font-weight: 600; color: var(--ink);
+  }
+  .cal-day:hover { border-color: var(--navy-soft); }
+  .cal-day.vacio { background: transparent; visibility: hidden; }
+  .cal-day.sin-conteo { color: var(--ink-soft); background: #f0f1f3; }
+  .cal-day.estado-pendiente { background: #eef0f3; }
+  .cal-day.estado-parcial { background: #fdf1de; color: var(--amber-dark); }
+  .cal-day.estado-enviado { background: #e4f3ec; color: var(--ok); }
+  .cal-day.hoy { border-color: var(--amber); box-shadow: 0 0 0 2px rgba(217,140,43,.18); }
+  .cal-day.seleccionado { border-color: var(--navy); background: var(--navy); color: #fff; }
+  .cal-day.seleccionado.estado-parcial,
+  .cal-day.seleccionado.estado-enviado { color: #fff; }
+  .cal-day .dots { display: flex; gap: 3px; height: 6px; }
+  .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .cal-day .dot-nota { background: var(--amber); }
+  .cal-day .dot-cierre { background: var(--danger); }
+  .cal-day.seleccionado .dot-nota { background: #ffd898; }
+  .cal-day.seleccionado .dot-cierre { background: #ff9d9d; }
+
+  .calendar-leyenda {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 11px; color: var(--ink-soft);
+  }
+  .calendar-leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+  .calendar-leyenda .sw { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+  .leyenda-global {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px; font-size: 12px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 8px;
+  }
+  .leyenda-global h4 {
+    margin: 0 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 700;
+  }
+  .leyenda-global span { display: flex; align-items: flex-start; gap: 7px; line-height: 1.4; }
+  .leyenda-global .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; margin-top: 2px; }
+
+  /* ---------- RESUMEN RÁPIDO DEL DÍA ---------- */
+  .resumen-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px;
+  }
+  .resumen-header {
+    display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; margin-bottom: 12px;
+  }
+  .resumen-header svg { color: var(--ink-soft); flex-shrink: 0; }
+  .resumen-header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .resumen-count {
+    font-size: 11.5px; font-weight: 700; color: #fff; background: var(--amber-dark);
+    border-radius: 20px; padding: 2px 9px;
+  }
+  .btn-anadir-obs {
+    background: var(--navy); color: #fff; border: none; border-radius: 7px; padding: 7px 13px;
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  }
+  .btn-anadir-obs:hover { background: var(--navy-soft); }
+  .resumen-body { display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 220px); overflow-y: auto; }
+  .resumen-vacio { color: var(--ink-soft); font-size: 13px; text-align: center; padding: 20px 6px; }
+  .resumen-grupo {
+    border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .resumen-grupo:hover { border-color: var(--navy-soft); background: #fafbfd; }
+  .resumen-grupo-titulo {
+    font-weight: 700; font-size: 12.5px; color: var(--navy); margin-bottom: 6px;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .resumen-grupo-titulo .ir {
+    font-size: 10.5px; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em;
+    flex-shrink: 0;
+  }
+  .resumen-item {
+    font-size: 12.5px; line-height: 1.4; padding: 6px 8px; border-radius: 6px; margin-top: 4px;
+    background: #fdf6ea; color: #7a5417;
+  }
+  .resumen-item:first-of-type { margin-top: 0; }
+  .resumen-item.cierre { background: #fceded; color: #8a3a3a; }
+  .resumen-item .tienda { font-weight: 700; }
+
+  .notas-generales { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; margin-top: 4px; }
+  .nota-chip {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    background: #fdf6ea; border: 1px solid #f0ddb8; color: #7a5417; border-radius: 8px;
+    padding: 9px 12px; font-size: 13px; line-height: 1.4;
+  }
+  .nota-chip.tipo-cierre { background: #fceded; border-color: #f0c8c8; color: #8a3a3a; }
+  .nota-chip .txt { flex: 1; }
+  .nota-chip .del {
+    background: none; border: none; color: inherit; opacity: .55; padding: 0 2px; font-size: 15px; line-height: 1;
+  }
+  .nota-chip .del:hover { opacity: 1; }
+
+  .sin-conteo-msg {
+    background: var(--panel); border: 1px dashed var(--line); border-radius: var(--radius);
+    padding: 30px; text-align: center; color: var(--ink-soft); font-size: 14px;
+  }
+
+  /* ---------- SECCIÓN / AGRUPACIÓN ---------- */
+  .seccion-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    margin-bottom: 16px; overflow: hidden;
+    scroll-margin-top: 78px;
+  }
+  .seccion-panel.estado-progreso { border-left: 4px solid var(--amber); }
+  .seccion-panel.estado-enviado { border-left: 4px solid var(--ok); }
+  .seccion-panel.estado-pendiente { border-left: 4px solid #c7cdd6; }
+
+  .seccion-header {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none;
+  }
+  .seccion-header .icono-agrup {
+    width: 40px; height: 40px; border-radius: 11px; background: #eef1f5; color: var(--navy);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700;
+  }
+  .seccion-header .info { flex: 1; min-width: 0; }
+  .seccion-header .name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .seccion-header .name { font-weight: 800; font-size: 16px; line-height: 1.25; letter-spacing: .1px; }
+  .seccion-header .count { color: var(--ink-soft); font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .seccion-header .chevron { transition: transform .15s; color: var(--ink-soft); flex-shrink: 0; }
+  .seccion-panel.colapsada .chevron { transform: rotate(-90deg); }
+  .seccion-panel.colapsada .seccion-body { display: none; }
+  .seccion-panel.colapsada .seccion-notas,
+  .seccion-panel.colapsada .seccion-notas-carga { display: none; }
+
+  .badge-ubicacion {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
+    color: var(--navy); background: #eef1f7; border: 1px solid #dde3ee;
+    border-radius: 20px; padding: 3px 10px 3px 8px; text-transform: none; letter-spacing: 0;
+    flex-shrink: 0;
+  }
+  .badge-ubicacion svg { color: var(--amber-dark); flex-shrink: 0; }
+
+  /* Total de palets de la agrupación, calculado en vivo a partir del TOTAL de cada tienda */
+  .badge-total-palets {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px; background: #eef1f7; color: var(--navy);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-total-palets .total-palets-valor { font-size: 12.5px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
+    padding: 4px 9px; border-radius: 20px; white-space: nowrap; text-transform: uppercase; letter-spacing: .03em;
+    flex-shrink: 0;
+  }
+  .badge-pendiente { background: #eef0f3; color: var(--ink-soft); }
+  .badge-progreso { background: #fdf1de; color: var(--amber-dark); }
+  .badge-enviado { background: #e4f3ec; color: var(--ok); }
+  .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  .btn-add-nota {
+    background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; color: var(--navy); flex-shrink: 0;
+  }
+  .btn-add-nota:hover { background: #e1e5eb; }
+
+  /* Botón "Enviar a agencia" en la cabecera, junto al badge de estado */
+  .btn-header-enviar {
+    background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
+    padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .btn-header-enviar:hover { background: var(--amber-dark); color: #fff; }
+  .btn-header-enviar:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* Indicador de sincronización: invisible cuando todo va bien (silencio),
+     solo se muestra mientras se está guardando en segundo plano. */
+  .sync-indicator {
+    display: none; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600;
+    color: var(--ink-soft); flex-shrink: 0;
+  }
+  .sync-indicator.mostrando { display: inline-flex; }
+  .sync-indicator .sync-spinner {
+    width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #c7cdd6;
+    border-top-color: var(--ink-soft); animation: girar .7s linear infinite;
+  }
+
+  .seccion-notas { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+
+  /* Notas/instrucciones de carga que vienen escritas en la propia hoja de
+     Excel (ej. "1 CAMIÓN 33 P. + 1 EXTRA 33 P. + RESTOS TODOS LOS LUNES").
+     Se muestran en tono azulado para distinguirlas de las observaciones
+     manuales (que sí se pueden borrar). Estas son de solo lectura: para
+     cambiarlas hay que editar la fila correspondiente en la hoja de cálculo. */
+  .seccion-notas-carga { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+  .nota-carga-chip {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy);
+    border-radius: 8px; padding: 9px 12px; font-size: 13px; font-weight: 600; line-height: 1.4;
+  }
+  .nota-carga-chip svg { flex-shrink: 0; margin-top: 1px; color: var(--amber-dark); }
+
+  .orden-retirada { margin-top: 6px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .orden-retirada-titulo {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft);
+    font-weight: 700; margin-bottom: 6px;
+  }
+  .orden-retirada ol { margin: 0; padding-left: 18px; font-size: 12px; color: var(--ink); line-height: 1.6; }
+
+  /* ---------- TABLA ---------- */
+  .table-wrap { overflow-x: auto; }
+  table.conteo { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.conteo thead th {
+    background: #f7f8fa; text-align: center; padding: 10px 6px; font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 700;
+    border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  table.conteo thead th.th-nombre { text-align: left; }
+  table.conteo thead th.th-total { color: var(--navy); }
+  table.conteo td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; text-align: center; }
+  table.conteo tbody tr:last-child td { border-bottom: none; }
+  table.conteo tbody tr:nth-child(even) { background: #fafbfc; }
+  table.conteo td.nombre { font-weight: 700; text-align: left; font-size: 13px; }
+  table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
+  table.conteo input.celda {
+    width: 52px; padding: 7px 4px; text-align: center; border: 1px solid var(--line);
+    border-radius: 7px; font-family: var(--mono); font-size: 13.5px; background: #fff;
+  }
+  table.conteo input.celda::-webkit-outer-spin-button,
+  table.conteo input.celda::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  table.conteo input.celda { -moz-appearance: textfield; }
+  table.conteo input.celda:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
+  table.conteo input.celda:disabled { background: #f0f1f3; color: var(--ink-soft); cursor: not-allowed; }
+
+  table.conteo input.celda-total {
+    width: 60px; padding: 8px 4px; font-weight: 800; font-size: 14px; color: var(--navy);
+    background: #eef1f7; border: 1.5px solid #d4dae4; cursor: default;
+  }
+  table.conteo input.celda-total:focus { box-shadow: none; }
+  table.conteo input.celda-total:disabled { background: #eef1f7; color: var(--navy); opacity: .6; }
+
+  table.conteo tr.fila-aviso input.celda { border-color: var(--amber); background: #fdf6ea; }
+  table.conteo tr.fila-aviso input.celda-total { background: var(--amber); color: #2a1c04; border-color: var(--amber-dark); }
+  table.conteo tr.fila-alerta input.celda { border-color: var(--danger); background: #fceded; color: var(--danger); }
+  table.conteo tr.fila-alerta input.celda-total { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .diff-nota { font-size: 10.5px; margin-top: 2px; font-weight: 600; }
+  .diff-nota.aviso { color: var(--amber-dark); }
+  .diff-nota.alerta { color: var(--danger); }
+
+  table.conteo tr.fila-cerrada { background: #fceded !important; }
+  table.conteo tr.fila-cerrada td.nombre { color: #8a3a3a; }
+  .motivo-cierre { font-size: 10.5px; color: var(--danger); font-weight: 600; margin-top: 2px; max-width: 140px; }
+
+  .btn-cerrar-tienda {
+    background: none; border: none; color: var(--ink-soft); padding: 5px; border-radius: 6px; display: inline-flex;
+  }
+  .btn-cerrar-tienda:hover { background: #fceded; color: var(--danger); }
+  .btn-reabrir {
+    background: var(--danger); color: #fff; border: none; border-radius: 6px; padding: 5px 9px; font-size: 11px; font-weight: 700;
+  }
+  .btn-reabrir:hover { background: #a83e3e; }
+
+  .btn { border: none; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; font-weight: 600; width: 100%; line-height: 1.3; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  .seccion-body { border-top: 1px solid var(--line); display: flex; }
+  .seccion-acciones {
+    flex: 0 0 148px; padding: 16px; display: flex; flex-direction: column; gap: 8px;
+    border-right: 1px solid var(--line); background: #fbfbfc;
+  }
+  .seccion-tabla-col { flex: 1; min-width: 0; }
+
+  @media (max-width: 700px) {
+    .seccion-body { flex-direction: column; }
+    .seccion-acciones { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--line); }
+    .orden-retirada { flex-basis: 100%; }
+  }
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,26,36,.55);
+    display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: var(--radius); padding: 24px; max-width: 400px; width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,.3);
+  }
+  .modal-box h3 { margin: 0 0 8px; font-size: 16px; }
+  .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .modal-box textarea {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+    font-size: 14px; resize: vertical; min-height: 76px; margin-bottom: 16px;
+  }
+  .modal-box textarea:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions button { border: none; border-radius: 7px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; }
+  .modal-cancel { background: #eef0f3; color: var(--ink); }
+  .modal-confirm { background: var(--navy); color: #fff; }
+  .modal-confirm.danger { background: var(--danger); }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--navy); color: #fff; padding: 12px 20px; border-radius: 8px;
+    font-size: 13.5px; opacity: 0; transition: all .25s; z-index: 300; pointer-events: none;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { background: var(--danger); }
+
+  .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
+</style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f3f4f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
+          <circle cx="7.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
+          <circle cx="17.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
+        </svg>
+      </div>
+      <h1>Conteos Diarios</h1>
+      <p class="sub">Gestión de conteos y envío a agencias</p>
+
+      <div class="campo-pass">
+        <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <input type="password" id="login-pass" placeholder="Contraseña" autofocus>
+        <button type="button" class="toggle-pass" id="toggle-pass" aria-label="Mostrar contraseña">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+
+      <button class="btn-primary" id="btn-login" onclick="intentarLogin()">
+        <span class="spinner" id="login-spinner"></span>
+        <span id="login-btn-text">Entrar</span>
+      </button>
+      <p id="login-error">Contraseña incorrecta</p>
+      <p class="login-footer">Acceso restringido al personal autorizado</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">CONTEOS <span>DIARIOS</span></div>
+      <div class="topbar-fecha" id="topbar-fecha"></div>
+      <button class="btn-hoy" onclick="irAHoy()">Hoy</button>
+    </header>
+    <main id="main"></main>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modal-title"></h3>
+      <p id="modal-text"></p>
+      <textarea id="modal-textarea" style="display:none;" placeholder="Escribe aquí…"></textarea>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+/* ---------------- ESTADO ---------------- */
+const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DIAS_SEMANA_ES = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DIAS_SEMANA_CORTO_ES = ['D','L','M','X','J','V','S'];
+
+let ESTADO = {
+  fecha: null,          // 'YYYY-MM-DD' seleccionada
+  anioMes: null,        // 'YYYY-MM' mostrado en el calendario
+  calendarioColapsado: false,
+  colapsadas: new Set() // nombres de agrupación colapsadas manualmente (persiste al recargar el día)
+};
+
+/* ---------------- LOGIN ---------------- */
+function intentarLogin() {
+  const pass = document.getElementById('login-pass').value;
+  const btn = document.getElementById('btn-login');
+  const spinner = document.getElementById('login-spinner');
+  const btnText = document.getElementById('login-btn-text');
+
+  document.getElementById('login-error').style.display = 'none';
+  btn.disabled = true; spinner.style.display = 'inline-block'; btnText.textContent = 'Comprobando…';
+
+  google.script.run
+    .withSuccessHandler(function (ok) {
+      btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
+      if (ok) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        irAHoy();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    })
+    .withFailureHandler(function (err) {
+      btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
+      mostrarErrorServidor(err);
+    })
+    .checkPassword(pass);
+}
+document.getElementById('login-pass').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') intentarLogin();
+});
+document.getElementById('toggle-pass').addEventListener('click', function () {
+  const input = document.getElementById('login-pass');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+/* ---------------- FECHAS HELPERS ---------------- */
+function hoyStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+function anioMesDe(fecha) { return fecha.slice(0, 7); }
+function formatearFechaLarga(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return DIAS_SEMANA_ES[d.getDay()] + ', ' + d.getDate() + ' de ' + MESES_ES[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+/* ---------------- NAVEGACIÓN PRINCIPAL ---------------- */
+function irAHoy() {
+  ESTADO.fecha = hoyStr();
+  ESTADO.anioMes = anioMesDe(ESTADO.fecha);
+  ESTADO.colapsadas = new Set();
+  renderShellPrincipal();
+  cargarCalendario();
+  cargarConteoDia();
+}
+
+function renderShellPrincipal() {
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="layout-grid">' +
+      '<aside class="col-sidebar col-calendario">' +
+        '<div class="calendar-panel" id="calendar-panel">' +
+          '<div class="calendar-panel-header" id="calendar-toggle">' +
+            '<div class="titulo">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
+              '<span>Calendario</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:10px;">' +
+              '<span class="selected-pill" id="selected-pill"></span>' +
+              '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+            '</div>' +
+          '</div>' +
+          '<div class="calendar-body" id="calendar-body">' +
+            '<div class="loader">Cargando calendario…</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="leyenda-global">' +
+          '<h4>Leyenda de límites</h4>' +
+          '<span><span class="sw" style="background:var(--amber)"></span>1-2 palets de más: se acepta, ciñéndose al límite</span>' +
+          '<span><span class="sw" style="background:var(--danger)"></span>3 o más de más: consultar con informática</span>' +
+        '</div>' +
+      '</aside>' +
+      '<div class="col-contenido">' +
+        '<div id="dia-contenido"><div class="loader">Cargando conteo…</div></div>' +
+      '</div>' +
+      '<aside class="col-sidebar col-resumen">' +
+        '<div class="resumen-panel" id="resumen-panel">' +
+          '<div class="resumen-header">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>' +
+            '<span>Observaciones importantes:</span>' +
+            '<div class="resumen-header-right">' +
+              '<span class="resumen-count" id="resumen-count" style="display:none;">0</span>' +
+              '<button type="button" class="btn-anadir-obs" id="btn-nota-dia">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+              'Añadir</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="resumen-body" id="resumen-body"><div class="resumen-vacio">Cargando…</div></div>' +
+        '</div>' +
+      '</aside>' +
+    '</div>';
+
+  document.getElementById('calendar-toggle').onclick = function () {
+    ESTADO.calendarioColapsado = !ESTADO.calendarioColapsado;
+    document.getElementById('calendar-panel').classList.toggle('colapsado', ESTADO.calendarioColapsado);
+  };
+}
+
+/* ---------------- CALENDARIO ---------------- */
+function cargarCalendario() {
+  document.getElementById('selected-pill').textContent = formatearFechaCorta(ESTADO.fecha);
+  google.script.run
+    .withSuccessHandler(function (dias) {
+      renderCalendario(dias);
+    })
+    .withFailureHandler(mostrarErrorServidor)
+    .getMesCalendario(ESTADO.anioMes);
+}
+
+function formatearFechaCorta(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return d.getDate() + ' ' + MESES_ES[d.getMonth()].slice(0, 3) + '.';
+}
+
+function cambiarMes(delta) {
+  const partes = ESTADO.anioMes.split('-').map(Number);
+  let anio = partes[0], mes = partes[1] - 1 + delta;
+  anio += Math.floor(mes / 12);
+  mes = ((mes % 12) + 12) % 12;
+  ESTADO.anioMes = anio + '-' + pad2(mes + 1);
+  cargarCalendario();
+}
+
+function renderCalendario(dias) {
+  const body = document.getElementById('calendar-body');
+  const partes = ESTADO.anioMes.split('-').map(Number);
+  const anio = partes[0], mes = partes[1]; // 1-12
+  const primerDiaSemana = new Date(anio, mes - 1, 1).getDay(); // 0=domingo
+  // Queremos la semana empezando en lunes:
+  const offset = (primerDiaSemana + 6) % 7;
+
+  let celdas = '';
+  for (let i = 0; i < offset; i++) celdas += '<div class="cal-day vacio"></div>';
+
+  dias.forEach(function (info) {
+    const clases = ['cal-day'];
+    if (!info.dia) clases.push('sin-conteo'); else clases.push('estado-' + info.estado);
+    if (info.esHoy) clases.push('hoy');
+    if (info.fecha === ESTADO.fecha) clases.push('seleccionado');
+
+    let dots = '';
+    if (info.tieneNotas) dots += '<span class="dot dot-nota"></span>';
+    if (info.tieneCierres) dots += '<span class="dot dot-cierre"></span>';
+
+    const diaNum = Number(info.fecha.slice(8, 10));
+    celdas += '<button type="button" class="' + clases.join(' ') + '" data-fecha="' + info.fecha + '">' +
+      '<span>' + diaNum + '</span>' +
+      '<span class="dots">' + dots + '</span>' +
+      '</button>';
+  });
+
+  const mesLabel = MESES_ES[mes - 1] + ' de ' + anio;
+
+  body.innerHTML =
+    '<div class="calendar-nav">' +
+      '<button type="button" id="cal-prev" aria-label="Mes anterior"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+      '<div class="mes-label">' + mesLabel + '</div>' +
+      '<button type="button" id="cal-next" aria-label="Mes siguiente"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
+    '</div>' +
+    '<div class="calendar-weekdays">' + ['L','M','X','J','V','S','D'].map(function (d) { return '<div>' + d + '</div>'; }).join('') + '</div>' +
+    '<div class="calendar-grid">' + celdas + '</div>' +
+    '<div class="calendar-leyenda">' +
+      '<span><span class="sw" style="background:#eef0f3"></span>Pendiente</span>' +
+      '<span><span class="sw" style="background:var(--amber)"></span>Parcial</span>' +
+      '<span><span class="sw" style="background:var(--ok)"></span>Enviado</span>' +
+      '<span><span class="dot dot-nota" style="width:8px;height:8px;"></span>Con notas</span>' +
+      '<span><span class="dot dot-cierre" style="width:8px;height:8px;"></span>Con cierres</span>' +
+    '</div>';
+
+  document.getElementById('cal-prev').onclick = function () { cambiarMes(-1); };
+  document.getElementById('cal-next').onclick = function () { cambiarMes(1); };
+  body.querySelectorAll('.cal-day[data-fecha]').forEach(function (btn) {
+    btn.onclick = function () { seleccionarFecha(btn.getAttribute('data-fecha')); };
+  });
+}
+
+function seleccionarFecha(fecha) {
+  ESTADO.fecha = fecha;
+  ESTADO.anioMes = anioMesDe(fecha);
+  ESTADO.colapsadas = new Set();
+  cargarCalendario();
+  cargarConteoDia();
+}
+
+/* ---------------- CONTENIDO DEL DÍA ---------------- */
+function cargarConteoDia() {
+  const cont = document.getElementById('dia-contenido');
+  cont.innerHTML = '<div class="loader">Cargando conteo…</div>';
+  document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Cargando…</div>';
+  google.script.run
+    .withSuccessHandler(renderContenidoDia)
+    .withFailureHandler(mostrarErrorServidor)
+    .getConteoDia(ESTADO.fecha);
+}
+
+function renderContenidoDia(data) {
+  const cont = document.getElementById('dia-contenido');
+  const wrap = document.createElement('div');
+
+  const topbarFecha = document.getElementById('topbar-fecha');
+  if (topbarFecha) topbarFecha.textContent = formatearFechaLarga(data.fecha);
+
+  if (data.notasGenerales && data.notasGenerales.length) {
+    const notasWrap = document.createElement('div');
+    notasWrap.className = 'notas-generales';
+    data.notasGenerales.forEach(function (n) {
+      notasWrap.appendChild(crearNotaChip(n));
+    });
+    wrap.appendChild(notasWrap);
+  }
+
+  if (!data.dia) {
+    const msg = document.createElement('div');
+    msg.className = 'sin-conteo-msg';
+    msg.textContent = 'Este día de la semana no tiene hoja de conteo. Puedes añadir una nota si necesitas dejar constancia de algo.';
+    wrap.appendChild(msg);
+  } else if (!data.secciones.length) {
+    const msg = document.createElement('div');
+    msg.className = 'sin-conteo-msg';
+    msg.textContent = 'No se han encontrado agrupaciones en la hoja "' + data.dia + '".';
+    wrap.appendChild(msg);
+  } else {
+    data.secciones.forEach(function (seccion) {
+      wrap.appendChild(crearSeccionPanel(seccion, data.dia, data.fecha));
+    });
+  }
+
+  cont.innerHTML = '';
+  cont.appendChild(wrap);
+
+  document.getElementById('btn-nota-dia').onclick = function () {
+    appPrompt('Nota del día', 'Escribe una observación general para este día…', function (texto) {
+      guardarObservacionYRecargar({ fecha: ESTADO.fecha, dia: data.dia || '', agrupacion: '', tienda: '', tipo: 'nota', texto: texto });
+    });
+  };
+
+  renderResumenDia(data);
+}
+
+function crearNotaChip(n) {
+  const div = document.createElement('div');
+  div.className = 'nota-chip' + (n.tipo === 'cierre' ? ' tipo-cierre' : '');
+  const span = document.createElement('span');
+  span.className = 'txt';
+  span.textContent = n.texto;
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.type = 'button';
+  del.innerHTML = '&times;';
+  del.onclick = function () {
+    appConfirm('Eliminar nota', '¿Seguro que quieres eliminar esta nota?', function () {
+      eliminarObservacionYRecargar(n.id);
+    });
+  };
+  div.appendChild(span);
+  div.appendChild(del);
+  return div;
+}
+
+/**
+ * Chip de solo lectura para una nota/instrucción de carga que viene escrita
+ * en la propia hoja de Excel de ese día (ej. "1 CAMIÓN 33 P. + ... TODOS LOS
+ * LUNES"). No tiene botón de borrar porque no vive en la hoja
+ * "Observaciones": para cambiarla hay que editar la celda en la hoja del día.
+ */
+function crearNotaCargaChip(texto) {
+  const div = document.createElement('div');
+  div.className = 'nota-carga-chip';
+  div.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
+    '<span>' + escapeHtml(texto) + '</span>';
+  return div;
+}
+
+/* ---------------- RESUMEN RÁPIDO DEL DÍA (sidebar derecho) ---------------- */
+
+/**
+ * Recorre las notas generales del día y, para cada agrupación, sus notas y
+ * tiendas cerradas, y construye un resumen agrupado en el panel lateral
+ * derecho. Al pulsar sobre un bloque de agrupación, se hace scroll y se
+ * expande esa sección en el contenido principal.
+ */
+function renderResumenDia(data) {
+  const body = document.getElementById('resumen-body');
+  const countEl = document.getElementById('resumen-count');
+  const bloques = [];
+  let total = 0;
+
+  if (data.notasGenerales && data.notasGenerales.length) {
+    total += data.notasGenerales.length;
+    bloques.push({
+      titulo: 'Nota general del día',
+      key: null,
+      items: data.notasGenerales.map(function (n) {
+        return { texto: n.texto, tipo: n.tipo, tienda: null };
+      })
+    });
+  }
+
+  (data.secciones || []).forEach(function (seccion) {
+    const items = [];
+    (seccion.notas || []).forEach(function (n) {
+      items.push({ texto: n.texto, tipo: n.tipo, tienda: null });
+    });
+    seccion.tiendas.forEach(function (t) {
+      if (t.cerrada) items.push({ texto: t.motivoCierre || 'Tienda cerrada', tipo: 'cierre', tienda: t.nombre });
+    });
+    if (items.length) {
+      total += items.length;
+      bloques.push({
+        titulo: parsearNombreAgrupacion(seccion.nombre).titulo,
+        key: seccion.nombre,
+        items: items
+      });
+    }
+  });
+
+  if (!bloques.length) {
+    body.innerHTML = '<div class="resumen-vacio">Sin cierres ni anotaciones para este día.</div>';
+    countEl.style.display = 'none';
+    return;
+  }
+
+  countEl.style.display = 'inline-block';
+  countEl.textContent = total;
+
+  body.innerHTML = '';
+  bloques.forEach(function (b) {
+    const div = document.createElement('div');
+    div.className = 'resumen-grupo';
+    const itemsHtml = b.items.map(function (it) {
+      const clase = it.tipo === 'cierre' ? 'resumen-item cierre' : 'resumen-item';
+      const prefijo = it.tienda ? '<span class="tienda">' + escapeHtml(it.tienda) + ':</span> ' : '';
+      return '<div class="' + clase + '">' + prefijo + escapeHtml(it.texto) + '</div>';
+    }).join('');
+    div.innerHTML =
+      '<div class="resumen-grupo-titulo"><span>' + escapeHtml(b.titulo) + '</span>' +
+      (b.key ? '<span class="ir">Ver &#8599;</span>' : '') + '</div>' +
+      itemsHtml;
+    if (b.key) {
+      div.onclick = function () { irASeccion(b.key); };
+    }
+    body.appendChild(div);
+  });
+}
+
+/** Expande y hace scroll hasta la agrupación indicada dentro del contenido principal */
+function irASeccion(key) {
+  const selector = '.seccion-panel[data-seccion-key="' + cssEscapeAtributo(key) + '"]';
+  const panel = document.querySelector(selector);
+  if (!panel) return;
+  panel.classList.remove('colapsada');
+  ESTADO.colapsadas.delete(key);
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  panel.style.transition = 'box-shadow .3s';
+  panel.style.boxShadow = '0 0 0 3px rgba(28,43,69,.35)';
+  setTimeout(function () { panel.style.boxShadow = ''; }, 1300);
+}
+
+function cssEscapeAtributo(s) {
+  if (window.CSS && CSS.escape) return CSS.escape(s);
+  return String(s).replace(/["\\]/g, '\\$&');
+}
+
+/* ---------------- SECCIÓN / AGRUPACIÓN ---------------- */
+
+/**
+ * Separa el nombre de la agrupación tal como viene de la hoja
+ * (ej. "TXT NORTE (PTA 11:00)") en:
+ *   titulo:    "TXT NORTE"
+ *   ubicacion: "PTA 11:00"  (lo que va entre paréntesis, o null si no hay)
+ */
+function parsearNombreAgrupacion(nombre) {
+  const m = String(nombre).match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (m) return { titulo: m[1].trim(), ubicacion: m[2].trim() };
+  return { titulo: String(nombre).trim(), ubicacion: null };
+}
+
+/**
+ * Muestra el indicador de sincronización de una sección durante el
+ * autoguardado. Filosofía: silencio cuando todo va bien, solo se ve algo
+ * mientras se está guardando (y desaparece solo, sin más aviso).
+ */
+function marcarGuardando(panel, activo) {
+  const ind = panel.querySelector('.sync-indicator');
+  if (!ind) return;
+  if (activo) {
+    ind.classList.add('mostrando');
+    ind.innerHTML = '<span class="sync-spinner"></span><span>Guardando…</span>';
+  } else {
+    ind.classList.remove('mostrando');
+    ind.innerHTML = '';
+  }
+}
+
+function crearSeccionPanel(seccion, dia, fecha) {
+  const panel = document.createElement('div');
+  panel.className = 'seccion-panel estado-' + seccion.estado;
+  panel.setAttribute('data-seccion-key', seccion.nombre);
+  if (ESTADO.colapsadas.has(seccion.nombre)) panel.classList.add('colapsada');
+
+  const partes = parsearNombreAgrupacion(seccion.nombre);
+  const iniciales = partes.titulo.replace(/[^A-ZÁÉÍÓÚÑ ]/gi, '').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase() || '·';
+
+  const badgeUbicacion = partes.ubicacion
+    ? '<span class="badge-ubicacion">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>' +
+      escapeHtml(partes.ubicacion) + '</span>'
+    : '';
+
+  const header = document.createElement('div');
+  header.className = 'seccion-header';
+  header.innerHTML =
+    '<div class="icono-agrup">' + iniciales + '</div>' +
+    '<div class="info"><div class="name-row">' +
+    '<span class="name">' + escapeHtml(partes.titulo) + '</span>' + badgeUbicacion +
+    '<span class="count">' + seccion.tiendas.length + ' tienda(s)</span>' +
+    '</div></div>' +
+    '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
+    badgeEstado(seccion) +
+    '<span class="sync-indicator"></span>' +
+    '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>' +
+    '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
+    '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  panel.appendChild(header);
+
+  header.querySelector('.btn-add-nota').onclick = function (e) {
+    e.stopPropagation();
+    appPrompt('Nota para ' + seccion.nombre, 'Escribe una observación para esta agrupación…', function (texto) {
+      guardarObservacionYRecargar({ fecha: fecha, dia: dia, agrupacion: seccion.nombre, tienda: '', tipo: 'nota', texto: texto });
+    });
+  };
+  header.addEventListener('click', function (e) {
+    if (e.target.closest('.btn-add-nota') || e.target.closest('.btn-header-enviar')) return;
+    panel.classList.toggle('colapsada');
+    if (panel.classList.contains('colapsada')) ESTADO.colapsadas.add(seccion.nombre);
+    else ESTADO.colapsadas.delete(seccion.nombre);
+  });
+
+  // Notas/instrucciones de carga escritas en la propia hoja de Excel
+  // (ej. "1 CAMIÓN 33 P. + ... TODOS LOS LUNES"). De solo lectura.
+  if (seccion.notasCarga && seccion.notasCarga.length) {
+    const cargaWrap = document.createElement('div');
+    cargaWrap.className = 'seccion-notas-carga';
+    seccion.notasCarga.forEach(function (texto) {
+      cargaWrap.appendChild(crearNotaCargaChip(texto));
+    });
+    panel.appendChild(cargaWrap);
+  }
+
+  // Observaciones manuales guardadas para esta agrupación (hoja Observaciones), sí se pueden borrar.
+  if (seccion.notas && seccion.notas.length) {
+    const notasWrap = document.createElement('div');
+    notasWrap.className = 'seccion-notas';
+    seccion.notas.forEach(function (n) { notasWrap.appendChild(crearNotaChip(n)); });
+    panel.appendChild(notasWrap);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'seccion-body';
+
+  // Columna lateral: solo se muestra si hay una lista de "quitar en este
+  // orden" que mostrar; ya no aloja botones (Guardar / Enviar), que ahora
+  // viven en la cabecera.
+  let acciones = null;
+  if (seccion.ordenRetirada && seccion.ordenRetirada.length) {
+    acciones = document.createElement('div');
+    acciones.className = 'seccion-acciones';
+    const ordenWrap = document.createElement('div');
+    ordenWrap.className = 'orden-retirada';
+    ordenWrap.innerHTML =
+      '<div class="orden-retirada-titulo">Quitar en este orden</div>' +
+      '<ol>' + seccion.ordenRetirada.map(function (o) { return '<li>' + escapeHtml(o) + '</li>'; }).join('') + '</ol>';
+    acciones.appendChild(ordenWrap);
+    body.appendChild(acciones);
+  }
+
+  const tablaCol = document.createElement('div');
+  tablaCol.className = 'seccion-tabla-col';
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'table-wrap';
+  const filasHtml = seccion.tiendas.map(function (t) { return filaHtml(t); }).join('');
+  tableWrap.innerHTML =
+    '<table class="conteo"><thead><tr>' +
+    '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th><th></th>' +
+    '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
+  tablaCol.appendChild(tableWrap);
+  body.appendChild(tablaCol);
+
+  panel.appendChild(body);
+
+  // Total de palets de la agrupación: suma en vivo del TOTAL de cada tienda
+  // (no cuenta las tiendas cerradas, que no tienen input de TOTAL).
+  function actualizarTotalPalets() {
+    let suma = 0;
+    tableWrap.querySelectorAll('input.celda-total').forEach(function (inp) {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) suma += v;
+    });
+    const el = header.querySelector('.total-palets-valor');
+    if (el) el.textContent = suma;
+  }
+  actualizarTotalPalets();
+
+  // Autoguardado: se guarda solo, en segundo plano, tras dejar de escribir,
+  // para que no se pierda nada si se cierra la pestaña sin pulsar nada.
+  let autoguardadoTimer = null;
+  function programarAutoguardado() {
+    clearTimeout(autoguardadoTimer);
+    autoguardadoTimer = setTimeout(function () { autoguardarSeccion(); }, 900);
+  }
+  function autoguardarSeccion(onDone) {
+    clearTimeout(autoguardadoTimer);
+    const filas = recogerFilas(tableWrap);
+    marcarGuardando(panel, true);
+    google.script.run
+      .withSuccessHandler(function () {
+        marcarGuardando(panel, false);
+        if (onDone) onDone(true);
+      })
+      .withFailureHandler(function (err) {
+        marcarGuardando(panel, false);
+        mostrarErrorServidor(err);
+        if (onDone) onDone(false);
+      })
+      .guardarConteo(dia, filas);
+  }
+
+  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-cerrada')) {
+      const btnReabrir = tr.querySelector('.btn-reabrir');
+      if (btnReabrir) {
+        btnReabrir.onclick = function () {
+          const cierreId = tr.getAttribute('data-cierre-id');
+          appConfirm('Reabrir tienda', '¿Quieres reabrir esta tienda para el conteo de hoy?', function () {
+            eliminarObservacionYRecargar(cierreId);
+          });
+        };
+      }
+    } else {
+      attachCalculoYValidacion(tr);
+      tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
+        input.addEventListener('input', function () {
+          programarAutoguardado();
+          actualizarTotalPalets();
+        });
+      });
+      const btnCerrar = tr.querySelector('.btn-cerrar-tienda');
+      if (btnCerrar) {
+        btnCerrar.onclick = function () {
+          const nombreTienda = tr.getAttribute('data-nombre');
+          appPrompt('Cerrar tienda', 'Motivo (ej. "Tienda cerrada, no se da a agencia")…', function (texto) {
+            guardarObservacionYRecargar({ fecha: fecha, dia: dia, agrupacion: seccion.nombre, tienda: nombreTienda, tipo: 'cierre', texto: texto });
+          });
+        };
+      }
+    }
+  });
+
+  header.querySelector('.btn-header-enviar').onclick = function (e) {
+    e.stopPropagation();
+    appConfirm(
+      'Enviar resumen',
+      'Se guardarán los datos y se enviará un email con el resumen de totales a la agencia de "' + seccion.nombre + '". ¿Continuar?',
+      function () { enviarSeccion(); }
+    );
+  };
+
+  function enviarSeccion() {
+    const btnEnviar = header.querySelector('.btn-header-enviar');
+    btnEnviar.disabled = true;
+    // Guarda inmediatamente (sin esperar el debounce) y, si todo va bien, envía.
+    autoguardarSeccion(function (ok) {
+      if (!ok) { btnEnviar.disabled = false; return; }
+      google.script.run
+        .withSuccessHandler(function (res) {
+          mostrarToast('Enviado a: ' + res.enviadoA.join(', ') + ' — campos vaciados para la próxima semana');
+          cargarConteoDia();
+          cargarCalendario();
+        })
+        .withFailureHandler(function (err) {
+          btnEnviar.disabled = false;
+          mostrarErrorServidor(err);
+        })
+        .enviarResumenAgencia(dia, seccion.nombre, fecha);
+    });
+  }
+
+  return panel;
+}
+
+function badgeEstado(seccion) {
+  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado ' + (seccion.horaEnvio || '') + '</span>';
+  if (seccion.estado === 'progreso') return '<span class="badge badge-progreso"><span class="badge-dot"></span>En progreso</span>';
+  return '<span class="badge badge-pendiente"><span class="badge-dot"></span>Pendiente</span>';
+}
+
+function filaHtml(t) {
+  if (t.cerrada) {
+    return '<tr class="fila-cerrada" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '">' +
+      '<td class="nombre">' + escapeHtml(t.nombre) + '</td>' +
+      '<td class="limite">' + t.limite + '</td>' +
+      '<td colspan="5"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
+      '</tr>';
+  }
+  return '<tr data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '">' +
+    '<td class="nombre">' + escapeHtml(t.nombre) + '</td>' +
+    '<td class="limite">' + t.limite + '</td>' +
+    '<td><input class="celda" data-campo="c60" type="number" value="' + t.c60 + '"></td>' +
+    '<td><input class="celda" data-campo="pta" type="number" value="' + t.pta + '"></td>' +
+    '<td><input class="celda" data-campo="cart" type="number" value="' + t.cart + '"></td>' +
+    '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
+    '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
+    '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
+    '</tr>';
+}
+
+/**
+ * Calcula TOTAL = 60 + PTA + CART automáticamente al escribir, y colorea la fila
+ * en ámbar (1-2 palets de más, se acepta ciñéndose al límite) o rojo
+ * (3 o más de más, hay que consultar a informática).
+ */
+function attachCalculoYValidacion(tr) {
+  const limite = Number(tr.getAttribute('data-limite'));
+  const c60Input = tr.querySelector('input[data-campo="c60"]');
+  const ptaInput = tr.querySelector('input[data-campo="pta"]');
+  const cartInput = tr.querySelector('input[data-campo="cart"]');
+  const totalInput = tr.querySelector('input[data-campo="total"]');
+  const nota = tr.querySelector('.diff-nota');
+
+  function recalcTotal() {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '') {
+      totalInput.value = '';
+    } else {
+      const m = parseFloat(c60Input.value) || 0;
+      const p = parseFloat(ptaInput.value) || 0;
+      const c = parseFloat(cartInput.value) || 0;
+      totalInput.value = m + p + c;
+    }
+    validar();
+  }
+
+  function validar() {
+    tr.classList.remove('fila-aviso', 'fila-alerta');
+    nota.textContent = '';
+    nota.className = 'diff-nota';
+
+    const total = parseFloat(totalInput.value);
+    if (isNaN(total) || !limite) return;
+
+    const exceso = total - limite;
+    if (exceso >= 3) {
+      tr.classList.add('fila-alerta');
+      nota.textContent = '+' + exceso + ' sobre el límite — consultar a informática';
+      nota.classList.add('alerta');
+    } else if (exceso >= 1) {
+      tr.classList.add('fila-aviso');
+      nota.textContent = '+' + exceso + ' sobre el límite — ceñirse al límite';
+      nota.classList.add('aviso');
+    }
+  }
+
+  c60Input.addEventListener('input', recalcTotal);
+  ptaInput.addEventListener('input', recalcTotal);
+  cartInput.addEventListener('input', recalcTotal);
+  validar();
+}
+
+function recogerFilas(tableWrap) {
+  const filas = [];
+  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-cerrada')) return; // las tiendas cerradas no se tocan
+    const row = Number(tr.getAttribute('data-row'));
+    const get = function (campo) {
+      const input = tr.querySelector('input[data-campo="' + campo + '"]');
+      return input.value === '' ? '' : input.value;
+    };
+    filas.push({ row: row, c60: get('c60'), pta: get('pta'), cart: get('cart'), total: get('total'), pdte: get('pdte') });
+  });
+  return filas;
+}
+
+/* ---------------- OBSERVACIONES ---------------- */
+function guardarObservacionYRecargar(obs) {
+  google.script.run
+    .withSuccessHandler(function () {
+      mostrarToast('Guardado');
+      cargarConteoDia();
+      cargarCalendario();
+    })
+    .withFailureHandler(mostrarErrorServidor)
+    .guardarObservacion(obs);
+}
+
+function eliminarObservacionYRecargar(id) {
+  google.script.run
+    .withSuccessHandler(function () {
+      mostrarToast('Eliminado');
+      cargarConteoDia();
+      cargarCalendario();
+    })
+    .withFailureHandler(mostrarErrorServidor)
+    .eliminarObservacion(id);
+}
+
+/* ---------------- UI HELPERS ---------------- */
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function mostrarToast(msg, esError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = esError ? 'show error' : 'show';
+  setTimeout(function () { t.className = t.className.replace('show', ''); }, 3200);
+}
+
+function mostrarErrorServidor(err) {
+  mostrarToast('Error: ' + (err && err.message ? err.message : err), true);
+}
+
+function appConfirm(titulo, texto, onConfirm) {
+  document.getElementById('modal-title').textContent = titulo;
+  document.getElementById('modal-text').textContent = texto;
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Confirmar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirm(); };
+}
+
+function appPrompt(titulo, placeholder, onSubmit) {
+  document.getElementById('modal-title').textContent = titulo;
+  document.getElementById('modal-text').style.display = 'none';
+  const textarea = document.getElementById('modal-textarea');
+  textarea.value = '';
+  textarea.placeholder = placeholder || '';
+  textarea.style.display = 'block';
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const texto = textarea.value.trim();
+    if (!texto) { textarea.focus(); return; }
+    cerrarModal();
+    onSubmit(texto);
+  };
+  setTimeout(function () { textarea.focus(); }, 50);
+}
+
+function cerrarModal() { document.getElementById('modal-overlay').style.display = 'none'; }
+</script>
+</body>
+</html>
