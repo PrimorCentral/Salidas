@@ -420,25 +420,41 @@
   table.conteo td.nombre .nota-tienda.nota-grupo-alerta { color: #fff; background: var(--danger); font-weight: 700; }
 
   /* Filas que comparten un límite de ruta entre varias tiendas (misma celda
-     combinada en el Excel): en vez de pintar de color todo el bloque (lo
-     que hacía indistinguibles dos rutas distintas seguidas), se enmarca el
-     grupo con un borde grueso arriba de la primera tienda y abajo de la
-     última, además de la barra lateral de color, para que se vea claramente
-     dónde empieza y dónde acaba cada ruta aunque haya varias seguidas. */
+     combinada en el Excel): se enmarca el grupo con un borde grueso (barra
+     lateral + borde inferior de la última tienda) y, en vez de repetir la
+     nota "8P MAX. POR RUTA — x/8" en cada tienda, se muestra UNA vez en una
+     fila-cabecera propia justo encima del grupo, con los nombres de las
+     tiendas que comparten esa ruta y el contador en vivo. */
   table.conteo tbody tr.fila-grupo-ruta td { border-bottom-color: transparent; position: relative; }
   table.conteo tbody tr.fila-grupo-ruta td.nombre::before {
     content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
   }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td { border-top: 3px solid var(--amber-dark); }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td { border-bottom: 3px solid var(--amber-dark); }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td.nombre::before { top: -3px; border-top-left-radius: 3px; border-top-right-radius: 3px; }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td.nombre::before { bottom: -3px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso { background: #fbe6c4 !important; }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso td.nombre::before { background: var(--amber-dark); }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta { background: #fbdada !important; }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta td.nombre::before { background: var(--danger); }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta.fila-grupo-primera td { border-top-color: var(--danger); }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta.fila-grupo-ultima td { border-bottom-color: var(--danger); }
+
+  /* Fila-cabecera del grupo (única, resume la ruta compartida) */
+  table.conteo tbody tr.fila-grupo-header td {
+    border-top: 3px solid var(--amber-dark); border-bottom-color: transparent;
+    padding: 7px 10px 6px; position: relative; background: #fff8ec;
+  }
+  table.conteo tbody tr.fila-grupo-header td::before {
+    content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
+    border-top-left-radius: 3px; border-top-right-radius: 3px;
+  }
+  table.conteo tbody tr.fila-grupo-header .grupo-header {
+    display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--amber-dark); font-weight: 700;
+  }
+  table.conteo tbody tr.fila-grupo-header .grupo-header svg { flex-shrink: 0; }
+  table.conteo tbody tr.fila-grupo-header .grupo-header-tiendas { color: var(--ink); font-weight: 700; }
+  table.conteo tbody tr.fila-grupo-header .grupo-header-chip {
+    margin-left: auto; background: #fdf3e6; padding: 3px 9px; border-radius: 10px; white-space: nowrap;
+  }
+  table.conteo tbody tr.fila-grupo-header .grupo-header-chip.nota-grupo-aviso { background: #fbe6c4; }
+  table.conteo tbody tr.fila-grupo-header .grupo-header-chip.nota-grupo-alerta { background: var(--danger); color: #fff; }
+  table.conteo tbody tr.fila-grupo-header.fila-grupo-header-alerta td { background: #fbdada; border-top-color: var(--danger); }
+  table.conteo tbody tr.fila-grupo-header.fila-grupo-header-alerta td::before { background: var(--danger); }
+  table.conteo tbody tr.fila-grupo-header.fila-grupo-header-aviso td { background: #fbe6c4; }
   table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
   table.conteo input.celda {
     width: 52px; padding: 7px 4px; text-align: center; border: 1px solid var(--line);
@@ -1200,12 +1216,22 @@ function crearSeccionPanel(seccion, dia, fecha) {
   tablaCol.className = 'seccion-tabla-col';
   const tableWrap = document.createElement('div');
   tableWrap.className = 'table-wrap';
+  // Nombres de las tiendas de cada grupo (para mostrarlos juntos una sola
+  // vez en la fila-cabecera, en vez de repetir la nota en cada tienda).
+  const nombresPorGrupo = {};
+  seccion.tiendas.forEach(function (t) {
+    if (!t.notaGrupoId) return;
+    if (!nombresPorGrupo[t.notaGrupoId]) nombresPorGrupo[t.notaGrupoId] = [];
+    nombresPorGrupo[t.notaGrupoId].push(t.nombre);
+  });
+
   const filasHtml = seccion.tiendas.map(function (t, i) {
     const anterior = seccion.tiendas[i - 1];
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    return filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId]) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
@@ -1327,8 +1353,25 @@ function badgeEstado(seccion) {
   return '<span class="badge badge-pendiente"><span class="badge-dot"></span>Pendiente</span>';
 }
 
+/**
+ * Fila-cabecera de un grupo de rutas: aparece UNA sola vez, justo encima de
+ * la primera tienda del grupo, con los nombres de todas las tiendas que
+ * comparten esa ruta y el chip con el contador en vivo (antes se repetía
+ * la misma nota "8P MAX. POR RUTA — x/8" en cada tienda del grupo).
+ */
+function filaGrupoHeaderHtml(t, nombresGrupo) {
+  const tiendas = (nombresGrupo || []).join(' + ');
+  return '<tr class="fila-grupo-header" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '">' +
+    '<td colspan="7">' +
+    '<div class="grupo-header">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
+    '<span class="grupo-header-tiendas">' + escapeHtml(tiendas) + '</span>' +
+    '<span class="grupo-header-chip" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</span>' +
+    '</div></td></tr>';
+}
+
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
-  const notaHtml = t.nota
+  const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
     : '';
   const atrGrupo = t.notaGrupoId
@@ -1415,8 +1458,8 @@ function attachCalculoYValidacion(tr) {
  * ruta). Esas filas comparten "data-nota-grupo" (mismo id = misma celda
  * combinada en el Excel) y "data-nota-limite" (el número sacado del texto,
  * ej. 8). Aquí se agrupan esas filas, se suma su TOTAL en vivo cada vez que
- * cambia cualquiera de ellas, y se pinta el aviso en el chip de la nota de
- * cada tienda del grupo (no en cada tienda por separado).
+ * cambia cualquiera de ellas, y se pinta el aviso en el chip ÚNICO de la
+ * fila-cabecera del grupo (ya no se repite en cada tienda).
  */
 function attachValidacionGrupos(tableWrap) {
   const grupos = {};
@@ -1430,6 +1473,8 @@ function attachValidacionGrupos(tableWrap) {
     const filas = grupos[id];
     const limiteStr = filas[0].getAttribute('data-nota-limite');
     const limite = limiteStr ? Number(limiteStr) : null;
+    const headerRow = tableWrap.querySelector('tr[data-nota-grupo-header="' + id + '"]');
+    const chip = headerRow ? headerRow.querySelector('.grupo-header-chip') : null;
 
     function recalcGrupo() {
       let suma = 0;
@@ -1438,20 +1483,27 @@ function attachValidacionGrupos(tableWrap) {
         const v = totalInput ? parseFloat(totalInput.value) : NaN;
         if (!isNaN(v)) suma += v;
       });
+
       filas.forEach(function (tr) {
         tr.classList.remove('fila-grupo-aviso', 'fila-grupo-alerta');
-        const chip = tr.querySelector('.nota-tienda');
-        if (!chip) return;
+        if (limite) {
+          if (suma > limite) tr.classList.add('fila-grupo-alerta');
+          else if (suma === limite) tr.classList.add('fila-grupo-aviso');
+        }
+      });
+
+      if (headerRow) headerRow.classList.remove('fila-grupo-header-aviso', 'fila-grupo-header-alerta');
+      if (chip) {
         const base = chip.getAttribute('data-nota-base') || '';
         chip.classList.remove('nota-grupo-aviso', 'nota-grupo-alerta');
         if (limite) {
           chip.textContent = base + ' — ' + suma + '/' + limite;
-          if (suma > limite) { chip.classList.add('nota-grupo-alerta'); tr.classList.add('fila-grupo-alerta'); }
-          else if (suma === limite) { chip.classList.add('nota-grupo-aviso'); tr.classList.add('fila-grupo-aviso'); }
+          if (suma > limite) { chip.classList.add('nota-grupo-alerta'); if (headerRow) headerRow.classList.add('fila-grupo-header-alerta'); }
+          else if (suma === limite) { chip.classList.add('nota-grupo-aviso'); if (headerRow) headerRow.classList.add('fila-grupo-header-aviso'); }
         } else {
           chip.textContent = base;
         }
-      });
+      }
     }
 
     filas.forEach(function (tr) {
