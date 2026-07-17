@@ -1280,6 +1280,9 @@ function crearSeccionPanel(seccion, dia, fecha) {
   }
 
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-grupo-header')) {
+      return; // fila-resumen del grupo: no es una tienda, no lleva inputs
+    }
     if (tr.classList.contains('fila-cerrada')) {
       const btnReabrir = tr.querySelector('.btn-reabrir');
       if (btnReabrir) {
@@ -1518,7 +1521,7 @@ function attachValidacionGrupos(tableWrap) {
 function recogerFilas(tableWrap) {
   const filas = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
-    if (tr.classList.contains('fila-cerrada')) return; // las tiendas cerradas no se tocan
+    if (tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-grupo-header')) return; // tiendas cerradas y fila-resumen del grupo no se guardan
     const row = Number(tr.getAttribute('data-row'));
     const get = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
