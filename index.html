@@ -418,6 +418,23 @@
   }
   table.conteo td.nombre .nota-tienda.nota-grupo-aviso { color: var(--amber-dark); background: #fbe6c4; font-weight: 700; }
   table.conteo td.nombre .nota-tienda.nota-grupo-alerta { color: #fff; background: var(--danger); font-weight: 700; }
+
+  /* Filas que comparten un límite de ruta entre varias tiendas (misma celda
+     combinada en el Excel): se pintan con un fondo propio y una barra de
+     color a la izquierda que las conecta visualmente en un único bloque,
+     para que se vea de un vistazo qué tiendas van juntas en esa ruta. */
+  table.conteo tbody tr.fila-grupo-ruta { background: #fff8ec !important; }
+  table.conteo tbody tr.fila-grupo-ruta td { border-bottom-color: transparent; position: relative; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td { border-bottom: 1px solid #f0e0bf; }
+  table.conteo tbody tr.fila-grupo-ruta td.nombre::before {
+    content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
+  }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td.nombre::before { top: 8px; border-top-left-radius: 3px; border-top-right-radius: 3px; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td.nombre::before { bottom: 8px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso { background: #fbe6c4 !important; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso td.nombre::before { background: var(--amber-dark); }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta { background: #fbdada !important; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta td.nombre::before { background: var(--danger); }
   table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
   table.conteo input.celda {
     width: 52px; padding: 7px 4px; text-align: center; border: 1px solid var(--line);
@@ -1179,7 +1196,13 @@ function crearSeccionPanel(seccion, dia, fecha) {
   tablaCol.className = 'seccion-tabla-col';
   const tableWrap = document.createElement('div');
   tableWrap.className = 'table-wrap';
-  const filasHtml = seccion.tiendas.map(function (t) { return filaHtml(t); }).join('');
+  const filasHtml = seccion.tiendas.map(function (t, i) {
+    const anterior = seccion.tiendas[i - 1];
+    const siguiente = seccion.tiendas[i + 1];
+    const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
+    const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
+    return filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo);
+  }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
     '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th><th></th>' +
@@ -1300,22 +1323,25 @@ function badgeEstado(seccion) {
   return '<span class="badge badge-pendiente"><span class="badge-dot"></span>Pendiente</span>';
 }
 
-function filaHtml(t) {
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
   const notaHtml = t.nota
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
     : '';
   const atrGrupo = t.notaGrupoId
     ? ' data-nota-grupo="' + escapeAttr(t.notaGrupoId) + '" data-nota-limite="' + (t.notaLimite != null ? t.notaLimite : '') + '"'
     : '';
+  const claseGrupo = t.notaGrupoId
+    ? ' fila-grupo-ruta' + (esPrimeraDeGrupo ? ' fila-grupo-primera' : '') + (esUltimaDeGrupo ? ' fila-grupo-ultima' : '')
+    : '';
   if (t.cerrada) {
-    return '<tr class="fila-cerrada" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
+    return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
       '<td colspan="5"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
-  return '<tr data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
+  return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
     '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
     '<td><input class="celda" data-campo="c60" type="number" value="' + t.c60 + '"></td>' +
@@ -1409,14 +1435,15 @@ function attachValidacionGrupos(tableWrap) {
         if (!isNaN(v)) suma += v;
       });
       filas.forEach(function (tr) {
+        tr.classList.remove('fila-grupo-aviso', 'fila-grupo-alerta');
         const chip = tr.querySelector('.nota-tienda');
         if (!chip) return;
         const base = chip.getAttribute('data-nota-base') || '';
         chip.classList.remove('nota-grupo-aviso', 'nota-grupo-alerta');
         if (limite) {
           chip.textContent = base + ' — ' + suma + '/' + limite;
-          if (suma > limite) chip.classList.add('nota-grupo-alerta');
-          else if (suma === limite) chip.classList.add('nota-grupo-aviso');
+          if (suma > limite) { chip.classList.add('nota-grupo-alerta'); tr.classList.add('fila-grupo-alerta'); }
+          else if (suma === limite) { chip.classList.add('nota-grupo-aviso'); tr.classList.add('fila-grupo-aviso'); }
         } else {
           chip.textContent = base;
         }
