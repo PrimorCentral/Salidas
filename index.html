@@ -1363,14 +1363,21 @@ function badgeEstado(seccion) {
  * la misma nota "8P MAX. POR RUTA — x/8" en cada tienda del grupo).
  */
 function filaGrupoHeaderHtml(t, nombresGrupo) {
-  const tiendas = (nombresGrupo || []).join(' + ');
+  const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   return '<tr class="fila-grupo-header" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '">' +
-    '<td colspan="7">' +
+    '<td colspan="8">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(tiendas) + '</span>' +
     '<span class="grupo-header-chip" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</span>' +
     '</div></td></tr>';
+}
+
+/** "127- NERVIÓN" -> "NERVIÓN" (quita el código numérico de tienda, solo para el
+ *  texto de la fila-cabecera del grupo; el nombre completo se sigue mostrando
+ *  tal cual en la fila individual de cada tienda). */
+function quitarCodigoTienda(nombre) {
+  return String(nombre).replace(/^\s*\d+\s*-\s*/, '').trim();
 }
 
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
