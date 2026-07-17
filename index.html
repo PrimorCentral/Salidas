@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Conteos Diarios</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
 <meta name="theme-color" content="#1c2b45">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Conteos">
@@ -571,7 +572,7 @@
 
 // 👉 PON AQUÍ la URL que te da Apps Script en
 //    "Implementar > Nueva implementación > Aplicación web" (termina en /exec)
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVpnRzh1s-4GTyfYeOMLbMEg2kcK46w8M-jACAbWObq02O0HLSceRob5g/exec';
+const APPS_SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_EXEC';
 
 const TOKEN_STORAGE_KEY = 'conteos_diarios_token';
 let SESSION_TOKEN = localStorage.getItem(TOKEN_STORAGE_KEY) || null;
@@ -1471,4 +1472,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-
