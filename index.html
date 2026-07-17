@@ -238,6 +238,28 @@
   .leyenda-global span { display: flex; align-items: flex-start; gap: 7px; line-height: 1.4; }
   .leyenda-global .sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; margin-top: 2px; }
 
+  /* ---------- ACCESO RÁPIDO A AGRUPACIONES ---------- */
+  .menu-rapido-panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px;
+  }
+  .menu-rapido-panel h4 {
+    margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 700;
+  }
+  .menu-rapido-body { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+  .menu-rapido-vacio { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
+  .menu-rapido-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 7px;
+    font-size: 12.5px; color: var(--ink); cursor: pointer; border: 1px solid transparent;
+    background: none; text-align: left; width: 100%;
+  }
+  .menu-rapido-item:hover { background: #fafbfd; border-color: var(--line); }
+  .menu-rapido-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #c7cdd6; }
+  .menu-rapido-item.estado-progreso .dot { background: var(--amber); }
+  .menu-rapido-item.estado-enviado .dot { background: var(--ok); }
+  .menu-rapido-item .titulo { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu-rapido-item .count { font-size: 11px; color: var(--ink-soft); flex-shrink: 0; }
+
   /* ---------- RESUMEN RÁPIDO DEL DÍA ---------- */
   .resumen-panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -468,16 +490,6 @@
   table.conteo input.celda:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
   table.conteo input.celda:disabled { background: #f0f1f3; color: var(--ink-soft); cursor: not-allowed; }
 
-  /* Celda con "NO" en el sheet: no se puede escribir directamente, solo
-     pinchar para ver el aviso y, si se confirma, desbloquearla. */
-  table.conteo input.celda-no {
-    background: #fceded; color: var(--danger); font-weight: 800; cursor: pointer;
-    caret-color: transparent;
-  }
-  table.conteo input.celda-no:focus { box-shadow: none; outline: none; }
-  /* Celda "NO" que el usuario ha desbloqueado tras confirmar el modal */
-  table.conteo input.celda-forzada { border-color: var(--amber-dark); background: #fdf6ea; }
-
   table.conteo input.celda-total {
     width: 60px; padding: 8px 4px; font-weight: 800; font-size: 14px; color: var(--navy);
     background: #eef1f7; border: 1.5px solid #d4dae4; cursor: default;
@@ -532,7 +544,7 @@
     box-shadow: 0 20px 50px rgba(0,0,0,.3);
   }
   .modal-box h3 { margin: 0 0 8px; font-size: 16px; }
-  .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; white-space: pre-line; }
+  .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
   .modal-box textarea {
     width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
     font-size: 14px; resize: vertical; min-height: 76px; margin-bottom: 16px;
@@ -814,6 +826,10 @@ function renderShellPrincipal() {
           '<span><span class="sw" style="background:var(--amber)"></span>1-2 palets de más: se acepta, ciñéndose al límite</span>' +
           '<span><span class="sw" style="background:var(--danger)"></span>3 o más de más: consultar con informática</span>' +
         '</div>' +
+        '<div class="menu-rapido-panel">' +
+          '<h4>Acceso rápido</h4>' +
+          '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio">Cargando…</div></div>' +
+        '</div>' +
       '</aside>' +
       '<div class="col-contenido">' +
         '<div id="dia-contenido"><div class="loader">Cargando conteo…</div></div>' +
@@ -980,6 +996,38 @@ function renderContenidoDia(data) {
   };
 
   renderResumenDia(data);
+  renderMenuRapido(data);
+}
+
+/**
+ * Lista de acceso rápido (sidebar izquierdo, debajo de la leyenda) con todas
+ * las agrupaciones del día. Al pulsar una, se hace scroll y se expande esa
+ * sección en el contenido principal (reutiliza irASeccion, la misma función
+ * que usa el resumen del día).
+ */
+function renderMenuRapido(data) {
+  const body = document.getElementById('menu-rapido-body');
+  if (!body) return;
+
+  const secciones = data.secciones || [];
+  if (!secciones.length) {
+    body.innerHTML = '<div class="menu-rapido-vacio">Sin agrupaciones para este día.</div>';
+    return;
+  }
+
+  body.innerHTML = '';
+  secciones.forEach(function (seccion) {
+    const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'menu-rapido-item estado-' + seccion.estado;
+    btn.innerHTML =
+      '<span class="dot"></span>' +
+      '<span class="titulo">' + escapeHtml(titulo) + '</span>' +
+      '<span class="count">' + seccion.tiendas.length + '</span>';
+    btn.onclick = function () { irASeccion(seccion.nombre); };
+    body.appendChild(btn);
+  });
 }
 
 function crearNotaChip(n) {
@@ -1307,7 +1355,6 @@ function crearSeccionPanel(seccion, dia, fecha) {
       }
     } else {
       attachCalculoYValidacion(tr);
-      attachCeldasNo(tr);
       tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
         input.addEventListener('input', function () {
           programarAutoguardado();
@@ -1393,25 +1440,6 @@ function quitarCodigoTienda(nombre) {
   return String(nombre).replace(/^\s*\d+\s*-\s*/, '').trim();
 }
 
-/** true si la casilla del sheet trae literalmente "NO" (no se debe dar palet ahí). */
-function esValorNo(v) {
-  return String(v == null ? '' : v).trim().toUpperCase() === 'NO';
-}
-
-/**
- * Casilla de 60 / PTA / CART. Si el valor viene como "NO" desde el sheet, se
- * pinta en rojo, en modo solo-lectura (no se puede escribir directamente) y
- * con el dato guardado para poder mostrar el aviso al pinchar (ver
- * attachCeldasNo). Si no es "NO", es la casilla numérica normal de siempre.
- */
-function celdaConteoHtml(campo, valor, etiqueta) {
-  if (esValorNo(valor)) {
-    return '<input class="celda celda-no" data-campo="' + campo + '" data-etiqueta="' + escapeAttr(etiqueta) + '"' +
-      ' type="text" value="NO" readonly inputmode="none" autocomplete="off">';
-  }
-  return '<input class="celda" data-campo="' + campo + '" type="number" value="' + escapeAttr(valor) + '">';
-}
-
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
   const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
@@ -1433,9 +1461,9 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
   return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
     '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
-    '<td>' + celdaConteoHtml('c60', t.c60, '60') + '</td>' +
-    '<td>' + celdaConteoHtml('pta', t.pta, 'PTA') + '</td>' +
-    '<td>' + celdaConteoHtml('cart', t.cart, 'CART.') + '</td>' +
+    '<td><input class="celda" data-campo="c60" type="number" value="' + t.c60 + '"></td>' +
+    '<td><input class="celda" data-campo="pta" type="number" value="' + t.pta + '"></td>' +
+    '<td><input class="celda" data-campo="cart" type="number" value="' + t.cart + '"></td>' +
     '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
@@ -1492,40 +1520,6 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   validar();
-}
-
-/**
- * Casillas que en el sheet traen "NO" (no se debe dar palet ahí): al
- * pincharlas no se escribe directamente, sale un modal avisando y
- * preguntando si se quiere dar palets de todas formas. Si se confirma, la
- * casilla se desbloquea para escribir un número con normalidad.
- */
-function attachCeldasNo(tr) {
-  const nombreTienda = tr.getAttribute('data-nombre') || 'esta tienda';
-  tr.querySelectorAll('input.celda-no').forEach(function (input) {
-    input.addEventListener('click', function () {
-      if (!input.readOnly) return; // ya desbloqueada: se edita con normalidad
-      const etiqueta = input.getAttribute('data-etiqueta') || input.getAttribute('data-campo');
-      appConfirm(
-        'Aviso — ' + nombreTienda,
-        'Hoy no se debería de dar palets de "' + etiqueta + '".\n\n¿Quieres dar palets?',
-        function () { desbloquearCeldaNo(input); }
-      );
-    });
-  });
-}
-
-function desbloquearCeldaNo(input) {
-  input.type = 'number';
-  input.readOnly = false;
-  input.value = '';
-  input.classList.remove('celda-no');
-  input.classList.add('celda-forzada');
-  input.setAttribute('data-forzado', '1');
-  input.removeAttribute('inputmode');
-  input.focus();
-  // Recalcula el TOTAL y dispara el autoguardado como si se hubiera escrito.
-  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 /**
@@ -1598,20 +1592,9 @@ function recogerFilas(tableWrap) {
     const row = Number(tr.getAttribute('data-row'));
     const get = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
-      // Si la casilla venía con "NO" y se ha forzado a escribir un número,
-      // se sigue enviando "NO" en su campo de siempre para no tocar el NO
-      // del sheet; el número escrito viaja aparte en "<campo>Forzado".
-      if (input.getAttribute('data-forzado') === '1') return 'NO';
       return input.value === '' ? '' : input.value;
     };
-    const getForzado = function (campo) {
-      const input = tr.querySelector('input[data-campo="' + campo + '"]');
-      return input.getAttribute('data-forzado') === '1' ? input.value : '';
-    };
-    filas.push({
-      row: row, c60: get('c60'), pta: get('pta'), cart: get('cart'), total: get('total'), pdte: get('pdte'),
-      c60Forzado: getForzado('c60'), ptaForzado: getForzado('pta'), cartForzado: getForzado('cart')
-    });
+    filas.push({ row: row, c60: get('c60'), pta: get('pta'), cart: get('cart'), total: get('total'), pdte: get('pdte') });
   });
   return filas;
 }
