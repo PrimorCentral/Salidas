@@ -420,21 +420,25 @@
   table.conteo td.nombre .nota-tienda.nota-grupo-alerta { color: #fff; background: var(--danger); font-weight: 700; }
 
   /* Filas que comparten un límite de ruta entre varias tiendas (misma celda
-     combinada en el Excel): se pintan con un fondo propio y una barra de
-     color a la izquierda que las conecta visualmente en un único bloque,
-     para que se vea de un vistazo qué tiendas van juntas en esa ruta. */
-  table.conteo tbody tr.fila-grupo-ruta { background: #fff8ec !important; }
+     combinada en el Excel): en vez de pintar de color todo el bloque (lo
+     que hacía indistinguibles dos rutas distintas seguidas), se enmarca el
+     grupo con un borde grueso arriba de la primera tienda y abajo de la
+     última, además de la barra lateral de color, para que se vea claramente
+     dónde empieza y dónde acaba cada ruta aunque haya varias seguidas. */
   table.conteo tbody tr.fila-grupo-ruta td { border-bottom-color: transparent; position: relative; }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td { border-bottom: 1px solid #f0e0bf; }
   table.conteo tbody tr.fila-grupo-ruta td.nombre::before {
     content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
   }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td.nombre::before { top: 8px; border-top-left-radius: 3px; border-top-right-radius: 3px; }
-  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td.nombre::before { bottom: 8px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td { border-top: 3px solid var(--amber-dark); }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td { border-bottom: 3px solid var(--amber-dark); }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-primera td.nombre::before { top: -3px; border-top-left-radius: 3px; border-top-right-radius: 3px; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td.nombre::before { bottom: -3px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso { background: #fbe6c4 !important; }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-aviso td.nombre::before { background: var(--amber-dark); }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta { background: #fbdada !important; }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta td.nombre::before { background: var(--danger); }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta.fila-grupo-primera td { border-top-color: var(--danger); }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta.fila-grupo-ultima td { border-bottom-color: var(--danger); }
   table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
   table.conteo input.celda {
     width: 52px; padding: 7px 4px; text-align: center; border: 1px solid var(--line);
