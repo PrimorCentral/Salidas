@@ -572,10 +572,14 @@
 
 // 👉 PON AQUÍ la URL que te da Apps Script en
 //    "Implementar > Nueva implementación > Aplicación web" (termina en /exec)
-const APPS_SCRIPT_URL = 'PEGA_AQUI_TU_URL_DE_EXEC';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVpnRzh1s-4GTyfYeOMLbMEg2kcK46w8M-jACAbWObq02O0HLSceRob5g/exec';
 
 const TOKEN_STORAGE_KEY = 'conteos_diarios_token';
-let SESSION_TOKEN = localStorage.getItem(TOKEN_STORAGE_KEY) || null;
+// El token de sesión ya NO se guarda en localStorage a propósito: así la PWA
+// siempre pide contraseña al abrirse (cada vez que se recarga o se relanza
+// la app), aunque dentro de la misma sesión abierta el token siga viviendo
+// en memoria para no tener que reintroducir la contraseña en cada llamada.
+let SESSION_TOKEN = null;
 
 // Nombre usado en el frontend -> nombre de la acción que entiende el backend.
 // (checkPassword se traduce a 'login', que es quien genera el token de sesión.)
@@ -603,7 +607,6 @@ function llamarApi_(accion, args) {
       if (!data.ok) {
         if (data.sesionCaducada) {
           SESSION_TOKEN = null;
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
           volverALogin_();
         }
         throw new Error(data.error || 'Error del servidor');
@@ -635,7 +638,6 @@ const google = {
                       // Si llega aquí es que la contraseña era correcta:
                       // el backend devuelve un token en vez de true/false.
                       SESSION_TOKEN = resultado;
-                      localStorage.setItem(TOKEN_STORAGE_KEY, resultado);
                       onSuccess(true);
                     } else {
                       onSuccess(resultado);
@@ -705,14 +707,10 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
   input.type = input.type === 'password' ? 'text' : 'password';
 });
 
-// Si ya había una sesión guardada (token de hasta 12h), se entra directo.
-// Si el token hubiera caducado, la primera llamada al backend lo detectará
-// y volverALogin_() nos devolverá aquí sin más.
-if (SESSION_TOKEN) {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  irAHoy();
-}
+// La PWA siempre arranca en la pantalla de login: SESSION_TOKEN nunca se
+// recupera de un arranque anterior (ver comentario más arriba), así que
+// aquí no hace falta comprobar nada más: #login-screen ya está visible
+// por defecto en el HTML.
 
 /* ---------------- FECHAS HELPERS ---------------- */
 function hoyStr() {
