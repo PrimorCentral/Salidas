@@ -412,6 +412,12 @@
   table.conteo tbody tr:last-child td { border-bottom: none; }
   table.conteo tbody tr:nth-child(even) { background: #fafbfc; }
   table.conteo td.nombre { font-weight: 700; text-align: left; font-size: 13px; }
+  table.conteo td.nombre .nota-tienda {
+    font-weight: 500; font-size: 11px; color: var(--amber-dark); margin-top: 2px;
+    background: #fdf3e6; border-radius: 5px; padding: 2px 6px; display: inline-block;
+  }
+  table.conteo td.nombre .nota-tienda.nota-grupo-aviso { color: var(--amber-dark); background: #fbe6c4; font-weight: 700; }
+  table.conteo td.nombre .nota-tienda.nota-grupo-alerta { color: #fff; background: var(--danger); font-weight: 700; }
   table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
   table.conteo input.celda {
     width: 52px; padding: 7px 4px; text-align: center; border: 1px solid var(--line);
@@ -1251,6 +1257,8 @@ function crearSeccionPanel(seccion, dia, fecha) {
     }
   });
 
+  attachValidacionGrupos(tableWrap);
+
   const btnHeaderEnviar = header.querySelector('.btn-header-enviar');
   if (btnHeaderEnviar) {
     btnHeaderEnviar.onclick = function (e) {
@@ -1293,16 +1301,22 @@ function badgeEstado(seccion) {
 }
 
 function filaHtml(t) {
+  const notaHtml = t.nota
+    ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
+    : '';
+  const atrGrupo = t.notaGrupoId
+    ? ' data-nota-grupo="' + escapeAttr(t.notaGrupoId) + '" data-nota-limite="' + (t.notaLimite != null ? t.notaLimite : '') + '"'
+    : '';
   if (t.cerrada) {
-    return '<tr class="fila-cerrada" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '">' +
-      '<td class="nombre">' + escapeHtml(t.nombre) + '</td>' +
+    return '<tr class="fila-cerrada" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
+      '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
       '<td colspan="5"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
-  return '<tr data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '">' +
-    '<td class="nombre">' + escapeHtml(t.nombre) + '</td>' +
+  return '<tr data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
+    '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
     '<td><input class="celda" data-campo="c60" type="number" value="' + t.c60 + '"></td>' +
     '<td><input class="celda" data-campo="pta" type="number" value="' + t.pta + '"></td>' +
@@ -1363,6 +1377,59 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   validar();
+}
+
+/**
+ * Algunas anotaciones de carga (ej. "8P MAX. POR RUTA") no son un límite de
+ * cada tienda por separado, sino de varias tiendas juntas (mismo camión/
+ * ruta). Esas filas comparten "data-nota-grupo" (mismo id = misma celda
+ * combinada en el Excel) y "data-nota-limite" (el número sacado del texto,
+ * ej. 8). Aquí se agrupan esas filas, se suma su TOTAL en vivo cada vez que
+ * cambia cualquiera de ellas, y se pinta el aviso en el chip de la nota de
+ * cada tienda del grupo (no en cada tienda por separado).
+ */
+function attachValidacionGrupos(tableWrap) {
+  const grupos = {};
+  tableWrap.querySelectorAll('table.conteo tbody tr[data-nota-grupo]').forEach(function (tr) {
+    const id = tr.getAttribute('data-nota-grupo');
+    if (!grupos[id]) grupos[id] = [];
+    grupos[id].push(tr);
+  });
+
+  Object.keys(grupos).forEach(function (id) {
+    const filas = grupos[id];
+    const limiteStr = filas[0].getAttribute('data-nota-limite');
+    const limite = limiteStr ? Number(limiteStr) : null;
+
+    function recalcGrupo() {
+      let suma = 0;
+      filas.forEach(function (tr) {
+        const totalInput = tr.querySelector('input[data-campo="total"]');
+        const v = totalInput ? parseFloat(totalInput.value) : NaN;
+        if (!isNaN(v)) suma += v;
+      });
+      filas.forEach(function (tr) {
+        const chip = tr.querySelector('.nota-tienda');
+        if (!chip) return;
+        const base = chip.getAttribute('data-nota-base') || '';
+        chip.classList.remove('nota-grupo-aviso', 'nota-grupo-alerta');
+        if (limite) {
+          chip.textContent = base + ' — ' + suma + '/' + limite;
+          if (suma > limite) chip.classList.add('nota-grupo-alerta');
+          else if (suma === limite) chip.classList.add('nota-grupo-aviso');
+        } else {
+          chip.textContent = base;
+        }
+      });
+    }
+
+    filas.forEach(function (tr) {
+      tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
+        input.addEventListener('input', recalcGrupo);
+      });
+    });
+    recalcGrupo();
+  });
 }
 
 function recogerFilas(tableWrap) {
