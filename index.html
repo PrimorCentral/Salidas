@@ -384,6 +384,12 @@
   }
   .btn-add-nota:hover { background: #e1e5eb; }
 
+  .btn-pdf-seccion {
+    background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .btn-pdf-seccion:hover { background: #e1e5eb; }
+
   /* Botón "Enviar a agencia" en la cabecera, junto al badge de estado */
   .btn-header-enviar {
     background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
@@ -698,6 +704,8 @@
   body.es-admin .btn-cerrar-tienda { display: inline-flex !important; }
   body.es-admin .btn-reabrir { display: inline-block !important; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -1369,6 +1377,12 @@ function crearSeccionPanel(seccion, dia, fecha) {
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
+    '<button type="button" class="btn-pdf-seccion" title="Generar PDF de esta agrupación">' +
+    '<svg width="16" height="18" viewBox="0 0 24 26">' +
+    '<path d="M4 2h11l6 6v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#e0342a"/>' +
+    '<path d="M15 2v6h6" fill="#ffffff" opacity="0.32"/>' +
+    '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" font-weight="800" fill="#ffffff">PDF</text>' +
+    '</svg></button>' +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
   panel.appendChild(header);
@@ -1538,6 +1552,14 @@ function crearSeccionPanel(seccion, dia, fecha) {
     };
   }
 
+  const btnPdf = header.querySelector('.btn-pdf-seccion');
+  if (btnPdf) {
+    btnPdf.onclick = function (e) {
+      e.stopPropagation();
+      generarPdfSeccion(seccion, dia, fecha, tableWrap);
+    };
+  }
+
   /** Recopila, en vivo desde los inputs actuales, los datos para el modal de envío. */
   function calcularResumenEnvio() {
     let totalTiendas = 0;
@@ -1592,6 +1614,126 @@ function crearSeccionPanel(seccion, dia, fecha) {
   }
 
   return panel;
+}
+
+/**
+ * Genera y descarga un PDF con el conteo completo de una agrupación: todas
+ * sus tiendas y casillas (Límite, 60, PTA, CART., TOTAL, PDTE), tal cual
+ * están en ese momento en la pantalla (incluye cambios aún sin autoguardar),
+ * más las notas de carga, observaciones y el orden de retirada si los hay.
+ *
+ * Usa jsPDF + el plugin autoTable (cargados por CDN en el <head>). No se
+ * usan emojis en el texto para evitar el mismo problema de renderizado que
+ * ya se dio en los PDF de incidencias.
+ */
+function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarToast('No se ha podido cargar el generador de PDF. Revisa tu conexión e inténtalo de nuevo.', true);
+    return;
+  }
+
+  const jsPDF = window.jspdf.jsPDF;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const partes = parsearNombreAgrupacion(seccion.nombre);
+
+  // Fecha/hora de generación del PDF (no la fecha del conteo), arriba del todo.
+  const ahora = new Date();
+  const fechaGeneracion = Utilities_formatearFechaHora_(ahora);
+  doc.setFontSize(8);
+  doc.setTextColor(140, 148, 158);
+  doc.text('Generado el ' + fechaGeneracion, 14, 10);
+  doc.setTextColor(0, 0, 0);
+
+  doc.setFontSize(15);
+  doc.setTextColor(28, 43, 69);
+  doc.text(partes.titulo + (partes.ubicacion ? ' · ' + partes.ubicacion : ''), 14, 18);
+
+  doc.setFontSize(10);
+  doc.setTextColor(90, 100, 114);
+  doc.text((dia || '') + ' · ' + formatearFechaLarga(fecha), 14, 24);
+  doc.setTextColor(0, 0, 0);
+
+  let y = 31;
+
+  if (seccion.notasCarga && seccion.notasCarga.length) {
+    doc.setFontSize(9);
+    seccion.notasCarga.forEach(function (texto) {
+      doc.text('• ' + texto, 14, y);
+      y += 5;
+    });
+    y += 2;
+  }
+
+  if (seccion.notas && seccion.notas.length) {
+    doc.setFontSize(9);
+    seccion.notas.forEach(function (n) {
+      doc.text('Nota: ' + n.texto, 14, y);
+      y += 5;
+    });
+    y += 2;
+  }
+
+  // Se leen los valores DIRECTAMENTE de la tabla en pantalla (no de
+  // "seccion"), para que el PDF refleje también cambios aún sin guardar.
+  const filas = [];
+  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-grupo-header')) return;
+
+    const nombre = tr.getAttribute('data-nombre') || '';
+
+    if (tr.classList.contains('fila-cerrada')) {
+      const limiteCelda = tr.querySelector('td.limite');
+      filas.push([
+        nombre,
+        limiteCelda ? limiteCelda.textContent.trim() : '',
+        'CERRADA', '', '', '', ''
+      ]);
+      return;
+    }
+
+    function valorCampo(campo) {
+      const inp = tr.querySelector('input[data-campo="' + campo + '"]');
+      return inp ? inp.value : '';
+    }
+
+    filas.push([
+      nombre,
+      tr.getAttribute('data-limite') || '',
+      valorCampo('c60'),
+      valorCampo('pta'),
+      valorCampo('cart'),
+      valorCampo('total'),
+      valorCampo('pdte')
+    ]);
+  });
+
+  doc.autoTable({
+    startY: y,
+    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE']],
+    body: filas,
+    styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
+    headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
+    bodyStyles: { halign: 'center' },
+    columnStyles: {
+      0: { fontStyle: 'bold', fontSize: 11, halign: 'left' },
+      5: { fontStyle: 'bold' }
+    }
+  });
+
+  const nombreArchivo = 'Conteo_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
+  doc.save(nombreArchivo);
+}
+
+/** 'lunes, 19 de julio de 2026, 14:32' — usada solo como marca de tiempo de
+ *  generación del PDF; no confundir con formatearFechaLarga(), que formatea
+ *  la fecha del CONTEO (que puede ser distinta a hoy si se abre un día pasado). */
+function Utilities_formatearFechaHora_(d) {
+  const dd = pad2(d.getDate());
+  const mm = MESES_ES[d.getMonth()];
+  const yyyy = d.getFullYear();
+  const hh = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  return dd + ' de ' + mm + ' de ' + yyyy + ', ' + hh + ':' + min;
 }
 
 function badgeEstado(seccion) {
