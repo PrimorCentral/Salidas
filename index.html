@@ -1132,7 +1132,7 @@ function renderContenidoDia(data) {
   if (!data.dia) {
     const msg = document.createElement('div');
     msg.className = 'sin-conteo-msg';
-    msg.textContent = 'Este día de la semana no tiene hoja de conteo. Puedes añadir una nota si necesitas dejar constancia de algo.';
+    msg.textContent = 'Sin hoja de conteos configurada para el SABADO, pasa a la del DOMINGO';
     wrap.appendChild(msg);
   } else if (!data.secciones.length) {
     const msg = document.createElement('div');
