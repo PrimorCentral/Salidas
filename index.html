@@ -1978,14 +1978,144 @@ function mostrarModalResultadoEnvio(ok, mensaje) {
 
 function cerrarModal() { document.getElementById('modal-overlay').style.display = 'none'; }
 
-/* ---------------- PWA: registro del service worker ---------------- */
+/* ---------------- PWA: service worker + aviso de actualización ----------------
+ * Cada vez que se despliega una versión nueva de la app (nuevo index.html,
+ * nuevo service-worker.js con CACHE_VERSION distinto), esta sección detecta
+ * el cambio y muestra un modal pidiendo confirmación para actualizar, en
+ * vez de recargar sola por sorpresa mientras alguien está rellenando un
+ * conteo. Dos vías de detección, para cubrirse:
+ *
+ *  1) Ciclo de vida estándar del Service Worker (evento 'updatefound' +
+ *     'controllerchange'). Es la vía principal.
+ *  2) Sondeo de version.json cada pocos minutos y al volver a la pestaña.
+ *     Sirve de respaldo porque en algunos navegadores (sobre todo Safari/
+ *     iOS en modo PWA instalada) el ciclo de vida del Service Worker tarda
+ *     en dispararse o no lo hace hasta que se fuerza una recarga completa.
+ *
+ * PARA PUBLICAR UNA ACTUALIZACIÓN: sube los archivos nuevos y actualiza el
+ * número de versión en dos sitios -> CACHE_VERSION en service-worker.js Y
+ * la clave "version" de version.json (usa el mismo valor en los dos).
+ */
+let swEnEspera = null;
+let actualizacionYaAvisada = false;
+
+function mostrarModalActualizacion() {
+  // Si ya hay otro modal abierto (p.ej. alguien confirmando un cierre de
+  // tienda), no se lo quitamos de encima: se reintentará en el próximo
+  // sondeo/evento en vez de interrumpir lo que está haciendo.
+  if (actualizacionYaAvisada) return;
+  if (document.getElementById('modal-overlay').style.display === 'flex') {
+    setTimeout(mostrarModalActualizacion, 15000);
+    return;
+  }
+  actualizacionYaAvisada = true;
+
+  document.getElementById('modal-title').textContent = 'Nueva versión disponible';
+  document.getElementById('modal-text').textContent =
+    'Hay una actualización de Conteos Diarios lista para instalar. Se recomienda actualizar ahora para evitar fallos.';
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-textarea').style.display = 'none';
+  document.getElementById('modal-custom').style.display = 'none';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Más tarde</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Actualizar ahora</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+
+  document.getElementById('modal-cancel-btn').onclick = function () {
+    cerrarModal();
+    actualizacionYaAvisada = false; // se puede volver a avisar en el siguiente sondeo
+  };
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    aplicarActualizacion();
+  };
+}
+
+/** Activa el service worker nuevo (si lo hay, esperando) y recarga la página. */
+function aplicarActualizacion() {
+  const btn = document.getElementById('modal-confirm-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
+
+  if (swEnEspera) {
+    swEnEspera.postMessage({ type: 'SKIP_WAITING' });
+    // El reload se dispara desde el listener de 'controllerchange' de más
+    // abajo en cuanto el nuevo SW tome el control. Por seguridad, si por lo
+    // que sea ese evento no llega, forzamos la recarga a los 2s igualmente.
+    setTimeout(function () { window.location.reload(); }, 2000);
+  } else {
+    // No había un SW nuevo detectado vía service worker (llegamos aquí solo
+    // por el sondeo de version.json): una recarga forzada basta para traer
+    // los archivos nuevos.
+    window.location.reload();
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('service-worker.js').catch(function (err) {
+    navigator.serviceWorker.register('service-worker.js').then(function (registration) {
+
+      // Ya había un SW controlando la página y aparece uno nuevo instalándose
+      // -> es una actualización real (no la primera instalación).
+      registration.addEventListener('updatefound', function () {
+        const nuevoWorker = registration.installing;
+        if (!nuevoWorker) return;
+        nuevoWorker.addEventListener('statechange', function () {
+          if (nuevoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            swEnEspera = nuevoWorker;
+            mostrarModalActualizacion();
+          }
+        });
+      });
+
+      // Comprueba activamente si hay una versión nueva del service worker
+      // cada 5 minutos y cada vez que se vuelve a la pestaña/app (cubre el
+      // caso típico de dejar la PWA abierta todo el día en un tablet).
+      setInterval(function () { registration.update(); }, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') registration.update();
+      });
+
+    }).catch(function (err) {
       console.warn('No se pudo registrar el service worker:', err);
     });
+
+    // En cuanto el SW nuevo toma el control (tras el SKIP_WAITING del botón
+    // "Actualizar ahora"), recargamos para servir los archivos nuevos.
+    let yaRecargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (yaRecargando) return;
+      yaRecargando = true;
+      window.location.reload();
+    });
+  });
+
+  // ---- Respaldo: sondeo de version.json ----
+  // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
+  // súbela a mano cada vez que despliegues, junto con version.json y con
+  // CACHE_VERSION en service-worker.js (los tres deben coincidir).
+  const APP_VERSION_ACTUAL = '1.0.0';
+
+  function comprobarVersionJson() {
+    fetch('version.json', { cache: 'no-store' })
+      .then(function (resp) { return resp.ok ? resp.json() : null; })
+      .then(function (data) {
+        if (data && data.version && data.version !== APP_VERSION_ACTUAL) {
+          mostrarModalActualizacion();
+        }
+      })
+      .catch(function () { /* sin conexión o version.json no disponible: se ignora, no es crítico */ });
+  }
+
+  window.addEventListener('load', function () {
+    setTimeout(comprobarVersionJson, 3000); // pequeño margen tras cargar
+    setInterval(comprobarVersionJson, 5 * 60 * 1000);
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') comprobarVersionJson();
   });
 }
+
 </script>
 </body>
 </html>
