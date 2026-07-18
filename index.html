@@ -501,6 +501,24 @@
   table.conteo tr.fila-aviso input.celda-total { background: var(--amber); color: #2a1c04; border-color: var(--amber-dark); }
   table.conteo tr.fila-alerta input.celda { border-color: var(--danger); background: #fceded; color: var(--danger); }
   table.conteo tr.fila-alerta input.celda-total { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  /* Casilla que trae "NO" desde el Excel (esa tienda no debe recibir palets
+     por esa vía). Se muestra en rojo, no editable; el botón "+" permite
+     forzar un número igualmente si hiciera falta, sin perder el "NO" original. */
+  .celda-no-wrap { display: inline-flex; align-items: center; gap: 4px; }
+  table.conteo input.celda-no {
+    width: 52px; padding: 7px 4px; text-align: center; border-radius: 7px; font-family: var(--mono);
+    font-size: 13.5px; font-weight: 800; color: var(--danger); background: #fceded; border: 1.5px solid var(--danger);
+    cursor: not-allowed;
+  }
+  table.conteo .btn-forzar-no {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--line);
+    background: #fff; color: var(--ink-soft); font-size: 13px; line-height: 1; cursor: pointer; padding: 0;
+  }
+  table.conteo .btn-forzar-no:hover { background: #f4f6f9; color: var(--ink); }
+  table.conteo input.celda-forzada {
+    border-color: var(--amber-dark); background: #fdf6ea; color: var(--amber-dark); font-weight: 800;
+  }
   .diff-nota { font-size: 10.5px; margin-top: 2px; font-weight: 600; }
   .diff-nota.aviso { color: var(--amber-dark); }
   .diff-nota.alerta { color: var(--danger); }
@@ -1355,6 +1373,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
       }
     } else {
       attachCalculoYValidacion(tr);
+      attachForzarNo(tr);
       tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
         input.addEventListener('input', function () {
           programarAutoguardado();
@@ -1440,6 +1459,27 @@ function quitarCodigoTienda(nombre) {
   return String(nombre).replace(/^\s*\d+\s*-\s*/, '').trim();
 }
 
+/** "NO" tal cual viene del Excel (sin importar mayúsculas/espacios): esa
+ *  tienda no debe recibir palets por esa vía ese día. */
+function esValorNo(v) {
+  return String(v == null ? '' : v).trim().toUpperCase() === 'NO';
+}
+
+/**
+ * Celda de 60/PTA/CART. Si el valor es "NO", se muestra en rojo y no
+ * editable (con un botón para forzar un número igualmente si hiciera
+ * falta); si no, es el input numérico normal de siempre.
+ */
+function celdaConteoHtml(campo, valor) {
+  if (esValorNo(valor)) {
+    return '<div class="celda-no-wrap">' +
+      '<input class="celda celda-no" data-campo="' + campo + '" type="text" value="NO" disabled title="Esta tienda no debe recibir palets por esta vía">' +
+      '<button type="button" class="btn-forzar-no" data-campo="' + campo + '" title="Forzar un número pese al NO">+</button>' +
+      '</div>';
+  }
+  return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
+}
+
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
   const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
@@ -1461,9 +1501,9 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
   return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
     '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
-    '<td><input class="celda" data-campo="c60" type="number" value="' + t.c60 + '"></td>' +
-    '<td><input class="celda" data-campo="pta" type="number" value="' + t.pta + '"></td>' +
-    '<td><input class="celda" data-campo="cart" type="number" value="' + t.cart + '"></td>' +
+    '<td>' + celdaConteoHtml('c60', t.c60) + '</td>' +
+    '<td>' + celdaConteoHtml('pta', t.pta) + '</td>' +
+    '<td>' + celdaConteoHtml('cart', t.cart) + '</td>' +
     '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
@@ -1520,6 +1560,43 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   validar();
+}
+
+/**
+ * Engancha el botón "+" de las casillas que traen "NO". Al pulsarlo, tras
+ * confirmar, deja escribir un número igualmente: la misma casilla pasa a
+ * ser un input numérico normal (marcado en ámbar) y se manda al backend
+ * como campoForzado, así el "NO" original de la hoja no se borra (ver
+ * guardarConteo / escribirCeldaConteo_ en el backend).
+ */
+function attachForzarNo(tr) {
+  tr.querySelectorAll('.btn-forzar-no').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const campo = btn.getAttribute('data-campo');
+      const input = tr.querySelector('input.celda-no[data-campo="' + campo + '"]');
+      appConfirm(
+        'Forzar palets pese al "NO"',
+        'Esta casilla trae "NO": esa tienda no debería recibir palets por esta vía. Si continúas, podrás escribir un número igualmente; se guardará como excepción sin borrar el "NO" original de la hoja.',
+        function () {
+          appPrompt('Número de palets a forzar', 'Ej: 2', function (texto) {
+            const numero = Number(String(texto).replace(',', '.'));
+            if (isNaN(numero)) { mostrarToast('Introduce un número válido', true); return; }
+            input.type = 'number';
+            input.disabled = false;
+            input.value = numero;
+            input.classList.remove('celda-no');
+            input.classList.add('celda-forzada');
+            input.setAttribute('data-forzado', '1');
+            input.title = 'Forzado pese al "NO" original';
+            btn.remove();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            programarAutoguardado();
+            actualizarTotalPalets();
+          });
+        }
+      );
+    });
+  });
 }
 
 /**
@@ -1590,11 +1667,31 @@ function recogerFilas(tableWrap) {
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-grupo-header')) return; // tiendas cerradas y fila-resumen del grupo no se guardan
     const row = Number(tr.getAttribute('data-row'));
+    // Para 60/PTA/CART: si la casilla se forzó pese a traer "NO", se manda
+    // "NO" en el campo normal (para que el backend NO sobrescriba esa
+    // celda) y el número escrito va aparte en xxxForzado, tal como espera
+    // guardarConteo() en el backend.
+    const getConEscape = function (campo) {
+      const input = tr.querySelector('input[data-campo="' + campo + '"]');
+      if (input.getAttribute('data-forzado') === '1') {
+        return { valor: 'NO', forzado: input.value === '' ? '' : input.value };
+      }
+      return { valor: input.value === '' ? '' : input.value, forzado: '' };
+    };
     const get = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
       return input.value === '' ? '' : input.value;
     };
-    filas.push({ row: row, c60: get('c60'), pta: get('pta'), cart: get('cart'), total: get('total'), pdte: get('pdte') });
+    const c60 = getConEscape('c60');
+    const pta = getConEscape('pta');
+    const cart = getConEscape('cart');
+    filas.push({
+      row: row,
+      c60: c60.valor, c60Forzado: c60.forzado,
+      pta: pta.valor, ptaForzado: pta.forzado,
+      cart: cart.valor, cartForzado: cart.forzado,
+      total: get('total'), pdte: get('pdte')
+    });
   });
   return filas;
 }
