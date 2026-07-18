@@ -331,7 +331,7 @@
   .seccion-panel.estado-pendiente { border-left: 4px solid #c7cdd6; }
 
   .seccion-header {
-    display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px; user-select: none;
   }
   .seccion-header .icono-agrup {
     width: 40px; height: 40px; border-radius: 11px; background: #eef1f5; color: var(--navy);
@@ -341,7 +341,12 @@
   .seccion-header .name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .seccion-header .name { font-weight: 800; font-size: 16px; line-height: 1.25; letter-spacing: .1px; }
   .seccion-header .count { color: var(--ink-soft); font-size: 12px; font-weight: 600; flex-shrink: 0; }
-  .seccion-header .chevron { transition: transform .15s; color: var(--ink-soft); flex-shrink: 0; }
+  .seccion-header .btn-toggle-colapsar {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 28px; height: 28px; border-radius: 7px; border: none; background: none; cursor: pointer; padding: 0;
+  }
+  .seccion-header .btn-toggle-colapsar:hover { background: #f0f2f6; }
+  .seccion-header .chevron { transition: transform .15s; color: var(--ink-soft); flex-shrink: 0; pointer-events: none; }
   .seccion-panel.colapsada .chevron { transform: rotate(-90deg); }
   .seccion-panel.colapsada .seccion-body { display: none; }
   .seccion-panel.colapsada .seccion-notas,
@@ -1236,7 +1241,8 @@ function crearSeccionPanel(seccion, dia, fecha) {
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
-    '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+    '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
+    '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
   panel.appendChild(header);
 
   header.querySelector('.btn-add-nota').onclick = function (e) {
@@ -1246,7 +1252,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
     });
   };
   header.addEventListener('click', function (e) {
-    if (e.target.closest('.btn-add-nota') || e.target.closest('.btn-header-enviar')) return;
+    if (!e.target.closest('.btn-toggle-colapsar')) return;
     panel.classList.toggle('colapsada');
     if (panel.classList.contains('colapsada')) ESTADO.colapsadas.add(seccion.nombre);
     else ESTADO.colapsadas.delete(seccion.nombre);
