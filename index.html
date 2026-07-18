@@ -107,25 +107,287 @@
   #app { display: none; min-height: 100vh; flex-direction: column; }
   header.topbar {
     background: var(--navy); color: #fff; padding: 14px 20px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 20;
   }
   header.topbar .brand { font-size: 15px; font-weight: 700; letter-spacing: .3px; flex: 0 0 auto; }
   header.topbar .brand span { color: var(--amber); }
   header.topbar .topbar-fecha {
-    flex: 1 1 auto; text-align: center; font-size: 19px; font-weight: 800;
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    text-align: center; font-size: 19px; font-weight: 800;
     text-transform: capitalize; letter-spacing: .2px; padding: 0 12px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(60vw, 460px);
+    pointer-events: none;
   }
   header.topbar .btn-hoy {
     background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 20px;
-    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto; margin-left: auto;
   }
   header.topbar .btn-hoy:hover { background: rgba(255,255,255,.22); }
+
+  /* ---------- NAVEGACIÓN PRINCIPAL (cabecera) ----------
+   * Tres secciones de la app, siempre en el mismo sitio junto al logo
+   * (a la izquierda, fuera del flujo que centra la fecha): Inicio
+   * (página principal / avisos), Conteos (los cuadrantes de siempre) y
+   * Configuración (resumen + gestión de cierres/observaciones, antes
+   * llamado "Administración").
+   */
+  .topbar-nav { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; position: relative; z-index: 1; }
+  .topbar-nav-item {
+    background: none; border: none; color: rgba(255,255,255,.72); border-radius: 20px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; letter-spacing: .1px; white-space: nowrap;
+  }
+  .topbar-nav-item:hover { background: rgba(255,255,255,.12); color: #fff; }
+  .topbar-nav-item.activa { background: rgba(255,255,255,.2); color: #fff; }
+
+  @media (max-width: 900px) {
+    .topbar-nav-item { padding: 7px 10px; font-size: 11.5px; }
+  }
 
   @media (max-width: 700px) {
     header.topbar .topbar-fecha { font-size: 14px; }
   }
+
+  /* ---------- VISTAS "INICIO" Y "CONFIGURACIÓN" ---------- */
+  .vista-wrap { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+  .vista-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 22px;
+  }
+  .vista-card h2 { margin: 0 0 8px; font-size: 18px; color: var(--navy); }
+  .vista-card p { margin: 0 0 4px; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+  .vista-card + .vista-card { margin-top: 0; }
+  .vista-card-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .vista-card-header h2 { margin: 0; flex: 1 1 auto; min-width: 0; }
+  .vista-card-header .btn-anadir-obs { flex-shrink: 0; }
+  .vista-card-header-acciones { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .btn-festivos-filtro {
+    position: relative; width: 34px; height: 34px; border-radius: 8px; border: none;
+    background: #eef1f7; color: var(--navy); display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .btn-festivos-filtro:hover { background: #e1e5eb; }
+  .btn-festivos-filtro.abierto { background: var(--navy); color: #fff; }
+  .btn-festivos-filtro .badge-punto {
+    position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--amber-dark); border: 2px solid var(--panel);
+  }
+
+  /* ---------- CONFIGURACIÓN: submenú + secciones ---------- */
+  .config-shell { display: flex; align-items: flex-start; gap: 22px; max-width: none; }
+  .config-submenu {
+    flex: 0 0 220px; display: flex; flex-direction: column; gap: 3px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px;
+  }
+  .config-submenu-item {
+    text-align: left; background: none; border: none; border-radius: 8px; padding: 10px 12px;
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+  }
+  .config-submenu-item:hover { background: #f0f2f6; }
+  .config-submenu-item.activa { background: var(--navy); color: #fff; }
+  .config-contenido { flex: 1 1 auto; min-width: 0; }
+
+  @media (max-width: 700px) {
+    .config-shell { flex-direction: column; }
+    .config-submenu { flex-direction: row; overflow-x: auto; width: 100%; flex: 0 0 auto; }
+  }
+
+  /* ---------- GESTIÓN FESTIVOS (resumen de notas y cierres) ---------- */
+  .festivos-stats { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .festivos-stat {
+    display: flex; align-items: center; gap: 8px; background: #f6f7fa; border: 1px solid var(--line);
+    border-radius: 9px; padding: 7px 12px; flex: 1 1 120px; min-width: 100px;
+  }
+  .festivos-stat .icono {
+    width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; background: #e4e8f0; color: var(--navy);
+  }
+  .festivos-stat.cierre .icono { background: #fbe2e2; color: #8a3a3a; }
+  .festivos-stat.nota .icono { background: #fbe9c9; color: #7a5417; }
+  .festivos-stat .txt { display: flex; flex-direction: column; line-height: 1.1; }
+  .festivos-stat .valor { font-size: 15px; font-weight: 800; color: var(--ink); }
+  .festivos-stat .etiqueta { font-size: 10px; color: var(--ink-soft); font-weight: 600; }
+
+  .festivos-toolbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; flex-wrap: wrap; }
+  .festivos-toolbar .rango-label { font-weight: 700; font-size: 13px; flex: 1 1 auto; text-transform: capitalize; }
+  .festivos-toolbar button.nav {
+    background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy); border-radius: 8px;
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .festivos-toolbar button.nav:hover { background: #e1e5eb; }
+  .festivos-toolbar button.nav:disabled { opacity: .4; cursor: not-allowed; }
+  .festivos-toolbar .btn-hoy-festivos {
+    background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy); border-radius: 20px;
+    padding: 5px 12px; font-size: 11.5px; font-weight: 700; flex-shrink: 0;
+  }
+  .festivos-toolbar .btn-hoy-festivos:hover { background: #e1e5eb; }
+  .festivos-toolbar .btn-hoy-festivos:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ---- Fila de filtros: búsqueda, tipo (segmentado) y rango de fechas ---- */
+  .festivos-filtros {
+    display: none; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: #f6f7fa; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px;
+  }
+  .festivos-filtros.abierta { display: flex; }
+  .festivos-filtro-busqueda {
+    display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; flex: 1 1 190px; min-width: 150px; color: var(--ink-soft);
+  }
+  .festivos-filtro-busqueda input {
+    border: none; outline: none; font-size: 12.5px; flex: 1 1 auto; min-width: 0; color: var(--ink); background: none;
+  }
+  .festivos-filtro-tipo { display: flex; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 2px; flex-shrink: 0; }
+  .festivos-filtro-tipo button {
+    background: none; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11.5px; font-weight: 600;
+    color: var(--ink-soft); white-space: nowrap;
+  }
+  .festivos-filtro-tipo button.activo { background: var(--navy); color: #fff; }
+  .festivos-filtro-fechas {
+    display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--line);
+    border-radius: 8px; padding: 4px 8px; flex-shrink: 0; color: var(--ink-soft); font-size: 11px;
+  }
+  .festivos-filtro-fechas input[type="date"] {
+    border: none; outline: none; font-size: 12px; color: var(--ink); background: none; max-width: 118px;
+  }
+  .festivos-filtro-limpiar {
+    display: flex; align-items: center; gap: 5px; background: none; border: none; color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 600; padding: 6px 4px; flex-shrink: 0;
+  }
+  .festivos-filtro-limpiar:hover { color: var(--danger); }
+
+  .festivos-grupo {
+    display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; margin-bottom: 7px; background: var(--panel);
+    transition: border-color .15s;
+  }
+  .festivos-grupo.es-hoy { border-color: var(--amber); background: #fffaf1; }
+  .festivos-fecha-badge {
+    flex-shrink: 0; width: 42px; height: 42px; border-radius: 9px; background: var(--navy);
+    color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .festivos-grupo.es-hoy .festivos-fecha-badge { background: var(--amber-dark); }
+  .festivos-fecha-badge .dia { font-size: 15px; font-weight: 800; }
+  .festivos-fecha-badge .mes { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; opacity: .85; }
+  .festivos-grupo-contenido { flex: 1 1 auto; min-width: 0; }
+  .festivos-grupo-fecha {
+    display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 12px; color: var(--navy);
+    margin-bottom: 5px; text-transform: capitalize;
+  }
+  .festivos-chip-hoy {
+    background: var(--amber-dark); color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .03em; border-radius: 20px; padding: 1px 8px; flex-shrink: 0;
+  }
+  .festivos-items { display: flex; flex-direction: column; gap: 3px; }
+  .festivos-item {
+    display: flex; align-items: flex-start; gap: 8px; padding: 5px 7px; border-radius: 7px;
+    background: #f6f7fa; font-size: 12px;
+  }
+  .festivos-item.cierre { background: #fceded; }
+  .festivos-item-icon {
+    width: 19px; height: 19px; border-radius: 6px; flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center; background: #e4e8f0; color: var(--navy);
+  }
+  .festivos-item.cierre .festivos-item-icon { background: #f4d4d4; color: #8a3a3a; }
+  .festivos-item-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+  .festivos-item-tag {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--ink-soft);
+  }
+  .festivos-item.cierre .festivos-item-tag { color: #8a3a3a; }
+  .festivos-item-texto { color: var(--ink); line-height: 1.3; }
+  .festivos-item.cierre .festivos-item-texto { color: #8a3a3a; }
+  .festivos-del {
+    background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 2px; margin-top: 1px;
+    border-radius: 5px;
+  }
+  .festivos-del:hover { color: var(--danger); background: #fff; }
+  .festivos-vacio {
+    color: var(--ink-soft); font-size: 13px; text-align: center; padding: 36px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .festivos-vacio svg { color: #c7cdd6; }
+
+  @media (max-width: 700px) {
+    .festivos-filtros { flex-direction: column; align-items: stretch; }
+    .festivos-filtro-busqueda { flex: 0 0 auto; }
+    .festivos-filtro-tipo { justify-content: space-between; }
+    .festivos-filtro-tipo button { flex: 1 1 auto; text-align: center; }
+    .festivos-filtro-fechas { justify-content: space-between; }
+    .festivos-filtro-fechas input[type="date"] { max-width: none; flex: 1 1 auto; }
+  }
+
+  /* ---------- CONFIGURACIÓN: "Emails agencias" ---------- */
+  .emails-config-toolbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
+  .emails-config-busqueda {
+    display: flex; align-items: center; gap: 6px; background: #f6f7fa; border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 11px; flex: 1 1 220px; min-width: 160px; color: var(--ink-soft);
+  }
+  .emails-config-busqueda input {
+    border: none; outline: none; font-size: 12.5px; flex: 1 1 auto; min-width: 0; color: var(--ink); background: none;
+  }
+  .btn-sincronizar-agrupaciones {
+    display: none; align-items: center; gap: 6px; background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  body.es-admin .btn-sincronizar-agrupaciones { display: flex !important; }
+  .btn-sincronizar-agrupaciones:hover { background: #e1e5eb; }
+  .btn-sincronizar-agrupaciones.girando svg { animation: girar-sinc 0.8s linear infinite; }
+  @keyframes girar-sinc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .emails-config-lista { display: flex; flex-direction: column; gap: 8px; }
+  .emails-config-item {
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--panel);
+  }
+  .emails-config-item.nueva { border-color: #e8c675; background: #fffaf1; }
+  .emails-config-item.sinuso { border-color: #e3b2b2; background: #fdf5f5; }
+  .emails-config-cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .emails-config-nombre { font-weight: 700; font-size: 13.5px; color: var(--navy); flex: 1 1 auto; min-width: 0; }
+  .emails-config-badge {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    border-radius: 20px; padding: 2px 9px; flex-shrink: 0;
+  }
+  .emails-config-badge.nueva { background: #f5deA0; color: #7a5417; }
+  .emails-config-badge.sinuso { background: #f4d4d4; color: #8a3a3a; }
+  .emails-config-borrar {
+    display: none; background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 3px;
+    border-radius: 5px;
+  }
+  body.es-admin .emails-config-borrar { display: inline-flex !important; }
+  .emails-config-borrar:hover { color: var(--danger); background: #fff; }
+  .emails-config-campos { display: flex; flex-direction: column; gap: 8px; }
+  .emails-config-campo label {
+    display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--ink-soft); margin-bottom: 3px;
+  }
+  .emails-config-campo input {
+    width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px;
+    font-size: 13px; color: var(--ink); background: #f9fafb;
+  }
+  .emails-config-campo input:disabled { color: var(--ink-soft); cursor: default; }
+  body.es-admin .emails-config-campo input { background: #fff; }
+  body.es-admin .emails-config-campo input:disabled { background: #f9fafb; }
+  .emails-config-pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .emails-config-guardar {
+    display: none; align-items: center; gap: 5px; background: var(--navy); color: #fff; border: none;
+    border-radius: 7px; padding: 6px 13px; font-size: 12px; font-weight: 700;
+  }
+  body.es-admin .emails-config-guardar { display: flex !important; }
+  .emails-config-guardar:hover { background: var(--navy-soft); }
+  .emails-config-guardar:disabled { opacity: .55; cursor: default; }
+  .emails-config-vacio {
+    color: var(--ink-soft); font-size: 13px; text-align: center; padding: 36px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .emails-config-vacio svg { color: #c7cdd6; }
+  .emails-config-solo-lectura {
+    display: flex; align-items: center; gap: 8px; background: #f6f7fa; border: 1px solid var(--line);
+    border-radius: 9px; padding: 9px 12px; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px;
+  }
+  body.es-admin .emails-config-solo-lectura { display: none !important; }
 
   main { flex: 1; padding: 24px 32px; max-width: none; width: 100%; }
 
@@ -678,6 +940,42 @@
 
   .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
 
+  /* ---------- GESTIÓN DE OBSERVACIONES (admin, cualquier día) ---------- */
+  .gestor-form { display: flex; flex-direction: column; gap: 14px; }
+  .gestor-campo label {
+    display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--ink-soft); font-weight: 700; margin-bottom: 6px;
+  }
+  .gestor-campo input[type="date"],
+  .gestor-campo input[type="text"],
+  .gestor-campo textarea {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
+    font-size: 14px; font-family: inherit;
+  }
+  .gestor-campo textarea { min-height: 70px; resize: vertical; }
+  .gestor-tipo-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .gestor-tipo-pill {
+    border: 1px solid var(--line); background: #f6f7f9; border-radius: 20px; padding: 7px 14px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  }
+  .gestor-tipo-pill.activa { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .gestor-tipo-pill:disabled { opacity: .4; cursor: not-allowed; }
+  .gestor-busqueda-wrap { position: relative; }
+  .gestor-busqueda-resultados {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff;
+    border: 1px solid var(--line); border-radius: 8px; max-height: 180px; overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12); z-index: 10;
+  }
+  .gestor-busqueda-item { padding: 8px 11px; font-size: 13px; cursor: pointer; }
+  .gestor-busqueda-item:hover { background: #f0f2f6; }
+  .gestor-busqueda-item .sub { font-size: 11px; color: var(--ink-soft); }
+  .gestor-seleccion-chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #eef1f5; border-radius: 20px;
+    padding: 5px 10px 5px 12px; font-size: 12.5px; font-weight: 600; color: var(--navy);
+  }
+  .gestor-seleccion-chip button { background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 15px; line-height: 1; padding: 0; }
+  .gestor-aviso { font-size: 12px; color: var(--ink-soft); background: #f6f7f9; border-radius: 8px; padding: 8px 10px; }
+
   /* ---------- PERMISOS (admin vs normal) ----------
      A PROPÓSITO al final de la hoja de estilos: en CSS, con la misma
      especificidad, gana la regla que aparece más abajo, y .btn-add-nota /
@@ -692,16 +990,20 @@
      normal sigue viendo el contenido de las notas y los cierres, solo no
      puede crearlos/borrarlos. */
   #btn-nota-dia,
+  #btn-festivos-anadir,
   .btn-add-nota,
   .nota-chip .del,
   .btn-cerrar-tienda,
-  .btn-reabrir {
+  .btn-reabrir,
+  .festivos-del {
     display: none !important;
   }
   body.es-admin #btn-nota-dia { display: flex !important; }
+  body.es-admin #btn-festivos-anadir { display: flex !important; }
   body.es-admin .btn-add-nota { display: flex !important; }
   body.es-admin .nota-chip .del { display: inline-block !important; }
   body.es-admin .btn-cerrar-tienda { display: inline-flex !important; }
+  body.es-admin .festivos-del { display: inline-flex !important; }
   body.es-admin .btn-reabrir { display: inline-block !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -747,6 +1049,11 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">CONTEOS <span>DIARIOS</span></div>
+      <nav class="topbar-nav" id="topbar-nav">
+        <button type="button" class="topbar-nav-item" data-vista="inicio">Inicio</button>
+        <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos</button>
+        <button type="button" class="topbar-nav-item" data-vista="configuracion">Configuración</button>
+      </nav>
       <div class="topbar-fecha" id="topbar-fecha"></div>
       <button class="btn-hoy" onclick="irAHoy()">Hoy</button>
     </header>
@@ -811,7 +1118,11 @@ const METODOS_REMOTOS_ = {
   guardarConteo: 'guardarConteo',
   enviarResumenAgencia: 'enviarResumenAgencia',
   guardarObservacion: 'guardarObservacion',
-  eliminarObservacion: 'eliminarObservacion'
+  eliminarObservacion: 'eliminarObservacion',
+  getAgrupacionesConfig: 'getAgrupacionesConfig',
+  guardarEmailsAgrupacion: 'guardarEmailsAgrupacion',
+  eliminarAgrupacionConfig: 'eliminarAgrupacionConfig',
+  sincronizarAgrupaciones: 'sincronizarAgrupaciones'
 };
 
 function llamarApi_(accion, args) {
@@ -892,6 +1203,7 @@ const DIAS_SEMANA_ES = ['domingo','lunes','martes','miércoles','jueves','vierne
 const DIAS_SEMANA_CORTO_ES = ['D','L','M','X','J','V','S'];
 
 let ESTADO = {
+  vista: null,          // 'inicio' | 'conteos' | 'configuracion'
   fecha: null,          // 'YYYY-MM-DD' seleccionada
   anioMes: null,        // 'YYYY-MM' mostrado en el calendario
   calendarioColapsado: false,
@@ -914,7 +1226,9 @@ function intentarLogin() {
       if (ok) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
-        irAHoy();
+        ESTADO.fecha = hoyStr();
+        ESTADO.anioMes = anioMesDe(ESTADO.fecha);
+        cambiarVista('inicio');
       } else {
         document.getElementById('login-error').style.display = 'block';
       }
@@ -931,6 +1245,13 @@ document.getElementById('login-pass').addEventListener('keydown', function (e) {
 document.getElementById('toggle-pass').addEventListener('click', function () {
   const input = document.getElementById('login-pass');
   input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+/* ---------------- NAVEGACIÓN PRINCIPAL (cabecera) ---------------- */
+// Vive en el HTML estático de la cabecera (no se redibuja con cada día), así
+// que sus listeners se enganchan una sola vez aquí, al cargar la página.
+document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
+  btn.addEventListener('click', function () { cambiarVista(btn.dataset.vista); });
 });
 
 // La PWA siempre arranca en la pantalla de login: SESSION_TOKEN nunca se
@@ -955,9 +1276,632 @@ function irAHoy() {
   ESTADO.fecha = hoyStr();
   ESTADO.anioMes = anioMesDe(ESTADO.fecha);
   ESTADO.colapsadas = new Set();
-  renderShellPrincipal();
-  cargarCalendario();
-  cargarConteoDia();
+  cambiarVista('conteos');
+}
+
+/** Cambia entre las tres secciones de la app (Inicio / Conteos /
+ *  Configuración), marcando la pestaña activa en la cabecera y
+ *  renderizando el contenido correspondiente en <main>. */
+function cambiarVista(vista) {
+  ESTADO.vista = vista;
+  document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
+    btn.classList.toggle('activa', btn.dataset.vista === vista);
+  });
+  document.getElementById('topbar-fecha').style.display = (vista === 'conteos') ? '' : 'none';
+
+  if (vista === 'inicio') {
+    renderVistaInicio();
+  } else if (vista === 'configuracion') {
+    renderVistaConfiguracion();
+  } else {
+    if (!ESTADO.fecha) {
+      ESTADO.fecha = hoyStr();
+      ESTADO.anioMes = anioMesDe(ESTADO.fecha);
+    }
+    renderShellPrincipal();
+    cargarCalendario();
+    cargarConteoDia();
+  }
+}
+
+/** INICIO: página principal tras entrar en la app. De momento un saludo
+ *  y un acceso directo a los conteos de hoy; aquí es donde en el futuro
+ *  irán los mensajes/avisos generales. */
+function renderVistaInicio() {
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="vista-wrap">' +
+      '<div class="vista-card">' +
+        '<h2>Bienvenido</h2>' +
+        '<p>Este es el punto de partida de la app. Próximamente aquí aparecerán los mensajes y avisos generales del equipo.</p>' +
+      '</div>' +
+    '</div>';
+}
+
+/** CONFIGURACIÓN: shell con submenú a la izquierda (más secciones se irán
+ *  añadiendo a CONFIG_SECCIONES) y el contenido de la sección activa a la
+ *  derecha. La primera sección es "Gestión festivos" (antes el único
+ *  punto de "Administración" en la cabecera: añadir cierres/observaciones,
+ *  ahora con un resumen de todo lo guardado). */
+const CONFIG_SECCIONES = [
+  { id: 'festivos', label: 'Gestión festivos' },
+  { id: 'emails', label: 'Emails agencias' }
+  // futuras secciones de Configuración van aquí
+];
+let ESTADO_CONFIG = { seccionActiva: 'festivos' };
+
+function renderVistaConfiguracion() {
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="config-shell">' +
+      '<nav class="config-submenu" id="config-submenu">' +
+        CONFIG_SECCIONES.map(function (s) {
+          return '<button type="button" class="config-submenu-item' + (s.id === ESTADO_CONFIG.seccionActiva ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
+        }).join('') +
+      '</nav>' +
+      '<div class="config-contenido" id="config-contenido"></div>' +
+    '</div>';
+
+  document.querySelectorAll('.config-submenu-item').forEach(function (btn) {
+    btn.onclick = function () { cambiarSeccionConfig(btn.getAttribute('data-seccion')); };
+  });
+
+  renderSeccionConfigActiva();
+}
+
+function cambiarSeccionConfig(id) {
+  ESTADO_CONFIG.seccionActiva = id;
+  document.querySelectorAll('.config-submenu-item').forEach(function (btn) {
+    btn.classList.toggle('activa', btn.getAttribute('data-seccion') === id);
+  });
+  renderSeccionConfigActiva();
+}
+
+function renderSeccionConfigActiva() {
+  if (ESTADO_CONFIG.seccionActiva === 'festivos') renderConfigFestivos();
+  else if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
+}
+
+/* ---------------- GESTIÓN FESTIVOS ----------------
+ * Resumen de todas las notas y cierres de tienda guardados (pasados y
+ * futuros), construido sin necesitar un endpoint nuevo: se recorre mes a
+ * mes con getMesCalendario (que ya trae qué días tienen notas/cierres) y
+ * solo se pide el detalle completo (getConteoDia) de los días marcados.
+ *
+ * Por defecto se muestra 1 mes (navegable con las flechas). Además hay
+ * filtros por texto (tienda/agrupación/contenido), por tipo (cierre u
+ * observación) y, opcionalmente, un rango de fechas personalizado que
+ * sustituye a la navegación mensual mientras esté activo. Los filtros de
+ * texto/tipo se aplican en el cliente sobre los datos ya cargados
+ * (FESTIVOS_ESTADO.datosCache), sin volver a pedir nada al servidor; solo
+ * cambiar de mes o de rango de fechas dispara una nueva carga.
+ */
+let FESTIVOS_ESTADO = {
+  mes: null,            // 'YYYY-MM' mostrado en modo navegación mensual
+  idSolicitud: 0,
+  datosCache: [],        // último resultado crudo de getConteoDia para el rango cargado
+  filtroTexto: '',
+  filtroTipo: 'todos',   // 'todos' | 'cierre' | 'nota'
+  filtroDesde: null,     // 'YYYY-MM-DD' -- si desde+hasta están definidos, sustituye la navegación mensual
+  filtroHasta: null,
+  filtrosAbiertos: false  // si el panel de filtros (oculto tras un icono) está desplegado
+};
+
+function sumarMeses_(anioMes, delta) {
+  const partes = anioMes.split('-').map(Number);
+  let anio = partes[0], mes = partes[1] - 1 + delta;
+  anio += Math.floor(mes / 12);
+  mes = ((mes % 12) + 12) % 12;
+  return anio + '-' + pad2(mes + 1);
+}
+
+function mesesEnRango_(inicio, fin) {
+  const out = [];
+  let cursor = inicio, guard = 0;
+  while (cursor <= fin && guard < 60) {
+    out.push(cursor);
+    cursor = sumarMeses_(cursor, 1);
+    guard++;
+  }
+  return out;
+}
+
+function formatearFechaCorta_(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return d.getDate() + ' ' + MESES_ES[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
+}
+
+function renderConfigFestivos() {
+  if (!FESTIVOS_ESTADO.mes) FESTIVOS_ESTADO.mes = anioMesDe(hoyStr());
+
+  const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Gestión festivos</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-festivos-filtro' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierto' : '') + '" id="btn-festivos-filtro-toggle" title="Filtrar">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>' +
+            '<span class="badge-punto" id="festivos-filtro-badge" style="display:none;"></span>' +
+          '</button>' +
+          '<button type="button" class="btn-anadir-obs" id="btn-festivos-anadir">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+            'Añadir cierre / observación</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Resumen de todas las notas y cierres de tienda guardados, tanto pasados como futuros.</p>' +
+      '<div class="festivos-stats" id="festivos-stats"></div>' +
+      '<div class="festivos-toolbar">' +
+        '<button type="button" class="nav" id="festivos-prev" aria-label="Mes anterior">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+        '<div class="rango-label" id="festivos-rango"></div>' +
+        '<button type="button" class="nav" id="festivos-next" aria-label="Mes siguiente">' +
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
+        '<button type="button" class="btn-hoy-festivos" id="festivos-hoy">Hoy</button>' +
+      '</div>' +
+      '<div class="festivos-filtros' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierta' : '') + '" id="festivos-filtros-panel">' +
+        '<div class="festivos-filtro-busqueda">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+          '<input type="text" id="festivos-buscar" placeholder="Buscar tienda, agrupación o texto…">' +
+        '</div>' +
+        '<div class="festivos-filtro-tipo" id="festivos-filtro-tipo">' +
+          '<button type="button" class="activo" data-tipo="todos">Todos</button>' +
+          '<button type="button" data-tipo="cierre">Cierres</button>' +
+          '<button type="button" data-tipo="nota">Observaciones</button>' +
+        '</div>' +
+        '<div class="festivos-filtro-fechas">' +
+          '<input type="date" id="festivos-desde" aria-label="Desde">' +
+          '<span>—</span>' +
+          '<input type="date" id="festivos-hasta" aria-label="Hasta">' +
+        '</div>' +
+        '<button type="button" class="festivos-filtro-limpiar" id="festivos-limpiar-filtros" title="Quitar todos los filtros">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+          'Limpiar filtros</button>' +
+      '</div>' +
+      '<div id="festivos-lista"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-festivos-anadir').onclick = abrirGestorObservaciones;
+  document.getElementById('btn-festivos-filtro-toggle').onclick = function () {
+    FESTIVOS_ESTADO.filtrosAbiertos = !FESTIVOS_ESTADO.filtrosAbiertos;
+    document.getElementById('festivos-filtros-panel').classList.toggle('abierta', FESTIVOS_ESTADO.filtrosAbiertos);
+    this.classList.toggle('abierto', FESTIVOS_ESTADO.filtrosAbiertos);
+  };
+  document.getElementById('festivos-prev').onclick = function () { desplazarMesFestivos_(-1); };
+  document.getElementById('festivos-next').onclick = function () { desplazarMesFestivos_(1); };
+  document.getElementById('festivos-hoy').onclick = function () {
+    FESTIVOS_ESTADO.mes = anioMesDe(hoyStr());
+    FESTIVOS_ESTADO.filtroDesde = null;
+    FESTIVOS_ESTADO.filtroHasta = null;
+    document.getElementById('festivos-desde').value = '';
+    document.getElementById('festivos-hasta').value = '';
+    cargarFestivos();
+  };
+
+  let temporizadorBusqueda = null;
+  document.getElementById('festivos-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusqueda);
+    const valor = e.target.value;
+    temporizadorBusqueda = setTimeout(function () {
+      FESTIVOS_ESTADO.filtroTexto = valor.trim().toLowerCase();
+      aplicarFiltrosFestivos_();
+    }, 200);
+  });
+
+  document.querySelectorAll('#festivos-filtro-tipo button').forEach(function (btn) {
+    btn.onclick = function () {
+      FESTIVOS_ESTADO.filtroTipo = btn.getAttribute('data-tipo');
+      document.querySelectorAll('#festivos-filtro-tipo button').forEach(function (b) { b.classList.toggle('activo', b === btn); });
+      aplicarFiltrosFestivos_();
+    };
+  });
+
+  document.getElementById('festivos-desde').onchange = actualizarFiltroFechas_;
+  document.getElementById('festivos-hasta').onchange = actualizarFiltroFechas_;
+
+  document.getElementById('festivos-limpiar-filtros').onclick = function () {
+    FESTIVOS_ESTADO.filtroTexto = '';
+    FESTIVOS_ESTADO.filtroTipo = 'todos';
+    FESTIVOS_ESTADO.filtroDesde = null;
+    FESTIVOS_ESTADO.filtroHasta = null;
+    document.getElementById('festivos-buscar').value = '';
+    document.getElementById('festivos-desde').value = '';
+    document.getElementById('festivos-hasta').value = '';
+    document.querySelectorAll('#festivos-filtro-tipo button').forEach(function (b) { b.classList.toggle('activo', b.getAttribute('data-tipo') === 'todos'); });
+    cargarFestivos();
+  };
+
+  cargarFestivos();
+}
+
+function desplazarMesFestivos_(delta) {
+  if (FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta) return; // navegación deshabilitada con rango personalizado
+  FESTIVOS_ESTADO.mes = sumarMeses_(FESTIVOS_ESTADO.mes, delta);
+  cargarFestivos();
+}
+
+function actualizarFiltroFechas_() {
+  const desde = document.getElementById('festivos-desde').value || null;
+  const hasta = document.getElementById('festivos-hasta').value || null;
+  FESTIVOS_ESTADO.filtroDesde = desde;
+  FESTIVOS_ESTADO.filtroHasta = hasta;
+  if (desde && hasta) cargarFestivos(); // rango completo: hace falta volver a pedir los meses que cubre
+  else aplicarFiltrosFestivos_();       // rango incompleto: no cambia lo que hay que cargar, solo se ignora como filtro
+}
+
+function cargarFestivos() {
+  if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'festivos') return;
+  const rangoEl = document.getElementById('festivos-rango');
+  const listaEl = document.getElementById('festivos-lista');
+  if (!rangoEl || !listaEl) return;
+
+  const rangoPersonalizado = !!(FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta);
+
+  rangoEl.textContent = rangoPersonalizado
+    ? formatearFechaCorta_(FESTIVOS_ESTADO.filtroDesde) + ' — ' + formatearFechaCorta_(FESTIVOS_ESTADO.filtroHasta)
+    : MESES_ES[Number(FESTIVOS_ESTADO.mes.slice(5, 7)) - 1] + ' de ' + FESTIVOS_ESTADO.mes.slice(0, 4);
+
+  ['festivos-prev', 'festivos-next', 'festivos-hoy'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = rangoPersonalizado;
+  });
+
+  const idSolicitud = ++FESTIVOS_ESTADO.idSolicitud;
+  listaEl.innerHTML = '<div class="loader">Cargando…</div>';
+  const statsElCarga = document.getElementById('festivos-stats');
+  if (statsElCarga) statsElCarga.innerHTML = '';
+
+  const meses = rangoPersonalizado
+    ? mesesEnRango_(anioMesDe(FESTIVOS_ESTADO.filtroDesde), anioMesDe(FESTIVOS_ESTADO.filtroHasta))
+    : [FESTIVOS_ESTADO.mes];
+
+  Promise.all(meses.map(function (m) { return llamarApi_('getMesCalendario', [m]).catch(function () { return []; }); }))
+    .then(function (resultadosMeses) {
+      const fechas = [];
+      resultadosMeses.forEach(function (dias) {
+        (dias || []).forEach(function (info) {
+          if (info.tieneNotas || info.tieneCierres) fechas.push(info.fecha);
+        });
+      });
+      if (!fechas.length) return [];
+      return Promise.all(fechas.map(function (fecha) {
+        return llamarApi_('getConteoDia', [fecha]).catch(function () { return null; });
+      }));
+    })
+    .then(function (datosDias) {
+      if (idSolicitud !== FESTIVOS_ESTADO.idSolicitud) return; // ya no es la petición vigente
+      FESTIVOS_ESTADO.datosCache = datosDias || [];
+      aplicarFiltrosFestivos_();
+    })
+    .catch(function (err) {
+      if (idSolicitud !== FESTIVOS_ESTADO.idSolicitud) return;
+      listaEl.innerHTML = '<div class="festivos-vacio">No se ha podido cargar la información.</div>';
+      mostrarErrorServidor(err);
+    });
+}
+
+/* Convierte el resultado crudo de getConteoDia en una lista plana de
+ * anotaciones individuales {fecha, tag, tipo, texto, id}, sin agrupar
+ * todavía: agrupar y filtrar se hace después, en aplicarFiltrosFestivos_,
+ * así los filtros de texto/tipo no necesitan volver a tocar el servidor. */
+function aplanarDatosFestivos_(datosDias) {
+  const lista = [];
+  (datosDias || []).forEach(function (data) {
+    if (!data) return;
+    (data.notasGenerales || []).forEach(function (n) {
+      lista.push({ fecha: data.fecha, tag: 'Nota del día', tipo: n.tipo, texto: n.texto, id: n.id });
+    });
+    (data.secciones || []).forEach(function (seccion) {
+      (seccion.notas || []).forEach(function (n) {
+        lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id });
+      });
+      (seccion.tiendas || []).forEach(function (t) {
+        if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'Tienda cerrada', id: t.cierreId });
+      });
+    });
+  });
+  return lista;
+}
+
+function aplicarFiltrosFestivos_() {
+  const listaEl = document.getElementById('festivos-lista');
+  const statsEl = document.getElementById('festivos-stats');
+  if (!listaEl) return;
+
+  let items = aplanarDatosFestivos_(FESTIVOS_ESTADO.datosCache);
+
+  if (FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta) {
+    items = items.filter(function (it) { return it.fecha >= FESTIVOS_ESTADO.filtroDesde && it.fecha <= FESTIVOS_ESTADO.filtroHasta; });
+  }
+  if (FESTIVOS_ESTADO.filtroTipo !== 'todos') {
+    items = items.filter(function (it) { return it.tipo === FESTIVOS_ESTADO.filtroTipo; });
+  }
+  if (FESTIVOS_ESTADO.filtroTexto) {
+    const q = FESTIVOS_ESTADO.filtroTexto;
+    items = items.filter(function (it) {
+      return it.tag.toLowerCase().indexOf(q) !== -1 || it.texto.toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  const porFecha = {};
+  items.forEach(function (it) { (porFecha[it.fecha] = porFecha[it.fecha] || []).push(it); });
+  const grupos = Object.keys(porFecha).sort().map(function (fecha) { return { fecha: fecha, items: porFecha[fecha] }; });
+
+  const hayFiltrosDeContenido = !!FESTIVOS_ESTADO.filtroTexto || FESTIVOS_ESTADO.filtroTipo !== 'todos';
+  const hayFiltrosActivos = hayFiltrosDeContenido || !!(FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta);
+  const badgeEl = document.getElementById('festivos-filtro-badge');
+  if (badgeEl) badgeEl.style.display = hayFiltrosActivos ? 'block' : 'none';
+
+  renderStatsFestivos_(statsEl, grupos);
+  renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido);
+}
+
+function renderStatsFestivos_(statsEl, grupos) {
+  if (!statsEl) return;
+  let totalCierres = 0, totalNotas = 0;
+  grupos.forEach(function (g) {
+    g.items.forEach(function (it) { it.tipo === 'cierre' ? totalCierres++ : totalNotas++; });
+  });
+  statsEl.innerHTML =
+    '<div class="festivos-stat">' +
+      '<span class="icono"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
+      '<span class="txt"><span class="valor">' + grupos.length + '</span><span class="etiqueta">día' + (grupos.length === 1 ? '' : 's') + '</span></span>' +
+    '</div>' +
+    '<div class="festivos-stat cierre">' +
+      '<span class="icono">' + ICONO_CIERRE_ + '</span>' +
+      '<span class="txt"><span class="valor">' + totalCierres + '</span><span class="etiqueta">cierre' + (totalCierres === 1 ? '' : 's') + '</span></span>' +
+    '</div>' +
+    '<div class="festivos-stat nota">' +
+      '<span class="icono">' + ICONO_NOTA_ + '</span>' +
+      '<span class="txt"><span class="valor">' + totalNotas + '</span><span class="etiqueta">nota' + (totalNotas === 1 ? '' : 's') + '</span></span>' +
+    '</div>';
+}
+
+function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
+  if (!grupos.length) {
+    listaEl.innerHTML = hayFiltrosDeContenido
+      ? '<div class="festivos-vacio">' +
+          '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+          '<span>Ningún resultado coincide con los filtros aplicados.</span>' +
+        '</div>'
+      : '<div class="festivos-vacio">' +
+          '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
+          '<span>Sin cierres ni anotaciones guardados en este rango.</span>' +
+        '</div>';
+    return;
+  }
+
+  const hoy = hoyStr();
+  listaEl.innerHTML = '';
+  grupos.forEach(function (g) {
+    const esHoy = g.fecha === hoy;
+    const d = new Date(g.fecha + 'T12:00:00');
+    const div = document.createElement('div');
+    div.className = 'festivos-grupo' + (esHoy ? ' es-hoy' : '');
+    const itemsHtml = g.items.map(function (it) {
+      const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : 'festivos-item';
+      const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : ICONO_NOTA_;
+      const delBtn = it.id
+        ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" title="Eliminar">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
+        : '';
+      return '<div class="' + clase + '">' +
+        '<span class="festivos-item-icon">' + icono + '</span>' +
+        '<div class="festivos-item-body">' +
+          '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
+          '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
+        '</div>' + delBtn + '</div>';
+    }).join('');
+    div.innerHTML =
+      '<div class="festivos-fecha-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +
+      '<div class="festivos-grupo-contenido">' +
+        '<div class="festivos-grupo-fecha">' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) +
+          (esHoy ? '<span class="festivos-chip-hoy">Hoy</span>' : '') +
+        '</div>' +
+        '<div class="festivos-items">' + itemsHtml + '</div>' +
+      '</div>';
+    listaEl.appendChild(div);
+  });
+
+  listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
+    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id')); };
+  });
+}
+
+const ICONO_NOTA_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
+const ICONO_CIERRE_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>';
+
+function eliminarObservacionDesdeFestivos_(id) {
+  llamarApi_('eliminarObservacion', [id])
+    .then(function () {
+      mostrarToast('Eliminado');
+      cargarFestivos();
+    })
+    .catch(mostrarErrorServidor);
+}
+
+/* ---------------- CONFIGURACIÓN: "Emails agencias" ----------------
+ * Lista editable de "Config_Agrupaciones" (nombre de la ruta, notas y
+ * emails de la agencia de transporte), para gestionarla desde la propia
+ * app en vez de tener que abrir la Google Sheet. Cualquier rol puede
+ * consultarla; solo "admin" puede editar, borrar o sincronizar (los
+ * campos e iconos correspondientes se muestran/ocultan vía CSS con la
+ * clase "es-admin" del <body>, igual que el resto de acciones de solo
+ * administrador de la app).
+ */
+let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
+
+function renderConfigEmails() {
+  const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Emails agencias</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+            'Sincronizar con hojas de día</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Emails de la agencia de transporte de cada agrupación (ruta). Se usan al pulsar "Enviar a agencia" en el conteo del día — ya no hace falta abrir la Google Sheet para cambiarlos.</p>' +
+      '<div class="emails-config-solo-lectura">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+        'Solo lectura: entra con la contraseña de administrador para poder editar o borrar.' +
+      '</div>' +
+      '<div class="emails-config-toolbar">' +
+        '<div class="emails-config-busqueda">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+          '<input type="text" id="emails-config-buscar" placeholder="Buscar agrupación o email…">' +
+        '</div>' +
+      '</div>' +
+      '<div id="emails-config-lista"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-sincronizar-agrupaciones').onclick = sincronizarAgrupacionesDesdeApp_;
+
+  let temporizadorBusquedaEmails = null;
+  document.getElementById('emails-config-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusquedaEmails);
+    const valor = e.target.value;
+    temporizadorBusquedaEmails = setTimeout(function () {
+      EMAILS_CONFIG_ESTADO.filtroTexto = valor.trim().toLowerCase();
+      pintarListaEmails_();
+    }, 200);
+  });
+
+  cargarAgrupacionesConfig_();
+}
+
+function cargarAgrupacionesConfig_() {
+  if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
+  llamarApi_('getAgrupacionesConfig', [])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
+      EMAILS_CONFIG_ESTADO.datos = datos || [];
+      pintarListaEmails_();
+    })
+    .catch(function (err) {
+      mostrarErrorServidor(err);
+      const listaEl = document.getElementById('emails-config-lista');
+      if (listaEl) listaEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar la lista.</div>';
+    });
+}
+
+function pintarListaEmails_() {
+  const listaEl = document.getElementById('emails-config-lista');
+  if (!listaEl) return;
+
+  const filtro = EMAILS_CONFIG_ESTADO.filtroTexto;
+  const items = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+    if (!filtro) return true;
+    const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.notas || '')).toLowerCase();
+    return texto.indexOf(filtro) !== -1;
+  });
+
+  if (!items.length) {
+    listaEl.innerHTML =
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        (EMAILS_CONFIG_ESTADO.datos.length ? 'Ninguna agrupación coincide con la búsqueda.' : 'Todavía no hay agrupaciones en Config_Agrupaciones. Usa "Sincronizar con hojas de día" para traerlas.') +
+      '</div>';
+    return;
+  }
+
+  listaEl.innerHTML = items.map(function (it, idx) {
+    const esNueva = /^NUEVA/i.test(it.estado || '');
+    const esSinUso = /^SIN USO/i.test(it.estado || '');
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : ''));
+    const badge = esNueva
+      ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
+      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>' : '');
+    const idSeguro = 'ec' + idx;
+    return (
+      '<div class="' + clase + '">' +
+        '<div class="emails-config-cabecera">' +
+          '<span class="emails-config-nombre">' + escapeHtml(it.agrupacion) + '</span>' +
+          badge +
+          '<button type="button" class="emails-config-borrar" title="Eliminar de la configuración" data-borrar="' + escapeAttr(it.agrupacion) + '">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="emails-config-campos">' +
+          '<div class="emails-config-campo">' +
+            '<label>Emails (separados por comas)</label>' +
+            '<input type="text" id="' + idSeguro + '_emails" value="' + escapeAttr(it.emails.join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '</div>' +
+          '<div class="emails-config-campo">' +
+            '<label>Notas</label>' +
+            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '</div>' +
+        '</div>' +
+        '<div class="emails-config-pie">' +
+          '<button type="button" class="emails-config-guardar" data-guardar="' + escapeAttr(it.agrupacion) + '" data-id="' + idSeguro + '">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>' +
+            'Guardar</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  listaEl.querySelectorAll('[data-guardar]').forEach(function (btn) {
+    btn.onclick = function () { guardarEmailAgrupacion_(btn.getAttribute('data-guardar'), btn.getAttribute('data-id'), btn); };
+  });
+  listaEl.querySelectorAll('[data-borrar]').forEach(function (btn) {
+    btn.onclick = function () { confirmarEliminarAgrupacionConfig_(btn.getAttribute('data-borrar')); };
+  });
+}
+
+function guardarEmailAgrupacion_(agrupacion, idSeguro, btn) {
+  const emailsTexto = document.getElementById(idSeguro + '_emails').value;
+  const notas = document.getElementById(idSeguro + '_notas').value;
+  btn.disabled = true;
+  llamarApi_('guardarEmailsAgrupacion', [agrupacion, emailsTexto, notas])
+    .then(function () {
+      mostrarToast('Emails guardados');
+      cargarAgrupacionesConfig_();
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      mostrarErrorServidor(err);
+    });
+}
+
+function confirmarEliminarAgrupacionConfig_(agrupacion) {
+  appConfirm(
+    'Eliminar de la configuración',
+    '¿Seguro que quieres eliminar "' + agrupacion + '" de Config_Agrupaciones? Si esa agrupación se sigue usando en alguna hoja de día, no se le podrá enviar el resumen por email hasta que vuelvas a añadirla.',
+    function () { eliminarAgrupacionConfig_(agrupacion); }
+  );
+}
+
+function eliminarAgrupacionConfig_(agrupacion) {
+  llamarApi_('eliminarAgrupacionConfig', [agrupacion])
+    .then(function () {
+      mostrarToast('Eliminado');
+      cargarAgrupacionesConfig_();
+    })
+    .catch(mostrarErrorServidor);
+}
+
+function sincronizarAgrupacionesDesdeApp_() {
+  const btn = document.getElementById('btn-sincronizar-agrupaciones');
+  if (btn) { btn.classList.add('girando'); btn.disabled = true; }
+  llamarApi_('sincronizarAgrupaciones', [])
+    .then(function (resultado) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      const nuevas = (resultado && resultado.nuevas) || [];
+      const huerfanas = (resultado && resultado.huerfanas) || [];
+      mostrarToast(!nuevas.length && !huerfanas.length
+        ? 'Todo al día: no hay cambios'
+        : nuevas.length + ' nueva(s), ' + huerfanas.length + ' sin uso');
+      cargarAgrupacionesConfig_();
+    })
+    .catch(function (err) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      mostrarErrorServidor(err);
+    });
 }
 
 function renderShellPrincipal() {
@@ -1120,19 +2064,10 @@ function renderContenidoDia(data) {
   const topbarFecha = document.getElementById('topbar-fecha');
   if (topbarFecha) topbarFecha.textContent = formatearFechaLarga(data.fecha);
 
-  if (data.notasGenerales && data.notasGenerales.length) {
-    const notasWrap = document.createElement('div');
-    notasWrap.className = 'notas-generales';
-    data.notasGenerales.forEach(function (n) {
-      notasWrap.appendChild(crearNotaChip(n));
-    });
-    wrap.appendChild(notasWrap);
-  }
-
   if (!data.dia) {
     const msg = document.createElement('div');
     msg.className = 'sin-conteo-msg';
-    msg.textContent = 'Sin hoja de conteos configurada para el SABADO, pasa a la del DOMINGO';
+    msg.textContent = 'Este día de la semana no tiene hoja de conteo. Puedes añadir una nota si necesitas dejar constancia de algo.';
     wrap.appendChild(msg);
   } else if (!data.secciones.length) {
     const msg = document.createElement('div');
@@ -2025,8 +2960,13 @@ function guardarObservacionYRecargar(obs) {
   google.script.run
     .withSuccessHandler(function () {
       mostrarToast('Guardado');
-      cargarConteoDia();
-      cargarCalendario();
+      if (document.getElementById('dia-contenido')) {
+        cargarConteoDia();
+        cargarCalendario();
+      }
+      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') {
+        cargarFestivos();
+      }
     })
     .withFailureHandler(mostrarErrorServidor)
     .guardarObservacion(obs);
@@ -2042,6 +2982,288 @@ function eliminarObservacionYRecargar(id) {
     .withFailureHandler(mostrarErrorServidor)
     .eliminarObservacion(id);
 }
+
+/* ---------------- GESTOR DE OBSERVACIONES (admin, cualquier día) ----------------
+ * Permite crear notas generales, notas de agrupación o cierres de tienda
+ * para CUALQUIER fecha desde un único modal, sin tener que navegar antes
+ * hasta ese día. La lista de agrupaciones/tiendas para buscar se obtiene
+ * reutilizando getConteoDia(fecha) (la misma llamada que ya usa el día
+ * normal), porque la hoja de conteo que aplica depende del día de la
+ * semana de la fecha elegida.
+ */
+let GESTOR_OBS = { fecha: null, datosDia: null, tipo: 'general', seleccion: null };
+
+function abrirGestorObservaciones() {
+  GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null };
+
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Añadir observación';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML = '';
+  custom.appendChild(crearFormularioGestorObs_());
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = guardarDesdeGestorObs_;
+
+  cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
+}
+
+function crearFormularioGestorObs_() {
+  const wrap = document.createElement('div');
+  wrap.className = 'gestor-form';
+  wrap.innerHTML =
+    '<div class="gestor-campo">' +
+      '<label>Fecha</label>' +
+      '<input type="date" id="gestor-fecha" value="' + GESTOR_OBS.fecha + '">' +
+    '</div>' +
+    '<div class="gestor-campo">' +
+      '<label>Tipo</label>' +
+      '<div class="gestor-tipo-pills">' +
+        '<button type="button" class="gestor-tipo-pill activa" data-tipo="general">Nota del día</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="agrupacion">Nota de agrupación</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="cierre">Cerrar tienda</button>' +
+      '</div>' +
+      '<div class="gestor-aviso" id="gestor-aviso-dia" style="display:none;margin-top:8px;">Ese día de la semana no tiene hoja de conteo: solo se puede añadir una nota general.</div>' +
+    '</div>' +
+    '<div class="gestor-campo" id="gestor-busqueda-campo" style="display:none;">' +
+      '<label id="gestor-busqueda-label">Agrupación</label>' +
+      '<div class="gestor-busqueda-wrap">' +
+        '<input type="text" id="gestor-busqueda" placeholder="Escribe para buscar…" autocomplete="off">' +
+        '<div class="gestor-busqueda-resultados" id="gestor-busqueda-resultados" style="display:none;"></div>' +
+      '</div>' +
+      '<div id="gestor-seleccion-actual" style="margin-top:8px;"></div>' +
+    '</div>' +
+    '<div class="gestor-campo" id="gestor-estado-carga" style="display:none;">' +
+      '<div class="gestor-aviso">Cargando agrupaciones de ese día…</div>' +
+    '</div>' +
+    '<div class="gestor-campo">' +
+      '<label id="gestor-texto-label">Nota</label>' +
+      '<textarea id="gestor-texto" placeholder="Escribe la nota general del día…"></textarea>' +
+    '</div>';
+
+  wrap.querySelector('#gestor-fecha').addEventListener('change', function (e) {
+    if (!e.target.value) return;
+    GESTOR_OBS.fecha = e.target.value;
+    GESTOR_OBS.datosDia = null;
+    GESTOR_OBS.seleccion = null;
+    document.getElementById('gestor-busqueda').value = '';
+    actualizarSeleccionGestorObs_();
+    cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
+  });
+
+  wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (btn) {
+    btn.onclick = function () {
+      if (btn.disabled) return;
+      wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (b) { b.classList.remove('activa'); });
+      btn.classList.add('activa');
+      GESTOR_OBS.tipo = btn.getAttribute('data-tipo');
+      GESTOR_OBS.seleccion = null;
+      actualizarFormularioSegunTipo_();
+    };
+  });
+
+  const inputBusqueda = wrap.querySelector('#gestor-busqueda');
+  inputBusqueda.addEventListener('input', function () {
+    GESTOR_OBS.seleccion = null;
+    actualizarSeleccionGestorObs_();
+    renderResultadosBusquedaGestorObs_(inputBusqueda.value);
+  });
+  inputBusqueda.addEventListener('focus', function () {
+    renderResultadosBusquedaGestorObs_(inputBusqueda.value);
+  });
+
+  return wrap;
+}
+
+/** Ajusta el formulario (buscador visible/oculto, etiquetas) según el tipo elegido. */
+function actualizarFormularioSegunTipo_() {
+  const campoBusqueda = document.getElementById('gestor-busqueda-campo');
+  const label = document.getElementById('gestor-busqueda-label');
+  const textoLabel = document.getElementById('gestor-texto-label');
+  const textoArea = document.getElementById('gestor-texto');
+  const inputBusqueda = document.getElementById('gestor-busqueda');
+  if (!campoBusqueda) return;
+
+  if (GESTOR_OBS.tipo === 'general') {
+    campoBusqueda.style.display = 'none';
+    textoLabel.textContent = 'Nota';
+    textoArea.placeholder = 'Escribe la nota general del día…';
+  } else if (GESTOR_OBS.tipo === 'agrupacion') {
+    campoBusqueda.style.display = 'block';
+    label.textContent = 'Agrupación';
+    inputBusqueda.placeholder = 'Busca una agrupación…';
+    textoLabel.textContent = 'Nota';
+    textoArea.placeholder = 'Escribe la nota para esta agrupación…';
+  } else {
+    campoBusqueda.style.display = 'block';
+    label.textContent = 'Tienda';
+    inputBusqueda.placeholder = 'Busca una tienda…';
+    textoLabel.textContent = 'Motivo del cierre';
+    textoArea.placeholder = 'Ej. "Tienda cerrada, no se da a agencia"…';
+  }
+  document.getElementById('gestor-busqueda-resultados').style.display = 'none';
+  actualizarSeleccionGestorObs_();
+}
+
+/** Muestra el chip de la agrupación/tienda ya elegida, con opción de quitarla. */
+function actualizarSeleccionGestorObs_() {
+  const cont = document.getElementById('gestor-seleccion-actual');
+  if (!cont) return;
+  if (!GESTOR_OBS.seleccion) { cont.innerHTML = ''; return; }
+  const texto = GESTOR_OBS.tipo === 'cierre'
+    ? GESTOR_OBS.seleccion.tienda + ' (' + GESTOR_OBS.seleccion.agrupacion + ')'
+    : GESTOR_OBS.seleccion.agrupacion;
+  cont.innerHTML = '<span class="gestor-seleccion-chip">' + escapeHtml(texto) + '<button type="button" id="gestor-quitar-seleccion">×</button></span>';
+  document.getElementById('gestor-quitar-seleccion').onclick = function () {
+    GESTOR_OBS.seleccion = null;
+    document.getElementById('gestor-busqueda').value = '';
+    actualizarSeleccionGestorObs_();
+  };
+}
+
+/** Carga (o recarga, al cambiar de fecha) las agrupaciones/tiendas de ese día. */
+function cargarDatosDiaGestorObs_(fecha) {
+  const carga = document.getElementById('gestor-estado-carga');
+  if (carga) carga.style.display = 'flex';
+  google.script.run
+    .withSuccessHandler(function (data) {
+      if (fecha !== GESTOR_OBS.fecha) return; // la fecha ya cambió mientras se cargaba
+      GESTOR_OBS.datosDia = data;
+      if (carga) carga.style.display = 'none';
+
+      const sinDia = !data.dia;
+      const pillAgr = document.querySelector('.gestor-tipo-pill[data-tipo="agrupacion"]');
+      const pillCierre = document.querySelector('.gestor-tipo-pill[data-tipo="cierre"]');
+      const aviso = document.getElementById('gestor-aviso-dia');
+      if (pillAgr) pillAgr.disabled = sinDia;
+      if (pillCierre) pillCierre.disabled = sinDia;
+      if (aviso) aviso.style.display = sinDia ? 'block' : 'none';
+
+      if (sinDia && GESTOR_OBS.tipo !== 'general') {
+        GESTOR_OBS.tipo = 'general';
+        document.querySelectorAll('.gestor-tipo-pill').forEach(function (b) {
+          b.classList.toggle('activa', b.getAttribute('data-tipo') === 'general');
+        });
+      }
+      actualizarFormularioSegunTipo_();
+    })
+    .withFailureHandler(function (err) {
+      if (carga) carga.style.display = 'none';
+      mostrarErrorServidor(err);
+    })
+    .getConteoDia(fecha);
+}
+
+/** Filtra agrupaciones o tiendas (según el tipo elegido) y pinta el desplegable de resultados. */
+function renderResultadosBusquedaGestorObs_(query) {
+  const cont = document.getElementById('gestor-busqueda-resultados');
+  if (!cont) return;
+
+  if (!GESTOR_OBS.datosDia) {
+    cont.innerHTML = '<div class="gestor-busqueda-item">Cargando…</div>';
+    cont.style.display = 'block';
+    return;
+  }
+
+  const q = String(query || '').trim().toLowerCase();
+  let items = [];
+  const secciones = GESTOR_OBS.datosDia.secciones || [];
+
+  if (GESTOR_OBS.tipo === 'agrupacion') {
+    items = secciones
+      .map(function (s) { return { label: s.nombre, agrupacion: s.nombre }; })
+      .filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1; });
+  } else if (GESTOR_OBS.tipo === 'cierre') {
+    secciones.forEach(function (s) {
+      (s.tiendas || []).forEach(function (t) {
+        if (t.cerrada) return; // ya cerrada: no tiene sentido volver a cerrarla
+        const coincide = !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
+        if (coincide) items.push({ label: t.nombre, sub: s.nombre, agrupacion: s.nombre, tienda: t.nombre });
+      });
+    });
+  }
+
+  items = items.slice(0, 8);
+
+  if (!items.length) {
+    cont.innerHTML = '<div class="gestor-busqueda-item">Sin resultados</div>';
+    cont.style.display = 'block';
+    return;
+  }
+
+  cont.innerHTML = items.map(function (it, i) {
+    return '<div class="gestor-busqueda-item" data-idx="' + i + '">' + escapeHtml(it.label) +
+      (it.sub ? '<div class="sub">' + escapeHtml(it.sub) + '</div>' : '') + '</div>';
+  }).join('');
+  cont.style.display = 'block';
+
+  cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
+    el.onclick = function () {
+      const it = items[Number(el.getAttribute('data-idx'))];
+      GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre'
+        ? { agrupacion: it.agrupacion, tienda: it.tienda }
+        : { agrupacion: it.agrupacion };
+      document.getElementById('gestor-busqueda').value = it.label;
+      cont.style.display = 'none';
+      actualizarSeleccionGestorObs_();
+    };
+  });
+}
+
+/** Valida el formulario y guarda la observación (nota general, de agrupación o cierre). */
+function guardarDesdeGestorObs_() {
+  const fecha = GESTOR_OBS.fecha;
+  if (!fecha) { mostrarToast('Elige una fecha', true); return; }
+
+  const texto = (document.getElementById('gestor-texto').value || '').trim();
+  if (!texto) { document.getElementById('gestor-texto').focus(); return; }
+
+  const obs = {
+    fecha: fecha,
+    dia: (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.dia) || '',
+    agrupacion: '', tienda: '', tipo: 'nota', texto: texto
+  };
+
+  if (GESTOR_OBS.tipo === 'agrupacion') {
+    if (!GESTOR_OBS.seleccion) { mostrarToast('Busca y selecciona una agrupación', true); return; }
+    obs.agrupacion = GESTOR_OBS.seleccion.agrupacion;
+  } else if (GESTOR_OBS.tipo === 'cierre') {
+    if (!GESTOR_OBS.seleccion) { mostrarToast('Busca y selecciona una tienda', true); return; }
+    obs.agrupacion = GESTOR_OBS.seleccion.agrupacion;
+    obs.tienda = GESTOR_OBS.seleccion.tienda;
+    obs.tipo = 'cierre';
+  }
+
+  cerrarModal();
+  google.script.run
+    .withSuccessHandler(function () {
+      mostrarToast('Guardado');
+      if (document.getElementById('calendar-body')) cargarCalendario();
+      if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') cargarFestivos();
+    })
+    .withFailureHandler(mostrarErrorServidor)
+    .guardarObservacion(obs);
+}
+
+// Cierra el desplegable de resultados de búsqueda del gestor si se hace clic
+// fuera de él. Se registra una única vez (no dentro de cada apertura del
+// modal) para no acumular listeners repetidos en el documento.
+document.addEventListener('click', function (e) {
+  const res = document.getElementById('gestor-busqueda-resultados');
+  if (res && res.style.display !== 'none' && !e.target.closest('.gestor-busqueda-wrap')) {
+    res.style.display = 'none';
+  }
+});
 
 /* ---------------- UI HELPERS ---------------- */
 function escapeHtml(s) {
@@ -2342,7 +3564,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.4';
+  const APP_VERSION_ACTUAL = '1.1.5';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
