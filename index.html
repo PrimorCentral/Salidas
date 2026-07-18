@@ -103,6 +103,26 @@
     text-align: center; font-size: 11.5px; color: var(--ink-soft); margin-top: 20px; opacity: .8;
   }
 
+  /* ---------- PERMISOS (admin vs normal) ----------
+     Se oculta con display:none por defecto y solo se muestra cuando
+     <body> tiene la clase "es-admin" (la pone aplicarPermisosUI() tras
+     un login correcto, según el rol devuelto por el backend). Cubre:
+     nota del día, nota de agrupación, borrar nota, cerrar tienda y
+     reabrir tienda. El usuario normal sigue viendo el contenido de las
+     notas y los cierres, solo no puede crearlos/borrarlos. */
+  #btn-nota-dia,
+  .btn-add-nota,
+  .nota-chip .del,
+  .btn-cerrar-tienda,
+  .btn-reabrir {
+    display: none;
+  }
+  body.es-admin #btn-nota-dia { display: flex; }
+  body.es-admin .btn-add-nota { display: flex; }
+  body.es-admin .nota-chip .del { display: inline-block; }
+  body.es-admin .btn-cerrar-tienda { display: inline-flex; }
+  body.es-admin .btn-reabrir { display: inline-block; }
+
   /* ---------- APP SHELL ---------- */
   #app { display: none; min-height: 100vh; flex-direction: column; }
   header.topbar {
@@ -706,6 +726,21 @@ const TOKEN_STORAGE_KEY = 'conteos_diarios_token';
 // la app), aunque dentro de la misma sesión abierta el token siga viviendo
 // en memoria para no tener que reintroducir la contraseña en cada llamada.
 let SESSION_TOKEN = null;
+// Rol de la sesión actual: 'admin' | 'normal' | null (aún sin login). Solo
+// el rol "admin" puede crear/borrar notas y cerrar/reabrir tiendas; se
+// guarda igual que el token, solo en memoria (no en localStorage).
+let SESSION_ROL = null;
+
+/** true si la sesión actual es de administrador. Se usa para mostrar u
+ *  ocultar en el momento los controles de notas/observaciones/cierres. */
+function esAdmin() { return SESSION_ROL === 'admin'; }
+
+/** Añade/quita la clase 'es-admin' en <body>, que es lo que la CSS usa
+ *  para mostrar u ocultar los botones de solo-admin (ver reglas
+ *  "body:not(.es-admin) ..." en el <style>). */
+function aplicarPermisosUI() {
+  document.body.classList.toggle('es-admin', esAdmin());
+}
 
 // Nombre usado en el frontend -> nombre de la acción que entiende el backend.
 // (checkPassword se traduce a 'login', que es quien genera el token de sesión.)
@@ -744,6 +779,8 @@ function llamarApi_(accion, args) {
 function volverALogin_() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  SESSION_ROL = null;
+  document.body.classList.remove('es-admin');
   mostrarToast('Sesión caducada, vuelve a entrar', true);
 }
 
@@ -762,8 +799,11 @@ const google = {
                   .then(function (resultado) {
                     if (nombreLocal === 'checkPassword') {
                       // Si llega aquí es que la contraseña era correcta:
-                      // el backend devuelve un token en vez de true/false.
-                      SESSION_TOKEN = resultado;
+                      // el backend ahora devuelve { token, rol } en vez de
+                      // solo el token.
+                      SESSION_TOKEN = resultado.token;
+                      SESSION_ROL = resultado.rol;
+                      aplicarPermisosUI();
                       onSuccess(true);
                     } else {
                       onSuccess(resultado);
