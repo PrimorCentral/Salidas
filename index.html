@@ -103,26 +103,6 @@
     text-align: center; font-size: 11.5px; color: var(--ink-soft); margin-top: 20px; opacity: .8;
   }
 
-  /* ---------- PERMISOS (admin vs normal) ----------
-     Se oculta con display:none por defecto y solo se muestra cuando
-     <body> tiene la clase "es-admin" (la pone aplicarPermisosUI() tras
-     un login correcto, según el rol devuelto por el backend). Cubre:
-     nota del día, nota de agrupación, borrar nota, cerrar tienda y
-     reabrir tienda. El usuario normal sigue viendo el contenido de las
-     notas y los cierres, solo no puede crearlos/borrarlos. */
-  #btn-nota-dia,
-  .btn-add-nota,
-  .nota-chip .del,
-  .btn-cerrar-tienda,
-  .btn-reabrir {
-    display: none;
-  }
-  body.es-admin #btn-nota-dia { display: flex; }
-  body.es-admin .btn-add-nota { display: flex; }
-  body.es-admin .nota-chip .del { display: inline-block; }
-  body.es-admin .btn-cerrar-tienda { display: inline-flex; }
-  body.es-admin .btn-reabrir { display: inline-block; }
-
   /* ---------- APP SHELL ---------- */
   #app { display: none; min-height: 100vh; flex-direction: column; }
   header.topbar {
@@ -645,6 +625,32 @@
   #toast.error { background: var(--danger); }
 
   .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
+
+  /* ---------- PERMISOS (admin vs normal) ----------
+     A PROPÓSITO al final de la hoja de estilos: en CSS, con la misma
+     especificidad, gana la regla que aparece más abajo, y .btn-add-nota /
+     .btn-cerrar-tienda / .btn-reabrir ya tienen su propio "display" definido
+     más arriba (para su aspecto normal). Puesto aquí + !important, esto
+     manda siempre por encima de esas reglas, esté donde esté cada una.
+
+     Oculto por defecto; solo se muestra cuando <body> tiene la clase
+     "es-admin" (la pone aplicarPermisosUI() tras un login correcto, según
+     el rol que devuelve el backend). Cubre: nota del día, nota de
+     agrupación, borrar nota, cerrar tienda y reabrir tienda. El usuario
+     normal sigue viendo el contenido de las notas y los cierres, solo no
+     puede crearlos/borrarlos. */
+  #btn-nota-dia,
+  .btn-add-nota,
+  .nota-chip .del,
+  .btn-cerrar-tienda,
+  .btn-reabrir {
+    display: none !important;
+  }
+  body.es-admin #btn-nota-dia { display: flex !important; }
+  body.es-admin .btn-add-nota { display: flex !important; }
+  body.es-admin .nota-chip .del { display: inline-block !important; }
+  body.es-admin .btn-cerrar-tienda { display: inline-flex !important; }
+  body.es-admin .btn-reabrir { display: inline-block !important; }
 </style>
 </head>
 <body>
@@ -2094,7 +2100,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.2';
+  const APP_VERSION_ACTUAL = '1.1.3';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
