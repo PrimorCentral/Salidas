@@ -579,6 +579,41 @@
   .modal-confirm { background: var(--navy); color: #fff; }
   .modal-confirm.danger { background: var(--danger); }
 
+  /* ---------- Modal "Enviar a agencia" ---------- */
+  .modal-envio-resumen {
+    background: #f6f7f9; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .modal-envio-fila { display: flex; align-items: center; justify-content: space-between; font-size: 13.5px; }
+  .modal-envio-fila span { color: var(--ink-soft); }
+  .modal-envio-fila strong { color: var(--ink); font-weight: 700; }
+  .modal-envio-aviso, .modal-envio-ok {
+    display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.45;
+    border-radius: 8px; padding: 9px 11px; margin-bottom: 12px;
+  }
+  .modal-envio-aviso { background: #fdf6ea; color: var(--amber-dark); }
+  .modal-envio-aviso svg { flex-shrink: 0; margin-top: 1px; }
+  .modal-envio-ok { background: #eaf7ef; color: #1f7a45; }
+  .modal-envio-ok svg { flex-shrink: 0; margin-top: 1px; }
+  .modal-envio-nota { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; margin: 0; }
+
+  .modal-cargando {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 18px 0 6px; text-align: center;
+  }
+  .modal-cargando span:last-child { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .spinner-navy {
+    width: 30px; height: 30px; border-radius: 50%; border: 3px solid #e3e7ee;
+    border-top-color: var(--navy); animation: girar .7s linear infinite; display: block;
+  }
+  .modal-resultado {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 14px 0 6px; text-align: center; font-size: 14px; font-weight: 600;
+  }
+  .modal-resultado.exito { color: #1f7a45; }
+  .modal-resultado.error { color: var(--danger); }
+  .modal-resultado svg { flex-shrink: 0; }
+
   /* Toast */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -643,6 +678,7 @@
     <div class="modal-box">
       <h3 id="modal-title"></h3>
       <p id="modal-text"></p>
+      <div id="modal-custom" style="display:none;"></div>
       <textarea id="modal-textarea" style="display:none;" placeholder="Escribe aquí…"></textarea>
       <div class="modal-actions" id="modal-actions"></div>
     </div>
@@ -1404,29 +1440,60 @@ function crearSeccionPanel(seccion, dia, fecha) {
   if (btnHeaderEnviar) {
     btnHeaderEnviar.onclick = function (e) {
       e.stopPropagation();
-      appConfirm(
-        'Enviar resumen',
-        'Se guardarán los datos y se enviará un email con el resumen de totales a la agencia de "' + seccion.nombre + '". ¿Continuar?',
-        function () { enviarSeccion(); }
-      );
+      mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
+        enviarSeccion(callback);
+      });
     };
   }
 
-  function enviarSeccion() {
+  /** Recopila, en vivo desde los inputs actuales, los datos para el modal de envío. */
+  function calcularResumenEnvio() {
+    let totalTiendas = 0;
+    let tiendasConDatos = 0;
+    const pendientes = [];
+    tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada')) return;
+      totalTiendas++;
+      const totalInput = tr.querySelector('input[data-campo="total"]');
+      const valor = totalInput ? parseFloat(totalInput.value) : NaN;
+      if (!isNaN(valor) && valor > 0) tiendasConDatos++;
+      else pendientes.push(tr.getAttribute('data-nombre') || '');
+    });
+    let totalPalets = 0;
+    tableWrap.querySelectorAll('input.celda-total').forEach(function (inp) {
+      const v = parseFloat(inp.value);
+      if (!isNaN(v)) totalPalets += v;
+    });
+    return {
+      nombre: seccion.nombre,
+      fechaTexto: formatearFechaLarga(fecha),
+      totalTiendas: totalTiendas,
+      tiendasConDatos: tiendasConDatos,
+      pendientes: pendientes,
+      totalPalets: totalPalets
+    };
+  }
+
+  function enviarSeccion(callback) {
     const btnEnviar = header.querySelector('.btn-header-enviar');
     btnEnviar.disabled = true;
     // Guarda inmediatamente (sin esperar el debounce) y, si todo va bien, envía.
     autoguardarSeccion(function (ok) {
-      if (!ok) { btnEnviar.disabled = false; return; }
+      if (!ok) {
+        btnEnviar.disabled = false;
+        if (callback) callback(false, 'No se han podido guardar los datos. Inténtalo de nuevo.');
+        return;
+      }
       google.script.run
         .withSuccessHandler(function (res) {
-          mostrarToast('Enviado a: ' + res.enviadoA.join(', ') + ' — campos vaciados para la próxima semana');
+          btnEnviar.disabled = false;
           cargarConteoDia();
           cargarCalendario();
+          if (callback) callback(true, 'Enviado a: ' + res.enviadoA.join(', '));
         })
         .withFailureHandler(function (err) {
           btnEnviar.disabled = false;
-          mostrarErrorServidor(err);
+          if (callback) callback(false, (err && err.message) ? err.message : String(err));
         })
         .enviarResumenAgencia(dia, seccion.nombre, fecha);
     });
@@ -1749,6 +1816,8 @@ function appConfirm(titulo, texto, onConfirm) {
   document.getElementById('modal-text').textContent = texto;
   document.getElementById('modal-text').style.display = 'block';
   document.getElementById('modal-textarea').style.display = 'none';
+  document.getElementById('modal-custom').style.display = 'none';
+  document.getElementById('modal-custom').innerHTML = '';
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
@@ -1761,6 +1830,8 @@ function appConfirm(titulo, texto, onConfirm) {
 function appPrompt(titulo, placeholder, onSubmit) {
   document.getElementById('modal-title').textContent = titulo;
   document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-custom').style.display = 'none';
+  document.getElementById('modal-custom').innerHTML = '';
   const textarea = document.getElementById('modal-textarea');
   textarea.value = '';
   textarea.placeholder = placeholder || '';
@@ -1778,6 +1849,91 @@ function appPrompt(titulo, placeholder, onSubmit) {
     onSubmit(texto);
   };
   setTimeout(function () { textarea.focus(); }, 50);
+}
+
+/**
+ * Modal informativo de "Enviar a agencia": muestra un resumen (tiendas,
+ * total de palets, tiendas sin datos todavía) antes de confirmar, y luego
+ * pasa a un estado "Enviando…" con spinner mientras se guarda y se manda
+ * el email, terminando en un estado de éxito (se cierra solo) o de error
+ * (se puede reintentar/cerrar).
+ *
+ * datos: { nombre, fechaTexto, totalTiendas, tiendasConDatos, pendientes, totalPalets }
+ * onConfirmar: function(callback) — hace el guardado + envío real y llama a
+ *              callback(true) si fue bien, o callback(false, mensajeError) si no.
+ */
+function mostrarModalEnviarAgencia(datos, onConfirmar) {
+  document.getElementById('modal-title').textContent = 'Enviar resumen a agencia';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  const filaAviso = datos.pendientes.length
+    ? '<div class="modal-envio-aviso">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+        '<span>' + datos.pendientes.length + ' tienda(s) sin datos todavía: ' + escapeHtml(datos.pendientes.map(quitarCodigoTienda).join(', ')) + '</span>' +
+      '</div>'
+    : '<div class="modal-envio-ok">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' +
+        '<span>Todas las tiendas tienen datos introducidos</span>' +
+      '</div>';
+
+  custom.innerHTML =
+    '<div class="modal-envio-resumen">' +
+      '<div class="modal-envio-fila"><span>Agrupación</span><strong>' + escapeHtml(datos.nombre) + '</strong></div>' +
+      '<div class="modal-envio-fila"><span>Fecha</span><strong>' + escapeHtml(datos.fechaTexto) + '</strong></div>' +
+      '<div class="modal-envio-fila"><span>Tiendas</span><strong>' + datos.tiendasConDatos + ' / ' + datos.totalTiendas + ' con datos</strong></div>' +
+      '<div class="modal-envio-fila"><span>Total palets</span><strong>' + datos.totalPalets + '</strong></div>' +
+    '</div>' +
+    filaAviso +
+    '<p class="modal-envio-nota">Se guardarán los datos actuales y se enviará un email con el resumen de totales a la agencia configurada para esta agrupación. Después, los campos se vaciarán para empezar en blanco la próxima semana.</p>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Enviar a agencia</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    mostrarModalCargando('Enviando correo a la agencia, espere por favor…');
+    onConfirmar(function (ok, mensaje) {
+      mostrarModalResultadoEnvio(ok, mensaje);
+    });
+  };
+}
+
+/** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
+function mostrarModalCargando(texto) {
+  document.getElementById('modal-title').textContent = '';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-cargando"><span class="spinner-navy"></span><span>' + escapeHtml(texto) + '</span></div>';
+  document.getElementById('modal-actions').innerHTML = '';
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+/** Estado final tras el envío: éxito (se cierra solo) o error (queda un botón para cerrar/reintentar). */
+function mostrarModalResultadoEnvio(ok, mensaje) {
+  const custom = document.getElementById('modal-custom');
+  custom.innerHTML =
+    '<div class="modal-resultado ' + (ok ? 'exito' : 'error') + '">' +
+    (ok
+      ? '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>'
+      : '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>') +
+    '<span>' + escapeHtml(mensaje) + '</span>' +
+    '</div>';
+  if (ok) {
+    setTimeout(cerrarModal, 1300);
+  } else {
+    const actions = document.getElementById('modal-actions');
+    actions.innerHTML = '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>';
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  }
 }
 
 function cerrarModal() { document.getElementById('modal-overlay').style.display = 'none'; }
