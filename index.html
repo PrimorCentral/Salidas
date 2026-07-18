@@ -1556,18 +1556,28 @@ function badgeEstado(seccion) {
 
 /**
  * Fila-cabecera de un grupo de rutas: aparece UNA sola vez, justo encima de
- * la primera tienda del grupo, con los nombres de todas las tiendas que
- * comparten esa ruta y el chip con el contador en vivo (antes se repetía
- * la misma nota "8P MAX. POR RUTA — x/8" en cada tienda del grupo).
+ * la primera tienda del grupo. Dos variantes, según t.notaGrupoTipo:
+ *
+ *  - Ruta normal (tipo null, ej. "8P MAX. POR RUTA"): a la izquierda los
+ *    nombres de las tiendas que comparten esa ruta, a la derecha el chip
+ *    con el contador en vivo "texto — x/8" (comportamiento de siempre).
+ *  - Total informativo (tipo 'total', ej. "TOTAL LISBOA"): a la izquierda
+ *    se muestra la descripción tal cual la escribiste en el Excel (no la
+ *    lista de tiendas), y a la derecha el chip con la suma de palets en
+ *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
+ *    información visual).
  */
 function filaGrupoHeaderHtml(t, nombresGrupo) {
+  const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
-  return '<tr class="fila-grupo-header" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '">' +
+  const textoIzquierda = esTotal ? t.nota : tiendas;
+  const chipInicial = esTotal ? '0 palets' : t.nota;
+  return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
     '<td colspan="8">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
-    '<span class="grupo-header-tiendas">' + escapeHtml(tiendas) + '</span>' +
-    '<span class="grupo-header-chip" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</span>' +
+    '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +
+    '<span class="grupo-header-chip' + (esTotal ? ' grupo-header-chip-total' : '') + '" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(chipInicial) + '</span>' +
     '</div></td></tr>';
 }
 
@@ -1604,10 +1614,10 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
     : '';
   const atrGrupo = t.notaGrupoId
-    ? ' data-nota-grupo="' + escapeAttr(t.notaGrupoId) + '" data-nota-limite="' + (t.notaLimite != null ? t.notaLimite : '') + '"'
+    ? ' data-nota-grupo="' + escapeAttr(t.notaGrupoId) + '" data-nota-limite="' + (t.notaLimite != null ? t.notaLimite : '') + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '"'
     : '';
   const claseGrupo = t.notaGrupoId
-    ? ' fila-grupo-ruta' + (esPrimeraDeGrupo ? ' fila-grupo-primera' : '') + (esUltimaDeGrupo ? ' fila-grupo-ultima' : '')
+    ? ' fila-grupo-ruta' + (t.notaGrupoTipo === 'total' ? ' fila-grupo-total' : '') + (esPrimeraDeGrupo ? ' fila-grupo-primera' : '') + (esUltimaDeGrupo ? ' fila-grupo-ultima' : '')
     : '';
   if (t.cerrada) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
@@ -1739,6 +1749,7 @@ function attachValidacionGrupos(tableWrap) {
     const filas = grupos[id];
     const limiteStr = filas[0].getAttribute('data-nota-limite');
     const limite = limiteStr ? Number(limiteStr) : null;
+    const esTotal = filas[0].getAttribute('data-nota-grupo-tipo') === 'total';
     const headerRow = tableWrap.querySelector('tr[data-nota-grupo-header="' + id + '"]');
     const chip = headerRow ? headerRow.querySelector('.grupo-header-chip') : null;
 
@@ -1750,19 +1761,25 @@ function attachValidacionGrupos(tableWrap) {
         if (!isNaN(v)) suma += v;
       });
 
-      filas.forEach(function (tr) {
-        tr.classList.remove('fila-grupo-aviso', 'fila-grupo-alerta');
-        if (limite) {
-          if (suma > limite) tr.classList.add('fila-grupo-alerta');
-          else if (suma === limite) tr.classList.add('fila-grupo-aviso');
-        }
-      });
+      // Los grupos "total" son solo informativos: nunca se marcan en
+      // amarillo/rojo, sea cual sea la suma (no hay límite que comprobar).
+      if (!esTotal) {
+        filas.forEach(function (tr) {
+          tr.classList.remove('fila-grupo-aviso', 'fila-grupo-alerta');
+          if (limite) {
+            if (suma > limite) tr.classList.add('fila-grupo-alerta');
+            else if (suma === limite) tr.classList.add('fila-grupo-aviso');
+          }
+        });
+      }
 
       if (headerRow) headerRow.classList.remove('fila-grupo-header-aviso', 'fila-grupo-header-alerta');
       if (chip) {
         const base = chip.getAttribute('data-nota-base') || '';
         chip.classList.remove('nota-grupo-aviso', 'nota-grupo-alerta');
-        if (limite) {
+        if (esTotal) {
+          chip.textContent = suma + ' ' + (suma === 1 ? 'palet' : 'palets');
+        } else if (limite) {
           chip.textContent = base + ' — ' + suma + '/' + limite;
           if (suma > limite) { chip.classList.add('nota-grupo-alerta'); if (headerRow) headerRow.classList.add('fila-grupo-header-alerta'); }
           else if (suma === limite) { chip.classList.add('nota-grupo-aviso'); if (headerRow) headerRow.classList.add('fila-grupo-header-aviso'); }
@@ -2100,7 +2117,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.3';
+  const APP_VERSION_ACTUAL = '1.1.4';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
