@@ -121,9 +121,27 @@
   }
   header.topbar .btn-hoy {
     background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 20px;
-    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto; margin-left: auto;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto;
   }
   header.topbar .btn-hoy:hover { background: rgba(255,255,255,.22); }
+  .topbar-derecha { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; margin-left: auto; }
+  .topbar-usuario {
+    display: flex; align-items: center; gap: 8px; padding-left: 10px;
+    border-left: 1px solid rgba(255,255,255,.18);
+  }
+  .topbar-usuario-rol {
+    font-size: 12px; font-weight: 600; color: rgba(255,255,255,.8);
+    text-transform: capitalize; white-space: nowrap;
+  }
+  .btn-salir {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.28); color: #fff;
+    border-radius: 20px; padding: 6px 13px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  }
+  .btn-salir:hover { background: rgba(255,255,255,.2); }
+  @media (max-width: 700px) {
+    .topbar-usuario-rol { display: none; }
+    .topbar-usuario { border-left: none; padding-left: 0; }
+  }
 
   /* ---------- NAVEGACIÓN PRINCIPAL (cabecera) ----------
    * Tres secciones de la app, siempre en el mismo sitio junto al logo
@@ -144,12 +162,48 @@
     .topbar-nav-item { padding: 7px 10px; font-size: 11.5px; }
   }
 
+  /* ---------- DESPLEGABLE DE CABECERA (p.ej. Configuración) ----------
+   * Botones de la cabecera que en vez de navegar directamente despliegan
+   * una lista de "subpáginas" justo debajo, como un menú; solo al elegir
+   * una entrada de la lista se navega a esa sección. */
+  .topbar-nav-dropdown { position: relative; }
+  .topbar-nav-item-dropdown { display: inline-flex; align-items: center; gap: 5px; }
+  .topbar-nav-item-dropdown .chevron { width: 12px; height: 12px; flex-shrink: 0; transition: transform .15s ease; }
+  .topbar-nav-dropdown.abierto .topbar-nav-item-dropdown .chevron { transform: rotate(180deg); }
+  .topbar-dropdown-menu {
+    display: none; flex-direction: column; gap: 2px;
+    position: absolute; top: calc(100% + 8px); left: 0; min-width: 200px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 14px 30px rgba(20,30,55,.2); padding: 6px; z-index: 50;
+  }
+  .topbar-nav-dropdown.abierto .topbar-dropdown-menu { display: flex; }
+  .topbar-dropdown-item {
+    text-align: left; background: none; border: none; border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap;
+  }
+  .topbar-dropdown-item:hover { background: #f0f2f6; }
+  .topbar-dropdown-item.activa { background: var(--navy); color: #fff; }
+  .topbar-dropdown-item.bloqueada,
+  .topbar-dropdown-item.bloqueada:hover {
+    background: none; color: #c2c7d0; cursor: not-allowed;
+  }
+
   @media (max-width: 700px) {
     header.topbar .topbar-fecha { font-size: 14px; }
   }
 
   /* ---------- VISTAS "INICIO" Y "CONFIGURACIÓN" ---------- */
   .vista-wrap { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+  .inicio-hero {
+    position: relative; width: 100%; flex: 1;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,.05), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(217,140,43,.14), transparent 45%),
+      linear-gradient(160deg, rgba(21,33,54,.78) 0%, rgba(16,26,44,.9) 100%),
+      url('https://images.pexels.com/photos/4487382/pexels-photo-4487382.jpeg?auto=compress&cs=tinysrgb&w=1920') center 30%/cover no-repeat;
+    background-color: var(--navy);
+  }
+  main.main-sin-padding { padding: 0; display: flex; flex-direction: column; }
   .vista-card {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
     padding: 22px;
@@ -226,15 +280,24 @@
   .festivos-toolbar .btn-hoy-festivos:hover { background: #e1e5eb; }
   .festivos-toolbar .btn-hoy-festivos:disabled { opacity: .4; cursor: not-allowed; }
 
-  /* ---- Fila de filtros: búsqueda, tipo (segmentado) y rango de fechas ---- */
+  /* ---- Panel de filtros: búsqueda, tipo (segmentado) y rango de fechas ----
+     Se abre/cierra con una animación suave (grid-template-rows 0fr -> 1fr)
+     en vez de un simple display:none/flex, que quedaba como una tira brusca
+     y sin transición. Dentro, dos filas bien separadas en vez de todo
+     apelotonado y envuelto en una sola línea. */
   .festivos-filtros {
-    display: none; align-items: center; gap: 8px; flex-wrap: wrap;
-    background: #f6f7fa; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px;
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows .22s ease;
   }
-  .festivos-filtros.abierta { display: flex; }
+  .festivos-filtros.abierta { grid-template-rows: 1fr; margin-bottom: 14px; }
+  .festivos-filtros-inner { overflow: hidden; min-height: 0; }
+  .festivos-filtros-contenido {
+    display: flex; flex-direction: column; gap: 10px;
+    background: #f6f7fa; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+  }
+  .festivos-filtros-fila { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .festivos-filtro-busqueda {
     display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line);
-    border-radius: 8px; padding: 6px 10px; flex: 1 1 190px; min-width: 150px; color: var(--ink-soft);
+    border-radius: 8px; padding: 7px 10px; flex: 1 1 auto; min-width: 150px; color: var(--ink-soft);
   }
   .festivos-filtro-busqueda input {
     border: none; outline: none; font-size: 12.5px; flex: 1 1 auto; min-width: 0; color: var(--ink); background: none;
@@ -247,16 +310,16 @@
   .festivos-filtro-tipo button.activo { background: var(--navy); color: #fff; }
   .festivos-filtro-fechas {
     display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--line);
-    border-radius: 8px; padding: 4px 8px; flex-shrink: 0; color: var(--ink-soft); font-size: 11px;
+    border-radius: 8px; padding: 5px 9px; flex-shrink: 0; color: var(--ink-soft); font-size: 11px;
   }
   .festivos-filtro-fechas input[type="date"] {
     border: none; outline: none; font-size: 12px; color: var(--ink); background: none; max-width: 118px;
   }
   .festivos-filtro-limpiar {
     display: flex; align-items: center; gap: 5px; background: none; border: none; color: var(--ink-soft);
-    font-size: 11.5px; font-weight: 600; padding: 6px 4px; flex-shrink: 0;
+    font-size: 11.5px; font-weight: 600; padding: 6px 8px; border-radius: 7px; flex-shrink: 0; margin-left: auto;
   }
-  .festivos-filtro-limpiar:hover { color: var(--danger); }
+  .festivos-filtro-limpiar:hover { color: var(--danger); background: #fff; }
 
   .festivos-grupo {
     display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 10px;
@@ -264,6 +327,34 @@
     transition: border-color .15s;
   }
   .festivos-grupo.es-hoy { border-color: var(--amber); background: #fffaf1; }
+  .festivos-grupo.vacio { opacity: .72; }
+  .festivos-grupo.vacio .festivos-fecha-badge { background: #c7cdd6; }
+  .festivos-item-vacio { font-size: 12px; color: var(--ink-soft); font-style: italic; padding: 5px 7px; }
+
+  /* ---- Vista semanal en columnas (Lunes -> Domingo en horizontal, y el
+     contenido de cada día apilado hacia abajo dentro de su columna) ---- */
+  .festivos-semana { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; align-items: stretch; }
+  .festivos-dia-col {
+    flex: 1 1 0; min-width: 152px; min-height: 580px; display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden;
+  }
+  .festivos-dia-col.es-hoy { border-color: var(--amber); }
+  .festivos-dia-col.vacio { opacity: .72; }
+  .festivos-dia-col-header {
+    padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: center; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .festivos-dia-col.es-hoy .festivos-dia-col-header { background: #fffaf1; border-color: var(--amber); }
+  .festivos-dia-col-badge {
+    width: 40px; height: 40px; border-radius: 9px; background: var(--navy); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  }
+  .festivos-dia-col-badge .dia { font-size: 15px; font-weight: 800; }
+  .festivos-dia-col-badge .mes { font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-top: 2px; opacity: .85; }
+  .festivos-dia-col.es-hoy .festivos-dia-col-badge { background: var(--amber-dark); }
+  .festivos-dia-col-nombre { font-weight: 800; font-size: 12px; color: var(--navy); text-transform: capitalize; display: flex; align-items: center; gap: 6px; }
+  .festivos-dia-col-items { padding: 8px; display: flex; flex-direction: column; gap: 5px; flex: 1 1 auto; }
+  @media (max-width: 900px) { .festivos-dia-col { min-width: 130px; } }
   .festivos-fecha-badge {
     flex-shrink: 0; width: 42px; height: 42px; border-radius: 9px; background: var(--navy);
     color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -311,8 +402,18 @@
   }
   .festivos-vacio svg { color: #c7cdd6; }
 
+  /* Cabecera fija de "Gestión festivos" (título, botones, stats y toolbar de
+     mes) + panel de filtros: no se mueven; la que se desplaza en su propia
+     caja con scroll interno es solo #festivos-lista (igual que en "Emails
+     agencias", para que no haga scroll toda la página). */
+  .festivos-fijo { margin-bottom: 12px; }
+  #festivos-lista {
+    overflow-y: auto; min-height: 160px;
+    padding-right: 6px; margin-right: -6px;
+  }
+
   @media (max-width: 700px) {
-    .festivos-filtros { flex-direction: column; align-items: stretch; }
+    .festivos-filtros-fila { flex-direction: column; align-items: stretch; }
     .festivos-filtro-busqueda { flex: 0 0 auto; }
     .festivos-filtro-tipo { justify-content: space-between; }
     .festivos-filtro-tipo button { flex: 1 1 auto; text-align: center; }
@@ -388,8 +489,118 @@
     border-radius: 9px; padding: 9px 12px; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px;
   }
   body.es-admin .emails-config-solo-lectura { display: none !important; }
+  /* Cabecera fija de "Emails agencias": título, botón sincronizar, descripción
+     y buscador no se mueven; el que se desplaza es solo #emails-config-lista,
+     en su propia caja con scroll interno (no toda la página). */
+  .emails-config-fijo { margin-bottom: 12px; }
+  .emails-config-fijo .emails-config-toolbar { margin-bottom: 0; }
+  #emails-config-lista {
+    overflow-y: auto; min-height: 160px;
+    padding-right: 6px; margin-right: -6px;
+  }
 
-  main { flex: 1; padding: 24px 32px; max-width: none; width: 100%; }
+  /* ---------- CONFIGURACIÓN: "Plantilla conteos" ---------- */
+  .plantilla-dias-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
+  .plantilla-dias { display: flex; gap: 6px; flex-wrap: wrap; }
+  .plantilla-dias button {
+    border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 12px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+  }
+  .plantilla-dias button:hover { background: #f0f2f6; }
+  .plantilla-dias button.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .plantilla-ruta {
+    border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .plantilla-ruta-header {
+    display: flex; align-items: center; gap: 6px; padding: 9px 10px; background: #f7f8fa;
+    border-bottom: 1px solid var(--line);
+  }
+  .plantilla-ruta-header input {
+    flex: 1 1 auto; min-width: 0; border: 1px solid transparent; background: none; font-weight: 800;
+    color: var(--navy); font-size: 13.5px; border-radius: 6px; padding: 5px 7px;
+  }
+  .plantilla-ruta-header input:focus { border-color: var(--navy-soft); background: #fff; outline: none; }
+  .plantilla-ruta-header input:disabled { color: var(--ink); }
+  .plantilla-ruta-borrar, .plantilla-tienda-borrar {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-ruta-borrar:hover, .plantilla-tienda-borrar:hover { color: var(--danger); background: #fceded; }
+  .plantilla-tienda-guardar {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-tienda-guardar:hover { color: var(--navy); background: #eef1f7; }
+  .plantilla-tienda-guardar:disabled { opacity: .3; cursor: default; background: none !important; color: var(--ink-soft) !important; }
+  .plantilla-tienda.dirty { background: #fdf6ea; }
+  .plantilla-tienda.dirty input.lim, .plantilla-tienda.dirty input.nombre { border-color: var(--amber); background: #fff; }
+  .plantilla-tienda.dirty .plantilla-tienda-guardar:not(:disabled) { color: var(--amber-dark); }
+  .plantilla-ruta-header.dirty { background: #fdf6ea; }
+  .plantilla-ruta-header.dirty input { border-color: var(--amber); background: #fff; }
+  .plantilla-ruta-header.dirty .plantilla-tienda-guardar:not(:disabled) { color: var(--amber-dark); }
+  .plantilla-tiendas { display: flex; flex-direction: column; }
+  .plantilla-tienda {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--line);
+  }
+  .plantilla-tienda:first-child { border-top: none; }
+  .plantilla-tienda input.lim {
+    width: 40px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    padding: 5px 4px; font-size: 12.5px;
+  }
+  .plantilla-tienda input.nombre {
+    flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 12.5px;
+  }
+  .plantilla-tienda-flechas { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .plantilla-tienda-flechas button {
+    width: 18px; height: 13px; border: none; background: #eef1f7; color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .plantilla-tienda-flechas button:first-child { border-radius: 4px 4px 0 0; }
+  .plantilla-tienda-flechas button:last-child { border-radius: 0 0 4px 4px; }
+  .plantilla-tienda-flechas button:disabled { opacity: .35; }
+  .plantilla-tienda-flechas button:hover:not(:disabled) { background: #e1e5eb; }
+  .plantilla-ruta-anadir-tienda {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--navy); font-weight: 700;
+    font-size: 11.5px; display: flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 7px;
+    white-space: nowrap;
+  }
+  .plantilla-ruta-anadir-tienda:hover { background: #eef1f7; }
+  .modal-campo { margin-bottom: 14px; }
+  .modal-campo:last-child { margin-bottom: 0; }
+  .modal-campo label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
+  .modal-campo input {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 13.5px;
+    box-sizing: border-box; color: var(--ink);
+  }
+  .modal-campo input:focus { border-color: var(--navy-soft); outline: none; }
+  .modal-dia-aviso {
+    background: #eef1f7; color: var(--ink); border-radius: 8px; padding: 8px 10px;
+    font-size: 12.5px; margin-bottom: 14px;
+  }
+  .modal-dia-aviso strong { color: var(--navy); }
+  .plantilla-anadir-ruta { flex-shrink: 0; }
+  .plantilla-tienda-nota {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-tienda-nota:hover:not(:disabled) { background: #eef1f7; color: var(--navy); }
+  .plantilla-tienda-nota:disabled { opacity: .35; cursor: default; }
+  .plantilla-tienda-nota.con-dato { color: var(--amber-dark); }
+  .plantilla-notascarga {
+    padding: 6px 10px; border-top: 1px dashed var(--line); border-bottom: 1px solid var(--line); background: #fbfbfc;
+  }
+  .plantilla-notacarga-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+  .plantilla-notacarga-item input {
+    flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 12.5px;
+    font-style: italic; color: var(--ink-soft);
+  }
+  .plantilla-notacarga-item.dirty input { border-color: var(--amber); background: #fff; }
+  .plantilla-notacarga-item.dirty .plantilla-tienda-guardar:not(:disabled) { color: var(--amber-dark); }
+  .plantilla-anadir-notacarga {
+    background: none; border: none; color: var(--navy); font-weight: 700; font-size: 11.5px;
+    display: flex; align-items: center; gap: 4px; padding: 5px 4px;
+  }
+  .plantilla-anadir-notacarga:hover { background: #eef1f7; border-radius: 6px; }
+
+  main { flex: 1; padding: 24px 20px; max-width: none; width: 100%; }
 
   /* Tres columnas: calendario pegado a la izquierda | contenido | resumen pegado a la derecha.
      El grid ocupa TODO el ancho disponible (main ya no tiene max-width centrado),
@@ -851,6 +1062,14 @@
   .modal-confirm { background: var(--navy); color: #fff; }
   .modal-confirm.danger { background: var(--danger); }
 
+  /* ---------- Modal de confirmación "peligro" (borrado) ---------- */
+  .modal-box.peligro { border-top: 5px solid var(--danger); }
+  .modal-box.peligro h3 { color: var(--danger); display: flex; align-items: center; gap: 8px; }
+  .modal-box.peligro h3::before {
+    content: ''; flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--danger) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.5" fill="white" stroke="white"/></svg>') center/12px no-repeat;
+  }
+
   /* ---------- Modal "Enviar a agencia" (versión amplia) ---------- */
   .modal-box.ancho { max-width: 620px; }
 
@@ -940,8 +1159,12 @@
 
   .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
 
+  /* ---------- Modal "Añadir observación" (algo más ancho que el estándar,
+     para que quepan bien las píldoras de tipo y los chips de selección) ---- */
+  .modal-box.medio { max-width: 480px; }
+
   /* ---------- GESTIÓN DE OBSERVACIONES (admin, cualquier día) ---------- */
-  .gestor-form { display: flex; flex-direction: column; gap: 14px; }
+  .gestor-form { display: flex; flex-direction: column; gap: 16px; }
   .gestor-campo label {
     display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
     color: var(--ink-soft); font-weight: 700; margin-bottom: 6px;
@@ -952,28 +1175,59 @@
     width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px;
     font-size: 14px; font-family: inherit;
   }
-  .gestor-campo textarea { min-height: 70px; resize: vertical; }
-  .gestor-tipo-pills { display: flex; gap: 8px; flex-wrap: wrap; }
-  .gestor-tipo-pill {
-    border: 1px solid var(--line); background: #f6f7f9; border-radius: 20px; padding: 7px 14px;
-    font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  .gestor-campo input[type="date"]:focus,
+  .gestor-campo input[type="text"]:focus,
+  .gestor-campo textarea:focus {
+    outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1);
   }
+  .gestor-campo textarea { min-height: 74px; resize: vertical; }
+  .gestor-campo-ayuda { font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; }
+
+  /* Píldoras de tipo, ahora con icono + texto, en tarjetas algo más grandes
+     para que se lean como una elección clara (no un simple filtro). */
+  .gestor-tipo-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .gestor-tipo-pill {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: #f9fafb; border-radius: 10px; padding: 10px 6px;
+    font-size: 11.5px; font-weight: 700; color: var(--ink-soft); text-align: center; line-height: 1.2;
+    transition: background .12s, border-color .12s, color .12s;
+  }
+  .gestor-tipo-pill svg { flex-shrink: 0; }
+  .gestor-tipo-pill:hover:not(.activa):not(:disabled) { background: #f0f2f6; }
   .gestor-tipo-pill.activa { background: var(--navy); border-color: var(--navy); color: #fff; }
   .gestor-tipo-pill:disabled { opacity: .4; cursor: not-allowed; }
+  @media (max-width: 480px) {
+    .gestor-tipo-pills { grid-template-columns: 1fr; }
+    .gestor-tipo-pill { flex-direction: row; justify-content: flex-start; padding: 9px 12px; }
+  }
+
   .gestor-busqueda-wrap { position: relative; }
   .gestor-busqueda-resultados {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff;
-    border: 1px solid var(--line); border-radius: 8px; max-height: 180px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 8px; max-height: 220px; overflow-y: auto;
     box-shadow: 0 8px 20px rgba(0,0,0,.12); z-index: 10;
   }
-  .gestor-busqueda-item { padding: 8px 11px; font-size: 13px; cursor: pointer; }
+  .gestor-busqueda-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; font-size: 13px; cursor: pointer; }
   .gestor-busqueda-item:hover { background: #f0f2f6; }
   .gestor-busqueda-item .sub { font-size: 11px; color: var(--ink-soft); }
+  .gestor-busqueda-item-texto { flex: 1 1 auto; min-width: 0; }
+  /* Casilla de selección múltiple (solo se usa en "Cerrar tienda"): un
+     cuadrito que se rellena al marcar, para dejar claro que se puede elegir
+     más de una tienda sin cerrar el desplegable cada vez. */
+  .gestor-check {
+    width: 17px; height: 17px; border-radius: 5px; border: 1.5px solid #c7cdd6; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: #fff; background: #fff;
+  }
+  .gestor-busqueda-item.marcada .gestor-check { background: var(--navy); border-color: var(--navy); }
+  .gestor-busqueda-item.marcada { background: #f3f5f9; }
+
+  .gestor-seleccion-chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .gestor-seleccion-chip {
     display: inline-flex; align-items: center; gap: 6px; background: #eef1f5; border-radius: 20px;
     padding: 5px 10px 5px 12px; font-size: 12.5px; font-weight: 600; color: var(--navy);
   }
   .gestor-seleccion-chip button { background: none; border: none; cursor: pointer; color: var(--ink-soft); font-size: 15px; line-height: 1; padding: 0; }
+  .gestor-seleccion-contador { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
   .gestor-aviso { font-size: 12px; color: var(--ink-soft); background: #f6f7f9; border-radius: 8px; padding: 8px 10px; }
 
   /* ---------- PERMISOS (admin vs normal) ----------
@@ -1052,10 +1306,21 @@
       <nav class="topbar-nav" id="topbar-nav">
         <button type="button" class="topbar-nav-item" data-vista="inicio">Inicio</button>
         <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos</button>
-        <button type="button" class="topbar-nav-item" data-vista="configuracion">Configuración</button>
+        <div class="topbar-nav-dropdown" id="topbar-dropdown-configuracion">
+          <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="configuracion" aria-haspopup="true" aria-expanded="false">
+            Configuración
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-configuracion"></div>
+        </div>
       </nav>
       <div class="topbar-fecha" id="topbar-fecha"></div>
-      <button class="btn-hoy" onclick="irAHoy()">Hoy</button>
+      <div class="topbar-derecha">
+        <div class="topbar-usuario">
+          <span class="topbar-usuario-rol" id="topbar-usuario-rol">&nbsp;</span>
+          <button type="button" class="btn-salir" onclick="cerrarSesion()">Salir</button>
+        </div>
+      </div>
     </header>
     <main id="main"></main>
   </div>
@@ -1107,6 +1372,9 @@ function esAdmin() { return SESSION_ROL === 'admin'; }
  *  "body:not(.es-admin) ..." en el <style>). */
 function aplicarPermisosUI() {
   document.body.classList.toggle('es-admin', esAdmin());
+  const elRol = document.getElementById('topbar-usuario-rol');
+  if (elRol) elRol.textContent = SESSION_ROL ? (esAdmin() ? 'Administrador' : 'Operario') : '';
+  poblarDropdownConfiguracion();
 }
 
 // Nombre usado en el frontend -> nombre de la acción que entiende el backend.
@@ -1153,6 +1421,21 @@ function volverALogin_() {
   SESSION_ROL = null;
   document.body.classList.remove('es-admin');
   mostrarToast('Sesión caducada, vuelve a entrar', true);
+}
+
+/** Cierre de sesión manual (botón "Salir" de la cabecera): a diferencia de
+ *  volverALogin_ (que salta cuando el token caduca solo), este es un logout
+ *  voluntario, así que no muestra el aviso de "sesión caducada". */
+function cerrarSesion() {
+  SESSION_TOKEN = null;
+  SESSION_ROL = null;
+  document.body.classList.remove('es-admin');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  const campoPass = document.getElementById('login-pass');
+  campoPass.value = '';
+  document.getElementById('login-error').style.display = 'none';
+  campoPass.focus();
 }
 
 const google = {
@@ -1250,9 +1533,77 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 /* ---------------- NAVEGACIÓN PRINCIPAL (cabecera) ---------------- */
 // Vive en el HTML estático de la cabecera (no se redibuja con cada día), así
 // que sus listeners se enganchan una sola vez aquí, al cargar la página.
-document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
+//
+// Secciones de "Configuración" (se necesitan ya aquí porque el desplegable
+// de la cabecera se construye con ellas; más secciones futuras solo se
+// añaden a esta lista).
+const CONFIG_SECCIONES = [
+  { id: 'festivos', label: 'Gestión festivos' },
+  { id: 'emails', label: 'Emails agencias' },
+  { id: 'plantilla', label: 'Rutas y tiendas' }
+  // futuras secciones de Configuración van aquí
+];
+let ESTADO_CONFIG = { seccionActiva: 'festivos' };
+
+// Botones simples (Inicio, Conteos): navegan directamente al pulsarlos.
+document.querySelectorAll('.topbar-nav > .topbar-nav-item').forEach(function (btn) {
   btn.addEventListener('click', function () { cambiarVista(btn.dataset.vista); });
 });
+
+// Botones con desplegable (Configuración): al pulsarlos solo se abre/cierra
+// la lista de subpáginas debajo; no se navega hasta elegir una de la lista.
+document.querySelectorAll('.topbar-nav-dropdown').forEach(function (wrap) {
+  const toggle = wrap.querySelector('.topbar-nav-item-dropdown');
+  toggle.addEventListener('click', function (e) {
+    e.stopPropagation();
+    const yaAbierto = wrap.classList.contains('abierto');
+    cerrarDropdownsTopbar();
+    if (!yaAbierto) {
+      wrap.classList.add('abierto');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+  });
+});
+// Clic fuera del desplegable (o tras elegir una opción) lo cierra.
+document.addEventListener('click', cerrarDropdownsTopbar);
+
+function cerrarDropdownsTopbar() {
+  document.querySelectorAll('.topbar-nav-dropdown.abierto').forEach(function (wrap) {
+    wrap.classList.remove('abierto');
+    wrap.querySelector('.topbar-nav-item-dropdown').setAttribute('aria-expanded', 'false');
+  });
+}
+
+/** Construye la lista del desplegable de Configuración a partir de
+ *  CONFIG_SECCIONES y engancha sus clics (cada uno navega directamente a
+ *  esa sección y cierra el desplegable). Los usuarios sin rol "admin" ven
+ *  las secciones "apagadas" (sin poder pinchar ni hacer nada): de momento
+ *  Gestión festivos y Emails agencias son solo para administradores. */
+function poblarDropdownConfiguracion() {
+  const cont = document.getElementById('topbar-dropdown-menu-configuracion');
+  const bloqueada = !esAdmin();
+  cont.innerHTML = CONFIG_SECCIONES.map(function (s) {
+    const activa = ESTADO.vista === 'configuracion' && s.id === ESTADO_CONFIG.seccionActiva;
+    return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + (bloqueada ? ' bloqueada' : '') + '"' +
+      (bloqueada ? ' disabled aria-disabled="true"' : '') +
+      ' data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
+  }).join('');
+  cont.querySelectorAll('.topbar-dropdown-item').forEach(function (btn) {
+    if (btn.disabled) return; // sin listener: al estar "apagado" el clic no hace nada
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarDropdownsTopbar();
+      cambiarVista('configuracion', btn.getAttribute('data-seccion'));
+    });
+  });
+}
+function marcarSeccionActivaEnDropdown() {
+  document.querySelectorAll('#topbar-dropdown-menu-configuracion .topbar-dropdown-item').forEach(function (btn) {
+    const activa = ESTADO.vista === 'configuracion' && btn.getAttribute('data-seccion') === ESTADO_CONFIG.seccionActiva;
+    btn.classList.toggle('activa', activa);
+  });
+}
+poblarDropdownConfiguracion();
 
 // La PWA siempre arranca en la pantalla de login: SESSION_TOKEN nunca se
 // recupera de un arranque anterior (ver comentario más arriba), así que
@@ -1281,13 +1632,20 @@ function irAHoy() {
 
 /** Cambia entre las tres secciones de la app (Inicio / Conteos /
  *  Configuración), marcando la pestaña activa en la cabecera y
- *  renderizando el contenido correspondiente en <main>. */
-function cambiarVista(vista) {
+ *  renderizando el contenido correspondiente en <main>. Para
+ *  "configuracion", `seccion` (opcional) indica qué página del
+ *  desplegable se quiere abrir (p.ej. 'emails'); si no se indica, se
+ *  mantiene/usa la última sección activa. */
+function cambiarVista(vista, seccion) {
   ESTADO.vista = vista;
   document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
     btn.classList.toggle('activa', btn.dataset.vista === vista);
   });
   document.getElementById('topbar-fecha').style.display = (vista === 'conteos') ? '' : 'none';
+  document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
+
+  if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
+  marcarSeccionActivaEnDropdown();
 
   if (vista === 'inicio') {
     renderVistaInicio();
@@ -1304,62 +1662,28 @@ function cambiarVista(vista) {
   }
 }
 
-/** INICIO: página principal tras entrar en la app. De momento un saludo
- *  y un acceso directo a los conteos de hoy; aquí es donde en el futuro
- *  irán los mensajes/avisos generales. */
+/** INICIO: página principal tras entrar en la app. De momento solo una
+ *  imagen de portada (almacén/palets, con el mismo tratamiento oscuro que
+ *  la pantalla de login); aquí es donde en el futuro irán los mensajes y
+ *  avisos generales del equipo. */
 function renderVistaInicio() {
   const main = document.getElementById('main');
-  main.innerHTML =
-    '<div class="vista-wrap">' +
-      '<div class="vista-card">' +
-        '<h2>Bienvenido</h2>' +
-        '<p>Este es el punto de partida de la app. Próximamente aquí aparecerán los mensajes y avisos generales del equipo.</p>' +
-      '</div>' +
-    '</div>';
+  main.innerHTML = '<div class="inicio-hero"></div>';
 }
 
-/** CONFIGURACIÓN: shell con submenú a la izquierda (más secciones se irán
- *  añadiendo a CONFIG_SECCIONES) y el contenido de la sección activa a la
- *  derecha. La primera sección es "Gestión festivos" (antes el único
- *  punto de "Administración" en la cabecera: añadir cierres/observaciones,
- *  ahora con un resumen de todo lo guardado). */
-const CONFIG_SECCIONES = [
-  { id: 'festivos', label: 'Gestión festivos' },
-  { id: 'emails', label: 'Emails agencias' }
-  // futuras secciones de Configuración van aquí
-];
-let ESTADO_CONFIG = { seccionActiva: 'festivos' };
-
+/** CONFIGURACIÓN: ya no tiene submenú lateral dentro de la página (la
+ *  elección de sección se hace desde el desplegable de la cabecera); aquí
+ *  solo se renderiza el contenido de la sección activa, a todo el ancho. */
 function renderVistaConfiguracion() {
   const main = document.getElementById('main');
-  main.innerHTML =
-    '<div class="config-shell">' +
-      '<nav class="config-submenu" id="config-submenu">' +
-        CONFIG_SECCIONES.map(function (s) {
-          return '<button type="button" class="config-submenu-item' + (s.id === ESTADO_CONFIG.seccionActiva ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
-        }).join('') +
-      '</nav>' +
-      '<div class="config-contenido" id="config-contenido"></div>' +
-    '</div>';
-
-  document.querySelectorAll('.config-submenu-item').forEach(function (btn) {
-    btn.onclick = function () { cambiarSeccionConfig(btn.getAttribute('data-seccion')); };
-  });
-
-  renderSeccionConfigActiva();
-}
-
-function cambiarSeccionConfig(id) {
-  ESTADO_CONFIG.seccionActiva = id;
-  document.querySelectorAll('.config-submenu-item').forEach(function (btn) {
-    btn.classList.toggle('activa', btn.getAttribute('data-seccion') === id);
-  });
+  main.innerHTML = '<div class="config-contenido" id="config-contenido"></div>';
   renderSeccionConfigActiva();
 }
 
 function renderSeccionConfigActiva() {
   if (ESTADO_CONFIG.seccionActiva === 'festivos') renderConfigFestivos();
   else if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
+  else if (ESTADO_CONFIG.seccionActiva === 'plantilla') renderConfigPlantilla();
 }
 
 /* ---------------- GESTIÓN FESTIVOS ----------------
@@ -1377,15 +1701,37 @@ function renderSeccionConfigActiva() {
  * cambiar de mes o de rango de fechas dispara una nueva carga.
  */
 let FESTIVOS_ESTADO = {
-  mes: null,            // 'YYYY-MM' mostrado en modo navegación mensual
+  semanaInicio: null,    // 'YYYY-MM-DD' del lunes de la semana mostrada (navegación semanal por defecto)
   idSolicitud: 0,
-  datosCache: [],        // último resultado crudo de getConteoDia para el rango cargado
+  datosCache: [],        // conteo completo (getConteoDia) de los días del rango que sí tienen notas/cierres
+  diasRango: [],         // TODAS las fechas del rango actual, en orden (aunque no tengan nada guardado)
   filtroTexto: '',
   filtroTipo: 'todos',   // 'todos' | 'cierre' | 'nota'
-  filtroDesde: null,     // 'YYYY-MM-DD' -- si desde+hasta están definidos, sustituye la navegación mensual
+  filtroDesde: null,     // 'YYYY-MM-DD' -- si desde+hasta están definidos, sustituye la navegación semanal
   filtroHasta: null,
   filtrosAbiertos: false  // si el panel de filtros (oculto tras un icono) está desplegado
 };
+
+/** Suma (o resta) días a una fecha 'YYYY-MM-DD' y devuelve otra fecha en el mismo formato. */
+function sumarDias_(fecha, delta) {
+  const d = new Date(fecha + 'T12:00:00');
+  d.setDate(d.getDate() + delta);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+/** Devuelve el lunes ('YYYY-MM-DD') de la semana a la que pertenece la fecha dada. */
+function lunesDeSemana_(fecha) {
+  const dow = new Date(fecha + 'T12:00:00').getDay(); // 0=domingo..6=sábado
+  return sumarDias_(fecha, -((dow + 6) % 7));
+}
+
+/** Enumera todas las fechas ('YYYY-MM-DD') entre inicio y fin, ambos incluidos. */
+function diasDeRango_(inicio, fin) {
+  const out = [];
+  let cursor = inicio, guard = 0;
+  while (cursor <= fin && guard < 400) { out.push(cursor); cursor = sumarDias_(cursor, 1); guard++; }
+  return out;
+}
 
 function sumarMeses_(anioMes, delta) {
   const partes = anioMes.split('-').map(Number);
@@ -1412,52 +1758,62 @@ function formatearFechaCorta_(fecha) {
 }
 
 function renderConfigFestivos() {
-  if (!FESTIVOS_ESTADO.mes) FESTIVOS_ESTADO.mes = anioMesDe(hoyStr());
+  if (!FESTIVOS_ESTADO.semanaInicio) FESTIVOS_ESTADO.semanaInicio = lunesDeSemana_(hoyStr());
 
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
   cont.innerHTML =
     '<div class="vista-card">' +
-      '<div class="vista-card-header">' +
-        '<h2>Gestión festivos</h2>' +
-        '<div class="vista-card-header-acciones">' +
-          '<button type="button" class="btn-festivos-filtro' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierto' : '') + '" id="btn-festivos-filtro-toggle" title="Filtrar">' +
-            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>' +
-            '<span class="badge-punto" id="festivos-filtro-badge" style="display:none;"></span>' +
-          '</button>' +
-          '<button type="button" class="btn-anadir-obs" id="btn-festivos-anadir">' +
-            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
-            'Añadir cierre / observación</button>' +
+      '<div class="festivos-fijo">' +
+        '<div class="vista-card-header">' +
+          '<h2>Gestión festivos</h2>' +
+          '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-festivos-filtro' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierto' : '') + '" id="btn-festivos-filtro-toggle" title="Filtrar">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>' +
+              '<span class="badge-punto" id="festivos-filtro-badge" style="display:none;"></span>' +
+            '</button>' +
+            '<button type="button" class="btn-anadir-obs" id="btn-festivos-anadir">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+              'Añadir cierre / observación</button>' +
+          '</div>' +
         '</div>' +
-      '</div>' +
-      '<p>Resumen de todas las notas y cierres de tienda guardados, tanto pasados como futuros.</p>' +
-      '<div class="festivos-stats" id="festivos-stats"></div>' +
-      '<div class="festivos-toolbar">' +
-        '<button type="button" class="nav" id="festivos-prev" aria-label="Mes anterior">' +
-          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
-        '<div class="rango-label" id="festivos-rango"></div>' +
-        '<button type="button" class="nav" id="festivos-next" aria-label="Mes siguiente">' +
-          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
-        '<button type="button" class="btn-hoy-festivos" id="festivos-hoy">Hoy</button>' +
-      '</div>' +
-      '<div class="festivos-filtros' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierta' : '') + '" id="festivos-filtros-panel">' +
-        '<div class="festivos-filtro-busqueda">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-          '<input type="text" id="festivos-buscar" placeholder="Buscar tienda, agrupación o texto…">' +
+        '<p>Resumen de todas las notas y cierres de tienda guardados, tanto pasados como futuros.</p>' +
+        '<div class="festivos-stats" id="festivos-stats"></div>' +
+        '<div class="festivos-toolbar">' +
+          '<button type="button" class="nav" id="festivos-prev" aria-label="Semana anterior">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+          '<div class="rango-label" id="festivos-rango"></div>' +
+          '<button type="button" class="nav" id="festivos-next" aria-label="Semana siguiente">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
+          '<button type="button" class="btn-hoy-festivos" id="festivos-hoy">Hoy</button>' +
         '</div>' +
-        '<div class="festivos-filtro-tipo" id="festivos-filtro-tipo">' +
-          '<button type="button" class="activo" data-tipo="todos">Todos</button>' +
-          '<button type="button" data-tipo="cierre">Cierres</button>' +
-          '<button type="button" data-tipo="nota">Observaciones</button>' +
+        '<div class="festivos-filtros' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierta' : '') + '" id="festivos-filtros-panel">' +
+          '<div class="festivos-filtros-inner">' +
+            '<div class="festivos-filtros-contenido">' +
+              '<div class="festivos-filtros-fila">' +
+                '<div class="festivos-filtro-busqueda">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+                  '<input type="text" id="festivos-buscar" placeholder="Buscar tienda, agrupación o texto…">' +
+                '</div>' +
+              '</div>' +
+              '<div class="festivos-filtros-fila">' +
+                '<div class="festivos-filtro-tipo" id="festivos-filtro-tipo">' +
+                  '<button type="button" class="activo" data-tipo="todos">Todos</button>' +
+                  '<button type="button" data-tipo="cierre">Cierres</button>' +
+                  '<button type="button" data-tipo="nota">Observaciones</button>' +
+                '</div>' +
+                '<div class="festivos-filtro-fechas">' +
+                  '<input type="date" id="festivos-desde" aria-label="Desde">' +
+                  '<span>—</span>' +
+                  '<input type="date" id="festivos-hasta" aria-label="Hasta">' +
+                '</div>' +
+                '<button type="button" class="festivos-filtro-limpiar" id="festivos-limpiar-filtros" title="Quitar todos los filtros">' +
+                  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+                  'Limpiar filtros</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="festivos-filtro-fechas">' +
-          '<input type="date" id="festivos-desde" aria-label="Desde">' +
-          '<span>—</span>' +
-          '<input type="date" id="festivos-hasta" aria-label="Hasta">' +
-        '</div>' +
-        '<button type="button" class="festivos-filtro-limpiar" id="festivos-limpiar-filtros" title="Quitar todos los filtros">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
-          'Limpiar filtros</button>' +
       '</div>' +
       '<div id="festivos-lista"><div class="loader">Cargando…</div></div>' +
     '</div>';
@@ -1467,11 +1823,15 @@ function renderConfigFestivos() {
     FESTIVOS_ESTADO.filtrosAbiertos = !FESTIVOS_ESTADO.filtrosAbiertos;
     document.getElementById('festivos-filtros-panel').classList.toggle('abierta', FESTIVOS_ESTADO.filtrosAbiertos);
     this.classList.toggle('abierto', FESTIVOS_ESTADO.filtrosAbiertos);
+    // El panel tarda .22s en abrirse/cerrarse (ver CSS); se recalcula la
+    // altura de la lista varias veces durante la transición para que no se
+    // quede corta o le sobre hueco mientras se anima.
+    [0, 90, 180, 260].forEach(function (ms) { setTimeout(function () { ajustarAlturaListaScrollable_('festivos-lista'); }, ms); });
   };
-  document.getElementById('festivos-prev').onclick = function () { desplazarMesFestivos_(-1); };
-  document.getElementById('festivos-next').onclick = function () { desplazarMesFestivos_(1); };
+  document.getElementById('festivos-prev').onclick = function () { desplazarSemanaFestivos_(-1); };
+  document.getElementById('festivos-next').onclick = function () { desplazarSemanaFestivos_(1); };
   document.getElementById('festivos-hoy').onclick = function () {
-    FESTIVOS_ESTADO.mes = anioMesDe(hoyStr());
+    FESTIVOS_ESTADO.semanaInicio = lunesDeSemana_(hoyStr());
     FESTIVOS_ESTADO.filtroDesde = null;
     FESTIVOS_ESTADO.filtroHasta = null;
     document.getElementById('festivos-desde').value = '';
@@ -1513,11 +1873,13 @@ function renderConfigFestivos() {
   };
 
   cargarFestivos();
+  ajustarAlturaListaScrollable_('festivos-lista');
+  window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
-function desplazarMesFestivos_(delta) {
+function desplazarSemanaFestivos_(delta) {
   if (FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta) return; // navegación deshabilitada con rango personalizado
-  FESTIVOS_ESTADO.mes = sumarMeses_(FESTIVOS_ESTADO.mes, delta);
+  FESTIVOS_ESTADO.semanaInicio = sumarDias_(FESTIVOS_ESTADO.semanaInicio, delta * 7);
   cargarFestivos();
 }
 
@@ -1537,10 +1899,10 @@ function cargarFestivos() {
   if (!rangoEl || !listaEl) return;
 
   const rangoPersonalizado = !!(FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta);
+  const inicio = rangoPersonalizado ? FESTIVOS_ESTADO.filtroDesde : FESTIVOS_ESTADO.semanaInicio;
+  const fin = rangoPersonalizado ? FESTIVOS_ESTADO.filtroHasta : sumarDias_(FESTIVOS_ESTADO.semanaInicio, 6);
 
-  rangoEl.textContent = rangoPersonalizado
-    ? formatearFechaCorta_(FESTIVOS_ESTADO.filtroDesde) + ' — ' + formatearFechaCorta_(FESTIVOS_ESTADO.filtroHasta)
-    : MESES_ES[Number(FESTIVOS_ESTADO.mes.slice(5, 7)) - 1] + ' de ' + FESTIVOS_ESTADO.mes.slice(0, 4);
+  rangoEl.textContent = formatearFechaCorta_(inicio) + ' — ' + formatearFechaCorta_(fin);
 
   ['festivos-prev', 'festivos-next', 'festivos-hoy'].forEach(function (id) {
     const el = document.getElementById(id);
@@ -1552,26 +1914,30 @@ function cargarFestivos() {
   const statsElCarga = document.getElementById('festivos-stats');
   if (statsElCarga) statsElCarga.innerHTML = '';
 
-  const meses = rangoPersonalizado
-    ? mesesEnRango_(anioMesDe(FESTIVOS_ESTADO.filtroDesde), anioMesDe(FESTIVOS_ESTADO.filtroHasta))
-    : [FESTIVOS_ESTADO.mes];
+  const meses = mesesEnRango_(anioMesDe(inicio), anioMesDe(fin));
 
   Promise.all(meses.map(function (m) { return llamarApi_('getMesCalendario', [m]).catch(function () { return []; }); }))
     .then(function (resultadosMeses) {
-      const fechas = [];
+      // Nos quedamos con la info (fecha, si tiene notas/cierres) de cada día
+      // del rango exacto pedido, aunque no tenga nada guardado: así se puede
+      // pintar la lista completa día a día (lunes a domingo) más abajo.
+      const infoPorFecha = {};
       resultadosMeses.forEach(function (dias) {
-        (dias || []).forEach(function (info) {
-          if (info.tieneNotas || info.tieneCierres) fechas.push(info.fecha);
-        });
+        (dias || []).forEach(function (info) { infoPorFecha[info.fecha] = info; });
       });
-      if (!fechas.length) return [];
-      return Promise.all(fechas.map(function (fecha) {
+      const diasRango = diasDeRango_(inicio, fin);
+      const fechasConContenido = diasRango.filter(function (fecha) {
+        const info = infoPorFecha[fecha];
+        return info && (info.tieneNotas || info.tieneCierres);
+      });
+      return Promise.all(fechasConContenido.map(function (fecha) {
         return llamarApi_('getConteoDia', [fecha]).catch(function () { return null; });
-      }));
+      })).then(function (datosDias) { return { diasRango: diasRango, datosDias: datosDias }; });
     })
-    .then(function (datosDias) {
+    .then(function (resultado) {
       if (idSolicitud !== FESTIVOS_ESTADO.idSolicitud) return; // ya no es la petición vigente
-      FESTIVOS_ESTADO.datosCache = datosDias || [];
+      FESTIVOS_ESTADO.diasRango = resultado.diasRango;
+      FESTIVOS_ESTADO.datosCache = resultado.datosDias || [];
       aplicarFiltrosFestivos_();
     })
     .catch(function (err) {
@@ -1626,27 +1992,36 @@ function aplicarFiltrosFestivos_() {
 
   const porFecha = {};
   items.forEach(function (it) { (porFecha[it.fecha] = porFecha[it.fecha] || []).push(it); });
-  const grupos = Object.keys(porFecha).sort().map(function (fecha) { return { fecha: fecha, items: porFecha[fecha] }; });
 
   const hayFiltrosDeContenido = !!FESTIVOS_ESTADO.filtroTexto || FESTIVOS_ESTADO.filtroTipo !== 'todos';
   const hayFiltrosActivos = hayFiltrosDeContenido || !!(FESTIVOS_ESTADO.filtroDesde && FESTIVOS_ESTADO.filtroHasta);
   const badgeEl = document.getElementById('festivos-filtro-badge');
   if (badgeEl) badgeEl.style.display = hayFiltrosActivos ? 'block' : 'none';
 
+  // Con un filtro de texto o tipo activo solo tiene sentido mostrar los días
+  // que de verdad tienen algo que coincida. Sin ese filtro (vista normal),
+  // se listan TODOS los días del rango, aunque algunos no tengan nada
+  // guardado (se marcan como "Sin ninguna anotación").
+  const grupos = hayFiltrosDeContenido
+    ? Object.keys(porFecha).sort().map(function (fecha) { return { fecha: fecha, items: porFecha[fecha] }; })
+    : (FESTIVOS_ESTADO.diasRango || []).map(function (fecha) { return { fecha: fecha, items: porFecha[fecha] || [] }; });
+
   renderStatsFestivos_(statsEl, grupos);
   renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido);
+  ajustarAlturaListaScrollable_('festivos-lista');
 }
 
 function renderStatsFestivos_(statsEl, grupos) {
   if (!statsEl) return;
-  let totalCierres = 0, totalNotas = 0;
+  let totalCierres = 0, totalNotas = 0, diasConContenido = 0;
   grupos.forEach(function (g) {
+    if (g.items.length) diasConContenido++;
     g.items.forEach(function (it) { it.tipo === 'cierre' ? totalCierres++ : totalNotas++; });
   });
   statsEl.innerHTML =
     '<div class="festivos-stat">' +
       '<span class="icono"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>' +
-      '<span class="txt"><span class="valor">' + grupos.length + '</span><span class="etiqueta">día' + (grupos.length === 1 ? '' : 's') + '</span></span>' +
+      '<span class="txt"><span class="valor">' + diasConContenido + '</span><span class="etiqueta">día' + (diasConContenido === 1 ? '' : 's') + '</span></span>' +
     '</div>' +
     '<div class="festivos-stat cierre">' +
       '<span class="icono">' + ICONO_CIERRE_ + '</span>' +
@@ -1673,36 +2048,43 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
   }
 
   const hoy = hoyStr();
-  listaEl.innerHTML = '';
+  const semana = document.createElement('div');
+  semana.className = 'festivos-semana';
+
   grupos.forEach(function (g) {
     const esHoy = g.fecha === hoy;
     const d = new Date(g.fecha + 'T12:00:00');
-    const div = document.createElement('div');
-    div.className = 'festivos-grupo' + (esHoy ? ' es-hoy' : '');
-    const itemsHtml = g.items.map(function (it) {
-      const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : 'festivos-item';
-      const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : ICONO_NOTA_;
-      const delBtn = it.id
-        ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" title="Eliminar">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
-        : '';
-      return '<div class="' + clase + '">' +
-        '<span class="festivos-item-icon">' + icono + '</span>' +
-        '<div class="festivos-item-body">' +
-          '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
-          '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
-        '</div>' + delBtn + '</div>';
-    }).join('');
-    div.innerHTML =
-      '<div class="festivos-fecha-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +
-      '<div class="festivos-grupo-contenido">' +
-        '<div class="festivos-grupo-fecha">' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) +
+    const col = document.createElement('div');
+    col.className = 'festivos-dia-col' + (esHoy ? ' es-hoy' : '') + (g.items.length ? '' : ' vacio');
+    const itemsHtml = g.items.length
+      ? g.items.map(function (it) {
+          const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : 'festivos-item';
+          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : ICONO_NOTA_;
+          const delBtn = it.id
+            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" title="Eliminar">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
+            : '';
+          return '<div class="' + clase + '">' +
+            '<span class="festivos-item-icon">' + icono + '</span>' +
+            '<div class="festivos-item-body">' +
+              '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
+              '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
+            '</div>' + delBtn + '</div>';
+        }).join('')
+      : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
+    col.innerHTML =
+      '<div class="festivos-dia-col-header">' +
+        '<div class="festivos-dia-col-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +
+        '<div class="festivos-dia-col-nombre">' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) +
           (esHoy ? '<span class="festivos-chip-hoy">Hoy</span>' : '') +
         '</div>' +
-        '<div class="festivos-items">' + itemsHtml + '</div>' +
-      '</div>';
-    listaEl.appendChild(div);
+      '</div>' +
+      '<div class="festivos-dia-col-items">' + itemsHtml + '</div>';
+    semana.appendChild(col);
   });
+
+  listaEl.innerHTML = '';
+  listaEl.appendChild(semana);
 
   listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
     btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id')); };
@@ -1712,13 +2094,49 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
 const ICONO_NOTA_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
 const ICONO_CIERRE_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>';
 
+// Quita del caché local (FESTIVOS_ESTADO.datosCache) el elemento con el id
+// indicado, sin tocar el servidor: permite repintar al instante tras borrar,
+// en vez de tener que volver a pedir todo el rango (con su loader y espera).
+function quitarDeCacheFestivos_(id) {
+  (FESTIVOS_ESTADO.datosCache || []).forEach(function (data) {
+    if (!data) return;
+    if (data.notasGenerales) {
+      data.notasGenerales = data.notasGenerales.filter(function (n) { return n.id !== id; });
+    }
+    (data.secciones || []).forEach(function (seccion) {
+      if (seccion.notas) {
+        seccion.notas = seccion.notas.filter(function (n) { return n.id !== id; });
+      }
+      (seccion.tiendas || []).forEach(function (t) {
+        if (t.cerrada && t.cierreId === id) {
+          t.cerrada = false;
+          t.motivoCierre = '';
+          t.cierreId = null;
+        }
+      });
+    });
+  });
+}
+
 function eliminarObservacionDesdeFestivos_(id) {
-  llamarApi_('eliminarObservacion', [id])
-    .then(function () {
+  appConfirm(
+    'Eliminar registro',
+    '¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.',
+    function () {
+      // Guardamos una copia del caché para poder revertir si el servidor falla.
+      const copiaCache = JSON.parse(JSON.stringify(FESTIVOS_ESTADO.datosCache || []));
+      quitarDeCacheFestivos_(id);
+      aplicarFiltrosFestivos_();
       mostrarToast('Eliminado');
-      cargarFestivos();
-    })
-    .catch(mostrarErrorServidor);
+      llamarApi_('eliminarObservacion', [id])
+        .catch(function (err) {
+          FESTIVOS_ESTADO.datosCache = copiaCache;
+          aplicarFiltrosFestivos_();
+          mostrarErrorServidor(err);
+        });
+    },
+    true
+  );
 }
 
 /* ---------------- CONFIGURACIÓN: "Emails agencias" ----------------
@@ -1732,28 +2150,53 @@ function eliminarObservacionDesdeFestivos_(id) {
  */
 let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
 
+// Calcula el alto disponible en pantalla para una lista con scroll propio
+// dentro de Configuración (para que sea ELLA la que se desplace, y no toda
+// la página): mide dónde termina la cabecera fija de encima y deja un
+// margen para el padding inferior de la tarjeta, en vez de usar un número
+// fijo en CSS que no encaja en todas las pantallas.
+function ajustarAlturaListaScrollable_(idLista) {
+  if (ESTADO.vista !== 'configuracion') return;
+  const listaEl = document.getElementById(idLista);
+  if (!listaEl) return;
+  const top = listaEl.getBoundingClientRect().top;
+  if (top <= 0) return; // sección no visible ahora mismo
+  const disponible = window.innerHeight - top - 50; // 50px = padding inferior de la tarjeta (22) + borde (1) + padding inferior de main (24) + margen
+  listaEl.style.maxHeight = Math.max(160, Math.round(disponible)) + 'px';
+}
+let _timerAjusteAlturasConfig = null;
+function ajustarAlturasListasConfig_debounced_() {
+  clearTimeout(_timerAjusteAlturasConfig);
+  _timerAjusteAlturasConfig = setTimeout(function () {
+    ajustarAlturaListaScrollable_('emails-config-lista');
+    ajustarAlturaListaScrollable_('festivos-lista');
+  }, 120);
+}
+
 function renderConfigEmails() {
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
   cont.innerHTML =
     '<div class="vista-card">' +
-      '<div class="vista-card-header">' +
-        '<h2>Emails agencias</h2>' +
-        '<div class="vista-card-header-acciones">' +
-          '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
-            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
-            'Sincronizar con hojas de día</button>' +
+      '<div class="emails-config-fijo">' +
+        '<div class="vista-card-header">' +
+          '<h2>Emails agencias</h2>' +
+          '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+              'Sincronizar con hojas de día</button>' +
+            '</div>' +
         '</div>' +
-      '</div>' +
-      '<p>Emails de la agencia de transporte de cada agrupación (ruta). Se usan al pulsar "Enviar a agencia" en el conteo del día — ya no hace falta abrir la Google Sheet para cambiarlos.</p>' +
-      '<div class="emails-config-solo-lectura">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
-        'Solo lectura: entra con la contraseña de administrador para poder editar o borrar.' +
-      '</div>' +
-      '<div class="emails-config-toolbar">' +
-        '<div class="emails-config-busqueda">' +
-          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-          '<input type="text" id="emails-config-buscar" placeholder="Buscar agrupación o email…">' +
+        '<p>Emails de la agencia de transporte de cada agrupación (ruta). Se usan al pulsar "Enviar a agencia" en el conteo del día — ya no hace falta abrir la Google Sheet para cambiarlos.</p>' +
+        '<div class="emails-config-solo-lectura">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+          'Solo lectura: entra con la contraseña de administrador para poder editar o borrar.' +
+        '</div>' +
+        '<div class="emails-config-toolbar">' +
+          '<div class="emails-config-busqueda">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+            '<input type="text" id="emails-config-buscar" placeholder="Buscar agrupación o email…">' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div id="emails-config-lista"><div class="loader">Cargando…</div></div>' +
@@ -1772,6 +2215,8 @@ function renderConfigEmails() {
   });
 
   cargarAgrupacionesConfig_();
+  ajustarAlturaListaScrollable_('emails-config-lista');
+  window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
 function cargarAgrupacionesConfig_() {
@@ -1781,6 +2226,7 @@ function cargarAgrupacionesConfig_() {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
       EMAILS_CONFIG_ESTADO.datos = datos || [];
       pintarListaEmails_();
+      ajustarAlturaListaScrollable_('emails-config-lista');
     })
     .catch(function (err) {
       mostrarErrorServidor(err);
@@ -1902,6 +2348,490 @@ function sincronizarAgrupacionesDesdeApp_() {
       if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
       mostrarErrorServidor(err);
     });
+}
+
+/* ---------------- CONFIGURACIÓN: "Plantilla conteos" ----------------
+ * Editor de la estructura de cada hoja de día (LUNES, MARTES...): qué
+ * rutas hay y qué tiendas tiene cada una, para no tener que abrir la
+ * Google Sheet a mano. Solo lectura para cualquier rol; añadir, editar,
+ * borrar y reordenar requiere el rol "admin" (igual que el resto de
+ * Configuración).
+ *
+ * OJO: esto edita filas reales de la hoja de conteo (inserta, borra o
+ * mueve filas). Mejor evitarlo mientras alguien esté a mitad de rellenar
+ * el conteo de ese día en concreto, para no liarse con casillas ya
+ * escritas de 60/PTA/CART. Por eso mismo, tras cada cambio se vuelve a
+ * pedir la plantilla entera de ese día al servidor (los números de fila
+ * cambian al insertar/borrar/mover, así que no se puede hacer una
+ * actualización optimista local como en "Gestión festivos").
+ */
+let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [] };
+
+function renderConfigPlantilla() {
+  const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Rutas y tiendas</h2>' +
+      '</div>' +
+      '<p>Rutas y tiendas de cada hoja de día. Los cambios se aplican directamente en la Google Sheet.</p>' +
+      '<div class="emails-config-solo-lectura">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+        'Solo lectura: entra con la contraseña de administrador para poder editar.' +
+      '</div>' +
+      '<div class="plantilla-dias-fila" id="plantilla-dias-fila"></div>' +
+      '<div id="plantilla-lista"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  llamarApi_('getDiasPlantilla', [])
+    .then(function (dias) {
+      PLANTILLA_ESTADO.dias = dias || [];
+      if (!PLANTILLA_ESTADO.dia || PLANTILLA_ESTADO.dias.indexOf(PLANTILLA_ESTADO.dia) === -1) {
+        PLANTILLA_ESTADO.dia = PLANTILLA_ESTADO.dias[0] || null;
+      }
+      pintarDiasPlantilla_();
+      cargarPlantilla_();
+    })
+    .catch(mostrarErrorServidor);
+}
+
+function pintarDiasPlantilla_() {
+  const cont = document.getElementById('plantilla-dias-fila');
+  if (!cont) return;
+  const botonesDias = PLANTILLA_ESTADO.dias.map(function (d) {
+    return '<button type="button" class="' + (d === PLANTILLA_ESTADO.dia ? 'activo' : '') + '" data-dia="' + escapeAttr(d) + '">' + escapeHtml(d) + '</button>';
+  }).join('');
+  cont.innerHTML =
+    '<div class="plantilla-dias">' + botonesDias + '</div>' +
+    (esAdmin() ? botonAnadirRutaPlantillaHtml_() : '');
+  cont.querySelectorAll('.plantilla-dias button').forEach(function (btn) {
+    btn.onclick = function () {
+      if (btn.getAttribute('data-dia') === PLANTILLA_ESTADO.dia) return;
+      PLANTILLA_ESTADO.dia = btn.getAttribute('data-dia');
+      pintarDiasPlantilla_();
+      cargarPlantilla_();
+    };
+  });
+  const btnAnadirRuta = document.getElementById('btn-plantilla-anadir-ruta');
+  if (btnAnadirRuta) btnAnadirRuta.onclick = anadirRutaPlantilla_;
+}
+
+function cargarPlantilla_() {
+  if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
+  const listaEl = document.getElementById('plantilla-lista');
+  if (!listaEl || !PLANTILLA_ESTADO.dia) return;
+  listaEl.innerHTML = '<div class="loader">Cargando…</div>';
+  llamarApi_('getPlantillaDia', [PLANTILLA_ESTADO.dia])
+    .then(function (resultado) {
+      if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
+      PLANTILLA_ESTADO.secciones = (resultado && resultado.secciones) || [];
+      pintarPlantilla_();
+    })
+    .catch(function (err) {
+      listaEl.innerHTML = '<div class="festivos-vacio">No se ha podido cargar la plantilla de este día.</div>';
+      mostrarErrorServidor(err);
+    });
+}
+
+function botonAnadirRutaPlantillaHtml_() {
+  return '<button type="button" class="btn-anadir-obs plantilla-anadir-ruta" id="btn-plantilla-anadir-ruta">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+    'Añadir ruta nueva</button>';
+}
+
+function pintarPlantilla_() {
+  const listaEl = document.getElementById('plantilla-lista');
+  if (!listaEl) return;
+
+  if (!PLANTILLA_ESTADO.secciones.length) {
+    listaEl.innerHTML = '<div class="festivos-vacio">Esta hoja de día todavía no tiene ninguna ruta.</div>';
+    return;
+  }
+
+  listaEl.innerHTML = PLANTILLA_ESTADO.secciones.map(function (s, si) {
+    const tiendasHtml = s.tiendas.map(function (t, ti) {
+      const idSeguro = 'pt' + si + '_' + ti;
+      const tieneNotaOOrden = !!(t.nota || t.orden);
+      return (
+        '<div class="plantilla-tienda">' +
+          '<div class="plantilla-tienda-flechas">' +
+            '<button type="button" data-subir="' + t.row + '"' + (ti === 0 ? ' disabled' : '') + ' title="Subir">' +
+              '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>' +
+            '<button type="button" data-bajar="' + t.row + '"' + (ti === s.tiendas.length - 1 ? ' disabled' : '') + ' title="Bajar">' +
+              '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
+          '</div>' +
+          '<input type="text" class="lim" id="' + idSeguro + '_lim" value="' + escapeAttr(t.limite) + '" title="Límite" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '<input type="text" class="nombre" id="' + idSeguro + '_nombre" value="' + escapeAttr(t.nombre) + '" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (esAdmin() ? '' : ' disabled') + '>' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
+          (esAdmin() ? (
+            '<button type="button" class="plantilla-tienda-guardar" data-guardar-tienda="' + t.row + '" data-id="' + idSeguro + '" title="Guardar cambios" disabled>' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
+            '<button type="button" class="plantilla-tienda-borrar" data-borrar-tienda="' + t.row + '" title="Eliminar tienda">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
+          ) : '') +
+        '</div>'
+      );
+    }).join('');
+
+    const notasCargaHtml = s.notasCarga.map(function (n, ni) {
+      const idn = 'nc' + si + '_' + ni;
+      return (
+        '<div class="plantilla-notacarga-item">' +
+          '<input type="text" id="' + idn + '" value="' + escapeAttr(n.texto) + '" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          (esAdmin() ? (
+            '<button type="button" class="plantilla-tienda-guardar" data-guardar-notacarga="' + n.row + '" data-id="' + idn + '" title="Guardar" disabled>' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
+            '<button type="button" class="plantilla-tienda-borrar" data-borrar-notacarga="' + n.row + '" title="Eliminar nota de carga">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
+          ) : '') +
+        '</div>'
+      );
+    }).join('');
+
+    return (
+      '<div class="plantilla-ruta">' +
+        '<div class="plantilla-ruta-header">' +
+          '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          (esAdmin() ? (
+            '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
+            '<button type="button" class="plantilla-tienda-guardar" data-guardar-ruta="' + escapeAttr(s.nombre) + '" data-id="pr' + si + '_nombre" title="Guardar nombre de ruta" disabled>' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
+            '<button type="button" class="plantilla-ruta-borrar" data-borrar-ruta="' + escapeAttr(s.nombre) + '" title="Eliminar ruta completa">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
+          ) : '') +
+        '</div>' +
+        (notasCargaHtml || esAdmin() ? (
+          '<div class="plantilla-notascarga">' +
+            notasCargaHtml +
+            (esAdmin() ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
+              '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir nota de carga</button>' : '') +
+          '</div>'
+        ) : '') +
+        '<div class="plantilla-tiendas">' + (tiendasHtml || '<div class="festivos-item-vacio">Sin tiendas todavía.</div>') + '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  listaEl.querySelectorAll('[data-nota-fila]').forEach(function (btn) {
+    btn.onclick = function () {
+      abrirModalNotaTiendaPlantilla_(
+        btn.getAttribute('data-nota-fila'),
+        btn.getAttribute('data-nota-texto'),
+        Number(btn.getAttribute('data-nota-cantidad')) || 1,
+        btn.getAttribute('data-nota-orden')
+      );
+    };
+  });
+  listaEl.querySelectorAll('[data-guardar-notacarga]').forEach(function (btn) {
+    btn.onclick = function () { guardarNotaCargaPlantilla_(btn.getAttribute('data-guardar-notacarga'), btn.getAttribute('data-id')); };
+  });
+  listaEl.querySelectorAll('[data-borrar-notacarga]').forEach(function (btn) {
+    btn.onclick = function () { confirmarEliminarNotaCargaPlantilla_(btn.getAttribute('data-borrar-notacarga')); };
+  });
+  listaEl.querySelectorAll('[data-anadir-notacarga]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalAnadirNotaCargaPlantilla_(btn.getAttribute('data-anadir-notacarga')); };
+  });
+  listaEl.querySelectorAll('.plantilla-notacarga-item').forEach(function (item) {
+    const input = item.querySelector('input');
+    const boton = item.querySelector('.plantilla-tienda-guardar');
+    if (!input || !boton) return;
+    const refrescar = function () {
+      const cambiado = input.value !== input.defaultValue;
+      item.classList.toggle('dirty', cambiado);
+      boton.disabled = !cambiado;
+    };
+    input.addEventListener('input', refrescar);
+  });
+
+  listaEl.querySelectorAll('[data-guardar-tienda]').forEach(function (btn) {
+
+    btn.onclick = function () { guardarTiendaPlantilla_(btn.getAttribute('data-guardar-tienda'), btn.getAttribute('data-id')); };
+  });
+  listaEl.querySelectorAll('[data-borrar-tienda]').forEach(function (btn) {
+    btn.onclick = function () { confirmarEliminarTiendaPlantilla_(btn.getAttribute('data-borrar-tienda')); };
+  });
+  listaEl.querySelectorAll('[data-subir]').forEach(function (btn) {
+    btn.onclick = function () { moverTiendaPlantilla_(btn.getAttribute('data-subir'), 'arriba'); };
+  });
+  listaEl.querySelectorAll('[data-bajar]').forEach(function (btn) {
+    btn.onclick = function () { moverTiendaPlantilla_(btn.getAttribute('data-bajar'), 'abajo'); };
+  });
+  listaEl.querySelectorAll('[data-anadir-tienda-ruta]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalAnadirTiendaPlantilla_(btn.getAttribute('data-anadir-tienda-ruta')); };
+  });
+  listaEl.querySelectorAll('[data-guardar-ruta]').forEach(function (btn) {
+    btn.onclick = function () { guardarNombreRutaPlantilla_(btn.getAttribute('data-guardar-ruta'), btn.getAttribute('data-id')); };
+  });
+
+  // Marca en naranja la fila/cabecera y habilita "Guardar" solo cuando el
+  // valor de un campo difiere de con el que se pintó (input.defaultValue
+  // conserva el valor original aunque el usuario escriba encima).
+  listaEl.querySelectorAll('.plantilla-tienda').forEach(function (fila) {
+    const lim = fila.querySelector('input.lim');
+    const nombre = fila.querySelector('input.nombre');
+    const boton = fila.querySelector('.plantilla-tienda-guardar');
+    if (!lim || !nombre || !boton) return;
+    const refrescar = function () {
+      const cambiado = lim.value !== lim.defaultValue || nombre.value !== nombre.defaultValue;
+      fila.classList.toggle('dirty', cambiado);
+      boton.disabled = !cambiado;
+    };
+    lim.addEventListener('input', refrescar);
+    nombre.addEventListener('input', refrescar);
+  });
+  listaEl.querySelectorAll('.plantilla-ruta-header').forEach(function (cabecera) {
+    const nombre = cabecera.querySelector('input');
+    const boton = cabecera.querySelector('[data-guardar-ruta]');
+    if (!nombre || !boton) return;
+    const refrescar = function () {
+      const cambiado = nombre.value !== nombre.defaultValue;
+      cabecera.classList.toggle('dirty', cambiado);
+      boton.disabled = !cambiado;
+    };
+    nombre.addEventListener('input', refrescar);
+  });
+  listaEl.querySelectorAll('[data-borrar-ruta]').forEach(function (btn) {
+    btn.onclick = function () { confirmarEliminarRutaPlantilla_(btn.getAttribute('data-borrar-ruta')); };
+  });
+}
+
+function guardarTiendaPlantilla_(row, idSeguro) {
+  const nombre = document.getElementById(idSeguro + '_nombre').value;
+  const limite = document.getElementById(idSeguro + '_lim').value;
+  llamarApi_('editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), nombre, limite])
+    .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function confirmarEliminarTiendaPlantilla_(row) {
+  appConfirm(
+    'Eliminar tienda',
+    '¿Seguro que quieres eliminar esta tienda de la plantilla? Esta acción no se puede deshacer.',
+    function () { eliminarTiendaPlantilla_(row); },
+    true
+  );
+}
+function eliminarTiendaPlantilla_(row) {
+  llamarApi_('eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row)])
+    .then(function () { mostrarToast('Eliminada'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function moverTiendaPlantilla_(row, direccion) {
+  llamarApi_('moverTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), direccion])
+    .then(function () { cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function guardarNotaCargaPlantilla_(row, idSeguro) {
+  const texto = document.getElementById(idSeguro).value;
+  llamarApi_('editarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), texto])
+    .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function confirmarEliminarNotaCargaPlantilla_(row) {
+  appConfirm(
+    'Eliminar nota de carga',
+    '¿Seguro que quieres eliminar esta nota de carga? Esta acción no se puede deshacer.',
+    function () {
+      llamarApi_('eliminarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, Number(row)])
+        .then(function () { mostrarToast('Eliminada'); cargarPlantilla_(); })
+        .catch(mostrarErrorServidor);
+    },
+    true
+  );
+}
+
+function abrirModalAnadirNotaCargaPlantilla_(nombreRuta) {
+  appPrompt('Añadir nota de carga', 'Ej: 1 CAMIÓN 33 P. + RESTOS TODOS LOS LUNES', function (texto) {
+    if (!texto || !texto.trim()) return;
+    llamarApi_('añadirNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, texto.trim()])
+      .then(function () { mostrarToast('Nota añadida'); cargarPlantilla_(); })
+      .catch(mostrarErrorServidor);
+  });
+}
+
+function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, ordenActual) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Nota y orden de retirada';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-nota-texto">Nota (ej: 8P MAX. POR RUTA)</label>' +
+      '<input type="text" id="modal-nota-texto" value="' + escapeAttr(notaActual || '') + '" placeholder="Déjalo vacío para no poner nota">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-nota-cantidad">Aplica a cuántas tiendas (empezando por esta)</label>' +
+      '<input type="text" id="modal-nota-cantidad" inputmode="numeric" value="' + (notaCantidadActual || 1) + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-nota-orden">Orden de retirada ("QUITAR EN ESTE ORDEN")</label>' +
+      '<input type="text" id="modal-nota-orden" value="' + escapeAttr(ordenActual || '') + '" placeholder="Ej: nombre de la tienda">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    (notaActual ? '<button class="modal-cancel" id="modal-quitar-nota-btn" style="margin-right:auto;">Quitar nota</button>' : '') +
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  if (notaActual) {
+    document.getElementById('modal-quitar-nota-btn').onclick = function () {
+      cerrarModal();
+      llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila])
+        .then(function () { mostrarToast('Nota eliminada'); cargarPlantilla_(); })
+        .catch(mostrarErrorServidor);
+    };
+  }
+
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const texto = document.getElementById('modal-nota-texto').value.trim();
+    const cantidad = document.getElementById('modal-nota-cantidad').value.trim() || '1';
+    const orden = document.getElementById('modal-nota-orden').value.trim();
+    cerrarModal();
+
+    const tareas = [];
+    if (texto) {
+      tareas.push(llamarApi_('guardarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila, cantidad, texto]));
+    } else if (notaActual) {
+      tareas.push(llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila]));
+    }
+    tareas.push(llamarApi_('editarOrdenTiendaPlantilla', [PLANTILLA_ESTADO.dia, fila, orden]));
+
+    Promise.all(tareas)
+      .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
+      .catch(mostrarErrorServidor);
+  };
+
+  setTimeout(function () { document.getElementById('modal-nota-texto').focus(); }, 50);
+}
+
+function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Añadir tienda';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-plantilla-lim">Límite de palets diarios</label>' +
+      '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Ej: 6">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-plantilla-nombre">Nombre de la tienda</label>' +
+      '<input type="text" id="modal-plantilla-nombre" placeholder="Ej: 345- INDEPENDENCIA2">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Añadir tienda</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const inputLim = document.getElementById('modal-plantilla-lim');
+    const inputNombre = document.getElementById('modal-plantilla-nombre');
+    const limite = inputLim.value.trim();
+    const nombre = inputNombre.value.trim();
+    if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
+    if (!nombre) { inputNombre.focus(); return; }
+    cerrarModal();
+    llamarApi_('añadirTiendaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, nombre, limite])
+      .then(function () { mostrarToast('Tienda añadida'); cargarPlantilla_(); })
+      .catch(mostrarErrorServidor);
+  };
+  setTimeout(function () { document.getElementById('modal-plantilla-nombre').focus(); }, 50);
+}
+
+function guardarNombreRutaPlantilla_(nombreActual, idSeguro) {
+  const nombreNuevo = document.getElementById(idSeguro).value;
+  llamarApi_('editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreNuevo])
+    .then(function () { mostrarToast('Nombre actualizado'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function confirmarEliminarRutaPlantilla_(nombreRuta) {
+  appConfirm(
+    'Eliminar ruta completa',
+    '¿Seguro que quieres eliminar la ruta "' + nombreRuta + '" y TODAS sus tiendas de ' + PLANTILLA_ESTADO.dia + '? Esta acción no se puede deshacer.',
+    function () { eliminarRutaPlantilla_(nombreRuta); },
+    true
+  );
+}
+function eliminarRutaPlantilla_(nombreRuta) {
+  llamarApi_('eliminarRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function () { mostrarToast('Ruta eliminada'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+function anadirRutaPlantilla_() {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Añadir ruta nueva';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-nombre">Nombre de la ruta</label>' +
+      '<input type="text" id="modal-ruta-nombre" placeholder="Ej: PRUEBA">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
+      '<input type="text" id="modal-ruta-ubicacion" placeholder="Ej: GAITE">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-hora">Hora de carga</label>' +
+      '<input type="text" id="modal-ruta-hora" placeholder="Ej: 10:00">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const inputNombre = document.getElementById('modal-ruta-nombre');
+    const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
+    const inputHora = document.getElementById('modal-ruta-hora');
+    const nombre = inputNombre.value.trim();
+    const ubicacion = inputUbicacion.value.trim();
+    const hora = inputHora.value.trim();
+    if (!nombre) { inputNombre.focus(); return; }
+    if (!ubicacion) { inputUbicacion.focus(); return; }
+    if (!hora) { inputHora.focus(); return; }
+
+    const nombreCompleto = nombre + ' (' + ubicacion + ' ' + hora + ')';
+    cerrarModal();
+    llamarApi_('añadirRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreCompleto])
+      .then(function () { mostrarToast('Ruta añadida'); cargarPlantilla_(); })
+      .catch(mostrarErrorServidor);
+  };
+  setTimeout(function () { document.getElementById('modal-ruta-nombre').focus(); }, 50);
 }
 
 function renderShellPrincipal() {
@@ -2072,7 +3002,7 @@ function renderContenidoDia(data) {
   } else if (!data.secciones.length) {
     const msg = document.createElement('div');
     msg.className = 'sin-conteo-msg';
-    msg.textContent = 'No se han encontrado agrupaciones en la hoja "' + data.dia + '".';
+    msg.textContent = 'Esta hoja ("' + data.dia + '") todavía no tiene ninguna ruta configurada.';
     wrap.appendChild(msg);
   } else {
     data.secciones.forEach(function (seccion) {
@@ -2997,6 +3927,7 @@ function abrirGestorObservaciones() {
   GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null };
 
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.add('medio');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir observación';
   document.getElementById('modal-text').style.display = 'none';
@@ -3028,9 +3959,15 @@ function crearFormularioGestorObs_() {
     '<div class="gestor-campo">' +
       '<label>Tipo</label>' +
       '<div class="gestor-tipo-pills">' +
-        '<button type="button" class="gestor-tipo-pill activa" data-tipo="general">Nota del día</button>' +
-        '<button type="button" class="gestor-tipo-pill" data-tipo="agrupacion">Nota de agrupación</button>' +
-        '<button type="button" class="gestor-tipo-pill" data-tipo="cierre">Cerrar tienda</button>' +
+        '<button type="button" class="gestor-tipo-pill activa" data-tipo="general">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>' +
+          'Nota del día</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="agrupacion">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' +
+          'Nota de agrupación</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="cierre">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>' +
+          'Cerrar tienda</button>' +
       '</div>' +
       '<div class="gestor-aviso" id="gestor-aviso-dia" style="display:none;margin-top:8px;">Ese día de la semana no tiene hoja de conteo: solo se puede añadir una nota general.</div>' +
     '</div>' +
@@ -3040,7 +3977,8 @@ function crearFormularioGestorObs_() {
         '<input type="text" id="gestor-busqueda" placeholder="Escribe para buscar…" autocomplete="off">' +
         '<div class="gestor-busqueda-resultados" id="gestor-busqueda-resultados" style="display:none;"></div>' +
       '</div>' +
-      '<div id="gestor-seleccion-actual" style="margin-top:8px;"></div>' +
+      '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un cierre para cada una.</div>' +
+      '<div id="gestor-seleccion-actual" style="margin-top:10px;"></div>' +
     '</div>' +
     '<div class="gestor-campo" id="gestor-estado-carga" style="display:none;">' +
       '<div class="gestor-aviso">Cargando agrupaciones de ese día…</div>' +
@@ -3054,7 +3992,7 @@ function crearFormularioGestorObs_() {
     if (!e.target.value) return;
     GESTOR_OBS.fecha = e.target.value;
     GESTOR_OBS.datosDia = null;
-    GESTOR_OBS.seleccion = null;
+    GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
     document.getElementById('gestor-busqueda').value = '';
     actualizarSeleccionGestorObs_();
     cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
@@ -3066,14 +4004,19 @@ function crearFormularioGestorObs_() {
       wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (b) { b.classList.remove('activa'); });
       btn.classList.add('activa');
       GESTOR_OBS.tipo = btn.getAttribute('data-tipo');
-      GESTOR_OBS.seleccion = null;
+      GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
+      document.getElementById('gestor-busqueda').value = '';
       actualizarFormularioSegunTipo_();
     };
   });
 
   const inputBusqueda = wrap.querySelector('#gestor-busqueda');
   inputBusqueda.addEventListener('input', function () {
-    GESTOR_OBS.seleccion = null;
+    // En "Cerrar tienda" se puede elegir varias tiendas: escribir para buscar
+    // la siguiente no debe borrar las que ya se marcaron. En "Nota de
+    // agrupación" solo hay una elegida a la vez, así que escribir sí la
+    // sustituye (se está buscando otra distinta).
+    if (GESTOR_OBS.tipo !== 'cierre') GESTOR_OBS.seleccion = null;
     actualizarSeleccionGestorObs_();
     renderResultadosBusquedaGestorObs_(inputBusqueda.value);
   });
@@ -3088,6 +4031,7 @@ function crearFormularioGestorObs_() {
 function actualizarFormularioSegunTipo_() {
   const campoBusqueda = document.getElementById('gestor-busqueda-campo');
   const label = document.getElementById('gestor-busqueda-label');
+  const ayuda = document.getElementById('gestor-busqueda-ayuda');
   const textoLabel = document.getElementById('gestor-texto-label');
   const textoArea = document.getElementById('gestor-texto');
   const inputBusqueda = document.getElementById('gestor-busqueda');
@@ -3095,18 +4039,21 @@ function actualizarFormularioSegunTipo_() {
 
   if (GESTOR_OBS.tipo === 'general') {
     campoBusqueda.style.display = 'none';
+    ayuda.style.display = 'none';
     textoLabel.textContent = 'Nota';
     textoArea.placeholder = 'Escribe la nota general del día…';
   } else if (GESTOR_OBS.tipo === 'agrupacion') {
     campoBusqueda.style.display = 'block';
+    ayuda.style.display = 'none';
     label.textContent = 'Agrupación';
     inputBusqueda.placeholder = 'Busca una agrupación…';
     textoLabel.textContent = 'Nota';
     textoArea.placeholder = 'Escribe la nota para esta agrupación…';
   } else {
     campoBusqueda.style.display = 'block';
-    label.textContent = 'Tienda';
-    inputBusqueda.placeholder = 'Busca una tienda…';
+    ayuda.style.display = 'block';
+    label.textContent = 'Tiendas';
+    inputBusqueda.placeholder = 'Busca y añade una o varias tiendas…';
     textoLabel.textContent = 'Motivo del cierre';
     textoArea.placeholder = 'Ej. "Tienda cerrada, no se da a agencia"…';
   }
@@ -3114,15 +4061,45 @@ function actualizarFormularioSegunTipo_() {
   actualizarSeleccionGestorObs_();
 }
 
-/** Muestra el chip de la agrupación/tienda ya elegida, con opción de quitarla. */
+/** Actualiza el texto del botón "Guardar" para reflejar cuántos cierres se van a crear (si es más de uno). */
+function actualizarBotonGuardarGestor_() {
+  const btn = document.getElementById('modal-confirm-btn');
+  if (!btn) return;
+  const n = GESTOR_OBS.tipo === 'cierre' && GESTOR_OBS.seleccion ? GESTOR_OBS.seleccion.length : 0;
+  btn.textContent = n > 1 ? 'Guardar ' + n + ' cierres' : 'Guardar';
+}
+
+/** Muestra el/los chip(s) de lo ya elegido (una agrupación, o varias tiendas si es un cierre), con opción de quitar cada uno. */
 function actualizarSeleccionGestorObs_() {
   const cont = document.getElementById('gestor-seleccion-actual');
   if (!cont) return;
+  actualizarBotonGuardarGestor_();
+
+  if (GESTOR_OBS.tipo === 'cierre') {
+    const seleccion = GESTOR_OBS.seleccion || [];
+    if (!seleccion.length) { cont.innerHTML = ''; return; }
+    const contador = seleccion.length === 1 ? '1 tienda seleccionada' : seleccion.length + ' tiendas seleccionadas';
+    cont.innerHTML =
+      '<div class="gestor-seleccion-contador">' + contador + '</div>' +
+      '<div class="gestor-seleccion-chips">' +
+      seleccion.map(function (s, i) {
+        return '<span class="gestor-seleccion-chip">' + escapeHtml(s.tienda + ' (' + s.agrupacion + ')') +
+          '<button type="button" data-quitar="' + i + '">×</button></span>';
+      }).join('') +
+      '</div>';
+    cont.querySelectorAll('button[data-quitar]').forEach(function (btn) {
+      btn.onclick = function () {
+        GESTOR_OBS.seleccion.splice(Number(btn.getAttribute('data-quitar')), 1);
+        actualizarSeleccionGestorObs_();
+        renderResultadosBusquedaGestorObs_(document.getElementById('gestor-busqueda').value);
+      };
+    });
+    return;
+  }
+
   if (!GESTOR_OBS.seleccion) { cont.innerHTML = ''; return; }
-  const texto = GESTOR_OBS.tipo === 'cierre'
-    ? GESTOR_OBS.seleccion.tienda + ' (' + GESTOR_OBS.seleccion.agrupacion + ')'
-    : GESTOR_OBS.seleccion.agrupacion;
-  cont.innerHTML = '<span class="gestor-seleccion-chip">' + escapeHtml(texto) + '<button type="button" id="gestor-quitar-seleccion">×</button></span>';
+  const texto = GESTOR_OBS.seleccion.agrupacion;
+  cont.innerHTML = '<div class="gestor-seleccion-chips"><span class="gestor-seleccion-chip">' + escapeHtml(texto) + '<button type="button" id="gestor-quitar-seleccion">×</button></span></div>';
   document.getElementById('gestor-quitar-seleccion').onclick = function () {
     GESTOR_OBS.seleccion = null;
     document.getElementById('gestor-busqueda').value = '';
@@ -3177,6 +4154,7 @@ function renderResultadosBusquedaGestorObs_(query) {
   const q = String(query || '').trim().toLowerCase();
   let items = [];
   const secciones = GESTOR_OBS.datosDia.secciones || [];
+  const seleccionActual = GESTOR_OBS.tipo === 'cierre' ? (GESTOR_OBS.seleccion || []) : [];
 
   if (GESTOR_OBS.tipo === 'agrupacion') {
     items = secciones
@@ -3201,25 +4179,46 @@ function renderResultadosBusquedaGestorObs_(query) {
   }
 
   cont.innerHTML = items.map(function (it, i) {
-    return '<div class="gestor-busqueda-item" data-idx="' + i + '">' + escapeHtml(it.label) +
-      (it.sub ? '<div class="sub">' + escapeHtml(it.sub) + '</div>' : '') + '</div>';
+    const marcada = GESTOR_OBS.tipo === 'cierre' && seleccionActual.some(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+    const casilla = GESTOR_OBS.tipo === 'cierre'
+      ? '<span class="gestor-check">' + (marcada ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '</span>'
+      : '';
+    return '<div class="gestor-busqueda-item' + (marcada ? ' marcada' : '') + '" data-idx="' + i + '">' + casilla +
+      '<span class="gestor-busqueda-item-texto">' + escapeHtml(it.label) +
+      (it.sub ? '<div class="sub">' + escapeHtml(it.sub) + '</div>' : '') + '</span></div>';
   }).join('');
   cont.style.display = 'block';
 
   cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
     el.onclick = function () {
       const it = items[Number(el.getAttribute('data-idx'))];
-      GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre'
-        ? { agrupacion: it.agrupacion, tienda: it.tienda }
-        : { agrupacion: it.agrupacion };
-      document.getElementById('gestor-busqueda').value = it.label;
-      cont.style.display = 'none';
-      actualizarSeleccionGestorObs_();
+      if (GESTOR_OBS.tipo === 'cierre') {
+        // Selección múltiple: marca/desmarca esta tienda sin cerrar el
+        // desplegable, para poder seguir añadiendo más sin reabrir nada.
+        if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
+        const idx = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+        if (idx === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
+        else GESTOR_OBS.seleccion.splice(idx, 1);
+        actualizarSeleccionGestorObs_();
+        renderResultadosBusquedaGestorObs_(query);
+      } else {
+        GESTOR_OBS.seleccion = { agrupacion: it.agrupacion };
+        document.getElementById('gestor-busqueda').value = it.label;
+        cont.style.display = 'none';
+        actualizarSeleccionGestorObs_();
+      }
     };
   });
 }
 
-/** Valida el formulario y guarda la observación (nota general, de agrupación o cierre). */
+/** Guarda una observación en el backend, envuelto en una Promesa (google.script.run usa callbacks). */
+function guardarObservacionPromise_(obs) {
+  return new Promise(function (resolve, reject) {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).guardarObservacion(obs);
+  });
+}
+
+/** Valida el formulario y guarda la observación (nota general, de agrupación, o uno o varios cierres de tienda). */
 function guardarDesdeGestorObs_() {
   const fecha = GESTOR_OBS.fecha;
   if (!fecha) { mostrarToast('Elige una fecha', true); return; }
@@ -3227,32 +4226,47 @@ function guardarDesdeGestorObs_() {
   const texto = (document.getElementById('gestor-texto').value || '').trim();
   if (!texto) { document.getElementById('gestor-texto').focus(); return; }
 
-  const obs = {
-    fecha: fecha,
-    dia: (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.dia) || '',
-    agrupacion: '', tienda: '', tipo: 'nota', texto: texto
-  };
+  const dia = (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.dia) || '';
+  const base = { fecha: fecha, dia: dia, agrupacion: '', tienda: '', tipo: 'nota', texto: texto };
 
-  if (GESTOR_OBS.tipo === 'agrupacion') {
+  let observaciones = [];
+  if (GESTOR_OBS.tipo === 'general') {
+    observaciones = [base];
+  } else if (GESTOR_OBS.tipo === 'agrupacion') {
     if (!GESTOR_OBS.seleccion) { mostrarToast('Busca y selecciona una agrupación', true); return; }
-    obs.agrupacion = GESTOR_OBS.seleccion.agrupacion;
+    observaciones = [Object.assign({}, base, { agrupacion: GESTOR_OBS.seleccion.agrupacion })];
   } else if (GESTOR_OBS.tipo === 'cierre') {
-    if (!GESTOR_OBS.seleccion) { mostrarToast('Busca y selecciona una tienda', true); return; }
-    obs.agrupacion = GESTOR_OBS.seleccion.agrupacion;
-    obs.tienda = GESTOR_OBS.seleccion.tienda;
-    obs.tipo = 'cierre';
+    const seleccion = GESTOR_OBS.seleccion || [];
+    if (!seleccion.length) { mostrarToast('Busca y selecciona al menos una tienda', true); return; }
+    // Una tienda por cada cierre: mismo motivo para todas las marcadas.
+    observaciones = seleccion.map(function (s) {
+      return Object.assign({}, base, { agrupacion: s.agrupacion, tienda: s.tienda, tipo: 'cierre' });
+    });
   }
 
-  cerrarModal();
-  google.script.run
-    .withSuccessHandler(function () {
-      mostrarToast('Guardado');
+  const btnGuardar = document.getElementById('modal-confirm-btn');
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
+
+  // Se guardan una a una (no en paralelo) para no saturar el backend de
+  // Apps Script con llamadas simultáneas cuando se cierran varias tiendas
+  // a la vez.
+  let cadena = Promise.resolve();
+  observaciones.forEach(function (obs) {
+    cadena = cadena.then(function () { return guardarObservacionPromise_(obs); });
+  });
+
+  cadena
+    .then(function () {
+      cerrarModal();
+      mostrarToast(observaciones.length > 1 ? observaciones.length + ' cierres guardados' : 'Guardado');
       if (document.getElementById('calendar-body')) cargarCalendario();
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
       if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') cargarFestivos();
     })
-    .withFailureHandler(mostrarErrorServidor)
-    .guardarObservacion(obs);
+    .catch(function (err) {
+      if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar'; }
+      mostrarErrorServidor(err);
+    });
 }
 
 // Cierra el desplegable de resultados de búsqueda del gestor si se hace clic
@@ -3284,8 +4298,10 @@ function mostrarErrorServidor(err) {
   mostrarToast('Error: ' + (err && err.message ? err.message : err), true);
 }
 
-function appConfirm(titulo, texto, onConfirm) {
+function appConfirm(titulo, texto, onConfirm, peligro) {
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.toggle('peligro', !!peligro);
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = titulo;
   document.getElementById('modal-text').textContent = texto;
@@ -3296,7 +4312,8 @@ function appConfirm(titulo, texto, onConfirm) {
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-confirm-btn">Confirmar</button>';
+    '<button class="modal-confirm' + (peligro ? ' danger' : '') + '" id="modal-confirm-btn">' +
+    (peligro ? 'Eliminar' : 'Confirmar') + '</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirm(); };
@@ -3304,6 +4321,7 @@ function appConfirm(titulo, texto, onConfirm) {
 
 function appPrompt(titulo, placeholder, onSubmit) {
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = titulo;
   document.getElementById('modal-text').style.display = 'none';
@@ -3341,6 +4359,7 @@ function appPrompt(titulo, placeholder, onSubmit) {
  */
 function mostrarModalEnviarAgencia(datos, onConfirmar) {
   document.getElementById('modal-box').classList.add('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-title').style.display = 'none';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
@@ -3443,6 +4462,8 @@ function mostrarModalResultadoEnvio(ok, mensaje) {
 function cerrarModal() {
   document.getElementById('modal-overlay').style.display = 'none';
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-title').style.display = '';
 }
 
