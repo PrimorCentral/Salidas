@@ -880,7 +880,7 @@
   .seccion-panel.no-editable table.conteo input.celda-total { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
   .seccion-panel.no-editable .btn-cerrar-tienda,
   .seccion-panel.no-editable .btn-reabrir,
-  .seccion-panel.no-editable .btn-forzar-no { opacity: .35; cursor: not-allowed; pointer-events: none; }
+  .seccion-panel.no-editable .celda-no { opacity: .35; cursor: not-allowed; pointer-events: none; }
 
   /* Días de calendario todavía no disponibles (demasiado en el futuro) */
   .cal-day.bloqueada-futuro { opacity: .35; cursor: not-allowed; }
@@ -1047,17 +1047,12 @@
   /* Casilla que trae "NO" desde el Excel (esa tienda no debe recibir palets
      por esa vía). Se muestra en rojo, no editable; el botón "+" permite
      forzar un número igualmente si hiciera falta, sin perder el "NO" original. */
-  .celda-no-wrap { display: inline-flex; align-items: center; gap: 4px; }
   table.conteo input.celda-no {
     width: 52px; padding: 7px 4px; text-align: center; border-radius: 7px; font-family: var(--mono);
     font-size: 13.5px; font-weight: 800; color: var(--danger); background: #fceded; border: 1.5px solid var(--danger);
-    cursor: not-allowed;
+    cursor: pointer;
   }
-  table.conteo .btn-forzar-no {
-    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--line);
-    background: #fff; color: var(--ink-soft); font-size: 13px; line-height: 1; cursor: pointer; padding: 0;
-  }
-  table.conteo .btn-forzar-no:hover { background: #f4f6f9; color: var(--ink); }
+  table.conteo input.celda-no:hover { background: #f8d7d7; }
   table.conteo input.celda-forzada {
     border-color: var(--amber-dark); background: #fdf6ea; color: var(--amber-dark); font-weight: 800;
   }
@@ -3585,7 +3580,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     // Fecha demasiado antigua (2+ días atrás) o ya enviada: se puede
     // consultar, pero no modificar nada de esta agrupación.
     tableWrap.querySelectorAll('input.celda, input.celda-total').forEach(function (input) { input.disabled = true; });
-    tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, .btn-forzar-no').forEach(function (btn) { btn.disabled = true; });
+    tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, input.celda-no').forEach(function (btn) { btn.disabled = true; });
   }
   tablaCol.appendChild(tableWrap);
   body.appendChild(tablaCol);
@@ -4021,12 +4016,12 @@ function esValorNo(v) {
  * editable (con un botón para forzar un número igualmente si hiciera
  * falta); si no, es el input numérico normal de siempre.
  */
-function celdaConteoHtml(campo, valor) {
+function celdaConteoHtml(campo, valor, forzado) {
+  if (forzado) {
+    return '<input class="celda celda-forzada" data-campo="' + campo + '" data-forzado="1" type="number" value="' + valor + '" title="Forzado pese al &quot;NO&quot; original. Toca para volver a forzar/cambiar el número.">';
+  }
   if (esValorNo(valor)) {
-    return '<div class="celda-no-wrap">' +
-      '<input class="celda celda-no" data-campo="' + campo + '" type="text" value="NO" disabled title="Esta tienda no debe recibir palets por esta vía">' +
-      '<button type="button" class="btn-forzar-no" data-campo="' + campo + '" title="Forzar un número pese al NO">+</button>' +
-      '</div>';
+    return '<input class="celda celda-no" data-campo="' + campo + '" type="text" value="NO" readonly title="Esta tienda no debe recibir palets por esta vía. Toca para forzar un número igualmente.">';
   }
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
@@ -4052,9 +4047,9 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
   return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
     '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
-    '<td>' + celdaConteoHtml('c60', t.c60) + '</td>' +
-    '<td>' + celdaConteoHtml('pta', t.pta) + '</td>' +
-    '<td>' + celdaConteoHtml('cart', t.cart) + '</td>' +
+    '<td>' + celdaConteoHtml('c60', t.c60, !!(t.forzados && t.forzados.c60 !== undefined)) + '</td>' +
+    '<td>' + celdaConteoHtml('pta', t.pta, !!(t.forzados && t.forzados.pta !== undefined)) + '</td>' +
+    '<td>' + celdaConteoHtml('cart', t.cart, !!(t.forzados && t.forzados.cart !== undefined)) + '</td>' +
     '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
@@ -4122,10 +4117,8 @@ function attachCalculoYValidacion(tr) {
  * guardarConteo / escribirCeldaConteo_ en el backend).
  */
 function attachForzarNo(tr) {
-  tr.querySelectorAll('.btn-forzar-no').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      const campo = btn.getAttribute('data-campo');
-      const input = tr.querySelector('input.celda-no[data-campo="' + campo + '"]');
+  tr.querySelectorAll('input.celda-no').forEach(function (input) {
+    input.addEventListener('click', function () {
       appConfirm(
         'Forzar palets pese al "NO"',
         'Esta casilla trae "NO": esa tienda no debería recibir palets por esta vía. Si continúas, podrás escribir un número igualmente; se guardará como excepción sin borrar el "NO" original de la hoja.',
@@ -4134,13 +4127,12 @@ function attachForzarNo(tr) {
             const numero = Number(String(texto).replace(',', '.'));
             if (isNaN(numero)) { mostrarToast('Introduce un número válido', true); return; }
             input.type = 'number';
-            input.disabled = false;
+            input.readOnly = false;
             input.value = numero;
             input.classList.remove('celda-no');
             input.classList.add('celda-forzada');
             input.setAttribute('data-forzado', '1');
             input.title = 'Forzado pese al "NO" original';
-            btn.remove();
             input.dispatchEvent(new Event('input', { bubbles: true }));
             programarAutoguardado();
             actualizarTotalPalets();
@@ -5080,7 +5072,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.2.1';
+  const APP_VERSION_ACTUAL = '1.2.2';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
