@@ -856,7 +856,20 @@
   .badge-pendiente { background: #eef0f3; color: var(--ink-soft); }
   .badge-progreso { background: #fdf1de; color: var(--amber-dark); }
   .badge-enviado { background: #e4f3ec; color: var(--ok); }
+  .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* Agrupación bloqueada para edición (fecha demasiado antigua, o ya enviada) */
+  .seccion-panel.no-editable table.conteo input.celda,
+  .seccion-panel.no-editable table.conteo input.celda-total { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
+  .seccion-panel.no-editable .btn-cerrar-tienda,
+  .seccion-panel.no-editable .btn-reabrir,
+  .seccion-panel.no-editable .btn-forzar-no { opacity: .35; cursor: not-allowed; pointer-events: none; }
+
+  /* Días de calendario todavía no disponibles (demasiado en el futuro) */
+  .cal-day.bloqueada-futuro { opacity: .35; cursor: not-allowed; }
+  .cal-day.bloqueada-futuro:hover { border-color: transparent; }
+  .cal-day[disabled] { pointer-events: none; }
 
   .btn-add-nota {
     background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
@@ -878,6 +891,33 @@
   }
   .btn-header-enviar:hover { background: var(--amber-dark); color: #fff; }
   .btn-header-enviar:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-borrar {
+    background: #fff;
+    color: #d9362f;
+    border: 1px solid #d9362f;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-header-borrar:hover { background: #fdecea; }
+  .btn-header-borrar:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-deshacer-envio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #fff;
+    color: #d9362f;
+    border: 1px solid #f1c2be;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: none;
+  }
+  .btn-deshacer-envio:hover { background: #fdecea; border-color: #d9362f; }
+  .btn-deshacer-envio:disabled { opacity: .5; cursor: not-allowed; }
 
   /* Indicador de sincronización: invisible cuando todo va bien (silencio),
      solo se muestra mientras se está guardando en segundo plano. */
@@ -1391,6 +1431,8 @@ const METODOS_REMOTOS_ = {
   getMesCalendario: 'getMesCalendario',
   getConteoDia: 'getConteoDia',
   guardarConteo: 'guardarConteo',
+  borrarConteoSeccion: 'borrarConteoSeccion',
+  deshacerEnvioSeccion: 'deshacerEnvioSeccion',
   enviarResumenAgencia: 'enviarResumenAgencia',
   guardarObservacion: 'guardarObservacion',
   eliminarObservacion: 'eliminarObservacion',
@@ -2964,13 +3006,15 @@ function renderCalendario(dias) {
     if (!info.dia) clases.push('sin-conteo'); else clases.push('estado-' + info.estado);
     if (info.esHoy) clases.push('hoy');
     if (info.fecha === ESTADO.fecha) clases.push('seleccionado');
+    if (info.bloqueada) clases.push('bloqueada-futuro');
 
     let dots = '';
     if (info.tieneNotas) dots += '<span class="dot dot-nota"></span>';
     if (info.tieneCierres) dots += '<span class="dot dot-cierre"></span>';
 
     const diaNum = Number(info.fecha.slice(8, 10));
-    celdas += '<button type="button" class="' + clases.join(' ') + '" data-fecha="' + info.fecha + '">' +
+    const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y mañana"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : '');
+    celdas += '<button type="button" class="' + clases.join(' ') + '" data-fecha="' + info.fecha + '"' + atrBloqueo + '>' +
       '<span>' + diaNum + '</span>' +
       '<span class="dots">' + dots + '</span>' +
       '</button>';
@@ -2997,6 +3041,7 @@ function renderCalendario(dias) {
   document.getElementById('cal-prev').onclick = function () { cambiarMes(-1); };
   document.getElementById('cal-next').onclick = function () { cambiarMes(1); };
   body.querySelectorAll('.cal-day[data-fecha]').forEach(function (btn) {
+    if (btn.disabled) return;
     btn.onclick = function () { seleccionarFecha(btn.getAttribute('data-fecha')); };
   });
 }
@@ -3027,6 +3072,19 @@ function renderContenidoDia(data) {
   const topbarFecha = document.getElementById('topbar-fecha');
   if (topbarFecha) topbarFecha.textContent = formatearFechaLarga(data.fecha);
 
+  if (data.bloqueada) {
+    const msg = document.createElement('div');
+    msg.className = 'sin-conteo-msg';
+    msg.textContent = 'Esta fecha todavía no está disponible: solo se puede consultar/editar el conteo de hoy y de mañana.';
+    wrap.appendChild(msg);
+    cont.innerHTML = '';
+    cont.appendChild(wrap);
+    document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Fecha no disponible todavía.</div>';
+    const menuRapido = document.getElementById('menu-rapido-body');
+    if (menuRapido) menuRapido.innerHTML = '<div class="menu-rapido-vacio">Fecha no disponible todavía.</div>';
+    return;
+  }
+
   if (!data.dia) {
     const msg = document.createElement('div');
     msg.className = 'sin-conteo-msg';
@@ -3039,7 +3097,7 @@ function renderContenidoDia(data) {
     wrap.appendChild(msg);
   } else {
     data.secciones.forEach(function (seccion) {
-      wrap.appendChild(crearSeccionPanel(seccion, data.dia, data.fecha));
+      wrap.appendChild(crearSeccionPanel(seccion, data.dia, data.fecha, data.esHoy));
     });
   }
 
@@ -3243,9 +3301,15 @@ function marcarGuardando(panel, activo) {
   }
 }
 
-function crearSeccionPanel(seccion, dia, fecha) {
+function crearSeccionPanel(seccion, dia, fecha, esHoy) {
+  // El backend calcula seccion.editable teniendo en cuenta la fecha (solo
+  // lectura si han pasado más de 2 días) y si ya se envió a la agencia
+  // (una vez enviado, ya no se puede modificar). Si por lo que sea no
+  // viniera ese campo, se asume editable (compatibilidad hacia atrás).
+  const editable = seccion.editable !== false && seccion.estado !== 'enviado';
+
   const panel = document.createElement('div');
-  panel.className = 'seccion-panel estado-' + seccion.estado;
+  panel.className = 'seccion-panel estado-' + seccion.estado + (editable ? '' : ' no-editable');
   panel.setAttribute('data-seccion-key', seccion.nombre);
   if (ESTADO.colapsadas.has(seccion.nombre)) panel.classList.add('colapsada');
 
@@ -3269,9 +3333,20 @@ function crearSeccionPanel(seccion, dia, fecha) {
     '</div></div>' +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     badgeEstado(seccion) +
+    (seccion.estado === 'enviado' && esHoy
+      ? '<button type="button" class="btn-deshacer-envio" title="Deshacer envío (solo se puede el mismo día)">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<polyline points="3 6 5 6 21 6"></polyline>' +
+        '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>' +
+        '<path d="M10 11v6"></path><path d="M14 11v6"></path>' +
+        '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>' +
+        '</svg></button>'
+      : '') +
+    (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
-    (seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>'
+    (editable && seccion.estado !== 'enviado'
+      ? '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>' +
+        '<button type="button" class="btn-header-borrar" title="Borrar todo lo escrito hoy en esta agrupación">Borrar conteo</button>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
@@ -3363,6 +3438,12 @@ function crearSeccionPanel(seccion, dia, fecha) {
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
     '<th></th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
+  if (!editable) {
+    // Fecha demasiado antigua (2+ días atrás) o ya enviada: se puede
+    // consultar, pero no modificar nada de esta agrupación.
+    tableWrap.querySelectorAll('input.celda, input.celda-total').forEach(function (input) { input.disabled = true; });
+    tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, .btn-forzar-no').forEach(function (btn) { btn.disabled = true; });
+  }
   tablaCol.appendChild(tableWrap);
   body.appendChild(tablaCol);
 
@@ -3390,6 +3471,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
   }
   function autoguardarSeccion(onDone) {
     clearTimeout(autoguardadoTimer);
+    if (!editable) { if (onDone) onDone(false); return; } // por si acaso: no se guarda nada de una agrupación no editable
     const filas = recogerFilas(tableWrap);
     marcarGuardando(panel, true);
     google.script.run
@@ -3402,7 +3484,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
         mostrarErrorServidor(err);
         if (onDone) onDone(false);
       })
-      .guardarConteo(dia, filas);
+      .guardarConteo(dia, filas, fecha, seccion.nombre);
   }
 
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
@@ -3413,6 +3495,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
       const btnReabrir = tr.querySelector('.btn-reabrir');
       if (btnReabrir) {
         btnReabrir.onclick = function () {
+          if (!editable) return;
           const cierreId = tr.getAttribute('data-cierre-id');
           appConfirm('Reabrir tienda', '¿Quieres reabrir esta tienda para el conteo de hoy?', function () {
             eliminarObservacionYRecargar(cierreId);
@@ -3431,6 +3514,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
       const btnCerrar = tr.querySelector('.btn-cerrar-tienda');
       if (btnCerrar) {
         btnCerrar.onclick = function () {
+          if (!editable) return;
           const nombreTienda = tr.getAttribute('data-nombre');
           appPrompt('Cerrar tienda', 'Motivo (ej. "Tienda cerrada, no se da a agencia")…', function (texto) {
             guardarObservacionYRecargar({ fecha: fecha, dia: dia, agrupacion: seccion.nombre, tienda: nombreTienda, tipo: 'cierre', texto: texto });
@@ -3449,6 +3533,58 @@ function crearSeccionPanel(seccion, dia, fecha) {
       mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
         enviarSeccion(callback);
       });
+    };
+  }
+
+  const btnHeaderBorrar = header.querySelector('.btn-header-borrar');
+  if (btnHeaderBorrar) {
+    btnHeaderBorrar.onclick = function (e) {
+      e.stopPropagation();
+      appConfirm(
+        'Borrar conteo',
+        'Vas a borrar TODOS los datos escritos hoy en "' + seccion.nombre + '" (60, PTA, CART., TOTAL, PDTE y PESO de todas sus tiendas). Esta acción no se puede deshacer. ¿Seguro que quieres continuar?',
+        function () {
+          btnHeaderBorrar.disabled = true;
+          google.script.run
+            .withSuccessHandler(function () {
+              btnHeaderBorrar.disabled = false;
+              cargarConteoDia();
+              cargarCalendario();
+            })
+            .withFailureHandler(function (err) {
+              btnHeaderBorrar.disabled = false;
+              mostrarErrorServidor(err);
+            })
+            .borrarConteoSeccion(dia, seccion.nombre, fecha);
+        },
+        true
+      );
+    };
+  }
+
+  const btnDeshacerEnvio = header.querySelector('.btn-deshacer-envio');
+  if (btnDeshacerEnvio) {
+    btnDeshacerEnvio.onclick = function (e) {
+      e.stopPropagation();
+      appConfirm(
+        'Deshacer envío',
+        'Vas a deshacer el envío de "' + seccion.nombre + '". Se quitará la marca de enviado y se recuperarán los datos para poder seguir editándolos. Solo puedes hacer esto el mismo día en que se envió. ¿Seguro que quieres continuar?',
+        function () {
+          btnDeshacerEnvio.disabled = true;
+          google.script.run
+            .withSuccessHandler(function () {
+              btnDeshacerEnvio.disabled = false;
+              cargarConteoDia();
+              cargarCalendario();
+            })
+            .withFailureHandler(function (err) {
+              btnDeshacerEnvio.disabled = false;
+              mostrarErrorServidor(err);
+            })
+            .deshacerEnvioSeccion(dia, seccion.nombre, fecha);
+        },
+        true
+      );
     };
   }
 
@@ -3489,6 +3625,7 @@ function crearSeccionPanel(seccion, dia, fecha) {
   }
 
   function enviarSeccion(callback) {
+    if (!editable) { if (callback) callback(false, 'Esta agrupación ya no se puede modificar.'); return; }
     const btnEnviar = header.querySelector('.btn-header-enviar');
     btnEnviar.disabled = true;
     // Guarda inmediatamente (sin esperar el debounce) y, si todo va bien, envía.
@@ -3637,9 +3774,9 @@ function Utilities_formatearFechaHora_(d) {
 }
 
 function badgeEstado(seccion) {
-  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado el: ' + (seccion.horaEnvio || '') + '</span>';
+  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado ' + (seccion.horaEnvio || '') + '</span>';
   if (seccion.estado === 'progreso') return '<span class="badge badge-progreso"><span class="badge-dot"></span>En progreso</span>';
-  return '';
+  return ''; // ya no se muestra el badge "Pendiente" en la cabecera de la agrupación
 }
 
 /**
