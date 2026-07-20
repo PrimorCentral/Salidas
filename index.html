@@ -809,6 +809,12 @@
     padding: 30px; text-align: center; color: var(--ink-soft); font-size: 14px;
   }
 
+  .aviso-datos-antiguos {
+    background: #fff3cd; border: 1px solid #f0d78c; border-radius: var(--radius);
+    padding: 12px 16px; margin-bottom: 16px; color: #6b5316; font-size: 13.5px; line-height: 1.5;
+  }
+  .aviso-datos-antiguos strong { color: #4a3a0f; }
+
   /* ---------- SECCIÓN / AGRUPACIÓN ---------- */
   .seccion-panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -3213,6 +3219,23 @@ function renderContenidoDia(data) {
     msg.textContent = 'Esta hoja ("' + data.dia + '") todavía no tiene ninguna ruta configurada.';
     wrap.appendChild(msg);
   } else {
+    // Datos antiguos sin cerrar (se mandó previsión pero nunca el
+    // definitivo, y ha llegado otra semana): el backend ya los ha vaciado
+    // solo con leer el conteo (ver getConteoDia/limpiarDatosAntiguosSiProcede_
+    // en el backend); aquí solo se avisa de que ha pasado, para que no
+    // parezca que el conteo aparece "vacío" de la nada sin explicación.
+    const avisos = data.secciones
+      .filter(function (s) { return s.datosAntiguosLimpiados; })
+      .map(function (s) { return { titulo: parsearNombreAgrupacion(s.nombre).titulo, fecha: s.datosAntiguosLimpiados }; });
+    if (avisos.length) {
+      const aviso = document.createElement('div');
+      aviso.className = 'aviso-datos-antiguos';
+      aviso.innerHTML =
+        '<strong>Aviso:</strong> se han vaciado datos sin cerrar de una fecha anterior (nunca se envió el definitivo) en: ' +
+        avisos.map(function (a) { return escapeHtml(a.titulo) + ' (' + escapeHtml(a.fecha) + ')'; }).join(', ') + '.';
+      wrap.appendChild(aviso);
+    }
+
     data.secciones.forEach(function (seccion) {
       wrap.appendChild(crearSeccionPanel(seccion, data.dia, data.fecha, data.esHoy));
     });
@@ -3773,20 +3796,68 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
  * Usa jsPDF + el plugin autoTable (cargados por CDN en el <head>). No se
  * usan emojis en el texto para evitar el mismo problema de renderizado que
  * ya se dio en los PDF de incidencias.
+ *
+ * SIEMPRE UNA SOLA PÁGINA: en vez de usar un A4 apaisado de tamaño fijo (lo
+ * que hacía que autoTable repartiera las agrupaciones grandes en varias
+ * páginas), primero se "mide" en un lienzo muy alto cuánto ocupa realmente
+ * el contenido completo (cabecera + notas + todas las filas) y luego se crea
+ * el PDF definitivo con el alto justo para que quepa entero: el ancho de A4
+ * apaisado (297mm) siempre, y de alto el estándar de un A4 (210mm) si cabe,
+ * o algo más alto si la agrupación es grande — pero nunca una página más.
  */
-function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    mostrarToast('No se ha podido cargar el generador de PDF. Revisa tu conexión e inténtalo de nuevo.', true);
-    return;
-  }
+const PDF_ANCHO_MM_ = 297; // ancho fijo tipo A4 apaisado
+const PDF_ALTO_A4_MM_ = 210; // alto estándar de un A4 apaisado
 
-  const jsPDF = window.jspdf.jsPDF;
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const partes = parsearNombreAgrupacion(seccion.nombre);
+/** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
+ *  sin guardar) las filas [tienda, límite, 60, PTA, CART., TOTAL, PDTE, (PESO)]. */
+function leerFilasPdfSeccion_(tableWrap, seccion) {
+  const filas = [];
+  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-grupo-header')) return;
 
-  // Fecha/hora de generación del PDF (no la fecha del conteo), arriba del todo.
-  const ahora = new Date();
-  const fechaGeneracion = Utilities_formatearFechaHora_(ahora);
+    const nombre = tr.getAttribute('data-nombre') || '';
+
+    if (tr.classList.contains('fila-cerrada')) {
+      const limiteCelda = tr.querySelector('td.limite');
+      filas.push([
+        nombre,
+        limiteCelda ? limiteCelda.textContent.trim() : '',
+        'CERRADA', '', '', '', ''
+      ].concat(seccion.tienePeso ? [''] : []));
+      return;
+    }
+
+    function valorCampo(campo) {
+      const inp = tr.querySelector('input[data-campo="' + campo + '"]');
+      return inp ? inp.value : '';
+    }
+
+    filas.push([
+      nombre,
+      tr.getAttribute('data-limite') || '',
+      valorCampo('c60'),
+      valorCampo('pta'),
+      valorCampo('cart'),
+      valorCampo('total'),
+      valorCampo('pdte')
+    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []));
+  });
+  return filas;
+}
+
+/** Crea un doc de jsPDF con el ancho/alto exactos pedidos (en mm), eligiendo
+ *  la orientación ('p' o 'l') que ya cumple esa forma, para que jsPDF no
+ *  intercambie ancho y alto por su cuenta (lo hace si, p.ej., pides
+ *  orientación "landscape" pero el alto que le das es mayor que el ancho). */
+function crearDocPdfPaginaExacta_(jsPDF, anchoMM, altoMM) {
+  const orientacion = altoMM > anchoMM ? 'p' : 'l';
+  return new jsPDF({ unit: 'mm', format: [anchoMM, altoMM], orientation: orientacion });
+}
+
+/** Dibuja la cabecera, las notas y la tabla completa de la agrupación en el
+ *  doc dado (empezando siempre en la misma posición) y devuelve la
+ *  coordenada Y justo debajo de la tabla, para poder saber cuánto ocupa. */
+function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas) {
   doc.setFontSize(8);
   doc.setTextColor(140, 148, 158);
   doc.text('Generado el ' + fechaGeneracion, 14, 10);
@@ -3821,40 +3892,6 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
     y += 2;
   }
 
-  // Se leen los valores DIRECTAMENTE de la tabla en pantalla (no de
-  // "seccion"), para que el PDF refleje también cambios aún sin guardar.
-  const filas = [];
-  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
-    if (tr.classList.contains('fila-grupo-header')) return;
-
-    const nombre = tr.getAttribute('data-nombre') || '';
-
-    if (tr.classList.contains('fila-cerrada')) {
-      const limiteCelda = tr.querySelector('td.limite');
-      filas.push([
-        nombre,
-        limiteCelda ? limiteCelda.textContent.trim() : '',
-        'CERRADA', '', '', '', ''
-      ].concat(seccion.tienePeso ? [''] : []));
-      return;
-    }
-
-    function valorCampo(campo) {
-      const inp = tr.querySelector('input[data-campo="' + campo + '"]');
-      return inp ? inp.value : '';
-    }
-
-    filas.push([
-      nombre,
-      tr.getAttribute('data-limite') || '',
-      valorCampo('c60'),
-      valorCampo('pta'),
-      valorCampo('cart'),
-      valorCampo('total'),
-      valorCampo('pdte')
-    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []));
-  });
-
   doc.autoTable({
     startY: y,
     head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : [])],
@@ -3865,8 +3902,48 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
     columnStyles: {
       0: { fontStyle: 'bold', fontSize: 11, halign: 'left' },
       5: { fontStyle: 'bold' }
-    }
+    },
+    // Margen inferior reducido y a propósito pequeño: la página final se
+    // dimensiona para que quepa justo, así que no hace falta el hueco de
+    // 20mm que deja autoTable por defecto (y que forzaría un salto de
+    // página con el alto ajustado que calculamos más abajo).
+    margin: { bottom: 10 },
+    // Por si acaso: nunca partir una fila entre dos páginas.
+    rowPageBreak: 'avoid'
   });
+
+  return doc.lastAutoTable.finalY;
+}
+
+function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarToast('No se ha podido cargar el generador de PDF. Revisa tu conexión e inténtalo de nuevo.', true);
+    return;
+  }
+
+  const jsPDF = window.jspdf.jsPDF;
+  const partes = parsearNombreAgrupacion(seccion.nombre);
+
+  // Fecha/hora de generación del PDF (no la fecha del conteo), arriba del todo.
+  const ahora = new Date();
+  const fechaGeneracion = Utilities_formatearFechaHora_(ahora);
+
+  const filas = leerFilasPdfSeccion_(tableWrap, seccion);
+
+  // 1ª pasada (de medición, se descarta): se dibuja todo en un lienzo muy
+  // alto (2000mm) para que la tabla nunca necesite paginarse, y así saber
+  // cuánto ocupa el contenido real completo, sea cual sea el tamaño de la
+  // agrupación.
+  const docMedida = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, 2000);
+  const alturaContenido = dibujarPdfSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filas);
+
+  // 2ª pasada (definitiva): si con el alto estándar de un A4 apaisado
+  // (210mm) ya cabe todo, se usa ese tamaño normal de siempre; si la
+  // agrupación es más grande, se alarga la página lo justo para que quepa
+  // entera en UNA sola hoja (nunca se generan páginas adicionales).
+  const alturaPagina = Math.max(PDF_ALTO_A4_MM_, alturaContenido + 14);
+  const doc = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, alturaPagina);
+  dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas);
 
   const nombreArchivo = 'Conteo_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
   doc.save(nombreArchivo);
