@@ -865,7 +865,7 @@
   .badge-pendiente { background: #eef0f3; color: var(--ink-soft); }
   .badge-progreso { background: #fdf1de; color: var(--amber-dark); }
   .badge-enviado { background: #e4f3ec; color: var(--ok); }
-  .badge-prevision { background: #e8eefc; color: var(--navy); }
+  .badge-prevision { background: #e4f3ec; color: var(--ok); }
   .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
@@ -901,8 +901,6 @@
   }
   .btn-header-prevision:hover { background: #fdf6ea; }
   .btn-header-prevision:disabled { opacity: .55; cursor: not-allowed; }
-  .btn-header-prevision.ya-enviada { background: #e8eefc; border-color: #c9d7f6; color: var(--navy); }
-  .btn-header-prevision.ya-enviada:hover { background: #dde7fb; }
   .btn-header-definitivo {
     background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
     padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
@@ -3412,9 +3410,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
+    (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
+      ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>'
+      : '') +
     (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-prevision' + (seccion.previsionEnviada ? ' ya-enviada' : '') + '" title="' + (seccion.previsionEnviada ? 'Previsión ya enviada (' + escapeAttr(seccion.previsionEnviada) + '). Puedes volver a enviarla si algo ha cambiado.' : 'Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)') + '">' + (seccion.previsionEnviada ? 'Reenviar Previsión' : 'Enviar Previsión') + '</button>' +
-        '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
+      ? '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
@@ -3844,7 +3844,7 @@ function badgeEstado(seccion) {
  *  estado — ambos pueden verse a la vez. */
 function badgePrevision(seccion) {
   if (!seccion.previsionEnviada) return '';
-  return '<span class="badge badge-prevision" title="' + escapeAttr(seccion.previsionEnviada) + '"><span class="badge-dot"></span>Previsión enviada</span>';
+  return '<span class="badge badge-prevision"><span class="badge-dot"></span>Previsión enviada ' + escapeHtml(seccion.previsionEnviada) + '</span>';
 }
 
 /**
@@ -4164,11 +4164,23 @@ function eliminarObservacionYRecargar(id) {
  * Permite crear notas generales, notas de agrupación o cierres de tienda
  * para CUALQUIER fecha desde un único modal, sin tener que navegar antes
  * hasta ese día. La lista de agrupaciones/tiendas para buscar se obtiene
- * reutilizando getConteoDia(fecha) (la misma llamada que ya usa el día
- * normal), porque la hoja de conteo que aplica depende del día de la
- * semana de la fecha elegida.
+ * con getPlantillaDia(dia) (la plantilla de rutas/tiendas de ese día de la
+ * semana), NO con getConteoDia(fecha): a diferencia de getConteoDia,
+ * getPlantillaDia no depende de la ventana de fechas accesibles (hoy +
+ * VENTANA_FUTURO_DIAS_), así que desde aquí se pueden dejar anotaciones
+ * para fechas futuras lejanas (festivos, cierres ya conocidos con
+ * antelación, etc.) sin que la fecha "parezca" no tener hoja de conteo.
  */
 let GESTOR_OBS = { fecha: null, datosDia: null, tipo: 'general', seleccion: null };
+
+/** Nombre de hoja de conteo (LUNES..DOMINGO) para una fecha 'YYYY-MM-DD',
+ *  calculado en el propio navegador (espejo de MAPA_DIA_SEMANA / getDay()
+ *  del backend) para no depender de getConteoDia. Los 7 días de la semana
+ *  tienen hoja propia, así que esto nunca devuelve null. */
+const MAPA_DIA_SEMANA_JS_ = { 0: 'DOMINGO', 1: 'LUNES', 2: 'MARTES', 3: 'MIERCOLES', 4: 'JUEVES', 5: 'VIERNES', 6: 'SABADO' };
+function diaDesdeFechaJs_(fecha) {
+  return MAPA_DIA_SEMANA_JS_[new Date(fecha + 'T12:00:00').getDay()];
+}
 
 function abrirGestorObservaciones() {
   GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null };
@@ -4358,13 +4370,14 @@ function actualizarSeleccionGestorObs_() {
 function cargarDatosDiaGestorObs_(fecha) {
   const carga = document.getElementById('gestor-estado-carga');
   if (carga) carga.style.display = 'flex';
+  const dia = diaDesdeFechaJs_(fecha);
   google.script.run
     .withSuccessHandler(function (data) {
       if (fecha !== GESTOR_OBS.fecha) return; // la fecha ya cambió mientras se cargaba
       GESTOR_OBS.datosDia = data;
       if (carga) carga.style.display = 'none';
 
-      const sinDia = !data.dia;
+      const sinDia = !data.dia || !(data.secciones && data.secciones.length);
       const pillAgr = document.querySelector('.gestor-tipo-pill[data-tipo="agrupacion"]');
       const pillCierre = document.querySelector('.gestor-tipo-pill[data-tipo="cierre"]');
       const aviso = document.getElementById('gestor-aviso-dia');
@@ -4384,7 +4397,7 @@ function cargarDatosDiaGestorObs_(fecha) {
       if (carga) carga.style.display = 'none';
       mostrarErrorServidor(err);
     })
-    .getConteoDia(fecha);
+    .getPlantillaDia(dia);
 }
 
 /** Filtra agrupaciones o tiendas (según el tipo elegido) y pinta el desplegable de resultados. */
@@ -4837,7 +4850,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.8';
+  const APP_VERSION_ACTUAL = '1.1.5';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
