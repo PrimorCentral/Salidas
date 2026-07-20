@@ -1,6 +1,6 @@
 {
-  "name": "Conteos Diarios",
-  "short_name": "Conteos",
+  "name": "Salida de Mercancía",
+  "short_name": "Salidas",
   "description": "Gestión de conteos y envío a agencias",
   "start_url": "./index.html",
   "scope": "./",
