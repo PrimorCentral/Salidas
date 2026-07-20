@@ -3637,9 +3637,9 @@ function Utilities_formatearFechaHora_(d) {
 }
 
 function badgeEstado(seccion) {
-  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado ' + (seccion.horaEnvio || '') + '</span>';
+  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado el: ' + (seccion.horaEnvio || '') + '</span>';
   if (seccion.estado === 'progreso') return '<span class="badge badge-progreso"><span class="badge-dot"></span>En progreso</span>';
-  return ''; // ya no se muestra el badge "Pendiente" en la cabecera de la agrupación
+  return '';
 }
 
 /**
