@@ -891,18 +891,6 @@
   }
   .btn-header-enviar:hover { background: var(--amber-dark); color: #fff; }
   .btn-header-enviar:disabled { opacity: .55; cursor: not-allowed; }
-  .btn-header-borrar {
-    background: #fff;
-    color: #d9362f;
-    border: 1px solid #d9362f;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .btn-header-borrar:hover { background: #fdecea; }
-  .btn-header-borrar:disabled { opacity: .5; cursor: not-allowed; }
   .btn-deshacer-envio {
     display: inline-flex;
     align-items: center;
@@ -3345,8 +3333,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
     (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>' +
-        '<button type="button" class="btn-header-borrar" title="Borrar todo lo escrito hoy en esta agrupación">Borrar conteo</button>'
+      ? '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
@@ -3533,32 +3520,6 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
         enviarSeccion(callback);
       });
-    };
-  }
-
-  const btnHeaderBorrar = header.querySelector('.btn-header-borrar');
-  if (btnHeaderBorrar) {
-    btnHeaderBorrar.onclick = function (e) {
-      e.stopPropagation();
-      appConfirm(
-        'Borrar conteo',
-        'Vas a borrar TODOS los datos escritos hoy en "' + seccion.nombre + '" (60, PTA, CART., TOTAL, PDTE y PESO de todas sus tiendas). Esta acción no se puede deshacer. ¿Seguro que quieres continuar?',
-        function () {
-          btnHeaderBorrar.disabled = true;
-          google.script.run
-            .withSuccessHandler(function () {
-              btnHeaderBorrar.disabled = false;
-              cargarConteoDia();
-              cargarCalendario();
-            })
-            .withFailureHandler(function (err) {
-              btnHeaderBorrar.disabled = false;
-              mostrarErrorServidor(err);
-            })
-            .borrarConteoSeccion(dia, seccion.nombre, fecha);
-        },
-        true
-      );
     };
   }
 
