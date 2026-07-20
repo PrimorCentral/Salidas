@@ -571,6 +571,15 @@
   .plantilla-ruta-peso:hover { background: #eef1f7; }
   .plantilla-ruta-peso.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
   .plantilla-ruta-peso.activo:hover { background: var(--navy-soft); }
+  .plantilla-tienda-bloqueos { display: flex; gap: 3px; flex-shrink: 0; }
+  .plantilla-tienda-bloqueo {
+    background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 9.5px; padding: 4px 6px; border-radius: 6px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-tienda-bloqueo:hover:not(:disabled) { background: #eef1f7; }
+  .plantilla-tienda-bloqueo:disabled { opacity: .35; cursor: default; }
+  .plantilla-tienda-bloqueo.activo { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .plantilla-tienda-bloqueo.activo:hover:not(:disabled) { background: #b23f3f; }
   .modal-campo { margin-bottom: 14px; }
   .modal-campo:last-child { margin-bottom: 0; }
   .modal-campo label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
@@ -811,7 +820,7 @@
   .seccion-panel.estado-pendiente { border-left: 4px solid #c7cdd6; }
 
   .seccion-header {
-    display: flex; align-items: center; gap: 12px; padding: 14px 16px; user-select: none;
+    display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; gap: 12px; padding: 14px 16px; user-select: none;
   }
   .seccion-header .icono-agrup {
     width: 40px; height: 40px; border-radius: 11px; background: #eef1f5; color: var(--navy);
@@ -883,14 +892,21 @@
   }
   .btn-pdf-seccion:hover { background: #e1e5eb; }
 
-  /* Botón "Enviar a agencia" en la cabecera, junto al badge de estado */
-  .btn-header-enviar {
+  /* Botones "Enviar Previsión" / "Enviar Definitivo" en la cabecera, junto al badge de estado */
+  .btn-header-prevision {
+    background: #fff; color: var(--amber-dark); border: 1.5px solid var(--amber); border-radius: 20px;
+    padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .btn-header-prevision:hover { background: #fdf6ea; }
+  .btn-header-prevision:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-definitivo {
     background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
     padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
     text-transform: uppercase; letter-spacing: .03em;
   }
-  .btn-header-enviar:hover { background: var(--amber-dark); color: #fff; }
-  .btn-header-enviar:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-definitivo:hover { background: var(--amber-dark); color: #fff; }
+  .btn-header-definitivo:disabled { opacity: .55; cursor: not-allowed; }
   .btn-deshacer-envio {
     display: inline-flex;
     align-items: center;
@@ -1105,7 +1121,7 @@
     background: var(--danger) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16.5" r="0.5" fill="white" stroke="white"/></svg>') center/12px no-repeat;
   }
 
-  /* ---------- Modal "Enviar a agencia" (versión amplia) ---------- */
+  /* ---------- Modal "Enviar Previsión / Enviar Definitivo" (versión amplia) ---------- */
   .modal-box.ancho { max-width: 620px; }
 
   .modal-envio-cabecera {
@@ -1421,7 +1437,8 @@ const METODOS_REMOTOS_ = {
   guardarConteo: 'guardarConteo',
   borrarConteoSeccion: 'borrarConteoSeccion',
   deshacerEnvioSeccion: 'deshacerEnvioSeccion',
-  enviarResumenAgencia: 'enviarResumenAgencia',
+  enviarPrevisionAgencia: 'enviarPrevisionAgencia',
+  enviarDefinitivoAgencia: 'enviarDefinitivoAgencia',
   guardarObservacion: 'guardarObservacion',
   eliminarObservacion: 'eliminarObservacion',
   getAgrupacionesConfig: 'getAgrupacionesConfig',
@@ -2224,7 +2241,7 @@ function renderConfigEmails() {
               'Sincronizar con hojas de día</button>' +
             '</div>' +
         '</div>' +
-        '<p>Emails de la agencia de transporte de cada agrupación (ruta). Se usan al pulsar "Enviar a agencia" en el conteo del día — ya no hace falta abrir la Google Sheet para cambiarlos.</p>' +
+        '<p>Emails de la agencia de transporte de cada agrupación (ruta): unos para "Enviar Previsión" y otros para "Enviar Definitivo" — pueden ser los mismos o distintos. Se usan al pulsar esos botones en el conteo del día — ya no hace falta abrir la Google Sheet para cambiarlos.</p>' +
         '<div class="emails-config-solo-lectura">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
           'Solo lectura: entra con la contraseña de administrador para poder editar o borrar.' +
@@ -2279,7 +2296,7 @@ function pintarListaEmails_() {
   const filtro = EMAILS_CONFIG_ESTADO.filtroTexto;
   const items = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
     if (!filtro) return true;
-    const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.notas || '')).toLowerCase();
+    const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.emailsPrevision || []).join(' ') + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
   });
 
@@ -2311,8 +2328,12 @@ function pintarListaEmails_() {
         '</div>' +
         '<div class="emails-config-campos">' +
           '<div class="emails-config-campo">' +
-            '<label>Emails (separados por comas)</label>' +
+            '<label>Emails Definitivo (separados por comas)</label>' +
             '<input type="text" id="' + idSeguro + '_emails" value="' + escapeAttr(it.emails.join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '</div>' +
+          '<div class="emails-config-campo">' +
+            '<label>Emails Previsión (separados por comas)</label>' +
+            '<input type="text" id="' + idSeguro + '_emailsPrevision" value="' + escapeAttr((it.emailsPrevision || []).join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
           '</div>' +
           '<div class="emails-config-campo">' +
             '<label>Notas</label>' +
@@ -2338,9 +2359,10 @@ function pintarListaEmails_() {
 
 function guardarEmailAgrupacion_(agrupacion, idSeguro, btn) {
   const emailsTexto = document.getElementById(idSeguro + '_emails').value;
+  const emailsPrevisionTexto = document.getElementById(idSeguro + '_emailsPrevision').value;
   const notas = document.getElementById(idSeguro + '_notas').value;
   btn.disabled = true;
-  llamarApi_('guardarEmailsAgrupacion', [agrupacion, emailsTexto, notas])
+  llamarApi_('guardarEmailsAgrupacion', [agrupacion, emailsTexto, notas, emailsPrevisionTexto])
     .then(function () {
       mostrarToast('Emails guardados');
       cargarAgrupacionesConfig_();
@@ -2477,6 +2499,19 @@ function botonAnadirRutaPlantillaHtml_() {
     'Añadir ruta nueva</button>';
 }
 
+/** Botón pequeño "60"/"PTA"/"CART." para bloquear (poner "NO") o
+ *  desbloquear la casilla correspondiente de una tienda, desde "Rutas y
+ *  tiendas". campo: 'c60' | 'pta' | 'cart'. Visible para todos (para que
+ *  el usuario normal vea qué está bloqueado), pero solo pulsable si es
+ *  admin. */
+function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
+  const bloqueado = campo === 'c60' ? t.bloqueo60 : (campo === 'pta' ? t.bloqueoPta : t.bloqueoCart);
+  const titulo = bloqueado
+    ? 'Quitar el bloqueo "NO" de ' + etiqueta + ' en esta tienda'
+    : 'Bloquear ' + etiqueta + ' en esta tienda (pondrá "NO", no podrá recibir palets ahí)';
+  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (esAdmin() ? '' : ' disabled') + '>' + etiqueta + '</button>';
+}
+
 function pintarPlantilla_() {
   const listaEl = document.getElementById('plantilla-lista');
   if (!listaEl) return;
@@ -2500,6 +2535,11 @@ function pintarPlantilla_() {
           '</div>' +
           '<input type="text" class="lim" id="' + idSeguro + '_lim" value="' + escapeAttr(t.limite) + '" title="Límite" ' + (esAdmin() ? '' : 'disabled') + '>' +
           '<input type="text" class="nombre" id="' + idSeguro + '_nombre" value="' + escapeAttr(t.nombre) + '" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '<div class="plantilla-tienda-bloqueos">' +
+            botonBloqueoPlantillaHtml_(t, 'c60', '60') +
+            botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
+            botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
+          '</div>' +
           '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (esAdmin() ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
           (esAdmin() ? (
@@ -2637,6 +2677,15 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-peso]').forEach(function (btn) {
     btn.onclick = function () { togglePesoRutaPlantilla_(btn.getAttribute('data-toggle-peso'), btn.getAttribute('data-peso-activo') === '1'); };
   });
+  listaEl.querySelectorAll('[data-bloqueo-row]').forEach(function (btn) {
+    btn.onclick = function () {
+      toggleBloqueoCampoTiendaPlantilla_(
+        btn.getAttribute('data-bloqueo-row'),
+        btn.getAttribute('data-bloqueo-campo'),
+        btn.getAttribute('data-bloqueo-activo') === '1'
+      );
+    };
+  });
 }
 
 /** Activa/desactiva la casilla PESO de una ruta desde "Rutas y tiendas".
@@ -2659,6 +2708,33 @@ function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
   llamarApi_('activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
     .then(function () { mostrarToast('Casilla PESO activada'); cargarPlantilla_(); })
     .catch(mostrarErrorServidor);
+}
+
+/** Bloquea o desbloquea la casilla 60/PTA/CART de una tienda concreta,
+ *  desde "Rutas y tiendas" (equivale a escribir/borrar "NO" a mano en la
+ *  Sheet). Al bloquear se pide confirmación, porque sobrescribe cualquier
+ *  valor que hubiera en esa celda (por ejemplo un conteo ya metido hoy). */
+function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
+  const etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' };
+  const etiqueta = etiquetas[campo] || campo;
+
+  if (activoActualmente) {
+    llamarApi_('desbloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), campo])
+      .then(function () { mostrarToast('Bloqueo quitado'); cargarPlantilla_(); })
+      .catch(mostrarErrorServidor);
+    return;
+  }
+
+  appConfirm(
+    'Bloquear ' + etiqueta,
+    'Esta tienda quedará marcada como "NO" en ' + etiqueta + ' (no debería recibir palets ahí ese día de la semana). Si esa casilla ya tenía algo escrito, se sobrescribirá. ¿Seguro?',
+    function () {
+      llamarApi_('bloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), campo])
+        .then(function () { mostrarToast('Bloqueado'); cargarPlantilla_(); })
+        .catch(mostrarErrorServidor);
+    },
+    true
+  );
 }
 
 function guardarTiendaPlantilla_(row, idSeguro) {
@@ -3333,7 +3409,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
     (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-enviar" title="Guardar y enviar a agencia">Enviar a agencia</button>'
+      ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>' +
+        '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
@@ -3513,13 +3590,23 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
 
   attachValidacionGrupos(tableWrap);
 
-  const btnHeaderEnviar = header.querySelector('.btn-header-enviar');
-  if (btnHeaderEnviar) {
-    btnHeaderEnviar.onclick = function (e) {
+  const btnHeaderPrevision = header.querySelector('.btn-header-prevision');
+  if (btnHeaderPrevision) {
+    btnHeaderPrevision.onclick = function (e) {
       e.stopPropagation();
       mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
-        enviarSeccion(callback);
-      });
+        enviarSeccion('prevision', callback);
+      }, 'prevision');
+    };
+  }
+
+  const btnHeaderDefinitivo = header.querySelector('.btn-header-definitivo');
+  if (btnHeaderDefinitivo) {
+    btnHeaderDefinitivo.onclick = function (e) {
+      e.stopPropagation();
+      mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
+        enviarSeccion('definitivo', callback);
+      }, 'definitivo');
     };
   }
 
@@ -3585,29 +3672,36 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     };
   }
 
-  function enviarSeccion(callback) {
+  function enviarSeccion(tipo, callback) {
     if (!editable) { if (callback) callback(false, 'Esta agrupación ya no se puede modificar.'); return; }
-    const btnEnviar = header.querySelector('.btn-header-enviar');
-    btnEnviar.disabled = true;
+    const btnPrevision = header.querySelector('.btn-header-prevision');
+    const btnDefinitivo = header.querySelector('.btn-header-definitivo');
+    if (btnPrevision) btnPrevision.disabled = true;
+    if (btnDefinitivo) btnDefinitivo.disabled = true;
+    const metodo = tipo === 'definitivo' ? 'enviarDefinitivoAgencia' : 'enviarPrevisionAgencia';
     // Guarda inmediatamente (sin esperar el debounce) y, si todo va bien, envía.
     autoguardarSeccion(function (ok) {
       if (!ok) {
-        btnEnviar.disabled = false;
+        if (btnPrevision) btnPrevision.disabled = false;
+        if (btnDefinitivo) btnDefinitivo.disabled = false;
         if (callback) callback(false, 'No se han podido guardar los datos. Inténtalo de nuevo.');
         return;
       }
       google.script.run
         .withSuccessHandler(function (res) {
-          btnEnviar.disabled = false;
+          if (btnPrevision) btnPrevision.disabled = false;
+          if (btnDefinitivo) btnDefinitivo.disabled = false;
           cargarConteoDia();
           cargarCalendario();
-          if (callback) callback(true, 'Enviado a: ' + res.enviadoA.join(', '));
+          const etiqueta = tipo === 'definitivo' ? 'Definitivo enviado a: ' : 'Previsión enviada a: ';
+          if (callback) callback(true, etiqueta + res.enviadoA.join(', '));
         })
         .withFailureHandler(function (err) {
-          btnEnviar.disabled = false;
+          if (btnPrevision) btnPrevision.disabled = false;
+          if (btnDefinitivo) btnDefinitivo.disabled = false;
           if (callback) callback(false, (err && err.message) ? err.message : String(err));
         })
-        .enviarResumenAgencia(dia, seccion.nombre, fecha);
+        [metodo](dia, seccion.nombre, fecha);
     });
   }
 
@@ -4487,7 +4581,7 @@ function appPrompt(titulo, placeholder, onSubmit) {
 }
 
 /**
- * Modal informativo de "Enviar a agencia": muestra un resumen (tiendas,
+ * Modal informativo de "Enviar Previsión" / "Enviar Definitivo": muestra un resumen (tiendas,
  * total de palets, tiendas sin datos todavía) antes de confirmar, y luego
  * pasa a un estado "Enviando…" con spinner mientras se guarda y se manda
  * el email, terminando en un estado de éxito (se cierra solo) o de error
@@ -4496,8 +4590,11 @@ function appPrompt(titulo, placeholder, onSubmit) {
  * datos: { nombre, fechaTexto, totalTiendas, tiendasConDatos, pendientes, totalPalets }
  * onConfirmar: function(callback) — hace el guardado + envío real y llama a
  *              callback(true) si fue bien, o callback(false, mensajeError) si no.
+ * tipo: 'prevision' | 'definitivo' — cambia el título del botón y la nota
+ *       de aviso, ya que tienen consecuencias distintas.
  */
-function mostrarModalEnviarAgencia(datos, onConfirmar) {
+function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
+  const esDefinitivo = tipo === 'definitivo';
   document.getElementById('modal-box').classList.add('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-title').style.display = 'none';
@@ -4531,7 +4628,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar) {
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>' +
       '</div>' +
       '<div class="modal-envio-cabecera-texto">' +
-        '<div class="nombre">' + escapeHtml(datos.nombre) + '</div>' +
+        '<div class="nombre">' + escapeHtml(datos.nombre) + (esDefinitivo ? ' · Definitivo' : ' · Previsión') + '</div>' +
         '<div class="fecha">' + escapeHtml(datos.fechaTexto) + '</div>' +
       '</div>' +
     '</div>' +
@@ -4551,16 +4648,18 @@ function mostrarModalEnviarAgencia(datos, onConfirmar) {
       '</div>' +
     '</div>' +
     filaAviso +
-    '<p class="modal-envio-nota">Se enviará un email con el resumen de las previsiones totales a la agencia de transporte. <br> Después, los campos se vaciarán para empezar en blanco la próxima semana.</p>';
+    (esDefinitivo
+      ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y los campos se vaciarán para empezar en blanco la próxima semana.</p>'
+      : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable y podrás volver a enviar otra previsión más tarde.</p>');
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-confirm-btn">Enviar a agencia</button>';
+    '<button class="modal-confirm" id="modal-confirm-btn">' + (esDefinitivo ? 'Enviar Definitivo' : 'Enviar Previsión') + '</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
-    mostrarModalCargando('Enviando correo a la agencia, espere por favor…');
+    mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…');
     onConfirmar(function (ok, mensaje) {
       mostrarModalResultadoEnvio(ok, mensaje);
     });
@@ -4725,7 +4824,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.6';
+  const APP_VERSION_ACTUAL = '1.1.5';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
