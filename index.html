@@ -626,7 +626,7 @@
   .col-contenido { min-width: 0; }
   /* El contenido en sí se limita a un ancho legible y se centra dentro de su
      columna, para que no quede estirado de pared a pared en pantallas anchas. */
-  .col-contenido > * { max-width: 900px; margin: 0 auto; }
+  .col-contenido > * { max-width: 1120px; margin: 0 auto; }
   .col-sidebar { position: sticky; top: 78px; display: flex; flex-direction: column; gap: 16px; }
 
   @media (max-width: 1600px) {
@@ -865,6 +865,7 @@
   .badge-pendiente { background: #eef0f3; color: var(--ink-soft); }
   .badge-progreso { background: #fdf1de; color: var(--amber-dark); }
   .badge-enviado { background: #e4f3ec; color: var(--ok); }
+  .badge-prevision { background: #e8eefc; color: var(--navy); }
   .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
@@ -900,6 +901,8 @@
   }
   .btn-header-prevision:hover { background: #fdf6ea; }
   .btn-header-prevision:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-prevision.ya-enviada { background: #e8eefc; border-color: #c9d7f6; color: var(--navy); }
+  .btn-header-prevision.ya-enviada:hover { background: #dde7fb; }
   .btn-header-definitivo {
     background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
     padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
@@ -3397,6 +3400,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '</div></div>' +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     badgeEstado(seccion) +
+    badgePrevision(seccion) +
     (seccion.estado === 'enviado' && esHoy
       ? '<button type="button" class="btn-deshacer-envio" title="Deshacer envío (solo se puede el mismo día)">' +
         '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -3409,7 +3413,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
     (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>' +
+      ? '<button type="button" class="btn-header-prevision' + (seccion.previsionEnviada ? ' ya-enviada' : '') + '" title="' + (seccion.previsionEnviada ? 'Previsión ya enviada (' + escapeAttr(seccion.previsionEnviada) + '). Puedes volver a enviarla si algo ha cambiado.' : 'Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)') + '">' + (seccion.previsionEnviada ? 'Reenviar Previsión' : 'Enviar Previsión') + '</button>' +
         '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
@@ -3832,6 +3836,15 @@ function badgeEstado(seccion) {
   if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Enviado ' + (seccion.horaEnvio || '') + '</span>';
   if (seccion.estado === 'progreso') return '<span class="badge badge-progreso"><span class="badge-dot"></span>En progreso</span>';
   return ''; // ya no se muestra el badge "Pendiente" en la cabecera de la agrupación
+}
+
+/** Badge independiente para la previsión: a diferencia del estado principal
+ *  (que solo refleja el envío DEFINITIVO), esto avisa de que ya se ha
+ *  mandado una previsión, sin bloquear nada ni sustituir al badge de
+ *  estado — ambos pueden verse a la vez. */
+function badgePrevision(seccion) {
+  if (!seccion.previsionEnviada) return '';
+  return '<span class="badge badge-prevision" title="' + escapeAttr(seccion.previsionEnviada) + '"><span class="badge-dot"></span>Previsión enviada</span>';
 }
 
 /**
@@ -4824,7 +4837,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.7';
+  const APP_VERSION_ACTUAL = '1.1.5';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
