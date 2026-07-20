@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Conteos Diarios</title>
+<title>Salida de Mercancía</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png" type="image/png">
 <meta name="theme-color" content="#1c2b45">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Conteos">
+<meta name="apple-mobile-web-app-title" content="Salidas">
 <style>
   :root {
     --bg: #f3f4f6;
@@ -1361,7 +1361,7 @@
           <circle cx="17.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
         </svg>
       </div>
-      <h1>Conteos Diarios</h1>
+      <h1>Salida de Mercancía</h1>
       <p class="sub">Gestión de conteos y envío a agencias</p>
 
       <div class="campo-pass">
@@ -4990,7 +4990,7 @@ function mostrarModalActualizacion() {
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Nueva versión disponible';
   document.getElementById('modal-text').textContent =
-    'Hay una actualización de Conteos Diarios lista para instalar. Se recomienda actualizar ahora para evitar fallos.';
+    'Hay una actualización de Salida de Mercancía lista para instalar. Se recomienda actualizar ahora para evitar fallos.';
   document.getElementById('modal-text').style.display = 'block';
   document.getElementById('modal-textarea').style.display = 'none';
   document.getElementById('modal-custom').style.display = 'none';
@@ -5072,7 +5072,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.2.2';
+  const APP_VERSION_ACTUAL = '1.2.1';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
