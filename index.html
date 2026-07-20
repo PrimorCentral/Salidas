@@ -1261,9 +1261,9 @@
 
   /* ---------- Insignia de versión (login e Inicio) ---------- */
   .version-badge {
-    position: absolute; right: 16px; bottom: 14px; z-index: 2;
-    font-size: 11px; font-weight: 600; letter-spacing: .02em;
-    color: rgba(255,255,255,.4); pointer-events: none; user-select: none;
+    position: absolute; right: 18px; bottom: 34px; z-index: 2;
+    font-size: 13px; font-weight: 700; letter-spacing: .02em;
+    color: rgba(255,255,255,.55); pointer-events: none; user-select: none;
   }
 
   /* Toast */
@@ -1510,7 +1510,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.2.3';
+const APP_VERSION_ACTUAL = '1.2.4';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
