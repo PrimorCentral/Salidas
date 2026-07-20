@@ -564,6 +564,13 @@
     white-space: nowrap;
   }
   .plantilla-ruta-anadir-tienda:hover { background: #eef1f7; }
+  .plantilla-ruta-peso {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-ruta-peso:hover { background: #eef1f7; }
+  .plantilla-ruta-peso.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .plantilla-ruta-peso.activo:hover { background: var(--navy-soft); }
   .modal-campo { margin-bottom: 14px; }
   .modal-campo:last-child { margin-bottom: 0; }
   .modal-campo label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
@@ -2495,6 +2502,7 @@ function pintarPlantilla_() {
         '<div class="plantilla-ruta-header">' +
           '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (esAdmin() ? '' : 'disabled') + '>' +
           (esAdmin() ? (
+            '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
             '<button type="button" class="plantilla-tienda-guardar" data-guardar-ruta="' + escapeAttr(s.nombre) + '" data-id="pr' + si + '_nombre" title="Guardar nombre de ruta" disabled>' +
@@ -2596,6 +2604,31 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-borrar-ruta]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarRutaPlantilla_(btn.getAttribute('data-borrar-ruta')); };
   });
+  listaEl.querySelectorAll('[data-toggle-peso]').forEach(function (btn) {
+    btn.onclick = function () { togglePesoRutaPlantilla_(btn.getAttribute('data-toggle-peso'), btn.getAttribute('data-peso-activo') === '1'); };
+  });
+}
+
+/** Activa/desactiva la casilla PESO de una ruta desde "Rutas y tiendas".
+ *  Al desactivarla se pide confirmación, porque borra también los valores
+ *  de peso ya guardados en esa ruta (ver desactivarPesoRuta en el backend). */
+function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
+  if (activoActualmente) {
+    appConfirm(
+      'Quitar la casilla PESO',
+      '¿Seguro que quieres quitar la casilla PESO de "' + nombreRuta + '"? Se borrarán los valores de peso ya guardados en esta ruta.',
+      function () {
+        llamarApi_('desactivarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
+          .then(function () { mostrarToast('Casilla PESO desactivada'); cargarPlantilla_(); })
+          .catch(mostrarErrorServidor);
+      },
+      true
+    );
+    return;
+  }
+  llamarApi_('activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function () { mostrarToast('Casilla PESO activada'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
 }
 
 function guardarTiendaPlantilla_(row, idSeguro) {
@@ -3321,12 +3354,14 @@ function crearSeccionPanel(seccion, dia, fecha) {
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId]) : '';
-    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
-    '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th><th></th>' +
+    '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th>' +
+    (seccion.tienePeso ? '<th>PESO</th>' : '') +
+    '<th></th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
   tablaCol.appendChild(tableWrap);
   body.appendChild(tablaCol);
@@ -3552,7 +3587,7 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         'CERRADA', '', '', '', ''
-      ]);
+      ].concat(seccion.tienePeso ? [''] : []));
       return;
     }
 
@@ -3569,12 +3604,12 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
       valorCampo('cart'),
       valorCampo('total'),
       valorCampo('pdte')
-    ]);
+    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []));
   });
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE']],
+    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : [])],
     body: filas,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
@@ -3620,13 +3655,13 @@ function badgeEstado(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
-function filaGrupoHeaderHtml(t, nombresGrupo) {
+function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   const textoIzquierda = esTotal ? t.nota : tiendas;
   const chipInicial = esTotal ? '0 palets' : t.nota;
   return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
-    '<td colspan="8">' +
+    '<td colspan="' + (tienePeso ? 9 : 8) + '">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +
@@ -3662,7 +3697,7 @@ function celdaConteoHtml(campo, valor) {
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
   const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
     : '';
@@ -3676,7 +3711,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
-      '<td colspan="5"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td colspan="' + (tienePeso ? 6 : 5) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
@@ -3688,6 +3723,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo) {
     '<td>' + celdaConteoHtml('cart', t.cart) + '</td>' +
     '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
+    (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
     '</tr>';
@@ -3869,18 +3905,24 @@ function recogerFilas(tableWrap) {
     };
     const get = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
+      if (!input) return undefined;
       return input.value === '' ? '' : input.value;
     };
     const c60 = getConEscape('c60');
     const pta = getConEscape('pta');
     const cart = getConEscape('cart');
-    filas.push({
+    const fila = {
       row: row,
       c60: c60.valor, c60Forzado: c60.forzado,
       pta: pta.valor, ptaForzado: pta.forzado,
       cart: cart.valor, cartForzado: cart.forzado,
       total: get('total'), pdte: get('pdte')
-    });
+    };
+    // El campo "peso" solo existe en las tiendas de rutas que lo tengan
+    // activado (ver seccion.tienePeso); si no hay casilla, no se manda nada.
+    const peso = get('peso');
+    if (peso !== undefined) fila.peso = peso;
+    filas.push(fila);
   });
   return filas;
 }
