@@ -1098,6 +1098,7 @@
     box-shadow: 0 20px 50px rgba(0,0,0,.3);
     max-height: calc(100vh - 40px); overflow-y: auto;
     transition: max-width .18s ease;
+    position: relative;
   }
   .modal-box h3 { margin: 0 0 8px; font-size: 16px; }
   .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
@@ -1209,7 +1210,11 @@
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #toast.error { background: var(--danger); }
 
-  .loader { text-align: center; padding: 40px; color: var(--ink-soft); font-size: 14px; }
+  .loader {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 50px 20px; color: var(--ink-soft); font-size: 14px;
+  }
+  .loader .spinner-navy { display: block; }
 
   /* ---------- Modal "Añadir observación" (algo más ancho que el estándar,
      para que quepan bien las píldoras de tipo y los chips de selección) ---- */
@@ -1217,6 +1222,34 @@
 
   /* ---------- GESTIÓN DE OBSERVACIONES (admin, cualquier día) ---------- */
   .gestor-form { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Overlay de carga: cubre todo el modal (fondo blanco translúcido) con un
+     spinner centrado, mientras se piden las agrupaciones/tiendas de ese día. */
+  .gestor-loading-overlay {
+    position: absolute; inset: 0; background: rgba(255,255,255,.82);
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+    border-radius: 16px; z-index: 5;
+  }
+  .gestor-loading-overlay.visible { display: flex; }
+  .gestor-spinner {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 3px solid #e2e5eb; border-top-color: var(--navy); animation: gestor-spin .7s linear infinite;
+  }
+  @keyframes gestor-spin { to { transform: rotate(360deg); } }
+  .gestor-loading-texto { font-size: 12.5px; color: var(--ink-soft); }
+
+  /* Aviso de error al cargar (fallo del servidor o timeout): reemplaza al
+     spinner y deja un botón para reintentar, en vez de quedarse colgado. */
+  .gestor-aviso-error {
+    display: none; align-items: flex-start; gap: 8px; background: #fdeceb; border: 1px solid #f6c6c1;
+    color: var(--danger); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5;
+  }
+  .gestor-aviso-error.visible { display: flex; }
+  .gestor-aviso-error button {
+    flex-shrink: 0; background: #fff; border: 1px solid var(--danger); color: var(--danger);
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  }
+  .gestor-aviso-error button:hover { background: var(--danger); color: #fff; }
   .gestor-campo label {
     display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
     color: var(--ink-soft); font-weight: 700; margin-bottom: 6px;
@@ -1445,7 +1478,26 @@ const METODOS_REMOTOS_ = {
   getAgrupacionesConfig: 'getAgrupacionesConfig',
   guardarEmailsAgrupacion: 'guardarEmailsAgrupacion',
   eliminarAgrupacionConfig: 'eliminarAgrupacionConfig',
-  sincronizarAgrupaciones: 'sincronizarAgrupaciones'
+  sincronizarAgrupaciones: 'sincronizarAgrupaciones',
+  getPlantillaDia: 'getPlantillaDia',
+  getDiasPlantilla: 'getDiasPlantilla',
+  editarTiendaPlantilla: 'editarTiendaPlantilla',
+  añadirTiendaPlantilla: 'añadirTiendaPlantilla',
+  eliminarTiendaPlantilla: 'eliminarTiendaPlantilla',
+  moverTiendaPlantilla: 'moverTiendaPlantilla',
+  editarNombreRutaPlantilla: 'editarNombreRutaPlantilla',
+  añadirRutaPlantilla: 'añadirRutaPlantilla',
+  eliminarRutaPlantilla: 'eliminarRutaPlantilla',
+  añadirNotaCargaPlantilla: 'añadirNotaCargaPlantilla',
+  editarNotaCargaPlantilla: 'editarNotaCargaPlantilla',
+  eliminarNotaCargaPlantilla: 'eliminarNotaCargaPlantilla',
+  guardarNotaGrupoPlantilla: 'guardarNotaGrupoPlantilla',
+  eliminarNotaGrupoPlantilla: 'eliminarNotaGrupoPlantilla',
+  editarOrdenTiendaPlantilla: 'editarOrdenTiendaPlantilla',
+  activarPesoRuta: 'activarPesoRuta',
+  desactivarPesoRuta: 'desactivarPesoRuta',
+  bloquearCampoTiendaPlantilla: 'bloquearCampoTiendaPlantilla',
+  desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla'
 };
 
 function llamarApi_(accion, args) {
@@ -3122,7 +3174,7 @@ function seleccionarFecha(fecha) {
 /* ---------------- CONTENIDO DEL DÍA ---------------- */
 function cargarConteoDia() {
   const cont = document.getElementById('dia-contenido');
-  cont.innerHTML = '<div class="loader">Cargando conteo…</div>';
+  cont.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando conteo…</div></div>';
   document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Cargando…</div>';
   google.script.run
     .withSuccessHandler(renderContenidoDia)
@@ -4171,7 +4223,7 @@ function eliminarObservacionYRecargar(id) {
  * para fechas futuras lejanas (festivos, cierres ya conocidos con
  * antelación, etc.) sin que la fecha "parezca" no tener hoja de conteo.
  */
-let GESTOR_OBS = { fecha: null, datosDia: null, tipo: 'general', seleccion: null };
+let GESTOR_OBS = { fecha: null, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
 
 /** Nombre de hoja de conteo (LUNES..DOMINGO) para una fecha 'YYYY-MM-DD',
  *  calculado en el propio navegador (espejo de MAPA_DIA_SEMANA / getDay()
@@ -4183,7 +4235,7 @@ function diaDesdeFechaJs_(fecha) {
 }
 
 function abrirGestorObservaciones() {
-  GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null };
+  GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.add('medio');
@@ -4239,12 +4291,19 @@ function crearFormularioGestorObs_() {
       '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un cierre para cada una.</div>' +
       '<div id="gestor-seleccion-actual" style="margin-top:10px;"></div>' +
     '</div>' +
-    '<div class="gestor-campo" id="gestor-estado-carga" style="display:none;">' +
-      '<div class="gestor-aviso">Cargando agrupaciones de ese día…</div>' +
+    '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
+      '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
+        '<span id="gestor-aviso-error-texto"></span>' +
+        '<button type="button" id="gestor-reintentar">Reintentar</button>' +
+      '</div>' +
     '</div>' +
     '<div class="gestor-campo">' +
       '<label id="gestor-texto-label">Nota</label>' +
       '<textarea id="gestor-texto" placeholder="Escribe la nota general del día…"></textarea>' +
+    '</div>' +
+    '<div class="gestor-loading-overlay" id="gestor-loading-overlay">' +
+      '<div class="gestor-spinner"></div>' +
+      '<div class="gestor-loading-texto">Cargando agrupaciones de ese día…</div>' +
     '</div>';
 
   wrap.querySelector('#gestor-fecha').addEventListener('change', function (e) {
@@ -4254,6 +4313,10 @@ function crearFormularioGestorObs_() {
     GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
     document.getElementById('gestor-busqueda').value = '';
     actualizarSeleccionGestorObs_();
+    cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
+  });
+
+  wrap.querySelector('#gestor-reintentar').addEventListener('click', function () {
     cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
   });
 
@@ -4367,15 +4430,65 @@ function actualizarSeleccionGestorObs_() {
 }
 
 /** Carga (o recarga, al cambiar de fecha) las agrupaciones/tiendas de ese día. */
+/** Carga (o recarga, al cambiar de fecha) las agrupaciones/tiendas de ese día.
+ *
+ * Usa un "id de carga" (GESTOR_OBS.cargaId) en vez de comparar solo la
+ * fecha: así, si el usuario teclea la fecha rápido y se disparan varias
+ * peticiones seguidas, solo la ÚLTIMA lanzada puede actualizar la
+ * pantalla — las respuestas de peticiones ya obsoletas (aunque lleguen
+ * después) se ignoran. También arma un timeout de seguridad: si en 12s no
+ * ha llegado ni éxito ni error (p.ej. un fallo de red que ni dispara el
+ * failureHandler), se muestra un aviso con botón "Reintentar" en vez de
+ * dejar el spinner dando vueltas para siempre.
+ */
+/** Carga (o recarga, al cambiar de fecha) las agrupaciones/tiendas de ese día.
+ *
+ * Usa PRIMERO getConteoDia(fecha) — la llamada de siempre, ya probada —
+ * porque para cualquier fecha dentro de la ventana normal (hoy, ayer,
+ * mañana...) funciona perfectamente y además trae el estado de cierres
+ * (para no ofrecer una tienda ya cerrada al buscarla). SOLO si esa
+ * llamada indica que la fecha está "bloqueada" (más allá de la ventana de
+ * futuro accesible) se hace una SEGUNDA llamada a getPlantillaDia(dia),
+ * que no depende de esa ventana, para poder seguir dejando notas o
+ * cierres en fechas lejanas (festivos, etc.) sin las tiendas ya cerradas.
+ *
+ * Usa un "id de carga" (GESTOR_OBS.cargaId) en vez de comparar solo la
+ * fecha: si el usuario teclea la fecha rápido y se disparan varias
+ * peticiones seguidas, solo la ÚLTIMA lanzada puede actualizar la
+ * pantalla. También arma un timeout de seguridad: si en 12s no ha
+ * llegado ni éxito ni error, se muestra un aviso con botón "Reintentar"
+ * en vez de dejar el spinner dando vueltas para siempre.
+ */
 function cargarDatosDiaGestorObs_(fecha) {
-  const carga = document.getElementById('gestor-estado-carga');
-  if (carga) carga.style.display = 'flex';
-  const dia = diaDesdeFechaJs_(fecha);
-  google.script.run
-    .withSuccessHandler(function (data) {
-      if (fecha !== GESTOR_OBS.fecha) return; // la fecha ya cambió mientras se cargaba
+  const overlay = document.getElementById('gestor-loading-overlay');
+  const avisoError = document.getElementById('gestor-aviso-error');
+  const avisoErrorTexto = document.getElementById('gestor-aviso-error-texto');
+
+  const miId = (GESTOR_OBS.cargaId || 0) + 1;
+  GESTOR_OBS.cargaId = miId;
+
+  if (avisoError) avisoError.classList.remove('visible');
+  if (overlay) overlay.classList.add('visible');
+
+  let timeoutId = setTimeout(onTimeout, 12000);
+
+  function onTimeout() {
+    if (miId !== GESTOR_OBS.cargaId) return;
+    if (overlay) overlay.classList.remove('visible');
+    if (avisoErrorTexto) avisoErrorTexto.textContent = 'La carga está tardando demasiado. Puede que el servidor de Apps Script no haya respondido. Comprueba tu conexión y vuelve a intentarlo.';
+    if (avisoError) avisoError.classList.add('visible');
+  }
+
+  function mostrarError(mensaje) {
+    if (overlay) overlay.classList.remove('visible');
+    if (avisoErrorTexto) avisoErrorTexto.textContent = mensaje;
+    if (avisoError) avisoError.classList.add('visible');
+  }
+
+  function aplicarDatos(data) {
+    try {
       GESTOR_OBS.datosDia = data;
-      if (carga) carga.style.display = 'none';
+      if (overlay) overlay.classList.remove('visible');
 
       const sinDia = !data.dia || !(data.secciones && data.secciones.length);
       const pillAgr = document.querySelector('.gestor-tipo-pill[data-tipo="agrupacion"]');
@@ -4392,12 +4505,52 @@ function cargarDatosDiaGestorObs_(fecha) {
         });
       }
       actualizarFormularioSegunTipo_();
+    } catch (e) {
+      mostrarError('Error al procesar los datos recibidos: ' + (e && e.message ? e.message : e));
+    }
+  }
+
+  // 2º intento (solo si la fecha está bloqueada por la ventana de futuro):
+  // plantilla del día de la semana, sin restricción de fecha.
+  function pedirPlantilla() {
+    const dia = diaDesdeFechaJs_(fecha);
+    google.script.run
+      .withSuccessHandler(function (data) {
+        clearTimeout(timeoutId);
+        if (miId !== GESTOR_OBS.cargaId) return;
+        aplicarDatos(data);
+      })
+      .withFailureHandler(function (err) {
+        clearTimeout(timeoutId);
+        if (miId !== GESTOR_OBS.cargaId) return;
+        const mensaje = (err && err.message) ? err.message : String(err);
+        mostrarError('No se ha podido cargar: ' + mensaje);
+        mostrarErrorServidor(err);
+      })
+      .getPlantillaDia(dia);
+  }
+
+  // 1er intento: la llamada de siempre, para fechas dentro de la ventana.
+  google.script.run
+    .withSuccessHandler(function (data) {
+      if (miId !== GESTOR_OBS.cargaId) { clearTimeout(timeoutId); return; }
+      if (data && data.bloqueada) {
+        // Fuera de la ventana normal: reintentamos con la plantilla, que sí
+        // sabe leer ese día de la semana sin mirar la fecha en absoluto.
+        pedirPlantilla();
+        return;
+      }
+      clearTimeout(timeoutId);
+      aplicarDatos(data);
     })
     .withFailureHandler(function (err) {
-      if (carga) carga.style.display = 'none';
+      clearTimeout(timeoutId);
+      if (miId !== GESTOR_OBS.cargaId) return;
+      const mensaje = (err && err.message) ? err.message : String(err);
+      mostrarError('No se ha podido cargar: ' + mensaje);
       mostrarErrorServidor(err);
     })
-    .getPlantillaDia(dia);
+    .getConteoDia(fecha);
 }
 
 /** Filtra agrupaciones o tiendas (según el tipo elegido) y pinta el desplegable de resultados. */
@@ -4850,7 +5003,7 @@ if ('serviceWorker' in navigator) {
   // APP_VERSION_ACTUAL es la versión con la que se sirvió ESTE index.html;
   // súbela a mano cada vez que despliegues, junto con version.json y con
   // CACHE_VERSION en service-worker.js (los tres deben coincidir).
-  const APP_VERSION_ACTUAL = '1.1.9';
+  const APP_VERSION_ACTUAL = '1.1.5';
 
   function comprobarVersionJson() {
     fetch('version.json', { cache: 'no-store' })
