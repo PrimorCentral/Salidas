@@ -4319,8 +4319,8 @@ function attachForzarNo(tr) {
   tr.querySelectorAll('input.celda-no').forEach(function (input) {
     input.addEventListener('click', function () {
       appConfirm(
-        'Forzar palets pese al "NO"',
-        'Esta casilla trae "NO": esa tienda no debería recibir palets por esta vía. Si continúas, podrás escribir un número igualmente; se guardará como excepción sin borrar el "NO" original de la hoja.',
+        'FORZAR SALIDA DE PALETS',
+        'Esta casilla trae "NO": Significa que esta tienda no debería recibir palets de esta nave. ¿Quieres forzar el envio de palets de esta nave?.',
         function () {
           appPrompt('Número de palets a forzar', 'Ej: 2', function (texto) {
             const numero = Number(String(texto).replace(',', '.'));
