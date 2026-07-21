@@ -342,9 +342,16 @@
   .festivos-dia-col.vacio { opacity: .72; }
   .festivos-dia-col-header {
     padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: center; flex-shrink: 0;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative;
   }
   .festivos-dia-col.es-hoy .festivos-dia-col-header { background: #fffaf1; border-color: var(--amber); }
+  .festivos-dia-col-add {
+    position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 6px;
+    border: 1px solid var(--line); background: #fff; color: var(--ink-soft); cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s, border-color .15s;
+  }
+  .festivos-dia-col-add:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .festivos-dia-col.es-hoy .festivos-dia-col-add { background: #fff; }
   .festivos-dia-col-badge {
     width: 40px; height: 40px; border-radius: 9px; background: var(--navy); color: #fff;
     display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
@@ -1500,7 +1507,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.2.5';
+const APP_VERSION_ACTUAL = '1.2.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2250,6 +2257,9 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
       : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
     col.innerHTML =
       '<div class="festivos-dia-col-header">' +
+        '<button type="button" class="festivos-dia-col-add" data-fecha="' + g.fecha + '" title="Añadir cierre / observación para este día">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+        '</button>' +
         '<div class="festivos-dia-col-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +
         '<div class="festivos-dia-col-nombre">' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) +
           (esHoy ? '<span class="festivos-chip-hoy">Hoy</span>' : '') +
@@ -2261,6 +2271,13 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
 
   listaEl.innerHTML = '';
   listaEl.appendChild(semana);
+
+  listaEl.querySelectorAll('.festivos-dia-col-add').forEach(function (btn) {
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      abrirGestorObservaciones(btn.getAttribute('data-fecha'));
+    };
+  });
 
   listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
     btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id')); };
@@ -4366,8 +4383,14 @@ function diaDesdeFechaJs_(fecha) {
   return MAPA_DIA_SEMANA_JS_[new Date(fecha + 'T12:00:00').getDay()];
 }
 
-function abrirGestorObservaciones() {
-  GESTOR_OBS = { fecha: ESTADO.fecha, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
+function abrirGestorObservaciones(fechaInicial) {
+  // fechaInicial (opcional): 'yyyy-MM-dd'. Se usa cuando se abre el gestor
+  // desde el botón "+" de un día concreto en "Gestión festivos", para que
+  // el formulario ya salga con esa fecha puesta en vez de la de hoy.
+  const fecha = (typeof fechaInicial === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaInicial))
+    ? fechaInicial
+    : ESTADO.fecha;
+  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.add('medio');
