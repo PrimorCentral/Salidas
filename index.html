@@ -3848,8 +3848,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           cargarConteoDia();
           cargarCalendario();
           const mensaje = tipo === 'definitivo' 
-          ? 'Definitivo enviado a: ' + res.enviadoA.join(', ') 
-         : 'Previsión enviada correctamente';
+          ? 'Definitivo enviado correctamente' 
+          : 'Previsión enviada correctamente';
 
 if (callback) callback(true, mensaje);
         })
