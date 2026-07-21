@@ -5102,8 +5102,8 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
     '</div>' +
     filaAviso +
     (esDefinitivo
-      ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y los campos se vaciarán para empezar en blanco la próxima semana.</p>'
-      : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable y podrás volver a enviar otra previsión más tarde.</p>');
+      ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y no se podrá editar.</p>'
+      : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable hasta que envies el definitivo.</p>');
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
