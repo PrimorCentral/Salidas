@@ -1475,7 +1475,7 @@
       <div class="brand">SALIDA <span>MERCANCÍA</span></div>
       <nav class="topbar-nav" id="topbar-nav">
         <button type="button" class="topbar-nav-item" data-vista="inicio">Inicio</button>
-        <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos</button>
+        <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos Diarios</button>
         <div class="topbar-nav-dropdown" id="topbar-dropdown-configuracion">
           <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="configuracion" aria-haspopup="true" aria-expanded="false">
             Configuración
@@ -4318,9 +4318,7 @@ function attachCalculoYValidacion(tr) {
 function attachForzarNo(tr) {
   tr.querySelectorAll('input.celda-no').forEach(function (input) {
     input.addEventListener('click', function () {
-      appConfirm(
-        'FORZAR SALIDA DE PALETS',
-        'Esta casilla trae "NO": Significa que esta tienda no debería recibir palets de esta nave. ¿Quieres forzar el envio de palets de esta nave?.',
+      appConfirm('FORZAR SALIDA DE PALETS', 'Esta casilla trae "NO" configurado.\nSignifica que esta tienda no debería recibir palets de esta nave\n¿Quieres forzar el envio de palets de esta nave?.',
         function () {
           appPrompt('Número de palets a forzar', 'Ej: 2', function (texto) {
             const numero = Number(String(texto).replace(',', '.'));
