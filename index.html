@@ -872,6 +872,16 @@
   .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
+  /* Mini badge de plazo de entrega (detectado desde "*" = 48H / "^" = 72H
+     en el nombre de la tienda, ver parsearMarcadorTienda()) */
+  .badge-plazo {
+    display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 20px; margin-left: 6px; vertical-align: middle;
+    letter-spacing: .02em;
+  }
+  .badge-48h { background: #fdf1de; color: var(--amber-dark); }
+  .badge-72h { background: #fbe3e3; color: var(--danger); }
+
   /* Agrupación bloqueada para edición (fecha demasiado antigua, o ya enviada) */
   .seccion-panel.no-editable table.conteo input.celda,
   .seccion-panel.no-editable table.conteo input.celda-total { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
@@ -1528,7 +1538,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.2.7';
+const APP_VERSION_ACTUAL = '1.2.8';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3467,6 +3477,7 @@ function renderMenuRapido(data) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'menu-rapido-item estado-' + seccion.estado;
+    btn.setAttribute('data-seccion-key', seccion.nombre);
     btn.innerHTML =
       '<span class="dot"></span>' +
       '<span class="titulo">' + escapeHtml(titulo) + '</span>' +
@@ -3474,6 +3485,18 @@ function renderMenuRapido(data) {
     btn.onclick = function () { irASeccion(seccion.nombre); };
     body.appendChild(btn);
   });
+}
+
+/** Actualiza en vivo el color del punto de una agrupación en "Acceso rápido
+ *  a agrupación" (p.ej. de pendiente/progreso a enviado tras un definitivo),
+ *  sin repintar todo el menú. Se usa desde aplicarResultadoEnvio_ para que
+ *  el menú lateral quede sincronizado con el panel aunque ya no se recargue
+ *  todo el cuadrante al enviar. */
+function actualizarMenuRapidoItem_(nombreSeccion, estado) {
+  const item = document.querySelector('.menu-rapido-item[data-seccion-key="' + CSS.escape(nombreSeccion) + '"]');
+  if (!item) return;
+  item.classList.remove('estado-pendiente', 'estado-progreso', 'estado-enviado');
+  item.classList.add('estado-' + estado);
 }
 
 function crearNotaChip(n) {
@@ -3632,12 +3655,22 @@ function marcarGuardando(panel, activo) {
   }
 }
 
+function htmlBotonDeshacerEnvio_() {
+  return '<button type="button" class="btn-deshacer-envio" title="Deshacer envío (solo se puede el mismo día)">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<polyline points="3 6 5 6 21 6"></polyline>' +
+    '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>' +
+    '<path d="M10 11v6"></path><path d="M14 11v6"></path>' +
+    '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>' +
+    '</svg></button>';
+}
+
 function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   // El backend calcula seccion.editable teniendo en cuenta la fecha (solo
   // lectura si han pasado más de 2 días) y si ya se envió a la agencia
   // (una vez enviado, ya no se puede modificar). Si por lo que sea no
   // viniera ese campo, se asume editable (compatibilidad hacia atrás).
-  const editable = seccion.editable !== false && seccion.estado !== 'enviado';
+  let editable = seccion.editable !== false && seccion.estado !== 'enviado';
 
   const panel = document.createElement('div');
   panel.className = 'seccion-panel estado-' + seccion.estado + (editable ? '' : ' no-editable');
@@ -3665,15 +3698,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     badgeEstado(seccion) +
     badgePrevision(seccion) +
-    (seccion.estado === 'enviado' && esHoy
-      ? '<button type="button" class="btn-deshacer-envio" title="Deshacer envío (solo se puede el mismo día)">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<polyline points="3 6 5 6 21 6"></polyline>' +
-        '<path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>' +
-        '<path d="M10 11v6"></path><path d="M14 11v6"></path>' +
-        '<path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>' +
-        '</svg></button>'
-      : '') +
+    (seccion.estado === 'enviado' && esHoy ? htmlBotonDeshacerEnvio_() : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '<span class="sync-indicator"></span>' +
     (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
@@ -3880,8 +3905,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     };
   }
 
-  const btnDeshacerEnvio = header.querySelector('.btn-deshacer-envio');
-  if (btnDeshacerEnvio) {
+  // Enlaza el click de "Deshacer envío" sobre el botón que se le pase: sirve
+  // tanto para el que ya viniera en el HTML inicial del panel (si la página
+  // se carga con la agrupación ya enviada hoy) como para el que se añade
+  // dinámicamente justo después de un envío definitivo (ver
+  // aplicarResultadoEnvio_ más abajo), sin duplicar esta lógica.
+  function bindBotonDeshacerEnvio_(btnDeshacerEnvio) {
+    if (!btnDeshacerEnvio) return;
     btnDeshacerEnvio.onclick = function (e) {
       e.stopPropagation();
       appConfirm(
@@ -3905,6 +3935,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       );
     };
   }
+  bindBotonDeshacerEnvio_(header.querySelector('.btn-deshacer-envio'));
 
   const btnPdf = header.querySelector('.btn-pdf-seccion');
   if (btnPdf) {
@@ -3961,7 +3992,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         .withSuccessHandler(function (res) {
           if (btnPrevision) btnPrevision.disabled = false;
           if (btnDefinitivo) btnDefinitivo.disabled = false;
-          cargarConteoDia();
+          aplicarResultadoEnvio_(tipo, res);
+          // El cuadrante (este panel) ya se ha actualizado en vivo, sin
+          // recargar nada; solo se refresca el calendario mensual (ligero,
+          // sin loader de página) para que la celda del día refleje el
+          // nuevo estado (pendiente/parcial/enviado).
           cargarCalendario();
           const mensaje = tipo === 'definitivo' 
           ? 'Definitivo enviado correctamente' 
@@ -3976,6 +4011,83 @@ if (callback) callback(true, mensaje);
         })
         [metodo](dia, seccion.nombre, fecha);
     });
+  }
+
+  /**
+   * Aplica el resultado de un envío de previsión/definitivo directamente
+   * sobre el panel ya pintado en pantalla, sin volver a pedir todo el
+   * cuadrante al servidor (mismo espíritu que quitarDeCacheFestivos_ en
+   * "Gestión festivos": actualizar en vivo el estado local + el DOM).
+   *
+   *  - 'prevision': no bloquea nada; solo se añade/actualiza el badge
+   *    "Previsión enviada" y se oculta el botón de "Enviar Previsión".
+   *  - 'definitivo': la agrupación pasa a "enviado": se bloquean los
+   *    inputs de la tabla, se ocultan los botones de envío, se actualiza
+   *    el badge de estado y, si es hoy, aparece "Deshacer envío".
+   */
+  function aplicarResultadoEnvio_(tipo, resultado) {
+    if (tipo === 'prevision') {
+      seccion.previsionEnviada = (resultado && resultado.previsionEnviada) || seccion.previsionEnviada || '';
+
+      const badgeExistente = header.querySelector('.badge-prevision');
+      if (badgeExistente) badgeExistente.remove();
+      const wrapTmp = document.createElement('div');
+      wrapTmp.innerHTML = badgePrevision(seccion);
+      const nuevoBadge = wrapTmp.firstElementChild;
+      if (nuevoBadge) {
+        const syncIndicator = header.querySelector('.sync-indicator');
+        if (syncIndicator) syncIndicator.insertAdjacentElement('beforebegin', nuevoBadge);
+        else header.appendChild(nuevoBadge);
+      }
+
+      const btnPrevisionEl = header.querySelector('.btn-header-prevision');
+      if (btnPrevisionEl) btnPrevisionEl.remove();
+      actualizarMenuRapidoItem_(seccion.nombre, seccion.estado);
+      return;
+    }
+
+    // tipo === 'definitivo'
+    seccion.estado = 'enviado';
+    seccion.horaEnvio = (resultado && resultado.horaEnvio) || seccion.horaEnvio || '';
+    // OJO: seccion.previsionEnviada NO se limpia aquí a propósito: el
+    // backend (Estado_Previsiones) tampoco se borra al enviar el
+    // definitivo, así que si se había mandado antes una previsión, su
+    // badge se sigue viendo junto al de "Definitivo enviado" -- igual que
+    // pasaría si recargases la página. Si aquí lo ocultáramos, quedaría
+    // una diferencia entre "recién enviado, en esta sesión" y "recargado
+    // desde cero", que es justo lo que queremos evitar.
+    editable = false;
+
+    panel.classList.remove('estado-pendiente', 'estado-progreso');
+    panel.classList.add('estado-enviado', 'no-editable');
+
+    const badgeEstadoExistente = header.querySelector('.badge-enviado, .badge-progreso');
+    if (badgeEstadoExistente) badgeEstadoExistente.remove();
+
+    const wrapTmp = document.createElement('div');
+    wrapTmp.innerHTML = badgeEstado(seccion);
+    const nuevoBadgeEstado = wrapTmp.firstElementChild;
+    const badgeTotalPalets = header.querySelector('.badge-total-palets');
+    if (nuevoBadgeEstado && badgeTotalPalets) badgeTotalPalets.insertAdjacentElement('afterend', nuevoBadgeEstado);
+
+    const btnPrevisionEl = header.querySelector('.btn-header-prevision');
+    if (btnPrevisionEl) btnPrevisionEl.remove();
+    const btnDefinitivoEl = header.querySelector('.btn-header-definitivo');
+    if (btnDefinitivoEl) btnDefinitivoEl.remove();
+
+    if (esHoy && !header.querySelector('.btn-deshacer-envio')) {
+      const wrapBtn = document.createElement('div');
+      wrapBtn.innerHTML = htmlBotonDeshacerEnvio_();
+      const nuevoBtn = wrapBtn.firstElementChild;
+      const syncIndicator = header.querySelector('.sync-indicator');
+      if (syncIndicator) syncIndicator.insertAdjacentElement('beforebegin', nuevoBtn);
+      else header.appendChild(nuevoBtn);
+      bindBotonDeshacerEnvio_(nuevoBtn);
+    }
+
+    tableWrap.querySelectorAll('input.celda, input.celda-total').forEach(function (input) { input.disabled = true; });
+    tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, input.celda-no').forEach(function (btn) { btn.disabled = true; });
+    actualizarMenuRapidoItem_(seccion.nombre, seccion.estado);
   }
 
   return panel;
@@ -4204,6 +4316,27 @@ function quitarCodigoTienda(nombre) {
   return String(nombre).replace(/^\s*\d+\s*-\s*/, '').trim();
 }
 
+/**
+ * Detecta si el nombre de una tienda termina en " *" (48H) o " ^" (72H) y
+ * devuelve el nombre limpio (sin el marcador) junto con los datos del
+ * badge a mostrar. Si no tiene marcador, badge es null.
+ * Ej: "141- RIOJA *" -> { nombreLimpio: "141- RIOJA", badge: { texto: "48H", clase: "badge-48h" } }
+ * OJO: esto es solo para lo que se PINTA en pantalla. El nombre real de la
+ * tienda (con el "*"/"^" incluido) se sigue usando tal cual en data-nombre
+ * y en todo lo que se envía al backend, porque así es como está guardado
+ * en la columna "Tienda" de la hoja del día.
+ */
+function parsearMarcadorTienda(nombre) {
+  const m = String(nombre || '').match(/^(.*?)\s*([*^])\s*$/);
+  if (!m) return { nombreLimpio: String(nombre || ''), badge: null };
+  return {
+    nombreLimpio: m[1],
+    badge: m[2] === '*'
+      ? { texto: '48H', clase: 'badge-48h' }
+      : { texto: '72H', clase: 'badge-72h' }
+  };
+}
+
 /** "NO" tal cual viene del Excel (sin importar mayúsculas/espacios): esa
  *  tienda no debe recibir palets por esa vía ese día. */
 function esValorNo(v) {
@@ -4226,6 +4359,10 @@ function celdaConteoHtml(campo, valor, forzado) {
 }
 
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
+  const marcador = parsearMarcadorTienda(t.nombre);
+  const badgeHtml = marcador.badge
+    ? '<span class="badge-plazo ' + marcador.badge.clase + '">' + marcador.badge.texto + '</span>'
+    : '';
   const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
     : '';
@@ -4237,14 +4374,14 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
     : '';
   if (t.cerrada) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
-      '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
+      '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
       '<td colspan="' + (tienePeso ? 6 : 5) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
   return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
-    '<td class="nombre">' + escapeHtml(t.nombre) + notaHtml + '</td>' +
+    '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
     '<td>' + celdaConteoHtml('c60', t.c60, !!(t.forzados && t.forzados.c60 !== undefined)) + '</td>' +
     '<td>' + celdaConteoHtml('pta', t.pta, !!(t.forzados && t.forzados.pta !== undefined)) + '</td>' +
@@ -4934,10 +5071,18 @@ function guardarDesdeGestorObs_() {
 
   // Se guardan una a una (no en paralelo) para no saturar el backend de
   // Apps Script con llamadas simultáneas cuando se cierran varias tiendas
-  // a la vez.
+  // a la vez. Se guarda también el id que devuelve cada guardado, para
+  // poder añadir la observación al caché local de "Gestión festivos" sin
+  // tener que volver a pedir todo el rango al servidor (ver
+  // agregarObservacionesACacheFestivos_ más abajo).
+  const guardados = [];
   let cadena = Promise.resolve();
   observaciones.forEach(function (obs) {
-    cadena = cadena.then(function () { return guardarObservacionPromise_(obs); });
+    cadena = cadena.then(function () {
+      return guardarObservacionPromise_(obs).then(function (res) {
+        guardados.push(Object.assign({}, obs, { id: res && res.id }));
+      });
+    });
   });
 
   cadena
@@ -4946,12 +5091,64 @@ function guardarDesdeGestorObs_() {
       mostrarToast(observaciones.length > 1 ? observaciones.length + ' cierres guardados' : 'Guardado');
       if (document.getElementById('calendar-body')) cargarCalendario();
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
-      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') cargarFestivos();
+      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') {
+        agregarObservacionesACacheFestivos_(fecha, dia, guardados);
+      }
     })
     .catch(function (err) {
       if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar'; }
       mostrarErrorServidor(err);
     });
+}
+
+/** Añade al caché local de "Gestión festivos" (FESTIVOS_ESTADO.datosCache)
+ *  las observaciones recién guardadas en el servidor, y repinta al instante
+ *  (mismo espíritu que quitarDeCacheFestivos_ al borrar): así añadir una
+ *  nota/cierre desde el gestor no obliga a volver a pedir todo el rango
+ *  visible con su loader y espera, igual que al eliminar una. */
+function agregarObservacionesACacheFestivos_(fecha, dia, guardados) {
+  if (!guardados || !guardados.length) return;
+
+  FESTIVOS_ESTADO.datosCache = FESTIVOS_ESTADO.datosCache || [];
+  let data = FESTIVOS_ESTADO.datosCache.filter(function (d) { return d && d.fecha === fecha; })[0];
+  if (!data) {
+    // Fecha que hasta ahora no tenía ninguna anotación (por eso no venía en
+    // el caché, que solo trae los días con contenido): se crea un registro
+    // nuevo para ella, vacío salvo por lo que se añade a continuación.
+    data = { fecha: fecha, dia: dia || '', notasGenerales: [], secciones: [] };
+    FESTIVOS_ESTADO.datosCache.push(data);
+  }
+
+  guardados.forEach(function (obs) {
+    if (!obs.id) return; // por si el backend no devolviera id, no se añade "a ciegas" al caché
+    if (!obs.agrupacion) {
+      data.notasGenerales = data.notasGenerales || [];
+      data.notasGenerales.push({ id: obs.id, texto: obs.texto, tipo: obs.tipo });
+      return;
+    }
+    data.secciones = data.secciones || [];
+    let seccion = data.secciones.filter(function (s) { return s.nombre === obs.agrupacion; })[0];
+    if (!seccion) {
+      seccion = { nombre: obs.agrupacion, notas: [], tiendas: [] };
+      data.secciones.push(seccion);
+    }
+    if (!obs.tienda) {
+      seccion.notas = seccion.notas || [];
+      seccion.notas.push({ id: obs.id, texto: obs.texto, tipo: obs.tipo });
+      return;
+    }
+    seccion.tiendas = seccion.tiendas || [];
+    let tienda = seccion.tiendas.filter(function (t) { return t.nombre === obs.tienda; })[0];
+    if (!tienda) {
+      tienda = { nombre: obs.tienda, cerrada: false, motivoCierre: '', cierreId: null };
+      seccion.tiendas.push(tienda);
+    }
+    tienda.cerrada = true;
+    tienda.motivoCierre = obs.texto;
+    tienda.cierreId = obs.id;
+  });
+
+  aplicarFiltrosFestivos_();
 }
 
 // Cierra el desplegable de resultados de búsqueda del gestor si se hace clic
