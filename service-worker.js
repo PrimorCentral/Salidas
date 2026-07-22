@@ -26,7 +26,7 @@
  * mismo número, aunque cada uno cumple un papel distinto.
  */
 
-const CACHE_VERSION = 'v1.2.8'; // <-- SUBE ESTE NÚMERO EN CADA DESPLIEGUE
+const CACHE_VERSION = 'v1.2.9'; // <-- SUBE ESTE NÚMERO EN CADA DESPLIEGUE
 const CACHE_NAME = 'conteos-diarios-' + CACHE_VERSION;
 
 // Archivos del "app shell" que se cachean al instalar. Ajusta esta lista si
