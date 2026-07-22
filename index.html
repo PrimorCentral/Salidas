@@ -653,7 +653,7 @@
     main { padding: 16px; }
     .layout-grid { grid-template-columns: 1fr; }
     .col-sidebar { position: static; }
-    .col-calendario { order: -2; }
+    .col-calendario { order: -2; max-height: none; overflow: visible; }
     .col-contenido { order: -1; }
     .col-resumen { order: 0; }
   }
@@ -724,6 +724,16 @@
   .calendar-leyenda span { display: inline-flex; align-items: center; gap: 5px; }
   .calendar-leyenda .sw { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 
+  /* La columna entera (calendario + acceso rápido) se desplaza como una
+     sola pieza, acotada a la altura visible de la ventana. Antes solo el
+     recuadro de la lista tenía su propio scroll con una altura fija
+     (460px): si el calendario estaba desplegado, ese recuadro podía
+     empezar ya muy abajo en la pantalla y su scroll interno quedaba fuera
+     de la parte visible, así que no había forma de llegar a las últimas
+     agrupaciones. Con el scroll en la columna entera, siempre se puede
+     bajar hasta el final se vea donde se vea. */
+  .col-calendario { max-height: calc(100vh - 96px); overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+
   /* ---------- ACCESO RÁPIDO A AGRUPACIONES ---------- */
   .menu-rapido-panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -732,7 +742,7 @@
   .menu-rapido-panel h4 {
     margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 700;
   }
-  .menu-rapido-body { display: flex; flex-direction: column; gap: 4px; max-height: 460px; overflow-y: auto; }
+  .menu-rapido-body { display: flex; flex-direction: column; gap: 4px; }
   .menu-rapido-vacio { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
   .menu-rapido-item {
     display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 7px;
@@ -1538,7 +1548,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.1';
+const APP_VERSION_ACTUAL = '1.3.2';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1812,7 +1822,7 @@ let ESTADO = {
   vista: null,          // 'inicio' | 'conteos' | 'configuracion'
   fecha: null,          // 'YYYY-MM-DD' seleccionada
   anioMes: null,        // 'YYYY-MM' mostrado en el calendario
-  calendarioColapsado: false,
+  calendarioColapsado: true,
   colapsadas: new Set() // nombres de agrupación colapsadas manualmente (persiste al recargar el día)
 };
 
@@ -3260,7 +3270,7 @@ function renderShellPrincipal() {
   main.innerHTML =
     '<div class="layout-grid">' +
       '<aside class="col-sidebar col-calendario">' +
-        '<div class="calendar-panel" id="calendar-panel">' +
+        '<div class="calendar-panel' + (ESTADO.calendarioColapsado ? ' colapsado' : '') + '" id="calendar-panel">' +
           '<div class="calendar-panel-header" id="calendar-toggle">' +
             '<div class="titulo">' +
               '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
