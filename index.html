@@ -713,8 +713,8 @@
   .cal-day.seleccionado.estado-enviado { color: #fff; }
   .cal-day .dots { display: flex; gap: 3px; height: 6px; }
   .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
-  .cal-day .dot-nota { background: var(--amber); }
-  .cal-day .dot-cierre { background: var(--danger); }
+  .dot-nota { background: var(--amber); }
+  .dot-cierre { background: var(--danger); }
   .cal-day.seleccionado .dot-nota { background: #ffd898; }
   .cal-day.seleccionado .dot-cierre { background: #ff9d9d; }
 
@@ -1538,7 +1538,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.2.8';
+const APP_VERSION_ACTUAL = '1.2.9';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -4470,7 +4470,7 @@ function attachForzarNo(tr) {
             input.dispatchEvent(new Event('input', { bubbles: true }));
             programarAutoguardado();
             actualizarTotalPalets();
-          });
+          }, false);
         }
       );
     });
@@ -4727,6 +4727,18 @@ function crearFormularioGestorObs_() {
 
   wrap.querySelector('#gestor-reintentar').addEventListener('click', function () {
     cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
+  });
+
+  // Fuerza mayúsculas mientras se escribe la nota/motivo (vale para los 3
+  // tipos: nota del día, nota de agrupación y motivo de cierre, ya que
+  // comparten el mismo textarea #gestor-texto). Se conserva la posición del
+  // cursor para que no "salte" al final en cada pulsación.
+  wrap.querySelector('#gestor-texto').addEventListener('input', function (e) {
+    const el = e.target;
+    const inicio = el.selectionStart;
+    const fin = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(inicio, fin);
   });
 
   wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (btn) {
@@ -5201,7 +5213,12 @@ function appConfirm(titulo, texto, onConfirm, peligro) {
   document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirm(); };
 }
 
-function appPrompt(titulo, placeholder, onSubmit) {
+function appPrompt(titulo, placeholder, onSubmit, mayusculas) {
+  // mayusculas (opcional, por defecto true): si es true, lo que se escriba
+  // en el textarea se convierte a mayúsculas automáticamente mientras se
+  // teclea. Se desactiva explícitamente para prompts numéricos (p.ej.
+  // "Número de palets a forzar"), donde no aplica.
+  if (mayusculas === undefined) mayusculas = true;
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-title').style.display = '';
@@ -5213,6 +5230,15 @@ function appPrompt(titulo, placeholder, onSubmit) {
   textarea.value = '';
   textarea.placeholder = placeholder || '';
   textarea.style.display = 'block';
+  textarea.oninput = mayusculas
+    ? function (e) {
+        const el = e.target;
+        const inicio = el.selectionStart;
+        const fin = el.selectionEnd;
+        el.value = el.value.toUpperCase();
+        el.setSelectionRange(inicio, fin);
+      }
+    : null;
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
