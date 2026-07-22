@@ -23,6 +23,7 @@
     --amber: #d98c2b;
     --amber-dark: #b8721e;
     --ok: #2f8f6f;
+    --prevision: #3b74c9;
     --danger: #c94f4f;
     --radius: 10px;
     --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -752,6 +753,7 @@
   .menu-rapido-item:hover { background: #fafbfd; border-color: var(--line); }
   .menu-rapido-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #c7cdd6; }
   .menu-rapido-item.estado-progreso .dot { background: var(--amber); }
+  .menu-rapido-item.estado-prevision .dot { background: var(--prevision); }
   .menu-rapido-item.estado-enviado .dot { background: var(--ok); }
   .menu-rapido-item .titulo { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .menu-rapido-item .count { font-size: 11px; color: var(--ink-soft); flex-shrink: 0; }
@@ -878,7 +880,7 @@
   .badge-pendiente { background: #eef0f3; color: var(--ink-soft); }
   .badge-progreso { background: #fdf1de; color: var(--amber-dark); }
   .badge-enviado { background: #e4f3ec; color: var(--ok); }
-  .badge-prevision { background: #e4f3ec; color: var(--ok); }
+  .badge-prevision { background: #e6eefb; color: var(--prevision); }
   .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
@@ -1548,7 +1550,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.2';
+const APP_VERSION_ACTUAL = '1.3.3';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1720,7 +1722,26 @@ function llamarApi_(accion, args, intento) {
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ accion: accion, token: SESSION_TOKEN, args: args })
   })
-    .then(function (resp) { return resp.json(); })
+    .then(function (resp) {
+      // No usamos resp.json() directamente: Apps Script, cuando está
+      // saturado (muchas llamadas simultáneas) o tiene un fallo puntual de
+      // infraestructura, a veces no ejecuta tu código y en su lugar
+      // devuelve una página HTML de error suya (empieza por "<!DOCTYPE
+      // html>..."). Si eso pasara, resp.json() lanzaría un SyntaxError feo
+      // ("Unexpected token '<' ... is not valid JSON") que antes se le
+      // enseñaba tal cual al usuario. Ahora se detecta aquí y se marca
+      // como fallo "de red" para que el bloque catch de abajo lo reintente
+      // solo, en vez de interrumpir al usuario con ese mensaje.
+      return resp.text().then(function (texto) {
+        try {
+          return JSON.parse(texto);
+        } catch (e) {
+          const errorNoJson = new Error('Respuesta no válida del servidor (reintentando…)');
+          errorNoJson.esRespuestaNoJson = true;
+          throw errorNoJson;
+        }
+      });
+    })
     .then(function (data) {
       if (!data.ok) {
         if (data.sesionCaducada) {
@@ -1738,7 +1759,8 @@ function llamarApi_(accion, args, intento) {
       // reintentar unas pocas veces con una pequeña espera. Un error real
       // del servidor (throw new Error(...) de arriba, p.ej. "Contraseña
       // incorrecta") NO es un TypeError, así que no se reintenta a ciegas.
-      const esFalloDeRed = err instanceof TypeError;
+      // Se trata igual el caso de respuesta HTML no-JSON detectado arriba.
+      const esFalloDeRed = err instanceof TypeError || err.esRespuestaNoJson === true;
       if (esFalloDeRed && intento < MAX_INTENTOS_RED_) {
         const esperaMs = 700 * intento;
         return new Promise(function (resolve) { setTimeout(resolve, esperaMs); })
@@ -3503,6 +3525,31 @@ function renderContenidoDia(data) {
  * sección en el contenido principal (reutiliza irASeccion, la misma función
  * que usa el resumen del día).
  */
+/** Estado a mostrar (color del punto) en "Acceso rápido a agrupación" para
+ *  una sección. seccion.estado ('pendiente' | 'progreso' | 'enviado') y
+ *  seccion.previsionEnviada son datos independientes (se puede enviar una
+ *  previsión sin que eso cambie seccion.estado), así que aquí se combinan
+ *  con una prioridad clara: definitivo enviado > previsión enviada > en
+ *  progreso > pendiente. Se usa tanto al pintar el menú por primera vez
+ *  como al actualizarlo en vivo tras enviar previsión/definitivo. */
+function claseEstadoMenuRapido_(seccion) {
+  if (seccion.estado === 'enviado') return 'estado-enviado';
+  if (seccion.previsionEnviada) return 'estado-prevision';
+  if (seccion.estado === 'progreso') return 'estado-progreso';
+  return 'estado-pendiente';
+}
+
+/** Texto del tooltip (title) del punto de "Acceso rápido a agrupación",
+ *  a juego con claseEstadoMenuRapido_. */
+function tituloEstadoMenuRapido_(seccion) {
+  switch (claseEstadoMenuRapido_(seccion)) {
+    case 'estado-enviado': return 'Definitivo enviado';
+    case 'estado-prevision': return 'Previsión enviada';
+    case 'estado-progreso': return 'En progreso';
+    default: return 'Sin empezar';
+  }
+}
+
 function renderMenuRapido(data) {
   const body = document.getElementById('menu-rapido-body');
   if (!body) return;
@@ -3518,10 +3565,10 @@ function renderMenuRapido(data) {
     const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'menu-rapido-item estado-' + seccion.estado;
+    btn.className = 'menu-rapido-item ' + claseEstadoMenuRapido_(seccion);
     btn.setAttribute('data-seccion-key', seccion.nombre);
     btn.innerHTML =
-      '<span class="dot"></span>' +
+      '<span class="dot" title="' + escapeAttr(tituloEstadoMenuRapido_(seccion)) + '"></span>' +
       '<span class="titulo">' + escapeHtml(titulo) + '</span>' +
       '<span class="count">' + seccion.tiendas.length + '</span>';
     btn.onclick = function () { irASeccion(seccion.nombre); };
@@ -3530,15 +3577,19 @@ function renderMenuRapido(data) {
 }
 
 /** Actualiza en vivo el color del punto de una agrupación en "Acceso rápido
- *  a agrupación" (p.ej. de pendiente/progreso a enviado tras un definitivo),
- *  sin repintar todo el menú. Se usa desde aplicarResultadoEnvio_ para que
- *  el menú lateral quede sincronizado con el panel aunque ya no se recargue
- *  todo el cuadrante al enviar. */
-function actualizarMenuRapidoItem_(nombreSeccion, estado) {
-  const item = document.querySelector('.menu-rapido-item[data-seccion-key="' + CSS.escape(nombreSeccion) + '"]');
+ *  a agrupación" (p.ej. de pendiente/progreso a previsión enviada, o a
+ *  definitivo enviado), sin repintar todo el menú. Se usa desde
+ *  aplicarResultadoEnvio_ para que el menú lateral quede sincronizado con
+ *  el panel aunque ya no se recargue todo el cuadrante al enviar. Recibe
+ *  la sección completa (no solo el estado) porque el color depende de la
+ *  combinación estado + previsionEnviada (ver claseEstadoMenuRapido_). */
+function actualizarMenuRapidoItem_(seccion) {
+  const item = document.querySelector('.menu-rapido-item[data-seccion-key="' + CSS.escape(seccion.nombre) + '"]');
   if (!item) return;
-  item.classList.remove('estado-pendiente', 'estado-progreso', 'estado-enviado');
-  item.classList.add('estado-' + estado);
+  item.classList.remove('estado-pendiente', 'estado-progreso', 'estado-prevision', 'estado-enviado');
+  item.classList.add(claseEstadoMenuRapido_(seccion));
+  const dot = item.querySelector('.dot');
+  if (dot) dot.title = tituloEstadoMenuRapido_(seccion);
 }
 
 function crearNotaChip(n) {
@@ -4084,7 +4135,7 @@ if (callback) callback(true, mensaje);
 
       const btnPrevisionEl = header.querySelector('.btn-header-prevision');
       if (btnPrevisionEl) btnPrevisionEl.remove();
-      actualizarMenuRapidoItem_(seccion.nombre, seccion.estado);
+      actualizarMenuRapidoItem_(seccion);
       return;
     }
 
@@ -4129,7 +4180,7 @@ if (callback) callback(true, mensaje);
 
     tableWrap.querySelectorAll('input.celda, input.celda-total').forEach(function (input) { input.disabled = true; });
     tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, input.celda-no').forEach(function (btn) { btn.disabled = true; });
-    actualizarMenuRapidoItem_(seccion.nombre, seccion.estado);
+    actualizarMenuRapidoItem_(seccion);
   }
 
   return panel;
