@@ -579,6 +579,13 @@
   .plantilla-ruta-peso:hover { background: #eef1f7; }
   .plantilla-ruta-peso.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
   .plantilla-ruta-peso.activo:hover { background: var(--navy-soft); }
+  .plantilla-ruta-pdfespecial {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-ruta-pdfespecial:hover { background: #eef1f7; }
+  .plantilla-ruta-pdfespecial.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-pdfespecial.activo:hover { filter: brightness(1.08); }
   .plantilla-tienda-bloqueos { display: flex; gap: 3px; flex-shrink: 0; }
   .plantilla-tienda-bloqueo {
     background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
@@ -917,6 +924,11 @@
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .btn-pdf-seccion:hover { background: #e1e5eb; }
+  .btn-pdf-especial-seccion {
+    background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .btn-pdf-especial-seccion:hover { background: #e1e5eb; }
 
   /* Botones "Enviar Previsión" / "Enviar Definitivo" en la cabecera, junto al badge de estado */
   .btn-header-prevision {
@@ -1707,6 +1719,8 @@ const METODOS_REMOTOS_ = {
   editarOrdenTiendaPlantilla: 'editarOrdenTiendaPlantilla',
   activarPesoRuta: 'activarPesoRuta',
   desactivarPesoRuta: 'desactivarPesoRuta',
+  activarPdfEspecial: 'activarPdfEspecial',
+  desactivarPdfEspecial: 'desactivarPdfEspecial',
   bloquearCampoTiendaPlantilla: 'bloquearCampoTiendaPlantilla',
   desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla'
 };
@@ -2887,6 +2901,7 @@ function pintarPlantilla_() {
           '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (esAdmin() ? '' : 'disabled') + '>' +
           (esAdmin() ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
+            '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
             '<button type="button" class="plantilla-tienda-guardar" data-guardar-ruta="' + escapeAttr(s.nombre) + '" data-id="pr' + si + '_nombre" title="Guardar nombre de ruta" disabled>' +
@@ -2991,6 +3006,9 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-peso]').forEach(function (btn) {
     btn.onclick = function () { togglePesoRutaPlantilla_(btn.getAttribute('data-toggle-peso'), btn.getAttribute('data-peso-activo') === '1'); };
   });
+  listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
+    btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
+  });
   listaEl.querySelectorAll('[data-bloqueo-row]').forEach(function (btn) {
     btn.onclick = function () {
       toggleBloqueoCampoTiendaPlantilla_(
@@ -3021,6 +3039,17 @@ function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
   }
   llamarApi_('activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
     .then(function () { mostrarToast('Casilla PESO activada'); cargarPlantilla_(); })
+    .catch(mostrarErrorServidor);
+}
+
+/** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".
+ *  A diferencia de PESO, aquí no hay valores guardados que se pierdan al
+ *  desactivar (los campos del PDF especial se rellenan a mano en el papel,
+ *  no se guardan en la Sheet), así que no hace falta pedir confirmación. */
+function togglePdfEspecialRutaPlantilla_(nombreRuta, activoActualmente) {
+  const accion = activoActualmente ? 'desactivarPdfEspecial' : 'activarPdfEspecial';
+  llamarApi_(accion, [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function () { mostrarToast(activoActualmente ? 'PDF ESPECIAL desactivado' : 'PDF ESPECIAL activado'); cargarPlantilla_(); })
     .catch(mostrarErrorServidor);
 }
 
@@ -3808,6 +3837,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<path d="M15 2v6h6" fill="#ffffff" opacity="0.32"/>' +
     '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" font-weight="800" fill="#ffffff">PDF</text>' +
     '</svg></button>' +
+    (seccion.tienePdfEspecial
+      ? '<button type="button" class="btn-pdf-especial-seccion" title="Generar PDF especial (formato de reparto en camión) de esta agrupación">' +
+        '<svg width="16" height="18" viewBox="0 0 24 26">' +
+        '<path d="M4 2h11l6 6v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="var(--prevision)"/>' +
+        '<path d="M15 2v6h6" fill="#ffffff" opacity="0.32"/>' +
+        '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="6" font-weight="800" fill="#ffffff">PDF+</text>' +
+        '</svg></button>'
+      : '') +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
   panel.appendChild(header);
@@ -4035,6 +4072,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     btnPdf.onclick = function (e) {
       e.stopPropagation();
       generarPdfSeccion(seccion, dia, fecha, tableWrap);
+    };
+  }
+
+  const btnPdfEspecial = header.querySelector('.btn-pdf-especial-seccion');
+  if (btnPdfEspecial) {
+    btnPdfEspecial.onclick = function (e) {
+      e.stopPropagation();
+      generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap);
     };
   }
 
@@ -4345,6 +4390,109 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
   dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas);
 
   const nombreArchivo = 'Conteo_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
+  doc.save(nombreArchivo);
+}
+
+/**
+ * PDF ESPECIAL: mismo formato que la plantilla Excel de reparto en camión
+ * (columnas LÍMITE CAMIÓN / AGENCIA / LÍMITE / TIENDA / NAVE 60 / PTA /
+ * CÁRTAMA / TOTAL / SOBRAN / TOTAL RUTA / FIRMA RES. TARDE / FIRMA RES.
+ * NOCHE / CONFIRMACIÓN RECOGIDA / ZONA-PASILLO), pensado para imprimir y
+ * rellenar a mano en el momento del reparto.
+ *
+ * LÍMITE, TIENDA, NAVE 60, PTA, CÁRTAMA y TOTAL salen de los datos ya
+ * introducidos en el conteo (igual que el PDF normal). El resto de
+ * columnas (LÍMITE CAMIÓN, AGENCIA, SOBRAN, TOTAL RUTA, las 3 firmas y
+ * ZONA/PASILLO) NO se guardan en ningún sitio de la app: se dejan en
+ * blanco a propósito para rellenarlas a mano sobre el papel, tal y como
+ * se pidió. Si en el futuro interesa que alguna de ellas venga rellena
+ * sola (p.ej. AGENCIA fija por ruta), se puede añadir como configuración
+ * por agrupación más adelante.
+ */
+function leerFilasPdfEspecialSeccion_(tableWrap) {
+  const filas = [];
+  tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+    if (tr.classList.contains('fila-grupo-header')) return;
+
+    const nombre = tr.getAttribute('data-nombre') || '';
+
+    if (tr.classList.contains('fila-cerrada')) {
+      const limiteCelda = tr.querySelector('td.limite');
+      filas.push(['', '', limiteCelda ? limiteCelda.textContent.trim() : '', nombre, 'CERRADA', '', '', '', '', '', '', '', '', '']);
+      return;
+    }
+
+    function valorCampo(campo) {
+      const inp = tr.querySelector('input[data-campo="' + campo + '"]');
+      return inp ? inp.value : '';
+    }
+
+    filas.push([
+      '', '', // LÍMITE CAMIÓN, AGENCIA — en blanco
+      tr.getAttribute('data-limite') || '',
+      nombre,
+      valorCampo('c60'), valorCampo('pta'), valorCampo('cart'), valorCampo('total'),
+      '', '', // SOBRAN, TOTAL RUTA — en blanco
+      '', '', '', // 3 firmas — en blanco
+      '' // ZONA/PASILLO — en blanco
+    ]);
+  });
+  return filas;
+}
+
+function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas) {
+  doc.setFontSize(8);
+  doc.setTextColor(140, 148, 158);
+  doc.text('Generado el ' + fechaGeneracion, 14, 10);
+  doc.setTextColor(0, 0, 0);
+
+  doc.setFontSize(15);
+  doc.setTextColor(28, 43, 69);
+  doc.text(partes.titulo + (partes.ubicacion ? ' · ' + partes.ubicacion : ''), 14, 18);
+
+  doc.setFontSize(10);
+  doc.setTextColor(90, 100, 114);
+  doc.text((dia || '') + ' · ' + formatearFechaLarga(fecha), 14, 24);
+  doc.setTextColor(0, 0, 0);
+
+  doc.autoTable({
+    startY: 31,
+    head: [['LÍMITE\nCAMIÓN', 'AGENCIA', 'LÍMITE', 'TIENDA', 'NAVE 60', 'PTA', 'CÁRTAMA', 'TOTAL', 'SOBRAN', 'TOTAL\nRUTA', 'FIRMA RES.\nTARDE', 'FIRMA RES.\nNOCHE', 'CONFIRMACIÓN\nRECOGIDA', 'ZONA/\nPASILLO']],
+    body: filas,
+    styles: { fontSize: 7.5, cellPadding: 2.5, valign: 'middle', halign: 'center' },
+    headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center', fontSize: 7 },
+    bodyStyles: { halign: 'center', minCellHeight: 9 },
+    columnStyles: {
+      3: { fontStyle: 'bold', fontSize: 9, halign: 'left' },
+      7: { fontStyle: 'bold' }
+    },
+    margin: { bottom: 10 },
+    rowPageBreak: 'avoid'
+  });
+
+  return doc.lastAutoTable.finalY;
+}
+
+function generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarToast('No se ha podido cargar el generador de PDF. Revisa tu conexión e inténtalo de nuevo.', true);
+    return;
+  }
+
+  const jsPDF = window.jspdf.jsPDF;
+  const partes = parsearNombreAgrupacion(seccion.nombre);
+  const ahora = new Date();
+  const fechaGeneracion = Utilities_formatearFechaHora_(ahora);
+  const filas = leerFilasPdfEspecialSeccion_(tableWrap);
+
+  const docMedida = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, 2000);
+  const alturaContenido = dibujarPdfEspecialSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filas);
+
+  const alturaPagina = Math.max(PDF_ALTO_A4_MM_, alturaContenido + 14);
+  const doc = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, alturaPagina);
+  dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas);
+
+  const nombreArchivo = 'Especial_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
   doc.save(nombreArchivo);
 }
 
