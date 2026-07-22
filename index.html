@@ -1109,7 +1109,7 @@
     position: relative;
   }
   .modal-box h3 { margin: 0 0 8px; font-size: 16px; }
-  .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; }
+  .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; white-space: pre-line; }
   .modal-box textarea {
     width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
     font-size: 14px; resize: vertical; min-height: 76px; margin-bottom: 16px;
@@ -3916,7 +3916,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       e.stopPropagation();
       appConfirm(
         'Deshacer envío',
-        'Vas a deshacer el envío de "' + seccion.nombre + '". Se quitará la marca de enviado y se recuperarán los datos para poder seguir editándolos. Solo puedes hacer esto el mismo día en que se envió. ¿Seguro que quieres continuar?',
+        'Vas a deshacer el envío de "' + seccion.nombre + '". Se quitará la marca de enviado y se recuperará el conteo para poder seguir editándolos. ¿Seguro que quieres continuar?',
         function () {
           btnDeshacerEnvio.disabled = true;
           google.script.run
