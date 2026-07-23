@@ -23,6 +23,14 @@
     --amber: #d98c2b;
     --amber-dark: #b8721e;
     --ok: #2f8f6f;
+    /* Alto real de header.topbar: se recalcula por JS (ver
+       ajustarAlturaTopbar_) nada más cargar la app y en cada resize, para
+       que todo lo que se queda "pegado" justo debajo (barra de días de
+       Rutas y tiendas, sidebar de Conteos Diarios...) encaje exacto sin
+       dejar un hueco por el que se cuele el contenido al hacer scroll.
+       Este valor de aquí es solo un respaldo por si el JS no llegara a
+       ejecutarse todavía. */
+    --topbar-h: 62px;
     --prevision: #3b74c9;
     --danger: #c94f4f;
     --radius: 10px;
@@ -515,7 +523,7 @@
      fondo blanco tapa el contenido que pasa por debajo. */
   .plantilla-dias-fila {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-    position: sticky; top: 78px; z-index: 6;
+    position: sticky; top: var(--topbar-h); z-index: 6;
     margin: 4px -22px 16px; padding: 10px 22px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
@@ -531,6 +539,59 @@
   }
   .plantilla-dias button:hover { background: #f0f2f6; }
   .plantilla-dias button.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  /* Buscadores de "Rutas y tiendas" (agrupación + tienda): viven juntos
+     en la fila de días (misma línea que LUNES/MARTES...), que es "sticky",
+     así que se mantienen visibles al hacer scroll. Solo aparecen cuando
+     hay un día seleccionado y solo buscan entre lo que hay en ESE día. */
+  .plantilla-buscadores { display: flex; gap: 8px; flex: 1 1 340px; max-width: 640px; margin: 0 auto; flex-wrap: wrap; }
+  .plantilla-buscador-wrap { position: relative; flex: 1 1 200px; min-width: 160px; }
+  .plantilla-buscador {
+    display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px;
+    background: #eef1f7; border: 1px solid transparent; border-radius: 9px;
+  }
+  .plantilla-buscador:focus-within { background: #fff; border-color: var(--navy); }
+  .plantilla-buscador svg { flex-shrink: 0; color: var(--ink-soft); }
+  .plantilla-buscador input {
+    border: none; background: transparent; outline: none; flex: 1 1 auto; min-width: 0;
+    font-size: 13.5px; color: var(--ink);
+  }
+  .plantilla-buscador-resultados {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(16, 26, 44, .14); max-height: 300px; overflow-y: auto;
+  }
+  .plantilla-buscador-item {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px; border: none; background: none; text-align: left; cursor: pointer;
+    font-size: 13.5px; color: var(--ink); border-bottom: 1px solid var(--line);
+  }
+  .plantilla-buscador-item:last-child { border-bottom: none; }
+  .plantilla-buscador-item:hover { background: #f5f7fb; }
+  .plantilla-buscador-item .nombre { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plantilla-buscador-item .dia-tag {
+    flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: .02em; color: var(--ink-soft);
+    background: #eef1f7; border-radius: 6px; padding: 2px 7px;
+  }
+  .plantilla-buscador-vacio { padding: 10px 12px; font-size: 13px; color: var(--ink-soft); }
+  @media (max-width: 640px) {
+    .plantilla-buscadores { flex-basis: 100%; max-width: none; margin: 0; }
+    .plantilla-buscador-wrap { flex-basis: 100%; min-width: 0; }
+  }
+
+  /* Resalte momentáneo al llegar a una ruta o tienda desde el buscador. */
+  .plantilla-ruta-resaltada {
+    animation: plantilla-ruta-flash 2.2s ease-out;
+    border-radius: 12px;
+  }
+  .plantilla-tienda-resaltada {
+    animation: plantilla-ruta-flash 2.2s ease-out;
+    border-radius: 8px;
+  }
+  @keyframes plantilla-ruta-flash {
+    0% { box-shadow: 0 0 0 3px rgba(217, 140, 43, .55); background: rgba(217, 140, 43, .09); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 140, 43, 0); background: transparent; }
+  }
   .plantilla-ruta {
     border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
     margin-bottom: 12px; overflow: hidden;
@@ -692,7 +753,7 @@
   /* El contenido en sí se limita a un ancho legible y se centra dentro de su
      columna, para que no quede estirado de pared a pared en pantallas anchas. */
   .col-contenido > * { max-width: 1120px; margin: 0 auto; }
-  .col-sidebar { position: sticky; top: 78px; display: flex; flex-direction: column; gap: 16px; }
+  .col-sidebar { position: sticky; top: var(--topbar-h); display: flex; flex-direction: column; gap: 16px; }
 
   @media (max-width: 1600px) {
     .layout-grid { grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 24px; }
@@ -885,7 +946,7 @@
   .seccion-panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
     margin-bottom: 16px; overflow: hidden;
-    scroll-margin-top: 78px;
+    scroll-margin-top: var(--topbar-h);
   }
   .seccion-panel.estado-progreso { border-left: 4px solid var(--amber); }
   .seccion-panel.estado-enviado { border-left: 4px solid var(--ok); }
@@ -1626,7 +1687,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.5';
+const APP_VERSION_ACTUAL = '1.3.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1942,6 +2003,21 @@ let ESTADO = {
 };
 
 /* ---------------- LOGIN ---------------- */
+
+/** Mide el alto REAL de header.topbar y lo guarda en la variable CSS
+ *  --topbar-h, que usan .plantilla-dias-fila, .col-sidebar y
+ *  .seccion-panel para "pegarse" justo debajo sin dejar un hueco (por el
+ *  que se colaría el contenido al hacer scroll, ver el fix de "Rutas y
+ *  tiendas"). Se llama al mostrar la app y en cada resize, porque el alto
+ *  del topbar puede variar (p.ej. si el texto envuelve a dos líneas en
+ *  pantallas estrechas). */
+function ajustarAlturaTopbar_() {
+  const topbar = document.querySelector('header.topbar');
+  if (!topbar) return;
+  document.documentElement.style.setProperty('--topbar-h', topbar.offsetHeight + 'px');
+}
+window.addEventListener('resize', ajustarAlturaTopbar_);
+
 function intentarLogin() {
   const pass = document.getElementById('login-pass').value;
   const btn = document.getElementById('btn-login');
@@ -1957,6 +2033,7 @@ function intentarLogin() {
       if (ok) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app').style.display = 'flex';
+        ajustarAlturaTopbar_();
         ESTADO.fecha = hoyStr();
         ESTADO.anioMes = anioMesDe(ESTADO.fecha);
         cambiarVista('inicio');
@@ -2833,6 +2910,65 @@ function sincronizarAgrupacionesDesdeApp_() {
  */
 let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [] };
 
+
+/** Busca en el caché local (PLANTILLA_ESTADO.secciones) la tienda con ese
+ *  "row" físico. Se usa para editar/borrar en memoria y repintar al
+ *  instante, sin volver a pedir toda la plantilla al servidor (mismo
+ *  espíritu que quitarDeCacheFestivos_ en "Gestión festivos"). */
+function buscarTiendaPlantilla_(row) {
+  for (let si = 0; si < PLANTILLA_ESTADO.secciones.length; si++) {
+    const s = PLANTILLA_ESTADO.secciones[si];
+    const t = s.tiendas.find(function (t) { return t.row === row; });
+    if (t) return { seccion: s, tienda: t };
+  }
+  return null;
+}
+
+/** Igual que buscarTiendaPlantilla_ pero para una línea de nota de carga. */
+function buscarNotaCargaPlantilla_(row) {
+  for (let si = 0; si < PLANTILLA_ESTADO.secciones.length; si++) {
+    const s = PLANTILLA_ESTADO.secciones[si];
+    const n = s.notasCarga.find(function (n) { return n.row === row; });
+    if (n) return { seccion: s, nota: n };
+  }
+  return null;
+}
+
+/** Refleja en memoria el desplazamiento de filas que provoca en la Sheet
+ *  borrar (delta=-1) una fila física a partir de "filaDesde" (inclusive):
+ *  todo lo que esté en esa fila o por debajo, en CUALQUIER ruta del día,
+ *  se desplaza ese mismo número de filas, para que el modelo en memoria
+ *  quede coherente con lo que ha hecho de verdad el backend. */
+function desplazarRowsPlantillaDesde_(filaDesde, delta) {
+  PLANTILLA_ESTADO.secciones.forEach(function (s) {
+    s.tiendas.forEach(function (t) {
+      if (t.row >= filaDesde) t.row += delta;
+      if (t.notaFilaInicio && t.notaFilaInicio >= filaDesde) t.notaFilaInicio += delta;
+    });
+    s.notasCarga.forEach(function (n) {
+      if (n.row >= filaDesde) n.row += delta;
+    });
+  });
+}
+
+/** Ejecuta una acción de "Rutas y tiendas" de forma optimista: aplica el
+ *  cambio ya mismo en memoria (mutarLocal) y repinta al instante (sin
+ *  loader, sin pedir nada al servidor); la llamada real al backend va en
+ *  segundo plano. Si falla, se revierte el cambio local y se repinta con
+ *  los datos de antes (igual que "Gestión festivos" al borrar una nota). */
+function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito) {
+  const copia = JSON.parse(JSON.stringify(PLANTILLA_ESTADO.secciones));
+  mutarLocal();
+  pintarPlantilla_();
+  if (mensajeExito) mostrarToast(mensajeExito);
+  llamarApi_(accionApi, argsApi)
+    .catch(function (err) {
+      PLANTILLA_ESTADO.secciones = copia;
+      pintarPlantilla_();
+      mostrarErrorServidor(err);
+    });
+}
+
 function renderConfigPlantilla() {
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
@@ -2853,11 +2989,21 @@ function renderConfigPlantilla() {
   llamarApi_('getDiasPlantilla', [])
     .then(function (dias) {
       PLANTILLA_ESTADO.dias = dias || [];
-      if (!PLANTILLA_ESTADO.dia || PLANTILLA_ESTADO.dias.indexOf(PLANTILLA_ESTADO.dia) === -1) {
-        PLANTILLA_ESTADO.dia = PLANTILLA_ESTADO.dias[0] || null;
+      // Si el día que tenía seleccionado de una visita anterior ya no
+      // existe (p.ej. se ocultó esa hoja), se olvida. Si NO tenía ninguno
+      // seleccionado (primera vez que se entra en esta sección), se deja
+      // así -- ya no se carga automáticamente el primer día (antes
+      // siempre caía en LUNES): hay que pulsar un día para que cargue.
+      if (PLANTILLA_ESTADO.dia && PLANTILLA_ESTADO.dias.indexOf(PLANTILLA_ESTADO.dia) === -1) {
+        PLANTILLA_ESTADO.dia = null;
       }
       pintarDiasPlantilla_();
-      cargarPlantilla_();
+      if (PLANTILLA_ESTADO.dia) {
+        cargarPlantilla_();
+      } else {
+        const listaEl = document.getElementById('plantilla-lista');
+        if (listaEl) listaEl.innerHTML = '<div class="festivos-vacio">Elige un día arriba para ver y editar sus rutas.</div>';
+      }
     })
     .catch(mostrarErrorServidor);
 }
@@ -2870,7 +3016,8 @@ function pintarDiasPlantilla_() {
   }).join('');
   cont.innerHTML =
     '<div class="plantilla-dias">' + botonesDias + '</div>' +
-    (esAdmin() ? botonAnadirRutaPlantillaHtml_() : '');
+    (PLANTILLA_ESTADO.dia ? buscadoresPlantillaHtml_() : '') +
+    (esAdmin() && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '');
   cont.querySelectorAll('.plantilla-dias button').forEach(function (btn) {
     btn.onclick = function () {
       if (btn.getAttribute('data-dia') === PLANTILLA_ESTADO.dia) return;
@@ -2881,18 +3028,52 @@ function pintarDiasPlantilla_() {
   });
   const btnAnadirRuta = document.getElementById('btn-plantilla-anadir-ruta');
   if (btnAnadirRuta) btnAnadirRuta.onclick = anadirRutaPlantilla_;
+  if (PLANTILLA_ESTADO.dia) inicializarBuscadoresPlantilla_();
 }
 
-function cargarPlantilla_() {
+/** HTML de los dos buscadores de "Rutas y tiendas" (agrupación y tienda):
+ *  viven juntos en la fila de días (misma línea que LUNES/MARTES...), que
+ *  es "sticky", así que se mantienen visibles al hacer scroll. Cada uno
+ *  busca SOLO dentro del día seleccionado. */
+function buscadoresPlantillaHtml_() {
+  return (
+    '<div class="plantilla-buscadores">' +
+      buscadorInputPlantillaHtml_('plantilla-buscador-wrap', 'plantilla-buscador-input', 'plantilla-buscador-resultados', 'Buscar agrupación…') +
+      buscadorInputPlantillaHtml_('plantilla-buscador-tienda-wrap', 'plantilla-buscador-tienda-input', 'plantilla-buscador-tienda-resultados', 'Buscar tienda…') +
+    '</div>'
+  );
+}
+
+function buscadorInputPlantillaHtml_(wrapId, inputId, resultadosId, placeholder) {
+  return (
+    '<div class="plantilla-buscador-wrap" id="' + wrapId + '">' +
+      '<div class="plantilla-buscador">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+        '<input type="text" id="' + inputId + '" placeholder="' + escapeAttr(placeholder) + '" autocomplete="off">' +
+      '</div>' +
+      '<div class="plantilla-buscador-resultados" id="' + resultadosId + '" style="display:none;"></div>' +
+    '</div>'
+  );
+}
+
+function cargarPlantilla_(opts) {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
   const listaEl = document.getElementById('plantilla-lista');
   if (!listaEl || !PLANTILLA_ESTADO.dia) return;
-  listaEl.innerHTML = '<div class="loader">Cargando…</div>';
+  // "silencioso": para acciones que insertan/mueven filas (el backend es
+  // quien decide la fila exacta, así que hace falta volver a pedir los
+  // datos), pero sin el loader ni el salto de scroll de una recarga
+  // normal -- se mantiene el contenido anterior visible hasta que llega
+  // la respuesta, y se restaura la posición de scroll al terminar.
+  const silencioso = opts && opts.silencioso;
+  const scrollY = window.scrollY;
+  if (!silencioso) listaEl.innerHTML = '<div class="loader">Cargando…</div>';
   llamarApi_('getPlantillaDia', [PLANTILLA_ESTADO.dia])
     .then(function (resultado) {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
       PLANTILLA_ESTADO.secciones = (resultado && resultado.secciones) || [];
       pintarPlantilla_();
+      if (silencioso) window.scrollTo(0, scrollY);
     })
     .catch(function (err) {
       listaEl.innerHTML = '<div class="festivos-vacio">No se ha podido cargar la plantilla de este día.</div>';
@@ -2905,6 +3086,163 @@ function botonAnadirRutaPlantillaHtml_() {
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
     'Añadir ruta nueva</button>';
 }
+
+/** Quita acentos y pasa a minúsculas para que la búsqueda de agrupación/
+ *  tienda no distinga "islazul" de "Islazul" ni de "íslazul". */
+function normalizarBusquedaPlantilla_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** true si ya hay un listener global (en document) para cerrar los
+ *  desplegables de los buscadores al hacer click fuera. Se pone a true la
+ *  primera vez y no se vuelve a añadir, para no acumular listeners cada
+ *  vez que se repinta la fila de días (pintarDiasPlantilla_ se llama en
+ *  cada cambio de día). */
+let PLANTILLA_BUSCADORES_CLICK_GLOBAL_LISTO_ = false;
+
+/** Al hacer click fuera de un buscador (agrupación o tienda), cierra SOLO
+ *  su propio desplegable de resultados (el otro buscador no se ve
+ *  afectado si el click fue dentro de él). */
+function cerrarDesplegablesBuscadorPlantilla_(ev) {
+  document.querySelectorAll('.plantilla-buscador-wrap').forEach(function (wrap) {
+    if (wrap.contains(ev.target)) return;
+    const res = wrap.querySelector('.plantilla-buscador-resultados');
+    if (res) res.style.display = 'none';
+  });
+}
+
+/** Engancha ambos buscadores de "Rutas y tiendas" (agrupación y tienda) de
+ *  la fila de días: cada uno filtra SOLO entre lo que hay en el día
+ *  seleccionado (PLANTILLA_ESTADO.secciones). Se vuelve a llamar cada vez
+ *  que se repinta la fila de días, porque los inputs se recrean enteros al
+ *  cambiar de día. */
+function inicializarBuscadoresPlantilla_() {
+  if (!PLANTILLA_BUSCADORES_CLICK_GLOBAL_LISTO_) {
+    PLANTILLA_BUSCADORES_CLICK_GLOBAL_LISTO_ = true;
+    document.addEventListener('click', cerrarDesplegablesBuscadorPlantilla_);
+  }
+
+  inicializarBuscadorGenericoPlantilla_('plantilla-buscador-input', 'plantilla-buscador-resultados', function (q) {
+    return PLANTILLA_ESTADO.secciones
+      .filter(function (s) { return normalizarBusquedaPlantilla_(s.nombre).indexOf(q) !== -1; })
+      .slice(0, 8);
+  }, pintarResultadosBuscadorAgrupacionPlantilla_);
+
+  inicializarBuscadorGenericoPlantilla_('plantilla-buscador-tienda-input', 'plantilla-buscador-tienda-resultados', function (q) {
+    const encontradas = [];
+    PLANTILLA_ESTADO.secciones.forEach(function (s) {
+      s.tiendas.forEach(function (t) {
+        if (normalizarBusquedaPlantilla_(t.nombre).indexOf(q) !== -1) encontradas.push({ tienda: t, ruta: s.nombre });
+      });
+    });
+    return encontradas.slice(0, 8);
+  }, pintarResultadosBuscadorTiendaPlantilla_);
+}
+
+/** Base común de un buscador con desplegable: al escribir, filtra con
+ *  filtroFn(texto normalizado) y pinta el resultado con pintarFn(items,
+ *  resultadosEl). Vacío de texto = desplegable cerrado. */
+function inicializarBuscadorGenericoPlantilla_(inputId, resultadosId, filtroFn, pintarFn) {
+  const input = document.getElementById(inputId);
+  const resultadosEl = document.getElementById(resultadosId);
+  if (!input || !resultadosEl) return;
+
+  input.addEventListener('input', function () {
+    const q = normalizarBusquedaPlantilla_(input.value.trim());
+    if (!q) {
+      resultadosEl.style.display = 'none';
+      resultadosEl.innerHTML = '';
+      return;
+    }
+    pintarFn(filtroFn(q), resultadosEl);
+  });
+
+  input.addEventListener('focus', function () {
+    if (input.value.trim() && resultadosEl.innerHTML) resultadosEl.style.display = 'block';
+  });
+}
+
+/** Pinta la lista desplegable de coincidencias del buscador de agrupaciones
+ *  (siempre del día activo). */
+function pintarResultadosBuscadorAgrupacionPlantilla_(secciones, resultadosEl) {
+  if (!secciones.length) {
+    resultadosEl.innerHTML = '<div class="plantilla-buscador-vacio">Sin coincidencias.</div>';
+    resultadosEl.style.display = 'block';
+    return;
+  }
+  resultadosEl.innerHTML = secciones.map(function (s) {
+    const titulo = parsearNombreAgrupacion(s.nombre).titulo;
+    return '<button type="button" class="plantilla-buscador-item" data-ruta="' + escapeAttr(s.nombre) + '">' +
+      '<span class="nombre">' + escapeHtml(titulo) + '</span>' +
+      '<span class="dia-tag">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
+    '</button>';
+  }).join('');
+  resultadosEl.style.display = 'block';
+  resultadosEl.querySelectorAll('.plantilla-buscador-item').forEach(function (btn) {
+    btn.onclick = function () { irAAgrupacionPlantilla_(btn.getAttribute('data-ruta'), resultadosEl); };
+  });
+}
+
+/** Pinta la lista desplegable de coincidencias del buscador de tiendas,
+ *  con el nombre de la ruta a la que pertenece cada una a la derecha. */
+function pintarResultadosBuscadorTiendaPlantilla_(encontradas, resultadosEl) {
+  if (!encontradas.length) {
+    resultadosEl.innerHTML = '<div class="plantilla-buscador-vacio">Sin coincidencias.</div>';
+    resultadosEl.style.display = 'block';
+    return;
+  }
+  resultadosEl.innerHTML = encontradas.map(function (it) {
+    const tituloRuta = parsearNombreAgrupacion(it.ruta).titulo;
+    return '<button type="button" class="plantilla-buscador-item" data-tienda-row="' + it.tienda.row + '">' +
+      '<span class="nombre">' + escapeHtml(it.tienda.nombre) + '</span>' +
+      '<span class="dia-tag">' + escapeHtml(tituloRuta) + '</span>' +
+    '</button>';
+  }).join('');
+  resultadosEl.style.display = 'block';
+  resultadosEl.querySelectorAll('.plantilla-buscador-item').forEach(function (btn) {
+    btn.onclick = function () { irATiendaPlantilla_(Number(btn.getAttribute('data-tienda-row')), resultadosEl); };
+  });
+}
+
+/** Al pinchar una agrupación del buscador: como siempre es del día activo,
+ *  basta con cerrar su desplegable, vaciar el input y hacer scroll + resaltado. */
+function irAAgrupacionPlantilla_(nombreRuta, resultadosEl) {
+  resultadosEl.style.display = 'none';
+  const input = document.getElementById('plantilla-buscador-input');
+  if (input) { input.value = ''; input.blur(); }
+  resaltarRutaPlantilla_(nombreRuta);
+}
+
+/** Igual que irAAgrupacionPlantilla_ pero para una tienda concreta (por su
+ *  "row" físico, único dentro del día). */
+function irATiendaPlantilla_(row, resultadosEl) {
+  resultadosEl.style.display = 'none';
+  const input = document.getElementById('plantilla-buscador-tienda-input');
+  if (input) { input.value = ''; input.blur(); }
+  resaltarTiendaPlantilla_(row);
+}
+
+/** Hace scroll hasta la ruta indicada (por su nombre exacto) dentro de
+ *  "Rutas y tiendas" y la resalta un momento para que se note cuál es. */
+function resaltarRutaPlantilla_(nombreRuta) {
+  const el = document.querySelector('.plantilla-ruta[data-ruta-nombre="' + CSS.escape(nombreRuta) + '"]');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('plantilla-ruta-resaltada');
+  setTimeout(function () { el.classList.remove('plantilla-ruta-resaltada'); }, 2200);
+}
+
+/** Hace scroll hasta la tienda indicada (por su "row" físico) dentro de
+ *  "Rutas y tiendas" y la resalta un momento para que se note cuál es. */
+function resaltarTiendaPlantilla_(row) {
+  const el = document.querySelector('.plantilla-tienda[data-tienda-row="' + row + '"]');
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('plantilla-tienda-resaltada');
+  setTimeout(function () { el.classList.remove('plantilla-tienda-resaltada'); }, 2200);
+}
+
+
 
 /** Botón pequeño "60"/"PTA"/"CART." para bloquear (poner "NO") o
  *  desbloquear la casilla correspondiente de una tienda, desde "Rutas y
@@ -2952,7 +3290,7 @@ function pintarPlantilla_() {
       const enGrupo = restantesGrupo > 0;
 
       piezasTiendas.push(
-        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + '">' +
+        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + '" data-tienda-row="' + t.row + '">' +
           '<div class="plantilla-tienda-flechas">' +
             '<button type="button" data-subir="' + t.row + '"' + (ti === 0 ? ' disabled' : '') + ' title="Subir">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>' +
@@ -3004,7 +3342,7 @@ function pintarPlantilla_() {
     }).join('');
 
     return (
-      '<div class="plantilla-ruta">' +
+      '<div class="plantilla-ruta" data-ruta-nombre="' + escapeAttr(s.nombre) + '">' +
         '<div class="plantilla-ruta-header">' +
           '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (esAdmin() ? '' : 'disabled') + '>' +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
@@ -3133,22 +3471,20 @@ function pintarPlantilla_() {
  *  Al desactivarla se pide confirmación, porque borra también los valores
  *  de peso ya guardados en esa ruta (ver desactivarPesoRuta en el backend). */
 function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tienePeso = !activoActualmente;
+  };
   if (activoActualmente) {
     appConfirm(
       'Quitar la casilla PESO',
       '¿Seguro que quieres quitar la casilla PESO de "' + nombreRuta + '"? Se borrarán los valores de peso ya guardados en esta ruta.',
-      function () {
-        llamarApi_('desactivarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
-          .then(function () { mostrarToast('Casilla PESO desactivada'); cargarPlantilla_(); })
-          .catch(mostrarErrorServidor);
-      },
+      function () { guardarPlantillaOptimista_(mutar, 'desactivarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla PESO desactivada'); },
       true
     );
     return;
   }
-  llamarApi_('activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
-    .then(function () { mostrarToast('Casilla PESO activada'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  guardarPlantillaOptimista_(mutar, 'activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla PESO activada');
 }
 
 /** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".
@@ -3157,9 +3493,11 @@ function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
  *  no se guardan en la Sheet), así que no hace falta pedir confirmación. */
 function togglePdfEspecialRutaPlantilla_(nombreRuta, activoActualmente) {
   const accion = activoActualmente ? 'desactivarPdfEspecial' : 'activarPdfEspecial';
-  llamarApi_(accion, [PLANTILLA_ESTADO.dia, nombreRuta])
-    .then(function () { mostrarToast(activoActualmente ? 'PDF ESPECIAL desactivado' : 'PDF ESPECIAL activado'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tienePdfEspecial = !activoActualmente;
+  };
+  guardarPlantillaOptimista_(mutar, accion, [PLANTILLA_ESTADO.dia, nombreRuta], activoActualmente ? 'PDF ESPECIAL desactivado' : 'PDF ESPECIAL activado');
 }
 
 /** Bloquea o desbloquea la casilla 60/PTA/CART de una tienda concreta,
@@ -3167,34 +3505,37 @@ function togglePdfEspecialRutaPlantilla_(nombreRuta, activoActualmente) {
  *  Sheet). Al bloquear se pide confirmación, porque sobrescribe cualquier
  *  valor que hubiera en esa celda (por ejemplo un conteo ya metido hoy). */
 function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
+  row = Number(row);
   const etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' };
   const etiqueta = etiquetas[campo] || campo;
+  const claveBloqueo = campo === 'c60' ? 'bloqueo60' : (campo === 'pta' ? 'bloqueoPta' : 'bloqueoCart');
+  const mutar = function () {
+    const info = buscarTiendaPlantilla_(row);
+    if (info) info.tienda[claveBloqueo] = !activoActualmente;
+  };
 
   if (activoActualmente) {
-    llamarApi_('desbloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), campo])
-      .then(function () { mostrarToast('Bloqueo quitado'); cargarPlantilla_(); })
-      .catch(mostrarErrorServidor);
+    guardarPlantillaOptimista_(mutar, 'desbloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, campo], 'Bloqueo quitado');
     return;
   }
 
   appConfirm(
     'Bloquear ' + etiqueta,
     'Esta tienda quedará marcada como "NO" en ' + etiqueta + ' (no debería recibir palets ahí ese día de la semana). Si esa casilla ya tenía algo escrito, se sobrescribirá. ¿Seguro?',
-    function () {
-      llamarApi_('bloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), campo])
-        .then(function () { mostrarToast('Bloqueado'); cargarPlantilla_(); })
-        .catch(mostrarErrorServidor);
-    },
+    function () { guardarPlantillaOptimista_(mutar, 'bloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, campo], 'Bloqueado'); },
     true
   );
 }
 
 function guardarTiendaPlantilla_(row, idSeguro) {
+  row = Number(row);
   const nombre = document.getElementById(idSeguro + '_nombre').value;
   const limite = document.getElementById(idSeguro + '_lim').value;
-  llamarApi_('editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), nombre, limite])
-    .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  const mutar = function () {
+    const info = buscarTiendaPlantilla_(row);
+    if (info) { info.tienda.nombre = nombre; info.tienda.limite = Number(limite); }
+  };
+  guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado');
 }
 
 function confirmarEliminarTiendaPlantilla_(row) {
@@ -3206,22 +3547,33 @@ function confirmarEliminarTiendaPlantilla_(row) {
   );
 }
 function eliminarTiendaPlantilla_(row) {
-  llamarApi_('eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row)])
-    .then(function () { mostrarToast('Eliminada'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  row = Number(row);
+  const mutar = function () {
+    const info = buscarTiendaPlantilla_(row);
+    if (!info) return;
+    info.seccion.tiendas.splice(info.seccion.tiendas.indexOf(info.tienda), 1);
+    desplazarRowsPlantillaDesde_(row + 1, -1);
+  };
+  guardarPlantillaOptimista_(mutar, 'eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Eliminada');
 }
 
 function moverTiendaPlantilla_(row, direccion) {
+  // El backend es quien decide cómo se reordenan las filas físicas; se
+  // pide la plantilla otra vez, pero en modo "silencioso" (sin loader ni
+  // salto de scroll) para que no se sienta como una recarga completa.
   llamarApi_('moverTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), direccion])
-    .then(function () { cargarPlantilla_(); })
+    .then(function () { cargarPlantilla_({ silencioso: true }); })
     .catch(mostrarErrorServidor);
 }
 
 function guardarNotaCargaPlantilla_(row, idSeguro) {
+  row = Number(row);
   const texto = document.getElementById(idSeguro).value;
-  llamarApi_('editarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), texto])
-    .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  const mutar = function () {
+    const info = buscarNotaCargaPlantilla_(row);
+    if (info) info.nota.texto = texto;
+  };
+  guardarPlantillaOptimista_(mutar, 'editarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, row, texto], 'Guardado');
 }
 
 function confirmarEliminarNotaCargaPlantilla_(row) {
@@ -3229,9 +3581,14 @@ function confirmarEliminarNotaCargaPlantilla_(row) {
     'Eliminar nota de carga',
     '¿Seguro que quieres eliminar esta nota de carga? Esta acción no se puede deshacer.',
     function () {
-      llamarApi_('eliminarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, Number(row)])
-        .then(function () { mostrarToast('Eliminada'); cargarPlantilla_(); })
-        .catch(mostrarErrorServidor);
+      const r = Number(row);
+      const mutar = function () {
+        const info = buscarNotaCargaPlantilla_(r);
+        if (!info) return;
+        info.seccion.notasCarga.splice(info.seccion.notasCarga.indexOf(info.nota), 1);
+        desplazarRowsPlantillaDesde_(r + 1, -1);
+      };
+      guardarPlantillaOptimista_(mutar, 'eliminarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, r], 'Eliminada');
     },
     true
   );
@@ -3240,8 +3597,11 @@ function confirmarEliminarNotaCargaPlantilla_(row) {
 function abrirModalAnadirNotaCargaPlantilla_(nombreRuta) {
   appPrompt('Añadir nota de carga', 'Ej: 1 CAMIÓN 33 P. + RESTOS TODOS LOS LUNES', function (texto) {
     if (!texto || !texto.trim()) return;
+    // Inserta una fila nueva -- el backend decide en qué fila exacta
+    // queda, así que hace falta volver a pedir la plantilla; se hace en
+    // modo "silencioso" (sin loader ni salto de scroll).
     llamarApi_('añadirNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, texto.trim()])
-      .then(function () { mostrarToast('Nota añadida'); cargarPlantilla_(); })
+      .then(function () { mostrarToast('Nota añadida'); cargarPlantilla_({ silencioso: true }); })
       .catch(mostrarErrorServidor);
   });
 }
@@ -3279,11 +3639,14 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
 
+  // Esta nota puede abarcar varias tiendas (celda combinada K:L) y el
+  // backend recalcula esa agrupación; se pide la plantilla otra vez tras
+  // guardar, pero en modo "silencioso" (sin loader ni salto de scroll).
   if (notaActual) {
     document.getElementById('modal-quitar-nota-btn').onclick = function () {
       cerrarModal();
       llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila])
-        .then(function () { mostrarToast('Nota eliminada'); cargarPlantilla_(); })
+        .then(function () { mostrarToast('Nota eliminada'); cargarPlantilla_({ silencioso: true }); })
         .catch(mostrarErrorServidor);
     };
   }
@@ -3303,7 +3666,7 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
     tareas.push(llamarApi_('editarOrdenTiendaPlantilla', [PLANTILLA_ESTADO.dia, fila, orden]));
 
     Promise.all(tareas)
-      .then(function () { mostrarToast('Guardado'); cargarPlantilla_(); })
+      .then(function () { mostrarToast('Guardado'); cargarPlantilla_({ silencioso: true }); })
       .catch(mostrarErrorServidor);
   };
 
@@ -3345,8 +3708,11 @@ function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
     if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
     if (!nombre) { inputNombre.focus(); return; }
     cerrarModal();
+    // Inserta una fila nueva -- el backend decide en qué fila exacta
+    // queda, así que hace falta volver a pedir la plantilla; modo
+    // "silencioso" (sin loader ni salto de scroll).
     llamarApi_('añadirTiendaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, nombre, limite])
-      .then(function () { mostrarToast('Tienda añadida'); cargarPlantilla_(); })
+      .then(function () { mostrarToast('Tienda añadida'); cargarPlantilla_({ silencioso: true }); })
       .catch(mostrarErrorServidor);
   };
   setTimeout(function () { document.getElementById('modal-plantilla-nombre').focus(); }, 50);
@@ -3354,9 +3720,11 @@ function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
 
 function guardarNombreRutaPlantilla_(nombreActual, idSeguro) {
   const nombreNuevo = document.getElementById(idSeguro).value;
-  llamarApi_('editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreNuevo])
-    .then(function () { mostrarToast('Nombre actualizado'); cargarPlantilla_(); })
-    .catch(mostrarErrorServidor);
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreActual; });
+    if (s) s.nombre = nombreNuevo;
+  };
+  guardarPlantillaOptimista_(mutar, 'editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreNuevo], 'Nombre actualizado');
 }
 
 function confirmarEliminarRutaPlantilla_(nombreRuta) {
@@ -3368,8 +3736,11 @@ function confirmarEliminarRutaPlantilla_(nombreRuta) {
   );
 }
 function eliminarRutaPlantilla_(nombreRuta) {
+  // Borra un bloque de filas completo (título + notas + tiendas); se pide
+  // la plantilla otra vez, en modo "silencioso" (sin loader ni salto de
+  // scroll) para que no se sienta como una recarga completa.
   llamarApi_('eliminarRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta])
-    .then(function () { mostrarToast('Ruta eliminada'); cargarPlantilla_(); })
+    .then(function () { mostrarToast('Ruta eliminada'); cargarPlantilla_({ silencioso: true }); })
     .catch(mostrarErrorServidor);
 }
 
@@ -3418,8 +3789,11 @@ function anadirRutaPlantilla_() {
 
     const nombreCompleto = nombre + ' (' + ubicacion + ' ' + hora + ')';
     cerrarModal();
+    // Inserta un bloque de filas nuevo -- el backend decide dónde queda,
+    // así que hace falta volver a pedir la plantilla; modo "silencioso"
+    // (sin loader ni salto de scroll).
     llamarApi_('añadirRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreCompleto])
-      .then(function () { mostrarToast('Ruta añadida'); cargarPlantilla_(); })
+      .then(function () { mostrarToast('Ruta añadida'); cargarPlantilla_({ silencioso: true }); })
       .catch(mostrarErrorServidor);
   };
   setTimeout(function () { document.getElementById('modal-ruta-nombre').focus(); }, 50);
