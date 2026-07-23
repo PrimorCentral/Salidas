@@ -655,6 +655,13 @@
   .plantilla-ruta-peso:hover { background: #eef1f7; }
   .plantilla-ruta-peso.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
   .plantilla-ruta-peso.activo:hover { background: var(--navy-soft); }
+  .plantilla-ruta-cexpress {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-ruta-cexpress:hover { background: #eef1f7; }
+  .plantilla-ruta-cexpress.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .plantilla-ruta-cexpress.activo:hover { background: var(--navy-soft); }
   .plantilla-ruta-pdfespecial {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
@@ -1529,15 +1536,38 @@
   }
 
   .gestor-busqueda-wrap { position: relative; }
+  .gestor-busqueda-wrap input { padding-right: 32px; }
+  .gestor-busqueda-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;
+    border: none; background: #eef1f5; border-radius: 50%; color: var(--ink-soft); cursor: pointer;
+    display: none; align-items: center; justify-content: center; font-size: 13px; line-height: 1; padding: 0;
+  }
+  .gestor-busqueda-clear:hover { background: #dfe3e9; color: var(--ink); }
+  .gestor-busqueda-clear.visible { display: flex; }
   .gestor-busqueda-resultados {
     position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff;
-    border: 1px solid var(--line); border-radius: 8px; max-height: 220px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 8px; max-height: 320px; overflow-y: auto;
     box-shadow: 0 8px 20px rgba(0,0,0,.12); z-index: 10;
   }
   .gestor-busqueda-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; font-size: 13px; cursor: pointer; }
   .gestor-busqueda-item:hover { background: #f0f2f6; }
   .gestor-busqueda-item .sub { font-size: 11px; color: var(--ink-soft); }
   .gestor-busqueda-item-texto { flex: 1 1 auto; min-width: 0; }
+  .gestor-busqueda-item mark { background: #ffe9a8; color: inherit; border-radius: 2px; padding: 0 1px; }
+  .gestor-busqueda-grupo {
+    position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 11px; font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+    color: var(--ink-soft); background: #f6f7f9; border-bottom: 1px solid var(--line); border-top: 1px solid var(--line);
+  }
+  .gestor-busqueda-grupo:first-child { border-top: none; }
+  .gestor-busqueda-grupo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gestor-grupo-toggle {
+    flex-shrink: 0; border: none; background: none; color: var(--navy); font-weight: 700; font-size: 11px;
+    text-transform: none; letter-spacing: 0; cursor: pointer; padding: 2px 4px;
+  }
+  .gestor-grupo-toggle:hover { text-decoration: underline; }
+  .gestor-busqueda-footer { padding: 8px 11px; font-size: 11.5px; color: var(--ink-soft); text-align: center; border-top: 1px solid var(--line); }
+  .gestor-busqueda-vacio { padding: 14px 11px; font-size: 13px; color: var(--ink-soft); text-align: center; }
   /* Casilla de selección múltiple (solo se usa en "Cerrar tienda"): un
      cuadrito que se rellena al marcar, para dejar claro que se puede elegir
      más de una tienda sin cerrar el desplegable cada vez. */
@@ -1586,6 +1616,52 @@
   body.es-admin .btn-cerrar-tienda { display: inline-flex !important; }
   body.es-admin .festivos-del { display: inline-flex !important; }
   body.es-admin .btn-reabrir { display: inline-block !important; }
+
+  /* ---------- ADMINISTRACIÓN (solo admin) ----------
+     Todo el menú "Administración" es exclusivo de admin, igual que "Diseño"
+     (ver regla justo debajo): ningún operario tiene nada que hacer ni que
+     consultar en ninguna de las dos, así que se ocultan enteras en vez de
+     mostrarlas "apagadas". */
+  #topbar-dropdown-administracion { display: none; }
+  body.es-admin #topbar-dropdown-administracion { display: block; }
+
+  /* ---------- DISEÑO / CONFIGURACIÓN (solo admin) ----------
+     Antes se veía siempre, con sus opciones "apagadas" (sin poder pinchar)
+     para quien no fuera admin; ahora se oculta el menú entero, igual que
+     Administración -- ninguna de sus secciones (Emails agencias, Rutas y
+     tiendas) permite nada a un operario normal. */
+  #topbar-dropdown-configuracion { display: none; }
+  body.es-admin #topbar-dropdown-configuracion { display: block; }
+
+  .admin-filtros { display: flex; align-items: flex-end; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
+  .admin-filtro-campo { display: flex; flex-direction: column; gap: 4px; }
+  .admin-filtro-campo label {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft);
+  }
+  .admin-filtro-campo input[type="date"] {
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--ink); background: #f9fafb;
+  }
+  .admin-filtro-busqueda { flex: 1 1 220px; min-width: 160px; }
+  .admin-filtro-busqueda .emails-config-busqueda { width: 100%; flex: 0 0 auto; }
+  .btn-admin-refrescar {
+    display: flex; align-items: center; gap: 6px; background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; height: 32px;
+  }
+  .btn-admin-refrescar:hover { background: #e1e5eb; }
+  .btn-admin-refrescar.girando svg { animation: girar-sinc 0.8s linear infinite; }
+  .admin-resumen { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  .admin-tabla-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table.admin-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.admin-tabla th {
+    position: sticky; top: 0; background: #f6f7f9; text-align: left; padding: 9px 12px; font-size: 10.5px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  table.admin-tabla td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+  table.admin-tabla tbody tr:last-child td { border-bottom: none; }
+  table.admin-tabla tbody tr:nth-child(even) { background: #fafbfc; }
+  table.admin-tabla td.admin-col-palets { font-weight: 700; color: var(--navy); text-align: center; }
+  table.admin-tabla td.admin-col-tienda { white-space: normal; min-width: 160px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -1636,10 +1712,17 @@
         <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos Diarios</button>
         <div class="topbar-nav-dropdown" id="topbar-dropdown-configuracion">
           <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="configuracion" aria-haspopup="true" aria-expanded="false">
-            Configuración
+            Diseño
             <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
           <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-configuracion"></div>
+        </div>
+        <div class="topbar-nav-dropdown" id="topbar-dropdown-administracion">
+          <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="administracion" aria-haspopup="true" aria-expanded="false">
+            Administración
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-administracion"></div>
         </div>
       </nav>
       <div class="topbar-fecha" id="topbar-fecha"></div>
@@ -1687,7 +1770,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.6';
+const APP_VERSION_ACTUAL = '1.3.7';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1808,6 +1891,7 @@ function aplicarPermisosUI() {
   const elRol = document.getElementById('topbar-usuario-rol');
   if (elRol) elRol.textContent = SESSION_ROL ? (esAdmin() ? 'Administrador' : 'Operario') : '';
   poblarDropdownConfiguracion();
+  poblarDropdownAdministracion();
 }
 
 // Nombre usado en el frontend -> nombre de la acción que entiende el backend.
@@ -2063,12 +2147,22 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 // de la cabecera se construye con ellas; más secciones futuras solo se
 // añaden a esta lista).
 const CONFIG_SECCIONES = [
-  { id: 'festivos', label: 'Gestión festivos' },
   { id: 'emails', label: 'Emails agencias' },
   { id: 'plantilla', label: 'Rutas y tiendas' }
   // futuras secciones de Configuración van aquí
 ];
-let ESTADO_CONFIG = { seccionActiva: 'festivos' };
+let ESTADO_CONFIG = { seccionActiva: 'emails' };
+
+// Secciones de "Administración": a diferencia de Configuración (ajustes que
+// definen cómo funciona la app), aquí van pantallas de solo lectura para
+// auditoría/consulta de lo que ya ha pasado (registros, historiales...).
+// Todo el menú es exclusivo de admin (ver CSS "#topbar-dropdown-administracion").
+const ADMIN_SECCIONES = [
+  { id: 'festivos', label: 'Gestión festivos' },
+  { id: 'palets-forzados', label: 'Palets forzados' }
+  // futuras secciones de Administración van aquí
+];
+let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
 
 // Botones simples (Inicio, Conteos): navegan directamente al pulsarlos.
 document.querySelectorAll('.topbar-nav > .topbar-nav-item').forEach(function (btn) {
@@ -2099,22 +2193,19 @@ function cerrarDropdownsTopbar() {
   });
 }
 
-/** Construye la lista del desplegable de Configuración a partir de
+/** Construye la lista del desplegable de "Diseño" a partir de
  *  CONFIG_SECCIONES y engancha sus clics (cada uno navega directamente a
- *  esa sección y cierra el desplegable). Los usuarios sin rol "admin" ven
- *  las secciones "apagadas" (sin poder pinchar ni hacer nada): de momento
- *  Gestión festivos y Emails agencias son solo para administradores. */
+ *  esa sección y cierra el desplegable). Todo el menú ya está oculto por
+ *  CSS para quien no sea admin (ver "#topbar-dropdown-configuracion" en
+ *  <style>, igual que Administración), así que aquí no hace falta "apagar"
+ *  las opciones una a una como antes. */
 function poblarDropdownConfiguracion() {
   const cont = document.getElementById('topbar-dropdown-menu-configuracion');
-  const bloqueada = !esAdmin();
   cont.innerHTML = CONFIG_SECCIONES.map(function (s) {
     const activa = ESTADO.vista === 'configuracion' && s.id === ESTADO_CONFIG.seccionActiva;
-    return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + (bloqueada ? ' bloqueada' : '') + '"' +
-      (bloqueada ? ' disabled aria-disabled="true"' : '') +
-      ' data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
+    return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
   }).join('');
   cont.querySelectorAll('.topbar-dropdown-item').forEach(function (btn) {
-    if (btn.disabled) return; // sin listener: al estar "apagado" el clic no hace nada
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       cerrarDropdownsTopbar();
@@ -2127,8 +2218,33 @@ function marcarSeccionActivaEnDropdown() {
     const activa = ESTADO.vista === 'configuracion' && btn.getAttribute('data-seccion') === ESTADO_CONFIG.seccionActiva;
     btn.classList.toggle('activa', activa);
   });
+  document.querySelectorAll('#topbar-dropdown-menu-administracion .topbar-dropdown-item').forEach(function (btn) {
+    const activa = ESTADO.vista === 'administracion' && btn.getAttribute('data-seccion') === ESTADO_ADMIN.seccionActiva;
+    btn.classList.toggle('activa', activa);
+  });
 }
 poblarDropdownConfiguracion();
+
+/** Construye la lista del desplegable de "Administración" a partir de
+ *  ADMIN_SECCIONES. Todo el menú ya está oculto por CSS para quien no sea
+ *  admin (ver "#topbar-dropdown-administracion" en <style>), así que aquí no
+ *  hace falta "apagar" nada como en poblarDropdownConfiguracion. */
+function poblarDropdownAdministracion() {
+  const cont = document.getElementById('topbar-dropdown-menu-administracion');
+  if (!cont) return;
+  cont.innerHTML = ADMIN_SECCIONES.map(function (s) {
+    const activa = ESTADO.vista === 'administracion' && s.id === ESTADO_ADMIN.seccionActiva;
+    return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
+  }).join('');
+  cont.querySelectorAll('.topbar-dropdown-item').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarDropdownsTopbar();
+      cambiarVista('administracion', btn.getAttribute('data-seccion'));
+    });
+  });
+}
+poblarDropdownAdministracion();
 
 // La PWA siempre arranca en la pantalla de login: SESSION_TOKEN nunca se
 // recupera de un arranque anterior (ver comentario más arriba), así que
@@ -2170,12 +2286,15 @@ function cambiarVista(vista, seccion) {
   document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
 
   if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
+  if (vista === 'administracion' && seccion) ESTADO_ADMIN.seccionActiva = seccion;
   marcarSeccionActivaEnDropdown();
 
   if (vista === 'inicio') {
     renderVistaInicio();
   } else if (vista === 'configuracion') {
     renderVistaConfiguracion();
+  } else if (vista === 'administracion') {
+    renderVistaAdministracion();
   } else {
     if (!ESTADO.fecha) {
       ESTADO.fecha = hoyStr();
@@ -2209,9 +2328,22 @@ function renderVistaConfiguracion() {
 }
 
 function renderSeccionConfigActiva() {
-  if (ESTADO_CONFIG.seccionActiva === 'festivos') renderConfigFestivos();
-  else if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
+  if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
   else if (ESTADO_CONFIG.seccionActiva === 'plantilla') renderConfigPlantilla();
+}
+
+/** ADMINISTRACIÓN: mismo patrón que renderVistaConfiguracion, pero con su
+ *  propio contenedor ("admin-contenido") para no compartir estado con
+ *  Configuración por accidente. */
+function renderVistaAdministracion() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="config-contenido" id="admin-contenido"></div>';
+  renderSeccionAdminActiva();
+}
+
+function renderSeccionAdminActiva() {
+  if (ESTADO_ADMIN.seccionActiva === 'festivos') renderAdminFestivos();
+  else if (ESTADO_ADMIN.seccionActiva === 'palets-forzados') renderAdminPaletsForzados();
 }
 
 /* ---------------- GESTIÓN FESTIVOS ----------------
@@ -2285,10 +2417,10 @@ function formatearFechaCorta_(fecha) {
   return d.getDate() + ' ' + MESES_ES[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
 }
 
-function renderConfigFestivos() {
+function renderAdminFestivos() {
   if (!FESTIVOS_ESTADO.semanaInicio) FESTIVOS_ESTADO.semanaInicio = lunesDeSemana_(hoyStr());
 
-  const cont = document.getElementById('config-contenido');
+  const cont = document.getElementById('admin-contenido');
   if (!cont) return;
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -2421,7 +2553,7 @@ function actualizarFiltroFechas_() {
 }
 
 function cargarFestivos() {
-  if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'festivos') return;
+  if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'festivos') return;
   const rangoEl = document.getElementById('festivos-rango');
   const listaEl = document.getElementById('festivos-lista');
   if (!rangoEl || !listaEl) return;
@@ -2893,6 +3025,143 @@ function sincronizarAgrupacionesDesdeApp_() {
     });
 }
 
+/* ---------------- ADMINISTRACIÓN: "Palets forzados" ----------------
+ * Pantalla de solo lectura sobre la hoja Palets_Forzados: cada vez que
+ * alguien confirma dar palets en una casilla que traía "NO" (ver
+ * escribirCeldaConteo_ / registrarPaletForzado_ en el backend), queda un
+ * registro ahí. Hasta ahora solo se podía consultar abriendo la Google
+ * Sheet a mano; esta pantalla lo trae a la app con filtro por fechas y
+ * búsqueda de tienda.
+ *
+ * Requiere la función de backend getPaletsForzadosAdmin(fechaIni, fechaFin)
+ * (SOLO ADMIN) -- ver nota al final de este bloque para añadirla a
+ * Codigo.gs si todavía no existe.
+ */
+let ADMIN_PALETS_ESTADO = { fechaIni: null, fechaFin: null, filtroTexto: '', datos: null };
+
+/** 'yyyy-MM-dd' de hace "dias" días, calculado en el propio navegador. */
+function fechaHaceDiasJs_(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+function renderAdminPaletsForzados() {
+  const cont = document.getElementById('admin-contenido');
+  if (!cont) return;
+
+  // Por defecto, últimos 30 días: es la ventana más útil para revisar
+  // incidencias recientes sin cargar todo el histórico de golpe.
+  if (!ADMIN_PALETS_ESTADO.fechaIni) ADMIN_PALETS_ESTADO.fechaIni = fechaHaceDiasJs_(30);
+  if (!ADMIN_PALETS_ESTADO.fechaFin) ADMIN_PALETS_ESTADO.fechaFin = hoyStr();
+
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Palets forzados</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-admin-refrescar" id="btn-admin-palets-refrescar" title="Volver a pedir los datos">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+            'Refrescar</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Registro de cada vez que se han dado palets en una casilla que traía "NO" (avisos confirmados a mano en el conteo del día). Es un histórico de solo lectura: no se puede editar ni borrar desde aquí.</p>' +
+      '<div class="admin-filtros">' +
+        '<div class="admin-filtro-campo"><label>Desde</label><input type="date" id="admin-palets-desde" value="' + ADMIN_PALETS_ESTADO.fechaIni + '"></div>' +
+        '<div class="admin-filtro-campo"><label>Hasta</label><input type="date" id="admin-palets-hasta" value="' + ADMIN_PALETS_ESTADO.fechaFin + '"></div>' +
+        '<div class="admin-filtro-campo admin-filtro-busqueda">' +
+          '<label>Buscar tienda</label>' +
+          '<div class="emails-config-busqueda">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+            '<input type="text" id="admin-palets-buscar" placeholder="Nombre de la tienda…">' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="admin-palets-resultado"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-admin-palets-refrescar').onclick = function () { cargarPaletsForzadosAdmin_(true); };
+
+  document.getElementById('admin-palets-desde').addEventListener('change', function (e) {
+    if (!e.target.value) return;
+    ADMIN_PALETS_ESTADO.fechaIni = e.target.value;
+    cargarPaletsForzadosAdmin_();
+  });
+  document.getElementById('admin-palets-hasta').addEventListener('change', function (e) {
+    if (!e.target.value) return;
+    ADMIN_PALETS_ESTADO.fechaFin = e.target.value;
+    cargarPaletsForzadosAdmin_();
+  });
+
+  let temporizadorBusquedaPalets = null;
+  document.getElementById('admin-palets-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusquedaPalets);
+    const valor = e.target.value;
+    temporizadorBusquedaPalets = setTimeout(function () {
+      ADMIN_PALETS_ESTADO.filtroTexto = valor.trim().toLowerCase();
+      pintarTablaPaletsForzados_();
+    }, 200);
+  });
+
+  cargarPaletsForzadosAdmin_();
+}
+
+function cargarPaletsForzadosAdmin_(esRefrescoManual) {
+  if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'palets-forzados') return;
+  const resultadoEl = document.getElementById('admin-palets-resultado');
+  const btnRefrescar = document.getElementById('btn-admin-palets-refrescar');
+  if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+
+  llamarApi_('getPaletsForzadosAdmin', [ADMIN_PALETS_ESTADO.fechaIni, ADMIN_PALETS_ESTADO.fechaFin])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'palets-forzados') return;
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      ADMIN_PALETS_ESTADO.datos = datos || [];
+      pintarTablaPaletsForzados_();
+    })
+    .catch(function (err) {
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      mostrarErrorServidor(err);
+      if (resultadoEl) resultadoEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar el registro.</div>';
+    });
+}
+
+function pintarTablaPaletsForzados_() {
+  const cont = document.getElementById('admin-palets-resultado');
+  if (!cont) return;
+  const datos = ADMIN_PALETS_ESTADO.datos || [];
+
+  const filtro = ADMIN_PALETS_ESTADO.filtroTexto;
+  const items = datos.filter(function (it) { return !filtro || it.tienda.toLowerCase().indexOf(filtro) !== -1; });
+
+  if (!items.length) {
+    cont.innerHTML =
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        (datos.length ? 'Ninguna coincide con la búsqueda.' : 'No hay palets forzados registrados en ese rango de fechas.') +
+      '</div>';
+    return;
+  }
+
+  cont.innerHTML =
+    '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' registro' : ' registros') + '</div>' +
+    '<div class="admin-tabla-wrap"><table class="admin-tabla">' +
+      '<thead><tr><th>Fecha</th><th>Día</th><th>Tienda</th><th>Columna</th><th>Palets</th><th>Registrado</th></tr></thead>' +
+      '<tbody>' + items.map(function (it) {
+        return '<tr>' +
+          '<td>' + escapeHtml(formatearFechaCorta_(it.fecha)) + '</td>' +
+          '<td>' + escapeHtml(it.dia) + '</td>' +
+          '<td class="admin-col-tienda">' + escapeHtml(it.tienda) + '</td>' +
+          '<td>' + escapeHtml(it.columna) + '</td>' +
+          '<td class="admin-col-palets">' + escapeHtml(String(it.palets)) + '</td>' +
+          '<td>' + escapeHtml(it.fechaHora) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody>' +
+    '</table></div>';
+}
+
 /* ---------------- CONFIGURACIÓN: "Plantilla conteos" ----------------
  * Editor de la estructura de cada hoja de día (LUNES, MARTES...): qué
  * rutas hay y qué tiendas tiene cada una, para no tener que abrir la
@@ -3348,6 +3617,7 @@ function pintarPlantilla_() {
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
           (esAdmin() ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
+            '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
@@ -3453,6 +3723,9 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-peso]').forEach(function (btn) {
     btn.onclick = function () { togglePesoRutaPlantilla_(btn.getAttribute('data-toggle-peso'), btn.getAttribute('data-peso-activo') === '1'); };
   });
+  listaEl.querySelectorAll('[data-toggle-cexpress]').forEach(function (btn) {
+    btn.onclick = function () { toggleCExpressRutaPlantilla_(btn.getAttribute('data-toggle-cexpress'), btn.getAttribute('data-cexpress-activo') === '1'); };
+  });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
   });
@@ -3485,6 +3758,28 @@ function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
     return;
   }
   guardarPlantillaOptimista_(mutar, 'activarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla PESO activada');
+}
+
+/** Activa/desactiva la casilla C.EXPRESS de una ruta desde "Rutas y tiendas".
+ *  Igual que PESO: al desactivarla se pide confirmación porque borra los
+ *  valores ya guardados en esa ruta (ver desactivarCExpressRuta en el
+ *  backend). A diferencia de PESO, C.EXPRESS sí se suma al TOTAL de cada
+ *  tienda (ver recalcTotal en attachCalculoYValidacion). */
+function toggleCExpressRutaPlantilla_(nombreRuta, activoActualmente) {
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tieneCExpress = !activoActualmente;
+  };
+  if (activoActualmente) {
+    appConfirm(
+      'Quitar la casilla C.EXPRESS',
+      '¿Seguro que quieres quitar la casilla C.EXPRESS de "' + nombreRuta + '"? Se borrarán los valores de C.EXPRESS ya guardados en esta ruta.',
+      function () { guardarPlantillaOptimista_(mutar, 'desactivarCExpressRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla C.EXPRESS desactivada'); },
+      true
+    );
+    return;
+  }
+  guardarPlantillaOptimista_(mutar, 'activarCExpressRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla C.EXPRESS activada');
 }
 
 /** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".
@@ -4409,13 +4704,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso) : '';
-    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
     '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th>' +
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
+    (seccion.tieneCExpress ? '<th>C.EXPRESS</th>' : '') +
     '<th></th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
   if (!editable) {
@@ -4769,7 +5065,7 @@ const PDF_ANCHO_MM_ = 297; // ancho fijo tipo A4 apaisado
 const PDF_ALTO_A4_MM_ = 210; // alto estándar de un A4 apaisado
 
 /** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
- *  sin guardar) las filas [tienda, límite, 60, PTA, CART., TOTAL, PDTE, (PESO)]. */
+ *  sin guardar) las filas [tienda, límite, 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS)]. */
 function leerFilasPdfSeccion_(tableWrap, seccion) {
   const filas = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
@@ -4783,7 +5079,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         'CERRADA', '', '', '', ''
-      ].concat(seccion.tienePeso ? [''] : []));
+      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
       return;
     }
 
@@ -4800,7 +5096,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       valorCampo('cart'),
       valorCampo('total'),
       valorCampo('pdte')
-    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []));
+    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []));
   });
   return filas;
 }
@@ -4854,7 +5150,7 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : [])],
+    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])],
     body: filas,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
@@ -5157,13 +5453,13 @@ function badgePrevision(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
-function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso) {
+function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   const textoIzquierda = esTotal ? t.nota : tiendas;
   const chipInicial = esTotal ? '0 palets' : t.nota;
   return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
-    '<td colspan="' + (tienePeso ? 9 : 8) + '">' +
+    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +
@@ -5220,7 +5516,7 @@ function celdaConteoHtml(campo, valor, forzado) {
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress) {
   const marcador = parsearMarcadorTienda(t.nombre);
   const badgeHtml = marcador.badge
     ? '<span class="badge-plazo ' + marcador.badge.clase + '">' + marcador.badge.texto + '</span>'
@@ -5238,7 +5534,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
-      '<td colspan="' + (tienePeso ? 6 : 5) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
@@ -5251,6 +5547,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso) {
     '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
+    (tieneCExpress ? '<td><input class="celda" data-campo="cexpress" type="number" step="0.01" value="' + (t.cexpress == null ? '' : t.cexpress) + '"></td>' : '') +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
     '</tr>';
@@ -5266,17 +5563,19 @@ function attachCalculoYValidacion(tr) {
   const c60Input = tr.querySelector('input[data-campo="c60"]');
   const ptaInput = tr.querySelector('input[data-campo="pta"]');
   const cartInput = tr.querySelector('input[data-campo="cart"]');
+  const cexpressInput = tr.querySelector('input[data-campo="cexpress"]');
   const totalInput = tr.querySelector('input[data-campo="total"]');
   const nota = tr.querySelector('.diff-nota');
 
   function recalcTotal() {
-    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '') {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '')) {
       totalInput.value = '';
     } else {
       const m = parseFloat(c60Input.value) || 0;
       const p = parseFloat(ptaInput.value) || 0;
       const c = parseFloat(cartInput.value) || 0;
-      totalInput.value = m + p + c;
+      const ce = cexpressInput ? (parseFloat(cexpressInput.value) || 0) : 0;
+      totalInput.value = m + p + c + ce;
     }
     validar();
   }
@@ -5304,6 +5603,7 @@ function attachCalculoYValidacion(tr) {
   c60Input.addEventListener('input', recalcTotal);
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
+  if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
   validar();
 }
 
@@ -5444,6 +5744,10 @@ function recogerFilas(tableWrap) {
     // activado (ver seccion.tienePeso); si no hay casilla, no se manda nada.
     const peso = get('peso');
     if (peso !== undefined) fila.peso = peso;
+    // Igual que "peso", "cexpress" solo existe si la ruta lo tiene activado
+    // (ver seccion.tieneCExpress).
+    const cexpress = get('cexpress');
+    if (cexpress !== undefined) fila.cexpress = cexpress;
     filas.push(fila);
   });
   return filas;
@@ -5458,7 +5762,7 @@ function guardarObservacionYRecargar(obs) {
         cargarConteoDia();
         cargarCalendario();
       }
-      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') {
+      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
         cargarFestivos();
       }
     })
@@ -5557,6 +5861,7 @@ function crearFormularioGestorObs_() {
       '<label id="gestor-busqueda-label">Agrupación</label>' +
       '<div class="gestor-busqueda-wrap">' +
         '<input type="text" id="gestor-busqueda" placeholder="Escribe para buscar…" autocomplete="off">' +
+        '<button type="button" class="gestor-busqueda-clear" id="gestor-busqueda-clear" title="Limpiar búsqueda">×</button>' +
         '<div class="gestor-busqueda-resultados" id="gestor-busqueda-resultados" style="display:none;"></div>' +
       '</div>' +
       '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un cierre para cada una.</div>' +
@@ -5583,6 +5888,8 @@ function crearFormularioGestorObs_() {
     GESTOR_OBS.datosDia = null;
     GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
     document.getElementById('gestor-busqueda').value = '';
+    const btnLimpiar = document.getElementById('gestor-busqueda-clear');
+    if (btnLimpiar) btnLimpiar.classList.remove('visible');
     actualizarSeleccionGestorObs_();
     cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
   });
@@ -5611,22 +5918,34 @@ function crearFormularioGestorObs_() {
       GESTOR_OBS.tipo = btn.getAttribute('data-tipo');
       GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
       document.getElementById('gestor-busqueda').value = '';
+      const btnLimpiar = document.getElementById('gestor-busqueda-clear');
+      if (btnLimpiar) btnLimpiar.classList.remove('visible');
       actualizarFormularioSegunTipo_();
     };
   });
 
   const inputBusqueda = wrap.querySelector('#gestor-busqueda');
+  const btnLimpiarBusqueda = wrap.querySelector('#gestor-busqueda-clear');
   inputBusqueda.addEventListener('input', function () {
     // En "Cerrar tienda" se puede elegir varias tiendas: escribir para buscar
     // la siguiente no debe borrar las que ya se marcaron. En "Nota de
     // agrupación" solo hay una elegida a la vez, así que escribir sí la
     // sustituye (se está buscando otra distinta).
     if (GESTOR_OBS.tipo !== 'cierre') GESTOR_OBS.seleccion = null;
+    btnLimpiarBusqueda.classList.toggle('visible', !!inputBusqueda.value);
     actualizarSeleccionGestorObs_();
     renderResultadosBusquedaGestorObs_(inputBusqueda.value);
   });
   inputBusqueda.addEventListener('focus', function () {
     renderResultadosBusquedaGestorObs_(inputBusqueda.value);
+  });
+  btnLimpiarBusqueda.addEventListener('click', function () {
+    inputBusqueda.value = '';
+    btnLimpiarBusqueda.classList.remove('visible');
+    if (GESTOR_OBS.tipo !== 'cierre') GESTOR_OBS.seleccion = null;
+    actualizarSeleccionGestorObs_();
+    renderResultadosBusquedaGestorObs_('');
+    inputBusqueda.focus();
   });
 
   return wrap;
@@ -5836,73 +6155,174 @@ function cargarDatosDiaGestorObs_(fecha) {
     .getConteoDia(fecha);
 }
 
-/** Filtra agrupaciones o tiendas (según el tipo elegido) y pinta el desplegable de resultados. */
+/** Resalta, dentro de "texto", la primera aparición de "q" (ya en minúsculas)
+ *  envolviéndola en <mark>. Si no hay query o no hay coincidencia, devuelve
+ *  el texto escapado tal cual. */
+function resaltarCoincidenciaGestorObs_(texto, q) {
+  const t = String(texto || '');
+  if (!q) return escapeHtml(t);
+  const idx = t.toLowerCase().indexOf(q);
+  if (idx === -1) return escapeHtml(t);
+  return escapeHtml(t.slice(0, idx)) + '<mark>' + escapeHtml(t.slice(idx, idx + q.length)) + '</mark>' + escapeHtml(t.slice(idx + q.length));
+}
+
+// Cuántos resultados como máximo se pintan de golpe en el desplegable. No es
+// un límite de búsqueda (se sigue buscando en TODAS las agrupaciones/tiendas
+// del día): es solo para no pintar de una vez cientos de filas si no se ha
+// escrito nada todavía. En cuanto se escribe algo, casi siempre el número de
+// coincidencias baja de sobra por debajo de esto.
+const GESTOR_OBS_LIMITE_VISIBLE_ = 60;
+
+/** Filtra agrupaciones o tiendas (según el tipo elegido) y pinta el
+ *  desplegable de resultados.
+ *
+ * En modo "cierre" los resultados se agrupan por agrupación/ruta (en vez de
+ * una lista plana), con un botón "Añadir todas" por grupo: muy útil para
+ * festivos, cuando hace falta cerrar una ruta entera de una vez en lugar de
+ * tienda a tienda. Antes esta función se quedaba solo con las 8 primeras
+ * coincidencias (items.slice(0,8)), así que cualquier tienda que no
+ * estuviera entre esas 8 primeras no aparecía nunca, escribieras lo que
+ * escribieras: se ha quitado ese límite (ver GESTOR_OBS_LIMITE_VISIBLE_,
+ * que solo acota cuántas se pintan de golpe, no cuántas se buscan).
+ */
 function renderResultadosBusquedaGestorObs_(query) {
   const cont = document.getElementById('gestor-busqueda-resultados');
   if (!cont) return;
 
   if (!GESTOR_OBS.datosDia) {
-    cont.innerHTML = '<div class="gestor-busqueda-item">Cargando…</div>';
+    cont.innerHTML = '<div class="gestor-busqueda-vacio">Cargando…</div>';
     cont.style.display = 'block';
     return;
   }
 
   const q = String(query || '').trim().toLowerCase();
-  let items = [];
   const secciones = GESTOR_OBS.datosDia.secciones || [];
-  const seleccionActual = GESTOR_OBS.tipo === 'cierre' ? (GESTOR_OBS.seleccion || []) : [];
 
   if (GESTOR_OBS.tipo === 'agrupacion') {
-    items = secciones
+    const items = secciones
       .map(function (s) { return { label: s.nombre, agrupacion: s.nombre }; })
-      .filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1; });
-  } else if (GESTOR_OBS.tipo === 'cierre') {
-    secciones.forEach(function (s) {
-      (s.tiendas || []).forEach(function (t) {
-        if (t.cerrada) return; // ya cerrada: no tiene sentido volver a cerrarla
-        const coincide = !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
-        if (coincide) items.push({ label: t.nombre, sub: s.nombre, agrupacion: s.nombre, tienda: t.nombre });
-      });
-    });
-  }
+      .filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return a.label.localeCompare(b.label, 'es'); });
 
-  items = items.slice(0, 8);
+    if (!items.length) {
+      cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay agrupaciones disponibles') + '</div>';
+      cont.style.display = 'block';
+      return;
+    }
 
-  if (!items.length) {
-    cont.innerHTML = '<div class="gestor-busqueda-item">Sin resultados</div>';
+    const visibles = items.slice(0, GESTOR_OBS_LIMITE_VISIBLE_);
+    cont.innerHTML = visibles.map(function (it, i) {
+      return '<div class="gestor-busqueda-item" data-idx="' + i + '"><span class="gestor-busqueda-item-texto">' +
+        resaltarCoincidenciaGestorObs_(it.label, q) + '</span></div>';
+    }).join('') + (items.length > visibles.length
+      ? '<div class="gestor-busqueda-footer">Mostrando ' + visibles.length + ' de ' + items.length + ' — sigue escribiendo para acotar</div>'
+      : '');
     cont.style.display = 'block';
-    return;
-  }
 
-  cont.innerHTML = items.map(function (it, i) {
-    const marcada = GESTOR_OBS.tipo === 'cierre' && seleccionActual.some(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
-    const casilla = GESTOR_OBS.tipo === 'cierre'
-      ? '<span class="gestor-check">' + (marcada ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '</span>'
-      : '';
-    return '<div class="gestor-busqueda-item' + (marcada ? ' marcada' : '') + '" data-idx="' + i + '">' + casilla +
-      '<span class="gestor-busqueda-item-texto">' + escapeHtml(it.label) +
-      (it.sub ? '<div class="sub">' + escapeHtml(it.sub) + '</div>' : '') + '</span></div>';
-  }).join('');
-  cont.style.display = 'block';
-
-  cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
-    el.onclick = function () {
-      const it = items[Number(el.getAttribute('data-idx'))];
-      if (GESTOR_OBS.tipo === 'cierre') {
-        // Selección múltiple: marca/desmarca esta tienda sin cerrar el
-        // desplegable, para poder seguir añadiendo más sin reabrir nada.
-        if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
-        const idx = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
-        if (idx === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
-        else GESTOR_OBS.seleccion.splice(idx, 1);
-        actualizarSeleccionGestorObs_();
-        renderResultadosBusquedaGestorObs_(query);
-      } else {
+    cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
+      el.onclick = function () {
+        const it = visibles[Number(el.getAttribute('data-idx'))];
         GESTOR_OBS.seleccion = { agrupacion: it.agrupacion };
         document.getElementById('gestor-busqueda').value = it.label;
         cont.style.display = 'none';
         actualizarSeleccionGestorObs_();
-      }
+      };
+    });
+    return;
+  }
+
+  if (GESTOR_OBS.tipo !== 'cierre') return;
+
+  // ---- Modo "cierre": agrupado por agrupación/ruta ----
+  const seleccionActual = GESTOR_OBS.seleccion || [];
+  const estaMarcada = function (agrupacion, tienda) {
+    return seleccionActual.some(function (s) { return s.tienda === tienda && s.agrupacion === agrupacion; });
+  };
+
+  const grupos = [];
+  let totalCoincidencias = 0;
+  secciones.forEach(function (s) {
+    const tiendas = (s.tiendas || []).filter(function (t) {
+      if (t.cerrada) return false; // ya cerrada: no tiene sentido volver a cerrarla
+      return !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
+    });
+    if (tiendas.length) {
+      grupos.push({ agrupacion: s.nombre, tiendas: tiendas });
+      totalCoincidencias += tiendas.length;
+    }
+  });
+
+  if (!grupos.length) {
+    cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay tiendas disponibles') + '</div>';
+    cont.style.display = 'block';
+    return;
+  }
+
+  // Índice plano (para los data-idx de cada tienda) que referencia este mismo
+  // array "planas" al hacer clic, en vez de recalcularlo.
+  const planas = [];
+  let mostradas = 0;
+  let truncado = false;
+  let html = '';
+
+  grupos.forEach(function (g) {
+    if (mostradas >= GESTOR_OBS_LIMITE_VISIBLE_) { truncado = true; return; }
+    const idsGrupo = g.tiendas.map(function (t) {
+      const idx = planas.length;
+      planas.push({ agrupacion: g.agrupacion, tienda: t.nombre });
+      return idx;
+    });
+    mostradas += idsGrupo.length;
+
+    const marcadasEnGrupo = idsGrupo.filter(function (idx) { return estaMarcada(planas[idx].agrupacion, planas[idx].tienda); }).length;
+    const todoMarcado = idsGrupo.length > 1 && marcadasEnGrupo === idsGrupo.length;
+
+    html += '<div class="gestor-busqueda-grupo"><span>' + escapeHtml(g.agrupacion) + ' · ' + g.tiendas.length + '</span>' +
+      (idsGrupo.length > 1 ? '<button type="button" class="gestor-grupo-toggle" data-ids="' + idsGrupo.join(',') + '">' + (todoMarcado ? 'Quitar todas' : 'Añadir todas') + '</button>' : '') +
+      '</div>';
+
+    idsGrupo.forEach(function (idx) {
+      const it = planas[idx];
+      const marcada = estaMarcada(it.agrupacion, it.tienda);
+      html += '<div class="gestor-busqueda-item' + (marcada ? ' marcada' : '') + '" data-idx="' + idx + '">' +
+        '<span class="gestor-check">' + (marcada ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' : '') + '</span>' +
+        '<span class="gestor-busqueda-item-texto">' + resaltarCoincidenciaGestorObs_(it.tienda, q) + '</span></div>';
+    });
+  });
+
+  if (truncado) {
+    html += '<div class="gestor-busqueda-footer">Mostrando ' + mostradas + ' de ' + totalCoincidencias + ' — sigue escribiendo para acotar</div>';
+  }
+
+  cont.innerHTML = html;
+  cont.style.display = 'block';
+
+  cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
+    el.onclick = function () {
+      const it = planas[Number(el.getAttribute('data-idx'))];
+      if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
+      const idx = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+      if (idx === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
+      else GESTOR_OBS.seleccion.splice(idx, 1);
+      actualizarSeleccionGestorObs_();
+      renderResultadosBusquedaGestorObs_(query);
+    };
+  });
+
+  cont.querySelectorAll('.gestor-grupo-toggle[data-ids]').forEach(function (btn) {
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      const ids = btn.getAttribute('data-ids').split(',').map(Number);
+      if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
+      const todoMarcado = ids.every(function (idx) { return estaMarcada(planas[idx].agrupacion, planas[idx].tienda); });
+      ids.forEach(function (idx) {
+        const it = planas[idx];
+        const pos = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+        if (todoMarcado) { if (pos !== -1) GESTOR_OBS.seleccion.splice(pos, 1); }
+        else if (pos === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
+      });
+      actualizarSeleccionGestorObs_();
+      renderResultadosBusquedaGestorObs_(query);
     };
   });
 }
@@ -5965,7 +6385,7 @@ function guardarDesdeGestorObs_() {
       mostrarToast(observaciones.length > 1 ? observaciones.length + ' cierres guardados' : 'Guardado');
       if (document.getElementById('calendar-body')) cargarCalendario();
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
-      if (ESTADO.vista === 'configuracion' && ESTADO_CONFIG.seccionActiva === 'festivos') {
+      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
         agregarObservacionesACacheFestivos_(fecha, dia, guardados);
       }
     })
