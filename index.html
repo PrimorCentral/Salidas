@@ -653,15 +653,15 @@
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
   }
   .plantilla-ruta-peso:hover { background: #eef1f7; }
-  .plantilla-ruta-peso.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
-  .plantilla-ruta-peso.activo:hover { background: var(--navy-soft); }
+  .plantilla-ruta-peso.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-peso.activo:hover { filter: brightness(1.08); }
   .plantilla-ruta-cexpress {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
   }
   .plantilla-ruta-cexpress:hover { background: #eef1f7; }
-  .plantilla-ruta-cexpress.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
-  .plantilla-ruta-cexpress.activo:hover { background: var(--navy-soft); }
+  .plantilla-ruta-cexpress.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-cexpress.activo:hover { filter: brightness(1.08); }
   .plantilla-ruta-pdfespecial {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
@@ -1277,6 +1277,8 @@
   .modal-cancel { background: #eef0f3; color: var(--ink); }
   .modal-confirm { background: var(--navy); color: #fff; }
   .modal-confirm.danger { background: var(--danger); }
+  .modal-confirm:disabled { background: #c7cbd3; color: #fff; cursor: not-allowed; }
+  .modal-confirm:disabled:hover { filter: none; }
 
   /* ---------- Modal de confirmación "peligro" (borrado) ---------- */
   .modal-box.peligro { border-top: 5px solid var(--danger); }
@@ -1339,6 +1341,11 @@
   .modal-envio-chip {
     background: #fff; color: var(--amber-dark); border: 1px solid #f3dfb3; border-radius: 20px;
     padding: 4px 11px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  }
+
+  .modal-envio-alerta { background: #fceded; color: var(--danger); }
+  .modal-envio-alerta .modal-envio-chip {
+    color: var(--danger); border-color: #f3c6c6;
   }
 
   .modal-envio-nota {
@@ -1649,6 +1656,11 @@
   }
   .btn-admin-refrescar:hover { background: #e1e5eb; }
   .btn-admin-refrescar.girando svg { animation: girar-sinc 0.8s linear infinite; }
+  .btn-admin-buscar {
+    background: var(--navy); color: #fff; border: none; border-radius: 8px; padding: 7px 16px;
+    font-size: 12.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0; height: 32px;
+  }
+  .btn-admin-buscar:hover { background: var(--navy-soft); }
   .admin-resumen { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 10px; }
   .admin-tabla-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
   table.admin-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -1770,7 +1782,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.7';
+const APP_VERSION_ACTUAL = '1.3.8';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3060,7 +3072,7 @@ function renderAdminPaletsForzados() {
       '<div class="vista-card-header">' +
         '<h2>Palets forzados</h2>' +
         '<div class="vista-card-header-acciones">' +
-          '<button type="button" class="btn-admin-refrescar" id="btn-admin-palets-refrescar" title="Volver a pedir los datos">' +
+          '<button type="button" class="btn-admin-refrescar" id="btn-admin-palets-refrescar" title="Volver a pedir los datos con las fechas actuales">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
             'Refrescar</button>' +
         '</div>' +
@@ -3076,21 +3088,21 @@ function renderAdminPaletsForzados() {
             '<input type="text" id="admin-palets-buscar" placeholder="Nombre de la tienda…">' +
           '</div>' +
         '</div>' +
+        '<button type="button" class="btn-admin-buscar" id="btn-admin-palets-buscar">Buscar</button>' +
       '</div>' +
-      '<div id="admin-palets-resultado"><div class="loader">Cargando…</div></div>' +
+      '<div id="admin-palets-resultado"></div>' +
     '</div>';
 
   document.getElementById('btn-admin-palets-refrescar').onclick = function () { cargarPaletsForzadosAdmin_(true); };
+  document.getElementById('btn-admin-palets-buscar').onclick = function () { cargarPaletsForzadosAdmin_(); };
 
   document.getElementById('admin-palets-desde').addEventListener('change', function (e) {
     if (!e.target.value) return;
     ADMIN_PALETS_ESTADO.fechaIni = e.target.value;
-    cargarPaletsForzadosAdmin_();
   });
   document.getElementById('admin-palets-hasta').addEventListener('change', function (e) {
     if (!e.target.value) return;
     ADMIN_PALETS_ESTADO.fechaFin = e.target.value;
-    cargarPaletsForzadosAdmin_();
   });
 
   let temporizadorBusquedaPalets = null;
@@ -3103,7 +3115,24 @@ function renderAdminPaletsForzados() {
     }, 200);
   });
 
-  cargarPaletsForzadosAdmin_();
+  // Ya no se busca sola al entrar: si ya había resultados de una búsqueda
+  // anterior en esta misma sesión se muestran tal cual (sin volver a pedirlos
+  // al servidor); si no, se espera a que el usuario pulse "Buscar".
+  if (ADMIN_PALETS_ESTADO.datos) {
+    pintarTablaPaletsForzados_();
+  } else {
+    mostrarPromptBusquedaPalets_();
+  }
+}
+
+function mostrarPromptBusquedaPalets_() {
+  const cont = document.getElementById('admin-palets-resultado');
+  if (!cont) return;
+  cont.innerHTML =
+    '<div class="emails-config-vacio">' +
+      '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+      'Elige el rango de fechas y pulsa "Buscar" para consultar el registro.' +
+    '</div>';
 }
 
 function cargarPaletsForzadosAdmin_(esRefrescoManual) {
@@ -4900,6 +4929,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     let totalTiendas = 0;
     let tiendasConDatos = 0;
     const pendientes = [];
+    const excedidas = [];
+    const pesoFaltante = [];
     tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
       if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada')) return;
       totalTiendas++;
@@ -4907,6 +4938,20 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const valor = totalInput ? parseFloat(totalInput.value) : NaN;
       if (!isNaN(valor) && valor > 0) tiendasConDatos++;
       else pendientes.push(tr.getAttribute('data-nombre') || '');
+      const limite = parseFloat(tr.getAttribute('data-limite'));
+      if (!isNaN(valor) && valor > 0 && !isNaN(limite) && limite > 0 && valor > limite) {
+        excedidas.push({
+          nombre: tr.getAttribute('data-nombre') || '',
+          total: valor,
+          limite: limite,
+          exceso: valor - limite
+        });
+      }
+      if (seccion.tienePeso && !isNaN(valor) && valor > 0) {
+        const pesoInput = tr.querySelector('input[data-campo="peso"]');
+        const peso = pesoInput ? parseFloat(pesoInput.value) : NaN;
+        if (isNaN(peso) || peso <= 0) pesoFaltante.push(tr.getAttribute('data-nombre') || '');
+      }
     });
     let totalPalets = 0;
     tableWrap.querySelectorAll('input.celda-total').forEach(function (inp) {
@@ -4919,7 +4964,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       totalTiendas: totalTiendas,
       tiendasConDatos: tiendasConDatos,
       pendientes: pendientes,
-      totalPalets: totalPalets
+      totalPalets: totalPalets,
+      excedidas: excedidas,
+      pesoFaltante: pesoFaltante
     };
   }
 
@@ -6578,6 +6625,34 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
         '<span>Todas las tiendas tienen datos introducidos</span>' +
       '</div>';
 
+  const filaExcedidas = (datos.excedidas && datos.excedidas.length)
+    ? '<div class="modal-envio-aviso modal-envio-alerta">' +
+        '<div class="modal-envio-aviso-titulo">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+          '<span>' + datos.excedidas.length + ' tienda(s) por encima de su límite</span>' +
+        '</div>' +
+        '<div class="modal-envio-chips">' +
+          datos.excedidas.map(function (e) {
+            return '<span class="modal-envio-chip">' + escapeHtml(quitarCodigoTienda(e.nombre)) + ' — ' + e.total + '/' + e.limite + '</span>';
+          }).join('') +
+        '</div>' +
+      '</div>'
+    : '';
+
+  const pesoFaltante = datos.pesoFaltante || [];
+  const bloqueadoPorPeso = pesoFaltante.length > 0;
+  const filaPesoFaltante = bloqueadoPorPeso
+    ? '<div class="modal-envio-aviso modal-envio-alerta">' +
+        '<div class="modal-envio-aviso-titulo">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+          '<span>Falta el peso en ' + pesoFaltante.length + ' tienda(s) — es obligatorio para poder enviar</span>' +
+        '</div>' +
+        '<div class="modal-envio-chips">' +
+          pesoFaltante.map(function (n) { return '<span class="modal-envio-chip">' + escapeHtml(quitarCodigoTienda(n)) + '</span>'; }).join('') +
+        '</div>' +
+      '</div>'
+    : '';
+
   custom.innerHTML =
     '<div class="modal-envio-cabecera">' +
       '<div class="modal-envio-cabecera-icono">' +
@@ -6604,6 +6679,8 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
       '</div>' +
     '</div>' +
     filaAviso +
+    filaExcedidas +
+    filaPesoFaltante +
     (esDefinitivo
       ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y no se podrá editar.</p>'
       : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable hasta que envies el definitivo.</p>');
@@ -6611,15 +6688,17 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-confirm-btn">' + (esDefinitivo ? 'Enviar Definitivo' : 'Enviar Previsión') + '</button>';
+    '<button class="modal-confirm" id="modal-confirm-btn"' + (bloqueadoPorPeso ? ' disabled title="Completa el peso de todas las tiendas antes de enviar"' : '') + '>' + (esDefinitivo ? 'Enviar Definitivo' : 'Enviar Previsión') + '</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  document.getElementById('modal-confirm-btn').onclick = function () {
-    mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…');
-    onConfirmar(function (ok, mensaje) {
-      mostrarModalResultadoEnvio(ok, mensaje);
-    });
-  };
+  if (!bloqueadoPorPeso) {
+    document.getElementById('modal-confirm-btn').onclick = function () {
+      mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…');
+      onConfirmar(function (ok, mensaje) {
+        mostrarModalResultadoEnvio(ok, mensaje);
+      });
+    };
+  }
 }
 
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
