@@ -1795,7 +1795,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.3.9';
+const APP_VERSION_ACTUAL = '1.4.1';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3091,7 +3091,7 @@ function renderAdminPaletsForzados() {
             'Refrescar</button>' +
         '</div>' +
       '</div>' +
-      '<p>Registro de cada vez que se ha dado palets en una nave que traía "NO".</p>' +
+      '<p>Registro de cada vez que se han dado palets en una casilla que traía "NO" (avisos confirmados a mano en el conteo del día). Es un histórico de solo lectura: no se puede editar ni borrar desde aquí.</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Desde</label><input type="date" id="admin-palets-desde" value="' + ADMIN_PALETS_ESTADO.fechaIni + '"></div>' +
         '<div class="admin-filtro-campo"><label>Hasta</label><input type="date" id="admin-palets-hasta" value="' + ADMIN_PALETS_ESTADO.fechaFin + '"></div>' +
@@ -5229,16 +5229,39 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
     y += 2;
   }
 
+  // Fila final de TOTAL GENERAL: suma del TOTAL de todas las tiendas no
+  // cerradas (misma lógica que el total que se ve en el chip de cabecera
+  // de la agrupación en pantalla). El resto de columnas de esa fila se
+  // dejan en blanco salvo "Tienda", donde va la etiqueta.
+  const totalGeneral = filas.reduce(function (acc, fila) {
+    const v = parseFloat(fila[5]); // índice 5 = TOTAL
+    return acc + (isNaN(v) ? 0 : v);
+  }, 0);
+  const filaTotal = ['TOTAL GENERAL', '', '', '', '', String(totalGeneral), '']
+    .concat(seccion.tienePeso ? [''] : [])
+    .concat(seccion.tieneCExpress ? [''] : []);
+  const filasConTotal = filas.concat([filaTotal]);
+  const indiceFilaTotal = filasConTotal.length - 1;
+
   doc.autoTable({
     startY: y,
     head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])],
-    body: filas,
+    body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
     bodyStyles: { halign: 'center' },
     columnStyles: {
       0: { fontStyle: 'bold', fontSize: 11, halign: 'left' },
       5: { fontStyle: 'bold' }
+    },
+    // La fila de TOTAL GENERAL se pinta con un fondo distinto y en negrita,
+    // igual que una fila de cierre en una tabla contable.
+    didParseCell: function (data) {
+      if (data.section === 'body' && data.row.index === indiceFilaTotal) {
+        data.cell.styles.fillColor = [242, 245, 249];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.lineWidth = { top: 0.4 };
+      }
     },
     // Margen inferior reducido y a propósito pequeño: la página final se
     // dimensiona para que quepa justo, así que no hace falta el hueco de
