@@ -469,6 +469,21 @@
   }
   .emails-config-badge.nueva { background: #f5deA0; color: #7a5417; }
   .emails-config-badge.sinuso { background: #f4d4d4; color: #8a3a3a; }
+
+  /* Panel "Aviso a tiendas (barrido del día)" */
+  .barrido-resumen { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
+  .barrido-chip {
+    font-size: 12px; font-weight: 700; border-radius: 20px; padding: 5px 12px;
+    background: var(--panel-alt, #f2f4f7); color: var(--ink-soft);
+  }
+  .barrido-chip.ok { background: #dcf3e3; color: #1f6b3a; }
+  .barrido-chip.error { background: #f4d4d4; color: #8a3a3a; }
+  .barrido-detalle { margin: 8px 0; font-size: 12.5px; }
+  .barrido-detalle summary { cursor: pointer; font-weight: 700; color: var(--navy); padding: 4px 0; }
+  .barrido-detalle ul { margin: 6px 0 0; padding-left: 18px; max-height: 220px; overflow-y: auto; }
+  .barrido-detalle li { margin-bottom: 3px; word-break: break-word; }
+  #btn-barrido-enviar { background: var(--danger, #c0392b) !important; border-color: var(--danger, #c0392b) !important; }
+  #btn-barrido-enviar:hover { filter: brightness(0.92); }
   .emails-config-borrar {
     display: none; background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 3px;
     border-radius: 5px;
@@ -675,13 +690,6 @@
   .plantilla-ruta-cexpress:hover { background: #eef1f7; }
   .plantilla-ruta-cexpress.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
   .plantilla-ruta-cexpress.activo:hover { filter: brightness(1.08); }
-  .plantilla-ruta-domingo {
-    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
-    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
-  }
-  .plantilla-ruta-domingo:hover { background: #eef1f7; }
-  .plantilla-ruta-domingo.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
-  .plantilla-ruta-domingo.activo:hover { filter: brightness(1.08); }
   .plantilla-ruta-pdfespecial {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
@@ -948,20 +956,13 @@
   .notas-generales { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; margin-top: 4px; }
   .nota-chip {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
-    background: #fdf0d2; border: 1px solid #f0c14b; border-left: 4px solid var(--amber-dark);
-    color: #6b4a0a; border-radius: 8px;
-    padding: 10px 14px; font-size: 13.5px; font-weight: 700; line-height: 1.4;
-    box-shadow: 0 1px 4px rgba(214, 158, 46, .18);
+    background: #fdf6ea; border: 1px solid #f0ddb8; color: #7a5417; border-radius: 8px;
+    padding: 9px 12px; font-size: 13px; line-height: 1.4;
   }
-  .nota-chip.tipo-cierre {
-    background: #fbdede; border-color: #e8a3a3; border-left-color: var(--danger); color: #7a2323;
-    box-shadow: 0 1px 4px rgba(196, 60, 60, .18);
-  }
-  .nota-chip .txt { flex: 1; display: flex; align-items: flex-start; gap: 8px; }
-  .nota-chip .txt svg { flex-shrink: 0; margin-top: 1px; color: var(--amber-dark); }
-  .nota-chip.tipo-cierre .txt svg { color: var(--danger); }
+  .nota-chip.tipo-cierre { background: #fceded; border-color: #f0c8c8; color: #8a3a3a; }
+  .nota-chip .txt { flex: 1; }
   .nota-chip .del {
-    background: none; border: none; color: inherit; opacity: .6; padding: 0 2px; font-size: 16px; line-height: 1; font-weight: 700;
+    background: none; border: none; color: inherit; opacity: .55; padding: 0 2px; font-size: 15px; line-height: 1;
   }
   .nota-chip .del:hover { opacity: 1; }
 
@@ -1075,20 +1076,16 @@
   }
   .btn-pdf-especial-seccion:hover { background: #e1e5eb; }
 
-  /* Botones "Enviar Previsión" / "Enviar Definitivo" en la cabecera, junto al badge de estado.
-     Previsión es discreto (envío ligero, se puede repetir sin consecuencias);
-     Definitivo es el único botón con color fuerte de la fila, para que destaque
-     como la acción seria e irreversible del día. */
+  /* Botones "Enviar Previsión" / "Enviar Definitivo" en la cabecera, junto al badge de estado */
   .btn-header-prevision {
-    background: #fff; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 20px;
-    padding: 6px 14px 6px 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
-    text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 5px;
+    background: #fff; color: var(--amber-dark); border: 1.5px solid var(--amber); border-radius: 20px;
+    padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: .03em;
   }
-  .btn-header-prevision svg { flex-shrink: 0; }
-  .btn-header-prevision:hover { background: #f5f6f8; border-color: #d3d7de; color: var(--ink); }
+  .btn-header-prevision:hover { background: #fdf6ea; }
   .btn-header-prevision:disabled { opacity: .55; cursor: not-allowed; }
   .btn-header-definitivo {
-    background: var(--amber); color: #fff; border: none; border-radius: 20px;
+    background: var(--amber); color: #2a1c04; border: none; border-radius: 20px;
     padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
     text-transform: uppercase; letter-spacing: .03em;
   }
@@ -1255,11 +1252,7 @@
 
   table.conteo tr.fila-cerrada { background: #fceded !important; }
   table.conteo tr.fila-cerrada td.nombre { color: #8a3a3a; }
-  .motivo-cierre {
-    font-size: 12.5px; color: var(--danger); font-weight: 700;
-    width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  table.conteo tr.fila-cerrada td { vertical-align: middle; }
+  .motivo-cierre { font-size: 10.5px; color: var(--danger); font-weight: 600; margin-top: 2px; max-width: 140px; }
 
   .btn-cerrar-tienda {
     background: none; border: none; color: var(--ink-soft); padding: 5px; border-radius: 6px; display: inline-flex;
@@ -1817,7 +1810,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.4.3';
+const APP_VERSION_ACTUAL = '1.4.4';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1979,7 +1972,12 @@ const METODOS_REMOTOS_ = {
   activarPdfEspecial: 'activarPdfEspecial',
   desactivarPdfEspecial: 'desactivarPdfEspecial',
   bloquearCampoTiendaPlantilla: 'bloquearCampoTiendaPlantilla',
-  desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla'
+  desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla',
+  getTiendasConfig: 'getTiendasConfig',
+  guardarEmailTienda: 'guardarEmailTienda',
+  eliminarTiendaConfig: 'eliminarTiendaConfig',
+  sincronizarTiendas: 'sincronizarTiendas',
+  enviarAvisosTiendas: 'enviarAvisosTiendas'
 };
 
 function llamarApi_(accion, args, intento) {
@@ -2196,7 +2194,8 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 // añaden a esta lista).
 const CONFIG_SECCIONES = [
   { id: 'emails', label: 'Emails agencias' },
-  { id: 'plantilla', label: 'Rutas y tiendas' }
+  { id: 'plantilla', label: 'Rutas y tiendas' },
+  { id: 'tiendas', label: 'Configuración tiendas' }
   // futuras secciones de Configuración van aquí
 ];
 let ESTADO_CONFIG = { seccionActiva: 'emails' };
@@ -2378,6 +2377,7 @@ function renderVistaConfiguracion() {
 function renderSeccionConfigActiva() {
   if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
   else if (ESTADO_CONFIG.seccionActiva === 'plantilla') renderConfigPlantilla();
+  else if (ESTADO_CONFIG.seccionActiva === 'tiendas') renderConfigTiendas();
 }
 
 /** ADMINISTRACIÓN: mismo patrón que renderVistaConfiguracion, pero con su
@@ -2888,6 +2888,7 @@ function ajustarAlturasListasConfig_debounced_() {
   _timerAjusteAlturasConfig = setTimeout(function () {
     ajustarAlturaListaScrollable_('emails-config-lista');
     ajustarAlturaListaScrollable_('festivos-lista');
+    ajustarAlturaListaScrollable_('tiendas-config-lista');
   }, 120);
 }
 
@@ -3066,6 +3067,299 @@ function sincronizarAgrupacionesDesdeApp_() {
         ? 'Todo al día: no hay cambios'
         : nuevas.length + ' nueva(s), ' + huerfanas.length + ' sin uso');
       cargarAgrupacionesConfig_();
+    })
+    .catch(function (err) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      mostrarErrorServidor(err);
+    });
+}
+
+/* ---------------- CONFIGURACIÓN: "Configuración tiendas" ----------------
+ * Mismo patrón que "Emails agencias" (Config_Agrupaciones), pero sobre
+ * Config_Tiendas: email de cada tienda para el aviso de "barrido de día".
+ * Además, solo para admin, incluye el panel para lanzar el barrido: envía
+ * a cada tienda con palets asignados ese día un correo con el total y la
+ * fecha de entrega calculada (24H/48H/72H según el marcador "*"/"^" de su
+ * nombre — ver detectarPlazoTienda_ en el backend). Requiere en Code.gs:
+ * getTiendasConfig, guardarEmailTienda, eliminarTiendaConfig,
+ * sincronizarTiendas y enviarAvisosTiendas.
+ */
+let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
+let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, simulado: false };
+
+function htmlBarridoTiendasCard_() {
+  return (
+    '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
+      '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas ese día y con email configurado abajo.</p>' +
+      '<div class="admin-filtros">' +
+        '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
+        '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
+        '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-barrido-enviar">Enviar avisos reales</button>' +
+      '</div>' +
+      '<div id="barrido-resultado"></div>' +
+    '</div>'
+  );
+}
+
+function vincularBarridoTiendas_() {
+  const fechaInput = document.getElementById('barrido-fecha');
+  if (fechaInput) {
+    fechaInput.addEventListener('change', function (e) {
+      if (e.target.value) BARRIDO_TIENDAS_ESTADO.fecha = e.target.value;
+    });
+  }
+  const btnPreview = document.getElementById('btn-barrido-preview');
+  if (btnPreview) btnPreview.onclick = function () { ejecutarBarridoTiendas_(true); };
+  const btnEnviar = document.getElementById('btn-barrido-enviar');
+  if (btnEnviar) {
+    btnEnviar.onclick = function () {
+      appConfirm(
+        'Enviar avisos reales',
+        'Vas a enviar un correo real a cada tienda con palets asignados el ' + formatearFechaLarga(BARRIDO_TIENDAS_ESTADO.fecha) + '. Esta acción no se puede deshacer. ¿Seguro que quieres continuar?',
+        function () { ejecutarBarridoTiendas_(false); }
+      );
+    };
+  }
+  if (BARRIDO_TIENDAS_ESTADO.resultado) pintarResultadoBarridoTiendas_();
+}
+
+function ejecutarBarridoTiendas_(simulacion) {
+  const resEl = document.getElementById('barrido-resultado');
+  const btnPreview = document.getElementById('btn-barrido-preview');
+  const btnEnviar = document.getElementById('btn-barrido-enviar');
+  if (btnPreview) btnPreview.disabled = true;
+  if (btnEnviar) btnEnviar.disabled = true;
+  if (resEl) resEl.innerHTML = '<div class="loader">' + (simulacion ? 'Calculando vista previa…' : 'Enviando correos…') + '</div>';
+
+  llamarApi_('enviarAvisosTiendas', [BARRIDO_TIENDAS_ESTADO.fecha, simulacion])
+    .then(function (resultado) {
+      if (btnPreview) btnPreview.disabled = false;
+      if (btnEnviar) btnEnviar.disabled = false;
+      BARRIDO_TIENDAS_ESTADO.resultado = resultado;
+      BARRIDO_TIENDAS_ESTADO.simulado = simulacion;
+      pintarResultadoBarridoTiendas_();
+      mostrarToast(simulacion
+        ? 'Vista previa: ' + resultado.enviados.length + ' se enviarían'
+        : resultado.enviados.length + ' correo(s) enviado(s)');
+    })
+    .catch(function (err) {
+      if (btnPreview) btnPreview.disabled = false;
+      if (btnEnviar) btnEnviar.disabled = false;
+      if (resEl) resEl.innerHTML = '';
+      mostrarErrorServidor(err);
+    });
+}
+
+function pintarResultadoBarridoTiendas_() {
+  const resEl = document.getElementById('barrido-resultado');
+  if (!resEl) return;
+  const r = BARRIDO_TIENDAS_ESTADO.resultado;
+  if (!r) { resEl.innerHTML = ''; return; }
+
+  function listaColapsable(titulo, items, render) {
+    if (!items.length) return '';
+    return (
+      '<details class="barrido-detalle">' +
+        '<summary>' + titulo + ' (' + items.length + ')</summary>' +
+        '<ul>' + items.map(render).join('') + '</ul>' +
+      '</details>'
+    );
+  }
+
+  resEl.innerHTML =
+    '<div class="barrido-resumen">' +
+      '<div class="barrido-chip ok">' + r.enviados.length + (BARRIDO_TIENDAS_ESTADO.simulado ? ' se enviarían' : ' enviados') + '</div>' +
+      '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
+      '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
+      '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
+      (r.errores.length ? '<div class="barrido-chip error">' + r.errores.length + ' con error</div>' : '') +
+    '</div>' +
+    listaColapsable(BARRIDO_TIENDAS_ESTADO.simulado ? 'Se enviarían' : 'Enviados', r.enviados, function (it) {
+      return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — entrega ' + formatearFechaLarga(it.fechaEntrega) + ' — ' + escapeHtml(it.email) + '</li>';
+    }) +
+    listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+    listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+    listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+    listaColapsable('Errores de envío', r.errores, function (it) { return '<li>' + escapeHtml(it.tienda) + ' — ' + escapeHtml(it.error) + '</li>'; });
+}
+
+function renderConfigTiendas() {
+  const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+  if (!BARRIDO_TIENDAS_ESTADO.fecha) BARRIDO_TIENDAS_ESTADO.fecha = hoyStr();
+
+  cont.innerHTML =
+    (esAdmin() ? htmlBarridoTiendasCard_() : '') +
+    '<div class="vista-card">' +
+      '<div class="emails-config-fijo">' +
+        '<div class="vista-card-header">' +
+          '<h2>Configuración tiendas</h2>' +
+          '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-tiendas" title="Vuelve a recorrer todas las hojas de día y añade las tiendas nuevas / marca las que ya no se usan">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+              'Buscar y sincronizar cambios de tiendas</button>' +
+          '</div>' +
+        '</div>' +
+        '<p>Email de cada tienda, usado para avisarle por correo de los palets que va a recibir cuando se hace el barrido del día.</p>' +
+        (esAdmin() ? '' :
+          '<div class="emails-config-solo-lectura">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+            'Solo lectura: entra con la contraseña de administrador para poder editar, borrar o enviar avisos.' +
+          '</div>') +
+        '<div class="emails-config-toolbar">' +
+          '<div class="emails-config-busqueda">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+            '<input type="text" id="tiendas-config-buscar" placeholder="Buscar tienda o email…">' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="tiendas-config-lista"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-sincronizar-tiendas').onclick = sincronizarTiendasDesdeApp_;
+
+  let temporizadorBusquedaTiendas = null;
+  document.getElementById('tiendas-config-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusquedaTiendas);
+    const valor = e.target.value;
+    temporizadorBusquedaTiendas = setTimeout(function () {
+      TIENDAS_CONFIG_ESTADO.filtroTexto = valor.trim().toLowerCase();
+      pintarListaTiendas_();
+    }, 200);
+  });
+
+  cargarTiendasConfig_();
+  ajustarAlturaListaScrollable_('tiendas-config-lista');
+  window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
+
+  if (esAdmin()) vincularBarridoTiendas_();
+}
+
+function cargarTiendasConfig_() {
+  if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'tiendas') return;
+  llamarApi_('getTiendasConfig', [])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'tiendas') return;
+      TIENDAS_CONFIG_ESTADO.datos = datos || [];
+      pintarListaTiendas_();
+      ajustarAlturaListaScrollable_('tiendas-config-lista');
+    })
+    .catch(function (err) {
+      mostrarErrorServidor(err);
+      const listaEl = document.getElementById('tiendas-config-lista');
+      if (listaEl) listaEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar la lista.</div>';
+    });
+}
+
+function pintarListaTiendas_() {
+  const listaEl = document.getElementById('tiendas-config-lista');
+  if (!listaEl) return;
+
+  const filtro = TIENDAS_CONFIG_ESTADO.filtroTexto;
+  const items = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+    if (!filtro) return true;
+    const texto = (it.tienda + ' ' + it.email + ' ' + (it.notas || '')).toLowerCase();
+    return texto.indexOf(filtro) !== -1;
+  });
+
+  if (!items.length) {
+    listaEl.innerHTML =
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        (TIENDAS_CONFIG_ESTADO.datos.length ? 'Ninguna tienda coincide con la búsqueda.' : 'Todavía no hay tiendas en Config_Tiendas. Usa "Buscar y sincronizar cambios de tiendas" para traerlas de las hojas de día.') +
+      '</div>';
+    return;
+  }
+
+  listaEl.innerHTML = items.map(function (it, idx) {
+    const esNueva = /^NUEVA/i.test(it.estado || '');
+    const esSinUso = /^SIN USO/i.test(it.estado || '');
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : ''));
+    const badge = esNueva
+      ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
+      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>' : '');
+    const idSeguro = 'tc' + idx;
+    return (
+      '<div class="' + clase + '">' +
+        '<div class="emails-config-cabecera">' +
+          '<span class="emails-config-nombre">' + escapeHtml(it.tienda) + '</span>' +
+          badge +
+          '<button type="button" class="emails-config-borrar" title="Eliminar de la configuración" data-borrar="' + escapeAttr(it.tienda) + '">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="emails-config-campos">' +
+          '<div class="emails-config-campo">' +
+            '<label>Email</label>' +
+            '<input type="text" id="' + idSeguro + '_email" value="' + escapeAttr(it.email || '') + '" placeholder="tienda@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '</div>' +
+          '<div class="emails-config-campo">' +
+            '<label>Notas</label>' +
+            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '</div>' +
+        '</div>' +
+        '<div class="emails-config-pie">' +
+          '<button type="button" class="emails-config-guardar" data-guardar="' + escapeAttr(it.tienda) + '" data-id="' + idSeguro + '">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>' +
+            'Guardar</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+
+  listaEl.querySelectorAll('[data-guardar]').forEach(function (btn) {
+    btn.onclick = function () { guardarEmailTienda_(btn.getAttribute('data-guardar'), btn.getAttribute('data-id'), btn); };
+  });
+  listaEl.querySelectorAll('[data-borrar]').forEach(function (btn) {
+    btn.onclick = function () { confirmarEliminarTiendaConfig_(btn.getAttribute('data-borrar')); };
+  });
+}
+
+function guardarEmailTienda_(tienda, idSeguro, btn) {
+  const email = document.getElementById(idSeguro + '_email').value;
+  const notas = document.getElementById(idSeguro + '_notas').value;
+  btn.disabled = true;
+  llamarApi_('guardarEmailTienda', [tienda, email, notas])
+    .then(function () {
+      mostrarToast('Email guardado');
+      cargarTiendasConfig_();
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      mostrarErrorServidor(err);
+    });
+}
+
+function confirmarEliminarTiendaConfig_(tienda) {
+  appConfirm(
+    'Eliminar de la configuración',
+    '¿Seguro que quieres eliminar "' + tienda + '" de Config_Tiendas? Si esa tienda se sigue usando en alguna hoja de día, no se le podrá enviar el aviso por email hasta que vuelvas a añadirla.',
+    function () { eliminarTiendaConfig_(tienda); }
+  );
+}
+
+function eliminarTiendaConfig_(tienda) {
+  llamarApi_('eliminarTiendaConfig', [tienda])
+    .then(function () {
+      mostrarToast('Eliminado');
+      cargarTiendasConfig_();
+    })
+    .catch(mostrarErrorServidor);
+}
+
+function sincronizarTiendasDesdeApp_() {
+  const btn = document.getElementById('btn-sincronizar-tiendas');
+  if (btn) { btn.classList.add('girando'); btn.disabled = true; }
+  llamarApi_('sincronizarTiendas', [])
+    .then(function (resultado) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      const nuevas = (resultado && resultado.nuevas) || [];
+      const huerfanas = (resultado && resultado.huerfanas) || [];
+      mostrarToast(!nuevas.length && !huerfanas.length
+        ? 'Todo al día: no hay cambios'
+        : nuevas.length + ' nueva(s), ' + huerfanas.length + ' sin uso');
+      cargarTiendasConfig_();
     })
     .catch(function (err) {
       if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
@@ -3689,7 +3983,6 @@ function pintarPlantilla_() {
           (esAdmin() ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
-            '<button type="button" class="plantilla-ruta-domingo' + (s.tieneDomingo ? ' activo' : '') + '" data-toggle-domingo="' + escapeAttr(s.nombre) + '" data-domingo-activo="' + (s.tieneDomingo ? '1' : '0') + '" title="' + (s.tieneDomingo ? 'Quitar la casilla DOMINGO de esta ruta' : 'Activar la casilla DOMINGO en el conteo de esta ruta') + '">DOMINGO</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
@@ -3804,9 +4097,6 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-cexpress]').forEach(function (btn) {
     btn.onclick = function () { toggleCExpressRutaPlantilla_(btn.getAttribute('data-toggle-cexpress'), btn.getAttribute('data-cexpress-activo') === '1'); };
   });
-  listaEl.querySelectorAll('[data-toggle-domingo]').forEach(function (btn) {
-    btn.onclick = function () { toggleDomingoRutaPlantilla_(btn.getAttribute('data-toggle-domingo'), btn.getAttribute('data-domingo-activo') === '1'); };
-  });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
   });
@@ -3861,28 +4151,6 @@ function toggleCExpressRutaPlantilla_(nombreRuta, activoActualmente) {
     return;
   }
   guardarPlantillaOptimista_(mutar, 'activarCExpressRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla C.EXPRESS activada');
-}
-
-/** Activa/desactiva la casilla DOMINGO de una ruta desde "Rutas y tiendas".
- *  Igual que C.EXPRESS: al desactivarla se pide confirmación porque borra
- *  los valores ya guardados en esa ruta (ver desactivarDomingoRuta en el
- *  backend), y DOMINGO también se suma al TOTAL de cada tienda (ver
- *  recalcTotal en attachCalculoYValidacion). */
-function toggleDomingoRutaPlantilla_(nombreRuta, activoActualmente) {
-  const mutar = function () {
-    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
-    if (s) s.tieneDomingo = !activoActualmente;
-  };
-  if (activoActualmente) {
-    appConfirm(
-      'Quitar la casilla DOMINGO',
-      '¿Seguro que quieres quitar la casilla DOMINGO de "' + nombreRuta + '"? Se borrarán los valores de DOMINGO ya guardados en esta ruta.',
-      function () { guardarPlantillaOptimista_(mutar, 'desactivarDomingoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla DOMINGO desactivada'); },
-      true
-    );
-    return;
-  }
-  guardarPlantillaOptimista_(mutar, 'activarDomingoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla DOMINGO activada');
 }
 
 /** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".
@@ -4515,9 +4783,7 @@ function crearNotaChip(n) {
   div.className = 'nota-chip' + (n.tipo === 'cierre' ? ' tipo-cierre' : '');
   const span = document.createElement('span');
   span.className = 'txt';
-  span.innerHTML =
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-    '<span>' + escapeHtml(n.texto) + '</span>';
+  span.textContent = n.texto;
   const del = document.createElement('button');
   del.className = 'del';
   del.type = 'button';
@@ -4723,7 +4989,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (seccion.estado === 'enviado' && esHoy ? htmlBotonDeshacerEnvio_() : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
-      ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Enviar Previsión</button>'
+      ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>'
       : '') +
     (editable && seccion.estado !== 'enviado'
       ? '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
@@ -4817,15 +5083,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneDomingo) : '';
-    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress, seccion.tieneDomingo);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
     '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th>' +
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
     (seccion.tieneCExpress ? '<th>C.EXPRESS</th>' : '') +
-    (seccion.tieneDomingo ? '<th>DOMINGO</th>' : '') +
     '<th></th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
   if (!editable) {
@@ -5211,7 +5476,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         'CERRADA', '', '', '', ''
-      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneDomingo ? [''] : []));
+      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
       return;
     }
 
@@ -5228,7 +5493,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       valorCampo('cart'),
       valorCampo('total'),
       valorCampo('pdte')
-    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneDomingo ? [valorCampo('domingo')] : []));
+    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []));
   });
   return filas;
 }
@@ -5290,14 +5555,13 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   }, 0);
   const filaTotal = ['TOTAL GENERAL', '', '', '', '', String(totalGeneral), '']
     .concat(seccion.tienePeso ? [''] : [])
-    .concat(seccion.tieneCExpress ? [''] : [])
-    .concat(seccion.tieneDomingo ? [''] : []);
+    .concat(seccion.tieneCExpress ? [''] : []);
   const filasConTotal = filas.concat([filaTotal]);
   const indiceFilaTotal = filasConTotal.length - 1;
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneDomingo ? ['DOMINGO'] : [])],
+    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])],
     body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
@@ -5609,13 +5873,13 @@ function badgePrevision(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
-function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress, tieneDomingo) {
+function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   const textoIzquierda = esTotal ? t.nota : tiendas;
   const chipInicial = esTotal ? '0 palets' : t.nota;
   return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
-    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneDomingo ? 1 : 0)) + '">' +
+    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +
@@ -5672,7 +5936,7 @@ function celdaConteoHtml(campo, valor, forzado) {
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneDomingo) {
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress) {
   const marcador = parsearMarcadorTienda(t.nombre);
   const badgeHtml = marcador.badge
     ? '<span class="badge-plazo ' + marcador.badge.clase + '">' + marcador.badge.texto + '</span>'
@@ -5690,7 +5954,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
-      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneDomingo ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
@@ -5704,7 +5968,6 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
     (tieneCExpress ? '<td><input class="celda" data-campo="cexpress" type="number" step="0.01" value="' + (t.cexpress == null ? '' : t.cexpress) + '"></td>' : '') +
-    (tieneDomingo ? '<td><input class="celda" data-campo="domingo" type="number" step="0.01" value="' + (t.domingo == null ? '' : t.domingo) + '"></td>' : '') +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
     '</tr>';
@@ -5721,20 +5984,18 @@ function attachCalculoYValidacion(tr) {
   const ptaInput = tr.querySelector('input[data-campo="pta"]');
   const cartInput = tr.querySelector('input[data-campo="cart"]');
   const cexpressInput = tr.querySelector('input[data-campo="cexpress"]');
-  const domingoInput = tr.querySelector('input[data-campo="domingo"]');
   const totalInput = tr.querySelector('input[data-campo="total"]');
   const nota = tr.querySelector('.diff-nota');
 
   function recalcTotal() {
-    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && (!domingoInput || domingoInput.value === '')) {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '')) {
       totalInput.value = '';
     } else {
       const m = parseFloat(c60Input.value) || 0;
       const p = parseFloat(ptaInput.value) || 0;
       const c = parseFloat(cartInput.value) || 0;
       const ce = cexpressInput ? (parseFloat(cexpressInput.value) || 0) : 0;
-      const dg = domingoInput ? (parseFloat(domingoInput.value) || 0) : 0;
-      totalInput.value = m + p + c + ce + dg;
+      totalInput.value = m + p + c + ce;
     }
     validar();
   }
@@ -5763,7 +6024,6 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
-  if (domingoInput) domingoInput.addEventListener('input', recalcTotal);
   validar();
 }
 
@@ -5908,10 +6168,6 @@ function recogerFilas(tableWrap) {
     // (ver seccion.tieneCExpress).
     const cexpress = get('cexpress');
     if (cexpress !== undefined) fila.cexpress = cexpress;
-    // Igual que "cexpress", "domingo" solo existe si la ruta lo tiene
-    // activado (ver seccion.tieneDomingo).
-    const domingo = get('domingo');
-    if (domingo !== undefined) fila.domingo = domingo;
     filas.push(fila);
   });
   return filas;
@@ -6043,7 +6299,7 @@ function crearFormularioGestorObs_() {
     '</div>' +
     '<div class="gestor-loading-overlay" id="gestor-loading-overlay">' +
       '<div class="gestor-spinner"></div>' +
-      '<div class="gestor-loading-texto">Cargando agrupaciones y tiendas, un momento por favor…</div>' +
+      '<div class="gestor-loading-texto">Cargando agrupaciones de ese día…</div>' +
     '</div>';
 
   wrap.querySelector('#gestor-fecha').addEventListener('change', function (e) {
