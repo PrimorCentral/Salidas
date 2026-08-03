@@ -520,6 +520,10 @@
     border-radius: 9px; padding: 9px 12px; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px;
   }
   body.es-admin .emails-config-solo-lectura { display: none !important; }
+  .barrido-hora-nota {
+    font-size: 12px; color: var(--ink-soft); margin: -4px 0 14px;
+  }
+  #barrido-hora-automatica-fila { margin-bottom: 6px; }
   /* Cabecera fija de "Emails agencias": título, botón sincronizar, descripción
      y buscador no se mueven; el que se desplaza es solo #emails-config-lista,
      en su propia caja con scroll interno (no toda la página). */
@@ -1810,7 +1814,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVp
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.4.4';
+const APP_VERSION_ACTUAL = '1.4.5';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3086,12 +3090,25 @@ function sincronizarAgrupacionesDesdeApp_() {
  */
 let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
 let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, simulado: false };
+// Hora a partir de la cual se intenta el envío automático del aviso a
+// tiendas (ver getConfigAvisoTiendas/guardarHoraAvisoTiendas en el
+// backend). null = todavía no se ha cargado desde el servidor.
+let HORA_AVISO_TIENDAS_ESTADO = { hora: null, cargando: false };
 
 function htmlBarridoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
       '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas ese día y con email configurado abajo.</p>' +
+      '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
+        '<div class="admin-filtro-campo">' +
+          '<label>Envío automático diario a partir de</label>' +
+          '<input type="time" id="barrido-hora-automatica" value="' + escapeAttr(HORA_AVISO_TIENDAS_ESTADO.hora || '') + '">' +
+        '</div>' +
+        '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar hora</button>' +
+        '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-quitar-hora-aviso" title="Deja el aviso a tiendas en solo envío manual">Quitar (solo manual)</button>' +
+      '</div>' +
+      '<p class="barrido-hora-nota">Cada 15 min la app comprueba si ya ha pasado esa hora y si el día está completo (todas las agrupaciones ya enviadas como definitivo a la agencia). En cuanto se cumplen las dos cosas, envía el aviso a tiendas automáticamente, una sola vez por día. Si dejas el campo vacío, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -3122,6 +3139,55 @@ function vincularBarridoTiendas_() {
     };
   }
   if (BARRIDO_TIENDAS_ESTADO.resultado) pintarResultadoBarridoTiendas_();
+
+  const btnGuardarHora = document.getElementById('btn-guardar-hora-aviso');
+  if (btnGuardarHora) btnGuardarHora.onclick = function () { guardarHoraAvisoTiendas_(); };
+  const btnQuitarHora = document.getElementById('btn-quitar-hora-aviso');
+  if (btnQuitarHora) {
+    btnQuitarHora.onclick = function () {
+      const input = document.getElementById('barrido-hora-automatica');
+      if (input) input.value = '';
+      guardarHoraAvisoTiendas_();
+    };
+  }
+  cargarHoraAvisoTiendas_();
+}
+
+/** Trae de Propiedades del script la hora configurada para el aviso
+ *  automático a tiendas y rellena el input (solo si el admin no la ha
+ *  tocado ya a mano mientras se cargaba). */
+function cargarHoraAvisoTiendas_() {
+  if (HORA_AVISO_TIENDAS_ESTADO.cargando) return;
+  HORA_AVISO_TIENDAS_ESTADO.cargando = true;
+  llamarApi_('getConfigAvisoTiendas', [])
+    .then(function (cfg) {
+      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
+      HORA_AVISO_TIENDAS_ESTADO.hora = (cfg && cfg.horaAutomatica) || '';
+      const input = document.getElementById('barrido-hora-automatica');
+      if (input && document.activeElement !== input) input.value = HORA_AVISO_TIENDAS_ESTADO.hora;
+    })
+    .catch(function (err) {
+      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
+      mostrarErrorServidor(err);
+    });
+}
+
+/** Guarda la hora del input (o la borra, dejando el envío en solo manual). */
+function guardarHoraAvisoTiendas_() {
+  const input = document.getElementById('barrido-hora-automatica');
+  const btn = document.getElementById('btn-guardar-hora-aviso');
+  const hora = input ? input.value : '';
+  if (btn) btn.disabled = true;
+  llamarApi_('guardarHoraAvisoTiendas', [hora])
+    .then(function () {
+      if (btn) btn.disabled = false;
+      HORA_AVISO_TIENDAS_ESTADO.hora = hora;
+      mostrarToast(hora ? 'Hora guardada: envío automático a partir de las ' + hora : 'Envío automático desactivado (solo manual)');
+    })
+    .catch(function (err) {
+      if (btn) btn.disabled = false;
+      mostrarErrorServidor(err);
+    });
 }
 
 function ejecutarBarridoTiendas_(simulacion) {
