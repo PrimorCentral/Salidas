@@ -1804,8 +1804,11 @@
 // archivo, se crea aquí una réplica de "google.script.run" con la misma
 // forma (withSuccessHandler / withFailureHandler / nombreMetodo(args)).
 
-// 👉 PON AQUÍ la URL que te da Apps Script en
-//    "Implementar > Nueva implementación > Aplicación web" (termina en /exec)
+// 👉 Ya NO apunta directo a Apps Script: apunta al Worker de Cloudflare
+//    (conteos-proxy) que hace de proxy fiable delante de Apps Script.
+//    Ver cloudflare-worker.js para el porqué (evita los 302/CORS erráticos
+//    de Apps Script visto desde el navegador). Si algún día cambias de
+//    Worker, solo hay que tocar esta línea.
 const APPS_SCRIPT_URL = 'https://conteos-proxy.samsungjose1998.workers.dev';
 
 // Versión con la que se sirvió ESTE index.html. Se muestra abajo a la
@@ -1814,7 +1817,7 @@ const APPS_SCRIPT_URL = 'https://conteos-proxy.samsungjose1998.workers.dev';
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.4.5';
+const APP_VERSION_ACTUAL = '1.4.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1984,18 +1987,46 @@ const METODOS_REMOTOS_ = {
   enviarAvisosTiendas: 'enviarAvisosTiendas'
 };
 
-function llamarApi_(accion, args, intento) {
+function llamarApi_(accion, args, intento, onLento) {
   intento = intento || 1;
-  const MAX_INTENTOS_RED_ = 3; // 1 intento inicial + 2 reintentos
+  // Antes eran 3 intentos con reintento de red a cargo del navegador. Ahora
+  // las peticiones pasan por el Worker de Cloudflare (conteos-proxy), que
+  // YA reintenta 3 veces por su cuenta en el servidor (más rápido y sin
+  // depender del wifi del usuario) antes de devolver nada aquí -- ver
+  // cloudflare-worker.js. Así que aquí basta con un margen pequeño extra
+  // por si el propio Worker tardara en responder o hubiera un corte de
+  // red real del lado del usuario.
+  const MAX_INTENTOS_RED_ = 2;
+
+  // Techo de espera por intento: si ni el Worker ni Apps Script han
+  // contestado en este tiempo, se da el intento por fallido y (si quedan
+  // intentos) se reintenta, en vez de dejar al fetch() esperando sin fin.
+  const TIMEOUT_MS_ = 25000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS_);
+
+  // Si a los pocos segundos la petición todavía no ha contestado, avisamos
+  // con onLento (si nos han pasado uno) SIN cancelar nada: seguimos
+  // esperando la respuesta real. Esto es solo para que el usuario sepa que
+  // no se ha quedado colgado (Apps Script puede tardar mucho de forma
+  // intermitente, sobre todo en frío) -- abortar y reintentar aquí sería
+  // peor, porque Apps Script seguiría procesando la petición original de
+  // todas formas y solo añadiríamos carga extra.
+  const AVISO_LENTO_MS = 6000;
+  const timerLento = onLento ? setTimeout(onLento, AVISO_LENTO_MS) : null;
+  function limpiarTimerLento() { if (timerLento) clearTimeout(timerLento); }
+
   return fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     // 'text/plain' evita que el navegador lance una petición OPTIONS de
     // pre-vuelo (Apps Script no sabe responder a esas); el body sigue
     // siendo JSON, solo cambia la cabecera para que cuente como "simple".
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ accion: accion, token: SESSION_TOKEN, args: args })
+    body: JSON.stringify({ accion: accion, token: SESSION_TOKEN, args: args }),
+    signal: controller.signal
   })
     .then(function (resp) {
+      clearTimeout(timeoutId);
       // No usamos resp.json() directamente: Apps Script, cuando está
       // saturado (muchas llamadas simultáneas) o tiene un fallo puntual de
       // infraestructura, a veces no ejecuta tu código y en su lugar
@@ -2016,6 +2047,7 @@ function llamarApi_(accion, args, intento) {
       });
     })
     .then(function (data) {
+      limpiarTimerLento();
       if (!data.ok) {
         if (data.sesionCaducada) {
           SESSION_TOKEN = null;
@@ -2026,19 +2058,23 @@ function llamarApi_(accion, args, intento) {
       return data.resultado;
     })
     .catch(function (err) {
+      clearTimeout(timeoutId);
       // "Failed to fetch" (fetch falla ANTES de recibir respuesta: sin
       // conexión, wifi cortado, DNS...) llega aquí como TypeError. Eso es
       // un fallo de RED, no un error del servidor -- vale la pena
       // reintentar unas pocas veces con una pequeña espera. Un error real
       // del servidor (throw new Error(...) de arriba, p.ej. "Contraseña
       // incorrecta") NO es un TypeError, así que no se reintenta a ciegas.
-      // Se trata igual el caso de respuesta HTML no-JSON detectado arriba.
-      const esFalloDeRed = err instanceof TypeError || err.esRespuestaNoJson === true;
+      // Se trata igual el caso de respuesta HTML no-JSON detectado arriba,
+      // y el AbortError que dispara nuestro propio TIMEOUT_MS_ de arriba.
+      const esFalloDeRed = err instanceof TypeError || err.name === 'AbortError' || err.esRespuestaNoJson === true;
       if (esFalloDeRed && intento < MAX_INTENTOS_RED_) {
+        limpiarTimerLento();
         const esperaMs = 700 * intento;
         return new Promise(function (resolve) { setTimeout(resolve, esperaMs); })
-          .then(function () { return llamarApi_(accion, args, intento + 1); });
+          .then(function () { return llamarApi_(accion, args, intento + 1, onLento); });
       }
+      limpiarTimerLento();
       throw err;
     });
 }
@@ -2161,25 +2197,33 @@ function intentarLogin() {
   document.getElementById('login-error').style.display = 'none';
   btn.disabled = true; spinner.style.display = 'inline-block'; btnText.textContent = 'Comprobando…';
 
-  google.script.run
-    .withSuccessHandler(function (ok) {
+  // Llamamos directo a llamarApi_ (en vez de pasar por el shim
+  // google.script.run) para poder pasarle onLento y avisar en el propio
+  // botón si el servidor está tardando más de lo normal, sin cancelar ni
+  // reintentar la petición -- ver la nota de cabecera de llamarApi_.
+  llamarApi_('login', [pass], 1, function () {
+    btnText.textContent = 'Esto está tardando más de lo normal, seguimos intentando…';
+  })
+    .then(function (resultado) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
-      if (ok) {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'flex';
-        ajustarAlturaTopbar_();
-        ESTADO.fecha = hoyStr();
-        ESTADO.anioMes = anioMesDe(ESTADO.fecha);
-        cambiarVista('inicio');
-      } else {
+      SESSION_TOKEN = resultado.token;
+      SESSION_ROL = resultado.rol;
+      aplicarPermisosUI();
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      ajustarAlturaTopbar_();
+      ESTADO.fecha = hoyStr();
+      ESTADO.anioMes = anioMesDe(ESTADO.fecha);
+      cambiarVista('inicio');
+    })
+    .catch(function (err) {
+      btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
+      if (err.message === 'Contraseña incorrecta') {
         document.getElementById('login-error').style.display = 'block';
+      } else {
+        mostrarErrorServidor(err);
       }
-    })
-    .withFailureHandler(function (err) {
-      btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
-      mostrarErrorServidor(err);
-    })
-    .checkPassword(pass);
+    });
 }
 document.getElementById('login-pass').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') intentarLogin();
