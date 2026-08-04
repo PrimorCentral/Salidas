@@ -3188,7 +3188,7 @@ function htmlBarridoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas ese día y con email configurado abajo.</p>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y cuyas rutas de ese día ya se hayan enviado todas como definitivo, con email configurado abajo.</p>' +
       '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
         '<div class="admin-filtro-campo">' +
           '<label>Envío automático diario a partir de</label>' +
@@ -3197,7 +3197,7 @@ function htmlBarridoTiendasCard_() {
         '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar hora</button>' +
         '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-quitar-hora-aviso" title="Deja el aviso a tiendas en solo envío manual">Quitar (solo manual)</button>' +
       '</div>' +
-      '<p class="barrido-hora-nota">Cada 15 min la app comprueba si ya ha pasado esa hora y si el día está completo (todas las agrupaciones ya enviadas como definitivo a la agencia). En cuanto se cumplen las dos cosas, envía el aviso a tiendas automáticamente, una sola vez por día. Si dejas el campo vacío, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
+      '<p class="barrido-hora-nota">Cada 15 min la app comprueba si ya ha pasado esa hora. En cuanto se cumple, avisa a las tiendas que ya estén listas: aquellas cuyas rutas/agrupaciones de hoy YA se hayan enviado todas como definitivo a la agencia, aunque el resto del cuadrante del día siga pendiente. Si una tienda recibe de varias rutas, espera a que todas estén enviadas antes de avisarla. No hace falta que el día entero esté cerrado, y el barrido puede repetirse a lo largo del día según van llegando más definitivos: cada tienda solo recibe su aviso una vez. Si dejas el campo vacío, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -3325,6 +3325,7 @@ function pintarResultadoBarridoTiendas_() {
   resEl.innerHTML =
     '<div class="barrido-resumen">' +
       '<div class="barrido-chip ok">' + r.enviados.length + (BARRIDO_TIENDAS_ESTADO.simulado ? ' se enviarían' : ' enviados') + '</div>' +
+      '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' pendientes de otras rutas</div>' +
       '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
       '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
       '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
@@ -3333,6 +3334,7 @@ function pintarResultadoBarridoTiendas_() {
     listaColapsable(BARRIDO_TIENDAS_ESTADO.simulado ? 'Se enviarían' : 'Enviados', r.enviados, function (it) {
       return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — entrega ' + formatearFechaLarga(it.fechaEntrega) + ' — ' + escapeHtml(it.email) + '</li>';
     }) +
+    listaColapsable('Pendientes de otras rutas (aún sin enviar como definitivo)', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
     listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
     listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
     listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
