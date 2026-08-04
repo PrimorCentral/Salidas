@@ -1706,6 +1706,32 @@
   table.admin-tabla tbody tr:nth-child(even) { background: #fafbfc; }
   table.admin-tabla td.admin-col-palets { font-weight: 700; color: var(--navy); text-align: center; }
   table.admin-tabla td.admin-col-tienda { white-space: normal; min-width: 160px; }
+
+  /* ---- Administración > Servidores ---- */
+  .servidores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 6px; }
+  .servidor-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #fafbfc;
+    display: flex; flex-direction: column; gap: 8px; position: relative;
+  }
+  .servidor-card.conectado { border-color: #cfe8dd; background: #f5fbf8; }
+  .servidor-card.desconectado { border-color: #f4d4d4; background: #fdf6f6; }
+  .servidor-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .servidor-card-nombre { font-size: 14px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+  .servidor-card-email { font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; word-break: break-all; }
+  .servidor-estado-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px;
+    font-size: 10.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  }
+  .servidor-estado-badge .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .servidor-estado-badge.ok { background: #e4f3ec; color: var(--ok); }
+  .servidor-estado-badge.mal { background: #fbe3e3; color: var(--danger); }
+  .servidor-card-fila { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--ink); }
+  .servidor-card-fila .etiqueta { color: var(--ink-soft); }
+  .servidor-card-fila .valor { font-weight: 700; }
+  .servidor-card-cuota-barra { height: 5px; border-radius: 3px; background: #e9ecf1; overflow: hidden; }
+  .servidor-card-cuota-barra > div { height: 100%; background: var(--amber-dark); }
+  .servidor-card-cuota-barra.baja > div { background: var(--danger); }
+  .servidor-card-notas { font-size: 11.5px; color: var(--ink-soft); font-style: italic; border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 2px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -2271,7 +2297,8 @@ let ESTADO_CONFIG = { seccionActiva: 'emails' };
 // Todo el menú es exclusivo de admin (ver CSS "#topbar-dropdown-administracion").
 const ADMIN_SECCIONES = [
   { id: 'festivos', label: 'Gestión festivos' },
-  { id: 'palets-forzados', label: 'Palets forzados' }
+  { id: 'palets-forzados', label: 'Palets forzados' },
+  { id: 'servidores', label: 'Servidores' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
@@ -2457,6 +2484,7 @@ function renderVistaAdministracion() {
 function renderSeccionAdminActiva() {
   if (ESTADO_ADMIN.seccionActiva === 'festivos') renderAdminFestivos();
   else if (ESTADO_ADMIN.seccionActiva === 'palets-forzados') renderAdminPaletsForzados();
+  else if (ESTADO_ADMIN.seccionActiva === 'servidores') renderAdminServidores();
 }
 
 /* ---------------- GESTIÓN FESTIVOS ----------------
@@ -3646,6 +3674,143 @@ function pintarTablaPaletsForzados_() {
       }).join('') +
       '</tbody>' +
     '</table></div>';
+}
+
+/* ---------------- ADMINISTRACIÓN: "Servidores" ----------------
+ * Pantalla de solo lectura que muestra el estado de la cuenta principal y
+ * de las cuentas puente (envío de lotes de avisos a tiendas), a partir de
+ * getEstadoServidores() (solo admin). No hay filtros: son pocas cuentas
+ * (una por lote + la principal), así que se listan todas en tarjetas.
+ * "Refrescar" vuelve a pedir el estado; no hay caché entre visitas a la
+ * sección salvo la de la propia sesión de navegación (mismo espíritu que
+ * "Palets forzados": si ya se cargó una vez, se repinta con lo que ya hay
+ * y solo se vuelve al servidor si se pulsa Refrescar o es la primera vez).
+ */
+let ADMIN_SERVIDORES_ESTADO = { datos: null };
+
+function renderAdminServidores() {
+  const cont = document.getElementById('admin-contenido');
+  if (!cont) return;
+
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Servidores</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-admin-refrescar" id="btn-admin-servidores-refrescar" title="Volver a consultar el estado ahora mismo">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+            'Refrescar</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Cuenta principal y cuentas puente que envían los avisos de palets a tiendas, con su cuota de email restante y cuándo dieron señales de vida por última vez.</p>' +
+      '<div id="admin-servidores-resultado"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-admin-servidores-refrescar').onclick = function () { cargarServidoresAdmin_(true); };
+
+  if (ADMIN_SERVIDORES_ESTADO.datos) {
+    pintarServidores_();
+  } else {
+    cargarServidoresAdmin_();
+  }
+}
+
+function cargarServidoresAdmin_(esRefrescoManual) {
+  if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'servidores') return;
+  const resultadoEl = document.getElementById('admin-servidores-resultado');
+  const btnRefrescar = document.getElementById('btn-admin-servidores-refrescar');
+  if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+
+  llamarApi_('getEstadoServidores', [])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'servidores') return;
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      ADMIN_SERVIDORES_ESTADO.datos = datos;
+      pintarServidores_();
+    })
+    .catch(function (err) {
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      mostrarErrorServidor(err);
+      if (resultadoEl) resultadoEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar el estado de los servidores.</div>';
+    });
+}
+
+function pintarServidores_() {
+  const cont = document.getElementById('admin-servidores-resultado');
+  if (!cont) return;
+  const datos = ADMIN_SERVIDORES_ESTADO.datos;
+  const servidores = (datos && datos.servidores) || [];
+
+  if (!servidores.length) {
+    cont.innerHTML =
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        'Ninguna cuenta se ha registrado todavía.' +
+      '</div>';
+    return;
+  }
+
+  cont.innerHTML =
+    '<div class="admin-resumen">' + servidores.length + (servidores.length === 1 ? ' cuenta' : ' cuentas') +
+      ' · umbral de conexión: ' + escapeHtml(String(datos.umbralConectadoMinutos)) + ' min</div>' +
+    '<div class="servidores-grid">' + servidores.map(pintarTarjetaServidor_).join('') + '</div>';
+}
+
+function pintarTarjetaServidor_(s) {
+  const conectado = !!s.conectado;
+  const cuotaConocida = s.cuotaRestante !== null && s.cuotaRestante !== undefined;
+  const cuotaMaximaConocida = cuotaConocida && s.cuotaMaxima !== null && s.cuotaMaxima !== undefined && Number(s.cuotaMaxima) > 0;
+  const pctCuota = cuotaMaximaConocida ? Math.max(0, Math.min(100, Math.round((Number(s.cuotaRestante) / Number(s.cuotaMaxima)) * 100))) : null;
+  const cuotaBaja = pctCuota !== null && pctCuota <= 15;
+
+  const filaCuota = cuotaConocida
+    ? ('<div class="servidor-card-fila"><span class="etiqueta">Cuota email hoy</span><span class="valor">' +
+        escapeHtml(String(s.cuotaRestante)) + (cuotaMaximaConocida ? (' / ' + escapeHtml(String(s.cuotaMaxima))) : '') +
+      '</span></div>' +
+      (cuotaMaximaConocida
+        ? '<div class="servidor-card-cuota-barra' + (cuotaBaja ? ' baja' : '') + '"><div style="width:' + pctCuota + '%;"></div></div>'
+        : ''))
+    : '<div class="servidor-card-fila"><span class="etiqueta">Cuota email hoy</span><span class="valor">—</span></div>';
+
+  const filaConexion = s.esEstaCuenta
+    ? '<div class="servidor-card-fila"><span class="etiqueta">Conexión</span><span class="valor">Esta misma cuenta</span></div>'
+    : '<div class="servidor-card-fila"><span class="etiqueta">Última conexión</span><span class="valor">' +
+        (s.ultimaConexion ? escapeHtml(s.ultimaConexion) : 'nunca') +
+      '</span></div>' +
+      (s.minutosDesdeUltimaConexion !== null && s.minutosDesdeUltimaConexion !== undefined
+        ? '<div class="servidor-card-fila"><span class="etiqueta">Hace</span><span class="valor">' + formatearMinutosTranscurridos_(s.minutosDesdeUltimaConexion) + '</span></div>'
+        : '');
+
+  return (
+    '<div class="servidor-card ' + (conectado ? 'conectado' : 'desconectado') + '">' +
+      '<div class="servidor-card-header">' +
+        '<div>' +
+          '<div class="servidor-card-nombre">' + escapeHtml(s.nombre || ('Lote ' + s.lote)) + '</div>' +
+          (s.email ? '<div class="servidor-card-email">' + escapeHtml(s.email) + '</div>' : '') +
+        '</div>' +
+        '<span class="servidor-estado-badge ' + (conectado ? 'ok' : 'mal') + '"><span class="badge-dot"></span>' +
+          (conectado ? 'Conectado' : 'Sin conexión reciente') +
+        '</span>' +
+      '</div>' +
+      filaCuota +
+      filaConexion +
+      (s.notas ? '<div class="servidor-card-notas">' + escapeHtml(s.notas) + '</div>' : '') +
+    '</div>'
+  );
+}
+
+/** minutos -> "hace 5 min" / "hace 2 h 10 min" / "hace 3 días", para la
+ *  tarjeta de cada cuenta puente en Administración > Servidores. */
+function formatearMinutosTranscurridos_(minutos) {
+  minutos = Number(minutos) || 0;
+  if (minutos < 1) return 'ahora mismo';
+  if (minutos < 60) return minutos + ' min';
+  const horas = Math.floor(minutos / 60);
+  const restoMin = minutos % 60;
+  if (horas < 24) return horas + ' h' + (restoMin ? ' ' + restoMin + ' min' : '');
+  const dias = Math.floor(horas / 24);
+  return dias + (dias === 1 ? ' día' : ' días');
 }
 
 /* ---------------- CONFIGURACIÓN: "Plantilla conteos" ----------------
