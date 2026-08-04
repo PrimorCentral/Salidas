@@ -1095,6 +1095,30 @@
   }
   .btn-header-definitivo:hover { background: var(--amber-dark); color: #fff; }
   .btn-header-definitivo:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* Botón "GUARDAR CONTEO": ya NO se autoguarda al escribir (ver
+     marcarCambiosSinGuardar_ / autoguardarSeccion en el JS). Este botón
+     solo aparece destacado (verde, con pulso) cuando hay cambios sin
+     guardar en esa agrupación; en reposo (todo guardado) se ve apagado. */
+  .btn-header-guardar {
+    background: var(--ok); color: #fff; border: none; border-radius: 20px;
+    padding: 6px 16px; font-size: 11.5px; font-weight: 800; white-space: nowrap; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: .03em;
+    box-shadow: 0 0 0 0 rgba(47,143,111,.55);
+  }
+  .btn-header-guardar:hover { background: #257a5d; }
+  .btn-header-guardar:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-guardar.sin-cambios {
+    background: #eef1f5; color: var(--ink-soft); box-shadow: none;
+  }
+  .btn-header-guardar.con-cambios {
+    animation: pulso-guardar 1.6s ease-in-out infinite;
+  }
+  @keyframes pulso-guardar {
+    0%   { box-shadow: 0 0 0 0 rgba(47,143,111,.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(47,143,111,0); }
+    100% { box-shadow: 0 0 0 0 rgba(47,143,111,0); }
+  }
   .btn-deshacer-envio {
     display: inline-flex;
     align-items: center;
@@ -1830,12 +1854,15 @@
 // archivo, se crea aquí una réplica de "google.script.run" con la misma
 // forma (withSuccessHandler / withFailureHandler / nombreMetodo(args)).
 
-// 👉 Ya NO apunta directo a Apps Script: apunta al Worker de Cloudflare
-//    (salidas-proxy, cuenta de trabajo) que hace de proxy fiable delante
-//    de Apps Script. Ver cloudflare-worker.js para el porqué (evita los
-//    302/CORS erráticos de Apps Script visto desde el navegador). Si
-//    algún día cambias de Worker, solo hay que tocar esta línea.
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqWayBU1wuFcFm__nyUoezOR3-itXayRZUrNRiuun3SJkWhzAiq1M3YpUKw1kGZsctQQ/exec';
+// 👉 Apunta DIRECTAMENTE a la implementación de Apps Script como
+//    "Aplicación web" (ya no hay ningún Worker de Cloudflare por delante:
+//    ese proxy se usó en su día para esquivar los 302/CORS erráticos de
+//    Apps Script visto desde el navegador, pero ya no está en uso — se ha
+//    quitado también toda la lógica de reintentos que asumía su
+//    comportamiento, ver llamarApi_ más abajo). Si algún día vuelve a
+//    hacer falta un proxy delante de Apps Script, solo hay que tocar esta
+//    línea.
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQjzJ4KHPnUlVpnRzh1s-4GTyfYeOMLbMEg2kcK46w8M-jACAbWObq02O0HLSceRob5g/exec';
 
 // Versión con la que se sirvió ESTE index.html. Se muestra abajo a la
 // derecha en el login y en "Inicio", y es la que se compara contra
@@ -1843,7 +1870,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqWayBU1wuFcFm
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.4.6';
+const APP_VERSION_ACTUAL = '1.5.0';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2015,36 +2042,34 @@ const METODOS_REMOTOS_ = {
 
 function llamarApi_(accion, args, intento, onLento) {
   intento = intento || 1;
-  // El Worker de Cloudflare (conteos-proxy) ya reintenta hasta 3 veces por
-  // su cuenta en el servidor, con hasta 15-20s por intento -- ver
-  // cloudflare-worker.js. En el PEOR caso eso puede tardar cerca de 45-60s
-  // en devolver algo. Antes el frontend abortaba a los 25s y reintentaba,
-  // lo que a veces cortaba al Worker A MITAD de su propio reintento
-  // (aparecía como "signal is aborted without reason"). Ahora el frontend
-  // espera lo suficiente como para dejar que el Worker termine su ciclo
-  // completo, y solo reintenta UNA vez más si aun así no ha contestado
-  // (p.ej. corte de red real del lado del usuario, no solo Apps Script lento).
+  // Ya NO hay ningún Worker de Cloudflare por delante (ver la nota junto a
+  // APPS_SCRIPT_URL más arriba): esta llamada va directa a Apps Script, sin
+  // ninguna capa intermedia que reintente por su cuenta. Por eso el
+  // timeout de aquí ya no necesita cubrir "el peor caso de un proxy que
+  // reintenta 3 veces" (eso ya no existe): basta con un techo generoso
+  // para una sola ejecución de Apps Script (que sí puede tardar bastante
+  // en frío, sobre todo si tiene que escanear una hoja de día grande), y
+  // reintentar UNA vez más si aun así no contesta (p.ej. corte de red real
+  // del lado del usuario, no solo Apps Script lento).
   const MAX_INTENTOS_RED_ = 2;
 
-  // Techo de espera por intento: generoso a propósito, para cubrir el peor
-  // caso del Worker sin cortarle la faena. Si ni el Worker ni Apps Script
-  // han contestado en este tiempo, se da el intento por fallido.
-  const TIMEOUT_MS_ = 55000;
+  // Techo de espera por intento. Al llamar directo a Apps Script (sin
+  // proxy) ya no hace falta el margen de 55s de antes; 30s es generoso de
+  // sobra para una sola ejecución. Si Apps Script no ha contestado en este
+  // tiempo, se da el intento por fallido y se reintenta (hasta
+  // MAX_INTENTOS_RED_ veces).
+  const TIMEOUT_MS_ = 30000;
   const controller = new AbortController();
   const timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS_);
 
   // Si a los pocos segundos la petición todavía no ha contestado, avisamos
   // con onLento (si nos han pasado uno) SIN cancelar nada: seguimos
   // esperando la respuesta real. Esto es solo para que el usuario sepa que
-  // no se ha quedado colgado (Apps Script puede tardar mucho de forma
-  // intermitente, sobre todo en frío) -- abortar y reintentar aquí sería
-  // peor, porque Apps Script seguiría procesando la petición original de
-  // todas formas y solo añadiríamos carga extra. Con TIMEOUT_MS_ ahora en
-  // 55s, un solo aviso a los 6s se queda corto y parece que se ha
-  // congelado el mensaje -- así que se repite cada 12s pasándole al
-  // callback en qué "paso" va, para que quien la use pueda variar el texto.
-  const AVISO_LENTO_MS = 6000;
-  const AVISO_LENTO_INTERVALO_MS = 12000;
+  // no se ha quedado colgado (Apps Script puede tardar en frío) -- abortar
+  // y reintentar aquí sería peor, porque Apps Script seguiría procesando
+  // la petición original de todas formas y solo añadiríamos carga extra.
+  const AVISO_LENTO_MS = 5000;
+  const AVISO_LENTO_INTERVALO_MS = 8000;
   let timerLento = null;
   if (onLento) {
     let pasoAviso = 0;
@@ -5282,6 +5307,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     badgePrevision(seccion) +
     (seccion.estado === 'enviado' && esHoy ? htmlBotonDeshacerEnvio_() : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
+    (editable && seccion.estado !== 'enviado'
+      ? '<button type="button" class="btn-header-guardar sin-cambios" disabled title="Guarda los datos introducidos en esta agrupación">Guardar conteo</button>'
+      : '') +
     (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
       ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>'
       : '') +
@@ -5411,29 +5439,58 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }
   actualizarTotalPalets();
 
-  // Autoguardado: se guarda solo, en segundo plano, tras dejar de escribir,
-  // para que no se pierda nada si se cierra la pestaña sin pulsar nada.
-  let autoguardadoTimer = null;
-  function programarAutoguardado() {
-    clearTimeout(autoguardadoTimer);
-    autoguardadoTimer = setTimeout(function () { autoguardarSeccion(); }, 900);
+  // GUARDADO MANUAL: ya no se guarda solo mientras se escribe. En su
+  // lugar, cualquier cambio en un input marca la agrupación como "con
+  // cambios sin guardar" (botón "Guardar conteo" destacado y con pulso);
+  // el guardado real solo ocurre al pulsar ese botón, o de forma
+  // automática justo antes de enviar previsión/definitivo (ver
+  // enviarSeccion más abajo, que llama a autoguardarSeccion() sin esperar
+  // a que el usuario pulse "Guardar conteo").
+  const btnGuardarConteo = header.querySelector('.btn-header-guardar');
+  let hayCambiosSinGuardar = false;
+  function marcarCambiosSinGuardar_() {
+    hayCambiosSinGuardar = true;
+    if (btnGuardarConteo) {
+      btnGuardarConteo.disabled = false;
+      btnGuardarConteo.classList.remove('sin-cambios');
+      btnGuardarConteo.classList.add('con-cambios');
+      btnGuardarConteo.textContent = 'Guardar conteo';
+    }
+  }
+  function marcarTodoGuardado_() {
+    hayCambiosSinGuardar = false;
+    if (btnGuardarConteo) {
+      btnGuardarConteo.disabled = true;
+      btnGuardarConteo.classList.remove('con-cambios');
+      btnGuardarConteo.classList.add('sin-cambios');
+      btnGuardarConteo.textContent = 'Guardado';
+    }
   }
   function autoguardarSeccion(onDone) {
-    clearTimeout(autoguardadoTimer);
     if (!editable) { if (onDone) onDone(false); return; } // por si acaso: no se guarda nada de una agrupación no editable
+    if (!hayCambiosSinGuardar) { if (onDone) onDone(true); return; } // nada que guardar: evita una llamada de red innecesaria
     const filas = recogerFilas(tableWrap);
     marcarGuardando(panel, true);
+    if (btnGuardarConteo) btnGuardarConteo.disabled = true;
     google.script.run
       .withSuccessHandler(function () {
         marcarGuardando(panel, false);
+        marcarTodoGuardado_();
         if (onDone) onDone(true);
       })
       .withFailureHandler(function (err) {
         marcarGuardando(panel, false);
+        marcarCambiosSinGuardar_(); // el guardado falló: sigue habiendo cambios sin guardar
         mostrarErrorServidor(err);
         if (onDone) onDone(false);
       })
       .guardarConteo(dia, filas, fecha, seccion.nombre);
+  }
+  if (btnGuardarConteo) {
+    btnGuardarConteo.onclick = function (e) {
+      e.stopPropagation();
+      autoguardarSeccion();
+    };
   }
 
   /** Recalcula EN VIVO (sin esperar a guardar ni a recargar) si esta
@@ -5480,7 +5537,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       attachForzarNo(tr);
       tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
         input.addEventListener('input', function () {
-          programarAutoguardado();
+          marcarCambiosSinGuardar_();
           actualizarTotalPalets();
           actualizarEstadoLocalSeccion_();
         });
@@ -6344,7 +6401,6 @@ function attachForzarNo(tr) {
             input.setAttribute('data-forzado', '1');
             input.title = 'Forzado pese al "NO" original';
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            programarAutoguardado();
             actualizarTotalPalets();
           }, false);
         }
