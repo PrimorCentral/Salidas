@@ -1805,11 +1805,11 @@
 // forma (withSuccessHandler / withFailureHandler / nombreMetodo(args)).
 
 // 👉 Ya NO apunta directo a Apps Script: apunta al Worker de Cloudflare
-//    (conteos-proxy) que hace de proxy fiable delante de Apps Script.
-//    Ver cloudflare-worker.js para el porqué (evita los 302/CORS erráticos
-//    de Apps Script visto desde el navegador). Si algún día cambias de
-//    Worker, solo hay que tocar esta línea.
-const APPS_SCRIPT_URL = 'https://conteos-proxy.samsungjose1998.workers.dev';
+//    (salidas-proxy, cuenta de trabajo) que hace de proxy fiable delante
+//    de Apps Script. Ver cloudflare-worker.js para el porqué (evita los
+//    302/CORS erráticos de Apps Script visto desde el navegador). Si
+//    algún día cambias de Worker, solo hay que tocar esta línea.
+const APPS_SCRIPT_URL = 'https://salidas-proxy.joseluisfranco-primor.workers.dev';
 
 // Versión con la que se sirvió ESTE index.html. Se muestra abajo a la
 // derecha en el login y en "Inicio", y es la que se compara contra
@@ -1989,19 +1989,21 @@ const METODOS_REMOTOS_ = {
 
 function llamarApi_(accion, args, intento, onLento) {
   intento = intento || 1;
-  // Antes eran 3 intentos con reintento de red a cargo del navegador. Ahora
-  // las peticiones pasan por el Worker de Cloudflare (conteos-proxy), que
-  // YA reintenta 3 veces por su cuenta en el servidor (más rápido y sin
-  // depender del wifi del usuario) antes de devolver nada aquí -- ver
-  // cloudflare-worker.js. Así que aquí basta con un margen pequeño extra
-  // por si el propio Worker tardara en responder o hubiera un corte de
-  // red real del lado del usuario.
+  // El Worker de Cloudflare (conteos-proxy) ya reintenta hasta 3 veces por
+  // su cuenta en el servidor, con hasta 15-20s por intento -- ver
+  // cloudflare-worker.js. En el PEOR caso eso puede tardar cerca de 45-60s
+  // en devolver algo. Antes el frontend abortaba a los 25s y reintentaba,
+  // lo que a veces cortaba al Worker A MITAD de su propio reintento
+  // (aparecía como "signal is aborted without reason"). Ahora el frontend
+  // espera lo suficiente como para dejar que el Worker termine su ciclo
+  // completo, y solo reintenta UNA vez más si aun así no ha contestado
+  // (p.ej. corte de red real del lado del usuario, no solo Apps Script lento).
   const MAX_INTENTOS_RED_ = 2;
 
-  // Techo de espera por intento: si ni el Worker ni Apps Script han
-  // contestado en este tiempo, se da el intento por fallido y (si quedan
-  // intentos) se reintenta, en vez de dejar al fetch() esperando sin fin.
-  const TIMEOUT_MS_ = 25000;
+  // Techo de espera por intento: generoso a propósito, para cubrir el peor
+  // caso del Worker sin cortarle la faena. Si ni el Worker ni Apps Script
+  // han contestado en este tiempo, se da el intento por fallido.
+  const TIMEOUT_MS_ = 55000;
   const controller = new AbortController();
   const timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS_);
 
@@ -2011,9 +2013,22 @@ function llamarApi_(accion, args, intento, onLento) {
   // no se ha quedado colgado (Apps Script puede tardar mucho de forma
   // intermitente, sobre todo en frío) -- abortar y reintentar aquí sería
   // peor, porque Apps Script seguiría procesando la petición original de
-  // todas formas y solo añadiríamos carga extra.
+  // todas formas y solo añadiríamos carga extra. Con TIMEOUT_MS_ ahora en
+  // 55s, un solo aviso a los 6s se queda corto y parece que se ha
+  // congelado el mensaje -- así que se repite cada 12s pasándole al
+  // callback en qué "paso" va, para que quien la use pueda variar el texto.
   const AVISO_LENTO_MS = 6000;
-  const timerLento = onLento ? setTimeout(onLento, AVISO_LENTO_MS) : null;
+  const AVISO_LENTO_INTERVALO_MS = 12000;
+  let timerLento = null;
+  if (onLento) {
+    let pasoAviso = 0;
+    const dispararAviso = function () {
+      pasoAviso++;
+      onLento(pasoAviso);
+      timerLento = setTimeout(dispararAviso, AVISO_LENTO_INTERVALO_MS);
+    };
+    timerLento = setTimeout(dispararAviso, AVISO_LENTO_MS);
+  }
   function limpiarTimerLento() { if (timerLento) clearTimeout(timerLento); }
 
   return fetch(APPS_SCRIPT_URL, {
@@ -2201,8 +2216,10 @@ function intentarLogin() {
   // google.script.run) para poder pasarle onLento y avisar en el propio
   // botón si el servidor está tardando más de lo normal, sin cancelar ni
   // reintentar la petición -- ver la nota de cabecera de llamarApi_.
-  llamarApi_('login', [pass], 1, function () {
-    btnText.textContent = 'Esto está tardando más de lo normal, seguimos intentando…';
+  llamarApi_('login', [pass], 1, function (paso) {
+    btnText.textContent = paso === 1
+      ? 'Esto está tardando más de lo normal, seguimos intentando…'
+      : 'Seguimos esperando respuesta del servidor…';
   })
     .then(function (resultado) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
