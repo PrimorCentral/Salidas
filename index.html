@@ -1870,7 +1870,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqWayBU1wuFcFm
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.0';
+const APP_VERSION_ACTUAL = '1.5.2';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -5308,7 +5308,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (seccion.estado === 'enviado' && esHoy ? htmlBotonDeshacerEnvio_() : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-guardar sin-cambios" disabled title="Guarda los datos introducidos en esta agrupación">Guardar conteo</button>'
+      ? '<button type="button" class="btn-header-guardar sin-cambios" title="Guarda el conteo de esta agrupación. Los botones de envío no se activan hasta pulsar aquí.">Guardar conteo</button>'
       : '') +
     (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
       ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>'
@@ -5441,45 +5441,63 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
 
   // GUARDADO MANUAL: ya no se guarda solo mientras se escribe. En su
   // lugar, cualquier cambio en un input marca la agrupación como "con
-  // cambios sin guardar" (botón "Guardar conteo" destacado y con pulso);
-  // el guardado real solo ocurre al pulsar ese botón, o de forma
-  // automática justo antes de enviar previsión/definitivo (ver
-  // enviarSeccion más abajo, que llama a autoguardarSeccion() sin esperar
-  // a que el usuario pulse "Guardar conteo").
+  // cambios sin guardar" (botón "Guardar conteo" destacado y con pulso).
+  // Los botones "Enviar Previsión" / "Enviar Definitivo" empiezan
+  // SIEMPRE apagados y solo se activan tras pulsar "Guardar conteo" al
+  // menos una vez (haGuardadoAlMenosUnaVez); si después se vuelve a
+  // escribir algo, se apagan otra vez hasta el siguiente guardado.
   const btnGuardarConteo = header.querySelector('.btn-header-guardar');
   let hayCambiosSinGuardar = false;
+  let haGuardadoAlMenosUnaVez = false;
+  function actualizarBotonesEnvio_() {
+    const bloquear = !haGuardadoAlMenosUnaVez || hayCambiosSinGuardar;
+    [header.querySelector('.btn-header-prevision'), header.querySelector('.btn-header-definitivo')].forEach(function (btn) {
+      if (!btn) return;
+      if (!btn.hasAttribute('data-title-original')) btn.setAttribute('data-title-original', btn.title);
+      btn.disabled = bloquear;
+      btn.title = bloquear ? 'Pulsa antes "Guardar conteo"' : btn.getAttribute('data-title-original');
+    });
+  }
   function marcarCambiosSinGuardar_() {
     hayCambiosSinGuardar = true;
     if (btnGuardarConteo) {
-      btnGuardarConteo.disabled = false;
       btnGuardarConteo.classList.remove('sin-cambios');
       btnGuardarConteo.classList.add('con-cambios');
       btnGuardarConteo.textContent = 'Guardar conteo';
     }
+    actualizarBotonesEnvio_();
   }
   function marcarTodoGuardado_() {
     hayCambiosSinGuardar = false;
+    haGuardadoAlMenosUnaVez = true;
     if (btnGuardarConteo) {
-      btnGuardarConteo.disabled = true;
       btnGuardarConteo.classList.remove('con-cambios');
       btnGuardarConteo.classList.add('sin-cambios');
       btnGuardarConteo.textContent = 'Guardado';
     }
+    actualizarBotonesEnvio_();
   }
+  // "Guardar conteo" siempre se puede pulsar (mientras sea editable),
+  // haya o no cambios: si no hay nada nuevo que guardar, no llama al
+  // servidor (evita una petición de red innecesaria), pero igualmente
+  // deja constancia de que se ha "confirmado" el guardado en esta
+  // sesión, que es lo que activa los botones de envío.
   function autoguardarSeccion(onDone) {
     if (!editable) { if (onDone) onDone(false); return; } // por si acaso: no se guarda nada de una agrupación no editable
-    if (!hayCambiosSinGuardar) { if (onDone) onDone(true); return; } // nada que guardar: evita una llamada de red innecesaria
+    if (!hayCambiosSinGuardar) { marcarTodoGuardado_(); if (onDone) onDone(true); return; }
     const filas = recogerFilas(tableWrap);
     marcarGuardando(panel, true);
     if (btnGuardarConteo) btnGuardarConteo.disabled = true;
     google.script.run
       .withSuccessHandler(function () {
         marcarGuardando(panel, false);
+        if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarTodoGuardado_();
         if (onDone) onDone(true);
       })
       .withFailureHandler(function (err) {
         marcarGuardando(panel, false);
+        if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarCambiosSinGuardar_(); // el guardado falló: sigue habiendo cambios sin guardar
         mostrarErrorServidor(err);
         if (onDone) onDone(false);
@@ -5492,6 +5510,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       autoguardarSeccion();
     };
   }
+  actualizarBotonesEnvio_(); // estado inicial: envío apagado hasta el primer "Guardar conteo" de esta sesión
 
   /** Recalcula EN VIVO (sin esperar a guardar ni a recargar) si esta
    *  agrupación "tiene datos" (pendiente -> en progreso), para que el
