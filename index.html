@@ -1759,6 +1759,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -1862,7 +1863,10 @@
 //    comportamiento, ver llamarApi_ más abajo). Si algún día vuelve a
 //    hacer falta un proxy delante de Apps Script, solo hay que tocar esta
 //    línea.
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqWayBU1wuFcFm__nyUoezOR3-itXayRZUrNRiuun3SJkWhzAiq1M3YpUKw1kGZsctQQ/exec';
+// APPS_SCRIPT_URL ELIMINADA: la app ya no llama a Apps Script para nada.
+// Lo que aún no está migrado a Supabase avisa con "no configurado aún con
+// Supabase" (ver SUPABASE_ACCIONES_ / llamarApi_ más abajo) en vez de
+// intentar hablar con el backend antiguo.
 
 // Versión con la que se sirvió ESTE index.html. Se muestra abajo a la
 // derecha en el login y en "Inicio", y es la que se compara contra
@@ -1870,7 +1874,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxqWayBU1wuFcFm
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.2';
+const APP_VERSION_ACTUAL = '1.5.3';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1886,6 +1890,56 @@ let SESSION_TOKEN = null;
 // el rol "admin" puede crear/borrar notas y cerrar/reabrir tiendas; se
 // guarda igual que el token, solo en memoria (no en localStorage).
 let SESSION_ROL = null;
+
+/* ---------------- SUPABASE ---------------- */
+// El login usa esta función RPC (login.sql / ya creada en tu proyecto) en
+// vez de Apps Script. El resto de acciones de la app SIGUEN sin migrar:
+// llamarApi_ (más abajo) las detecta y avisa con "no configurado aún con
+// Supabase" en vez de intentar llamar a Apps Script (que ya no existe en
+// este archivo).
+//
+// El login NO usa Supabase Auth (no hay "usuarios" de verdad): llama a la
+// función RPC public.login que ya tenías creada en Supabase, que reproduce
+// el mismo esquema que Apps Script -- hashes en config_app
+// (app_password_admin_hash / app_password_hash) y token de sesión en la
+// tabla sesiones. Por eso solo hace falta la clave "anon" / "publishable",
+// nunca la "service_role".
+//
+// 👉 Rellena estos dos valores con los de tu proyecto (Supabase ->
+//    Project Settings -> API -> "Project URL" / "anon public" o
+//    "Publishable key").
+const SUPABASE_URL = 'https://plqcnqjlxfxjvxyktqbx.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_O7FxndlZ08NVAbZeGx6jYw_HKdqLqFr';
+
+const supabaseClient = (window.supabase && SUPABASE_URL.indexOf('TU_SUPABASE_URL') === -1)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+if (!supabaseClient) {
+  console.warn('[Supabase] cliente NO inicializado -- window.supabase =', typeof window.supabase, '(¿ha cargado el <script> del CDN? revisa la pestaña Network). No se intentará el login en paralelo.');
+} else {
+  console.info('[Supabase] cliente inicializado contra', SUPABASE_URL);
+}
+
+/** Llama a la RPC public.login con la contraseña tal cual la ha escrito el
+ *  usuario (la comparación con el hash bcrypt la hace el propio Postgres).
+ *  Devuelve { token, rol } si la contraseña es correcta, null si no lo es,
+ *  o rechaza la Promise si hay un fallo real (red, Supabase mal
+ *  configurado...). */
+function loginSupabase_(pass) {
+  if (!supabaseClient) {
+    return Promise.reject(new Error('Supabase no está configurado todavía (revisa SUPABASE_URL / SUPABASE_ANON_KEY).'));
+  }
+  return supabaseClient.rpc('login', { p_password: pass })
+    .then(function (resp) {
+      if (resp.error) {
+        if (resp.error.message && resp.error.message.indexOf('Contraseña incorrecta') !== -1) {
+          return null; // contraseña mal -- no es un error de servidor
+        }
+        throw resp.error;
+      }
+      return resp.data;
+    });
+}
 
 /* ---------------- INSTALAR APP (PWA) ---------------- */
 // Chrome/Edge/Android disparan "beforeinstallprompt" cuando la PWA cumple
@@ -1995,9 +2049,7 @@ function aplicarPermisosUI() {
 }
 
 // Nombre usado en el frontend -> nombre de la acción que entiende el backend.
-// (checkPassword se traduce a 'login', que es quien genera el token de sesión.)
 const METODOS_REMOTOS_ = {
-  checkPassword: 'login',
   getMesCalendario: 'getMesCalendario',
   getConteoDia: 'getConteoDia',
   guardarConteo: 'guardarConteo',
@@ -2040,114 +2092,124 @@ const METODOS_REMOTOS_ = {
   enviarAvisosTiendas: 'enviarAvisosTiendas'
 };
 
-function llamarApi_(accion, args, intento, onLento) {
-  intento = intento || 1;
-  // Ya NO hay ningún Worker de Cloudflare por delante (ver la nota junto a
-  // APPS_SCRIPT_URL más arriba): esta llamada va directa a Apps Script, sin
-  // ninguna capa intermedia que reintente por su cuenta. Por eso el
-  // timeout de aquí ya no necesita cubrir "el peor caso de un proxy que
-  // reintenta 3 veces" (eso ya no existe): basta con un techo generoso
-  // para una sola ejecución de Apps Script (que sí puede tardar bastante
-  // en frío, sobre todo si tiene que escanear una hoja de día grande), y
-  // reintentar UNA vez más si aun así no contesta (p.ej. corte de red real
-  // del lado del usuario, no solo Apps Script lento).
-  const MAX_INTENTOS_RED_ = 2;
-
-  // Techo de espera por intento. Al llamar directo a Apps Script (sin
-  // proxy) ya no hace falta el margen de 55s de antes; 30s es generoso de
-  // sobra para una sola ejecución. Si Apps Script no ha contestado en este
-  // tiempo, se da el intento por fallido y se reintenta (hasta
-  // MAX_INTENTOS_RED_ veces).
-  const TIMEOUT_MS_ = 30000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(function () { controller.abort(); }, TIMEOUT_MS_);
-
-  // Si a los pocos segundos la petición todavía no ha contestado, avisamos
-  // con onLento (si nos han pasado uno) SIN cancelar nada: seguimos
-  // esperando la respuesta real. Esto es solo para que el usuario sepa que
-  // no se ha quedado colgado (Apps Script puede tardar en frío) -- abortar
-  // y reintentar aquí sería peor, porque Apps Script seguiría procesando
-  // la petición original de todas formas y solo añadiríamos carga extra.
-  const AVISO_LENTO_MS = 5000;
-  const AVISO_LENTO_INTERVALO_MS = 8000;
-  let timerLento = null;
-  if (onLento) {
-    let pasoAviso = 0;
-    const dispararAviso = function () {
-      pasoAviso++;
-      onLento(pasoAviso);
-      timerLento = setTimeout(dispararAviso, AVISO_LENTO_INTERVALO_MS);
-    };
-    timerLento = setTimeout(dispararAviso, AVISO_LENTO_MS);
+/** Llama a una función RPC de Postgres (Supabase) pasando SIEMPRE el token
+ *  de sesión actual como p_token -- mismo patrón que usan las funciones
+ *  migradas en el backend (get_conteo_dia, ...), que validan el token
+ *  contra la tabla "sesiones" ellas mismas (en vez de depender de
+ *  Supabase Auth, que aquí no se usa -- ver loginSupabase_ más arriba).
+ *  Si el RPC devuelve el error de sesión caducada, se dispara
+ *  volverALogin_() igual que hacía antes sesionCaducada:true en Apps
+ *  Script, y además se rechaza la Promise para que el .catch(mostrarErrorServidor)
+ *  de turno no muestre un toast duplicado encima del aviso de "vuelve a
+ *  entrar". */
+function llamarRpcSupabase_(nombreFuncion, argsExtra) {
+  if (!supabaseClient) {
+    return Promise.reject(new Error('Supabase no está configurado todavía.'));
   }
-  function limpiarTimerLento() { if (timerLento) clearTimeout(timerLento); }
+  const params = Object.assign({ p_token: SESSION_TOKEN }, argsExtra || {});
+  return supabaseClient.rpc(nombreFuncion, params).then(function (resp) {
+    if (resp.error) {
+      if (resp.error.message && resp.error.message.indexOf('Sesión caducada') !== -1) {
+        volverALogin_();
+        return Promise.reject(new Error('')); // ya se ha avisado con el toast de volverALogin_
+      }
+      throw resp.error;
+    }
+    return resp.data;
+  });
+}
 
-  return fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    // 'text/plain' evita que el navegador lance una petición OPTIONS de
-    // pre-vuelo (Apps Script no sabe responder a esas); el body sigue
-    // siendo JSON, solo cambia la cabecera para que cuente como "simple".
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ accion: accion, token: SESSION_TOKEN, args: args }),
-    signal: controller.signal
-  })
-    .then(function (resp) {
-      clearTimeout(timeoutId);
-      // No usamos resp.json() directamente: Apps Script, cuando está
-      // saturado (muchas llamadas simultáneas) o tiene un fallo puntual de
-      // infraestructura, a veces no ejecuta tu código y en su lugar
-      // devuelve una página HTML de error suya (empieza por "<!DOCTYPE
-      // html>..."). Si eso pasara, resp.json() lanzaría un SyntaxError feo
-      // ("Unexpected token '<' ... is not valid JSON") que antes se le
-      // enseñaba tal cual al usuario. Ahora se detecta aquí y se marca
-      // como fallo "de red" para que el bloque catch de abajo lo reintente
-      // solo, en vez de interrumpir al usuario con ese mensaje.
-      return resp.text().then(function (texto) {
-        try {
-          return JSON.parse(texto);
-        } catch (e) {
-          const errorNoJson = new Error('Respuesta no válida del servidor (reintentando…)');
-          errorNoJson.esRespuestaNoJson = true;
-          throw errorNoJson;
-        }
-      });
-    })
-    .then(function (data) {
-      limpiarTimerLento();
-      if (!data.ok) {
-        if (data.sesionCaducada) {
-          SESSION_TOKEN = null;
-          volverALogin_();
-        }
-        throw new Error(data.error || 'Error del servidor');
-      }
-      return data.resultado;
-    })
-    .catch(function (err) {
-      clearTimeout(timeoutId);
-      // "Failed to fetch" (fetch falla ANTES de recibir respuesta: sin
-      // conexión, wifi cortado, DNS...) llega aquí como TypeError. Eso es
-      // un fallo de RED, no un error del servidor -- vale la pena
-      // reintentar unas pocas veces con una pequeña espera. Un error real
-      // del servidor (throw new Error(...) de arriba, p.ej. "Contraseña
-      // incorrecta") NO es un TypeError, así que no se reintenta a ciegas.
-      // Se trata igual el caso de respuesta HTML no-JSON detectado arriba,
-      // y el AbortError que dispara nuestro propio TIMEOUT_MS_ de arriba.
-      const esFalloDeRed = err instanceof TypeError || err.name === 'AbortError' || err.esRespuestaNoJson === true;
-      if (esFalloDeRed && intento < MAX_INTENTOS_RED_) {
-        limpiarTimerLento();
-        const esperaMs = 700 * intento;
-        return new Promise(function (resolve) { setTimeout(resolve, esperaMs); })
-          .then(function () { return llamarApi_(accion, args, intento + 1, onLento); });
-      }
-      limpiarTimerLento();
-      throw err;
+// Acciones ya migradas a Supabase: cada entrada es una función
+// (args) => resultado (o Promise<resultado>) con la MISMA forma que
+// devolvía Apps Script para esa acción, para no tener que tocar el resto
+// del archivo. Se va rellenando bloque a bloque -- ver cada sección
+// "-- Supabase: <bloque> --" según se va migrando.
+const SUPABASE_ACCIONES_ = {
+  // -- Supabase: getConteoDia --
+  getConteoDia: function (args) {
+    const fecha = args[0];
+    return llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha });
+  },
+  // -- Supabase: getMesCalendario --
+  getMesCalendario: function (args) {
+    const anioMes = args[0];
+    return llamarRpcSupabase_('get_mes_calendario', { p_anio_mes: anioMes });
+  },
+  // -- Supabase: guardarConteo --
+  guardarConteo: function (args) {
+    const dia = args[0], filas = args[1], fecha = args[2], nombreAgrupacion = args[3];
+    return llamarRpcSupabase_('guardar_conteo', {
+      p_dia: dia,
+      p_filas: filas,
+      p_fecha: fecha,
+      p_nombre_agrupacion: nombreAgrupacion
     });
+  },
+  // -- Supabase: Emails agencias (Config_Agrupaciones) --
+  getAgrupacionesConfig: function () {
+    return llamarRpcSupabase_('get_agrupaciones_config', {});
+  },
+  guardarEmailsAgrupacion: function (args) {
+    const agrupacion = args[0], emails = args[1], notas = args[2], emailsPrevision = args[3];
+    return llamarRpcSupabase_('guardar_emails_agrupacion', {
+      p_agrupacion: agrupacion,
+      p_emails: emails,
+      p_notas: notas,
+      p_emails_prevision: emailsPrevision
+    });
+  },
+  eliminarAgrupacionConfig: function (args) {
+    return llamarRpcSupabase_('eliminar_agrupacion_config', { p_agrupacion: args[0] });
+  },
+  sincronizarAgrupaciones: function () {
+    return llamarRpcSupabase_('sincronizar_agrupaciones', {});
+  },
+  // -- Supabase: Rutas y tiendas (Plantilla) --
+  getDiasPlantilla: function () {
+    return llamarRpcSupabase_('get_dias_plantilla', {});
+  },
+  getPlantillaDia: function (args) {
+    const dia = args[0];
+    return llamarRpcSupabase_('get_plantilla_dia', { p_dia: dia });
+  },
+  // -- Supabase: Configuración tiendas + Aviso a tiendas (barrido del día) --
+  getConfigAvisoTiendas: function () {
+    return llamarRpcSupabase_('get_config_aviso_tiendas', {});
+  },
+  guardarHoraAvisoTiendas: function (args) {
+    const hora = args[0];
+    return llamarRpcSupabase_('guardar_hora_aviso_tiendas', { p_hora: hora });
+  },
+  enviarAvisosTiendas: function (args) {
+    const fecha = args[0], simulacion = args[1];
+    return llamarRpcSupabase_('enviar_avisos_tiendas', { p_fecha: fecha, p_simulacion: simulacion });
+  },
+  getTiendasConfig: function () {
+    return llamarRpcSupabase_('get_tiendas_config', {});
+  },
+  guardarEmailTienda: function (args) {
+    const tienda = args[0], email = args[1], notas = args[2];
+    return llamarRpcSupabase_('guardar_email_tienda', { p_tienda: tienda, p_email: email, p_notas: notas });
+  },
+  eliminarTiendaConfig: function (args) {
+    return llamarRpcSupabase_('eliminar_tienda_config', { p_tienda: args[0] });
+  },
+  sincronizarTiendas: function () {
+    return llamarRpcSupabase_('sincronizar_tiendas', {});
+  }
+};
+
+function llamarApi_(accion, args) {
+  if (Object.prototype.hasOwnProperty.call(SUPABASE_ACCIONES_, accion)) {
+    return Promise.resolve().then(function () { return SUPABASE_ACCIONES_[accion](args || []); });
+  }
+  return Promise.reject(new Error('"' + accion + '" no configurado aún con Supabase'));
 }
 
 function volverALogin_() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  SESSION_TOKEN = null;
   SESSION_ROL = null;
   document.body.classList.remove('es-admin');
   mostrarToast('Sesión caducada, vuelve a entrar', true);
@@ -2195,26 +2257,8 @@ const google = {
                 const args = Array.prototype.slice.call(arguments);
                 const accion = METODOS_REMOTOS_[nombreLocal];
                 llamarApi_(accion, args)
-                  .then(function (resultado) {
-                    if (nombreLocal === 'checkPassword') {
-                      // Si llega aquí es que la contraseña era correcta:
-                      // el backend ahora devuelve { token, rol } en vez de
-                      // solo el token.
-                      SESSION_TOKEN = resultado.token;
-                      SESSION_ROL = resultado.rol;
-                      aplicarPermisosUI();
-                      onSuccess(true);
-                    } else {
-                      onSuccess(resultado);
-                    }
-                  })
-                  .catch(function (err) {
-                    if (nombreLocal === 'checkPassword' && err.message === 'Contraseña incorrecta') {
-                      onSuccess(false);
-                    } else {
-                      onFailure(err);
-                    }
-                  });
+                  .then(onSuccess)
+                  .catch(onFailure);
               };
             });
             return runner;
@@ -2263,17 +2307,13 @@ function intentarLogin() {
   document.getElementById('login-error').style.display = 'none';
   btn.disabled = true; spinner.style.display = 'inline-block'; btnText.textContent = 'Comprobando…';
 
-  // Llamamos directo a llamarApi_ (en vez de pasar por el shim
-  // google.script.run) para poder pasarle onLento y avisar en el propio
-  // botón si el servidor está tardando más de lo normal, sin cancelar ni
-  // reintentar la petición -- ver la nota de cabecera de llamarApi_.
-  llamarApi_('login', [pass], 1, function (paso) {
-    btnText.textContent = paso === 1
-      ? 'Esto está tardando más de lo normal, seguimos intentando…'
-      : 'Seguimos esperando respuesta del servidor…';
-  })
+  loginSupabase_(pass)
     .then(function (resultado) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
+      if (!resultado) {
+        document.getElementById('login-error').style.display = 'block';
+        return;
+      }
       SESSION_TOKEN = resultado.token;
       SESSION_ROL = resultado.rol;
       aplicarPermisosUI();
@@ -2286,11 +2326,7 @@ function intentarLogin() {
     })
     .catch(function (err) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
-      if (err.message === 'Contraseña incorrecta') {
-        document.getElementById('login-error').style.display = 'block';
-      } else {
-        mostrarErrorServidor(err);
-      }
+      mostrarErrorServidor(err);
     });
 }
 document.getElementById('login-pass').addEventListener('keydown', function (e) {
@@ -6502,7 +6538,9 @@ function recogerFilas(tableWrap) {
   const filas = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-grupo-header')) return; // tiendas cerradas y fila-resumen del grupo no se guardan
-    const row = Number(tr.getAttribute('data-row'));
+    // "row" es ahora el UUID de tiendas_ruta (antes era el nº de fila de
+    // la hoja de Google Sheets), así que NO se convierte con Number().
+    const row = tr.getAttribute('data-row');
     // Para 60/PTA/CART: si la casilla se forzó pese a traer "NO", se manda
     // "NO" en el campo normal (para que el backend NO sobrescriba esa
     // celda) y el número escrito va aparte en xxxForzado, tal como espera
@@ -6905,25 +6943,24 @@ function cargarDatosDiaGestorObs_(fecha) {
   // plantilla del día de la semana, sin restricción de fecha.
   function pedirPlantilla() {
     const dia = diaDesdeFechaJs_(fecha);
-    google.script.run
-      .withSuccessHandler(function (data) {
+    llamarApi_('getPlantillaDia', [dia])
+      .then(function (data) {
         clearTimeout(timeoutId);
         if (miId !== GESTOR_OBS.cargaId) return;
         aplicarDatos(data);
       })
-      .withFailureHandler(function (err) {
+      .catch(function (err) {
         clearTimeout(timeoutId);
         if (miId !== GESTOR_OBS.cargaId) return;
         const mensaje = (err && err.message) ? err.message : String(err);
         mostrarError('No se ha podido cargar: ' + mensaje);
         mostrarErrorServidor(err);
-      })
-      .getPlantillaDia(dia);
+      });
   }
 
   // 1er intento: la llamada de siempre, para fechas dentro de la ventana.
-  google.script.run
-    .withSuccessHandler(function (data) {
+  llamarApi_('getConteoDia', [fecha])
+    .then(function (data) {
       if (miId !== GESTOR_OBS.cargaId) { clearTimeout(timeoutId); return; }
       if (data && data.bloqueada) {
         // Fuera de la ventana normal: reintentamos con la plantilla, que sí
@@ -6934,14 +6971,13 @@ function cargarDatosDiaGestorObs_(fecha) {
       clearTimeout(timeoutId);
       aplicarDatos(data);
     })
-    .withFailureHandler(function (err) {
+    .catch(function (err) {
       clearTimeout(timeoutId);
       if (miId !== GESTOR_OBS.cargaId) return;
       const mensaje = (err && err.message) ? err.message : String(err);
       mostrarError('No se ha podido cargar: ' + mensaje);
       mostrarErrorServidor(err);
-    })
-    .getConteoDia(fecha);
+    });
 }
 
 /** Resalta, dentro de "texto", la primera aparición de "q" (ya en minúsculas)
@@ -7260,6 +7296,10 @@ function mostrarToast(msg, esError) {
 }
 
 function mostrarErrorServidor(err) {
+  // Si el mensaje viene vacío es porque el error ya se avisó por su cuenta
+  // (p.ej. "Sesión caducada" -- ver llamarRpcSupabase_/volverALogin_): no
+  // pintamos un segundo toast encima sin contenido.
+  if (err && err.message === '') return;
   mostrarToast('Error: ' + (err && err.message ? err.message : err), true);
 }
 
