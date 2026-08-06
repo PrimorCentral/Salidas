@@ -1874,7 +1874,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.5';
+const APP_VERSION_ACTUAL = '1.5.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2131,6 +2131,23 @@ const SUPABASE_ACCIONES_ = {
   getConteoDia: function (args) {
     const fecha = args[0];
     return llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha });
+  },
+  // -- Supabase: enviarPrevisionAgencia / enviarDefinitivoAgencia --
+  enviarPrevisionAgencia: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
+    return llamarRpcSupabase_('enviar_prevision_agencia', {
+      p_dia: dia,
+      p_nombre_ruta: nombreAgrupacion,
+      p_fecha: fecha
+    });
+  },
+  enviarDefinitivoAgencia: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
+    return llamarRpcSupabase_('enviar_definitivo_agencia', {
+      p_dia: dia,
+      p_nombre_ruta: nombreAgrupacion,
+      p_fecha: fecha
+    });
   },
   // -- Supabase: getMesCalendario --
   getMesCalendario: function (args) {
