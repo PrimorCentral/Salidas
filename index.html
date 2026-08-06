@@ -1874,7 +1874,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.3';
+const APP_VERSION_ACTUAL = '1.5.4';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2083,6 +2083,8 @@ const METODOS_REMOTOS_ = {
   desactivarPesoRuta: 'desactivarPesoRuta',
   activarPdfEspecial: 'activarPdfEspecial',
   desactivarPdfEspecial: 'desactivarPdfEspecial',
+  activarCExpressRuta: 'activarCExpressRuta',
+  desactivarCExpressRuta: 'desactivarCExpressRuta',
   bloquearCampoTiendaPlantilla: 'bloquearCampoTiendaPlantilla',
   desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla',
   getTiendasConfig: 'getTiendasConfig',
@@ -2172,6 +2174,19 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0];
     return llamarRpcSupabase_('get_plantilla_dia', { p_dia: dia });
   },
+  añadirTiendaPlantilla: function (args) {
+    const dia = args[0], nombreSeccion = args[1], nombre = args[2], limite = args[3];
+    return llamarRpcSupabase_('anadir_tienda_plantilla', {
+      p_dia: dia,
+      p_nombre_seccion: nombreSeccion,
+      p_nombre: nombre,
+      p_limite: limite
+    });
+  },
+  eliminarTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('eliminar_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
   // -- Supabase: Configuración tiendas + Aviso a tiendas (barrido del día) --
   getConfigAvisoTiendas: function () {
     return llamarRpcSupabase_('get_config_aviso_tiendas', {});
@@ -2196,6 +2211,114 @@ const SUPABASE_ACCIONES_ = {
   },
   sincronizarTiendas: function () {
     return llamarRpcSupabase_('sincronizar_tiendas', {});
+  },
+  // -- Supabase: Rutas y tiendas — casillas opcionales (PESO / C.EXPRESS / PDF ESPECIAL) --
+  // Las 3 casillas comparten exactamente el mismo patrón en el backend
+  // (activar_x_ruta / desactivar_x_ruta, con p_dia + p_nombre_ruta): solo
+  // se pedía migrar C.EXPRESS y PDF ESPECIAL, pero PESO usaba el mismo
+  // fallback sin configurar (SUPABASE_ACCIONES_ no la tenía todavía) y ya
+  // existe como función SQL, así que se aprovecha para dejarla también
+  // enganchada aquí mismo.
+  activarPesoRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_peso_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarPesoRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_peso_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  activarCExpressRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_cexpress_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarCExpressRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_cexpress_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  activarPdfEspecial: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_pdf_especial', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarPdfEspecial: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_pdf_especial', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  // -- Supabase: Rutas y tiendas — bloqueo 60/PTA/CART por tienda --
+  bloquearCampoTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1], campo = args[2];
+    return llamarRpcSupabase_('bloquear_campo_tienda_plantilla', { p_dia: dia, p_row: row, p_campo: campo });
+  },
+  desbloquearCampoTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1], campo = args[2];
+    return llamarRpcSupabase_('desbloquear_campo_tienda_plantilla', { p_dia: dia, p_row: row, p_campo: campo });
+  },
+  moverTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1], direccion = args[2];
+    return llamarRpcSupabase_('mover_tienda_plantilla', { p_dia: dia, p_row: row, p_direccion: direccion });
+  },
+  moverRutaPlantilla: function (args) {
+    const dia = args[0], nombreRuta = args[1], direccion = args[2];
+    return llamarRpcSupabase_('mover_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_direccion: direccion });
+  },
+  editarNombreRutaPlantilla: function (args) {
+    const dia = args[0], nombreActual = args[1], nombreNuevo = args[2];
+    return llamarRpcSupabase_('editar_nombre_ruta_plantilla', { p_dia: dia, p_nombre_actual: nombreActual, p_nombre_nuevo: nombreNuevo });
+  },
+  añadirNotaCargaPlantilla: function (args) {
+    const dia = args[0], nombreRuta = args[1], texto = args[2];
+    return llamarRpcSupabase_('anadir_nota_carga_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_texto: texto });
+  },
+  eliminarRutaPlantilla: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('eliminar_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  editarNotaCargaPlantilla: function (args) {
+    const dia = args[0], row = args[1], texto = args[2];
+    return llamarRpcSupabase_('editar_nota_carga_plantilla', { p_dia: dia, p_row: row, p_texto: texto });
+  },
+  eliminarNotaCargaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('eliminar_nota_carga_plantilla', { p_dia: dia, p_row: row });
+  },
+  guardarNotaGrupoPlantilla: function (args) {
+    const dia = args[0], fila = args[1], cantidad = args[2], texto = args[3];
+    return llamarRpcSupabase_('guardar_nota_grupo_plantilla', { p_dia: dia, p_fila_inicio: fila, p_num_filas: cantidad, p_texto: texto });
+  },
+  eliminarNotaGrupoPlantilla: function (args) {
+    const dia = args[0], fila = args[1];
+    return llamarRpcSupabase_('eliminar_nota_grupo_plantilla', { p_dia: dia, p_fila: fila });
+  },
+  editarOrdenTiendaPlantilla: function (args) {
+    const dia = args[0], fila = args[1], orden = args[2];
+    return llamarRpcSupabase_('editar_orden_tienda_plantilla', { p_dia: dia, p_row: fila, p_texto: orden });
+  },
+  // -- Supabase: Observaciones (notas generales, de agrupación y cierres) --
+  guardarObservacion: function (args) {
+    const obs = args[0];
+    return llamarRpcSupabase_('guardar_observacion', {
+      p_fecha: obs.fecha,
+      p_dia: obs.dia,
+      p_agrupacion: obs.agrupacion,
+      p_tienda: obs.tienda,
+      p_tipo: obs.tipo,
+      p_texto: obs.texto
+    });
+  },
+  eliminarObservacion: function (args) {
+    return llamarRpcSupabase_('eliminar_observacion', { p_id: args[0] });
+  },
+  // -- Supabase: Administración: Palets forzados --
+  getPaletsForzadosAdmin: function (args) {
+    const fechaIni = args[0], fechaFin = args[1];
+    return llamarRpcSupabase_('get_palets_forzados_admin', { p_fecha_ini: fechaIni, p_fecha_fin: fechaFin });
+  },
+  añadirRutaPlantilla: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('anadir_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  editarTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1], nombre = args[2], limite = args[3];
+    return llamarRpcSupabase_('editar_tienda_plantilla', { p_dia: dia, p_row: row, p_nombre: nombre, p_limite: limite });
   }
 };
 
@@ -4882,11 +5005,11 @@ function renderShellPrincipal() {
 /* ---------------- CALENDARIO ---------------- */
 function cargarCalendario() {
   document.getElementById('selected-pill').textContent = formatearFechaCorta(ESTADO.fecha);
-  google.script.run
-    .withSuccessHandler(function (dias) {
+  llamarApi_('getMesCalendario', [ESTADO.anioMes])
+    .then(function (dias) {
       renderCalendario(dias);
     })
-    .withFailureHandler(function (err) {
+    .catch(function (err) {
       mostrarErrorServidor(err);
       // A diferencia del toast (que desaparece solo a los 3s), si el
       // calendario se queda sin cargar hay que dejar algo accionable en su
@@ -4901,8 +5024,7 @@ function cargarCalendario() {
           '</div>';
         document.getElementById('btn-reintentar-calendario').onclick = cargarCalendario;
       }
-    })
-    .getMesCalendario(ESTADO.anioMes);
+    });
 }
 
 function formatearFechaCorta(fecha) {
@@ -4988,10 +5110,9 @@ function cargarConteoDia() {
   const cont = document.getElementById('dia-contenido');
   cont.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando conteo…</div></div>';
   document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Cargando…</div>';
-  google.script.run
-    .withSuccessHandler(renderContenidoDia)
-    .withFailureHandler(mostrarErrorServidor)
-    .getConteoDia(ESTADO.fecha);
+  llamarApi_('getConteoDia', [ESTADO.fecha])
+    .then(renderContenidoDia)
+    .catch(mostrarErrorServidor);
 }
 
 function renderContenidoDia(data) {
@@ -5524,21 +5645,20 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const filas = recogerFilas(tableWrap);
     marcarGuardando(panel, true);
     if (btnGuardarConteo) btnGuardarConteo.disabled = true;
-    google.script.run
-      .withSuccessHandler(function () {
+    llamarApi_('guardarConteo', [dia, filas, fecha, seccion.nombre])
+      .then(function () {
         marcarGuardando(panel, false);
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarTodoGuardado_();
         if (onDone) onDone(true);
       })
-      .withFailureHandler(function (err) {
+      .catch(function (err) {
         marcarGuardando(panel, false);
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarCambiosSinGuardar_(); // el guardado falló: sigue habiendo cambios sin guardar
         mostrarErrorServidor(err);
         if (onDone) onDone(false);
-      })
-      .guardarConteo(dia, filas, fecha, seccion.nombre);
+      });
   }
   if (btnGuardarConteo) {
     btnGuardarConteo.onclick = function (e) {
@@ -6582,8 +6702,8 @@ function recogerFilas(tableWrap) {
 
 /* ---------------- OBSERVACIONES ---------------- */
 function guardarObservacionYRecargar(obs) {
-  google.script.run
-    .withSuccessHandler(function () {
+  llamarApi_('guardarObservacion', [obs])
+    .then(function () {
       mostrarToast('Guardado');
       if (document.getElementById('dia-contenido')) {
         cargarConteoDia();
@@ -6593,19 +6713,17 @@ function guardarObservacionYRecargar(obs) {
         cargarFestivos();
       }
     })
-    .withFailureHandler(mostrarErrorServidor)
-    .guardarObservacion(obs);
+    .catch(mostrarErrorServidor);
 }
 
 function eliminarObservacionYRecargar(id) {
-  google.script.run
-    .withSuccessHandler(function () {
+  llamarApi_('eliminarObservacion', [id])
+    .then(function () {
       mostrarToast('Eliminado');
       cargarConteoDia();
       cargarCalendario();
     })
-    .withFailureHandler(mostrarErrorServidor)
-    .eliminarObservacion(id);
+    .catch(mostrarErrorServidor);
 }
 
 /* ---------------- GESTOR DE OBSERVACIONES (admin, cualquier día) ----------------
@@ -7154,9 +7272,7 @@ function renderResultadosBusquedaGestorObs_(query) {
 
 /** Guarda una observación en el backend, envuelto en una Promesa (google.script.run usa callbacks). */
 function guardarObservacionPromise_(obs) {
-  return new Promise(function (resolve, reject) {
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).guardarObservacion(obs);
-  });
+  return llamarApi_('guardarObservacion', [obs]);
 }
 
 /** Valida el formulario y guarda la observación (nota general, de agrupación, o uno o varios cierres de tienda). */
