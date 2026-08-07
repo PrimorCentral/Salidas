@@ -480,7 +480,7 @@
   .barrido-chip.error { background: #f4d4d4; color: #8a3a3a; }
   .barrido-detalle { margin: 8px 0; font-size: 12.5px; }
   .barrido-detalle summary { cursor: pointer; font-weight: 700; color: var(--navy); padding: 4px 0; }
-  .barrido-detalle ul { margin: 6px 0 0; padding-left: 18px; max-height: 220px; overflow-y: auto; }
+  .barrido-detalle ul { margin: 6px 0 0; padding-left: 18px; }
   .barrido-detalle li { margin-bottom: 3px; word-break: break-word; }
   #btn-barrido-enviar { background: var(--danger, #c0392b) !important; border-color: var(--danger, #c0392b) !important; }
   #btn-barrido-enviar:hover { filter: brightness(0.92); }
@@ -524,12 +524,28 @@
     font-size: 12px; color: var(--ink-soft); margin: -4px 0 14px;
   }
   #barrido-hora-automatica-fila { margin-bottom: 6px; }
+  /* El resultado del barrido (chips + listas colapsables) tiene su propio
+     scroll, igual que #emails-config-lista: así la cabecera de la tarjeta
+     (título, fecha, botones) se queda fija y es esta caja la que se
+     desplaza, no toda la página. Alto real puesto por JS (ver
+     ajustarAlturaListaScrollable_). */
+  #barrido-resultado {
+    overflow-y: auto;
+    padding-right: 6px; margin-right: -6px;
+  }
   /* Cabecera fija de "Emails agencias": título, botón sincronizar, descripción
      y buscador no se mueven; el que se desplaza es solo #emails-config-lista,
      en su propia caja con scroll interno (no toda la página). */
   .emails-config-fijo { margin-bottom: 12px; }
   .emails-config-fijo .emails-config-toolbar { margin-bottom: 0; }
   #emails-config-lista {
+    overflow-y: auto; min-height: 160px;
+    padding-right: 6px; margin-right: -6px;
+  }
+  /* Igual que #emails-config-lista: cabecera de "Email tiendas" (título,
+     botón sincronizar, descripción y buscador) fija, solo esta caja
+     desplaza. */
+  #tiendas-config-lista {
     overflow-y: auto; min-height: 160px;
     padding-right: 6px; margin-right: -6px;
   }
@@ -1756,6 +1772,21 @@
   .servidor-card-cuota-barra > div { height: 100%; background: var(--amber-dark); }
   .servidor-card-cuota-barra.baja > div { background: var(--danger); }
   .servidor-card-notas { font-size: 11.5px; color: var(--ink-soft); font-style: italic; border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 2px; }
+
+  .cola-emails-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin-right: 6px; background: #eef0f4; color: var(--ink-soft); }
+  .cola-emails-chip.pendiente { background: #eef0f4; color: var(--ink-soft); }
+  .cola-emails-chip.enviando { background: #fff4dd; color: var(--amber-dark); }
+  .cola-emails-chip.enviado { background: #e4f7ea; color: #1a7f3c; }
+  .cola-emails-chip.error { background: #fde8e8; color: var(--danger); }
+  .cola-emails-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  .cola-emails-tabla th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 6px 8px; }
+  .cola-emails-tabla td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .cola-emails-estado { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .cola-emails-estado.pendiente { background: #eef0f4; color: var(--ink-soft); }
+  .cola-emails-estado.enviando { background: #fff4dd; color: var(--amber-dark); }
+  .cola-emails-estado.enviado { background: #e4f7ea; color: #1a7f3c; }
+  .cola-emails-estado.error { background: #fde8e8; color: var(--danger); }
+  .cola-emails-error-detalle { font-size: 11px; color: var(--danger); margin-top: 3px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -1874,7 +1905,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.6';
+const APP_VERSION_ACTUAL = '1.5.7';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2091,7 +2122,8 @@ const METODOS_REMOTOS_ = {
   guardarEmailTienda: 'guardarEmailTienda',
   eliminarTiendaConfig: 'eliminarTiendaConfig',
   sincronizarTiendas: 'sincronizarTiendas',
-  enviarAvisosTiendas: 'enviarAvisosTiendas'
+  enviarAvisosTiendas: 'enviarAvisosTiendas',
+  getAvisosEnviadosTiendas: 'getAvisosEnviadosTiendas'
 };
 
 /** Llama a una función RPC de Postgres (Supabase) pasando SIEMPRE el token
@@ -2209,12 +2241,29 @@ const SUPABASE_ACCIONES_ = {
     return llamarRpcSupabase_('get_config_aviso_tiendas', {});
   },
   guardarHoraAvisoTiendas: function (args) {
-    const hora = args[0];
-    return llamarRpcSupabase_('guardar_hora_aviso_tiendas', { p_hora: hora });
+    const hora = args[0], horaLimite = args[1];
+    return llamarRpcSupabase_('guardar_hora_aviso_tiendas', { p_hora: hora, p_hora_limite: horaLimite || null });
   },
   enviarAvisosTiendas: function (args) {
     const fecha = args[0], simulacion = args[1];
     return llamarRpcSupabase_('enviar_avisos_tiendas', { p_fecha: fecha, p_simulacion: simulacion });
+  },
+  getAvisosEnviadosTiendas: function (args) {
+    const fecha = args[0];
+    return llamarRpcSupabase_('get_avisos_enviados_tiendas', { p_fecha: fecha });
+  },
+  // -- Supabase: Cola de trabajo emails (envío de avisos a tiendas a ritmo controlado) --
+  getColaEmailsTiendas: function (args) {
+    const fecha = args[0];
+    return llamarRpcSupabase_('get_cola_emails_tiendas', { p_fecha: fecha || null });
+  },
+  reintentarEmailCola: function (args) {
+    const id = args[0];
+    return llamarRpcSupabase_('reintentar_email_cola', { p_id: id });
+  },
+  reintentarTodosErroresCola: function (args) {
+    const fecha = args[0];
+    return llamarRpcSupabase_('reintentar_todos_errores_cola', { p_fecha: fecha || null });
   },
   getTiendasConfig: function () {
     return llamarRpcSupabase_('get_tiendas_config', {});
@@ -2485,9 +2534,10 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 // de la cabecera se construye con ellas; más secciones futuras solo se
 // añaden a esta lista).
 const CONFIG_SECCIONES = [
-  { id: 'emails', label: 'Emails agencias' },
   { id: 'plantilla', label: 'Rutas y tiendas' },
-  { id: 'tiendas', label: 'Configuración tiendas' }
+  { id: 'emails', label: 'Email agencias' },
+  { id: 'tiendas', label: 'Email tiendas' },
+  { id: 'aviso-tiendas', label: 'Aviso a tiendas' }
   // futuras secciones de Configuración van aquí
 ];
 let ESTADO_CONFIG = { seccionActiva: 'emails' };
@@ -2499,7 +2549,8 @@ let ESTADO_CONFIG = { seccionActiva: 'emails' };
 const ADMIN_SECCIONES = [
   { id: 'festivos', label: 'Gestión festivos' },
   { id: 'palets-forzados', label: 'Palets forzados' },
-  { id: 'servidores', label: 'Servidores' }
+  { id: 'servidores', label: 'Servidores' },
+  { id: 'cola-emails', label: 'Cola trabajo emails' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
@@ -2670,6 +2721,7 @@ function renderVistaConfiguracion() {
 function renderSeccionConfigActiva() {
   if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
   else if (ESTADO_CONFIG.seccionActiva === 'plantilla') renderConfigPlantilla();
+  else if (ESTADO_CONFIG.seccionActiva === 'aviso-tiendas') renderAvisoTiendas();
   else if (ESTADO_CONFIG.seccionActiva === 'tiendas') renderConfigTiendas();
 }
 
@@ -2686,6 +2738,7 @@ function renderSeccionAdminActiva() {
   if (ESTADO_ADMIN.seccionActiva === 'festivos') renderAdminFestivos();
   else if (ESTADO_ADMIN.seccionActiva === 'palets-forzados') renderAdminPaletsForzados();
   else if (ESTADO_ADMIN.seccionActiva === 'servidores') renderAdminServidores();
+  else if (ESTADO_ADMIN.seccionActiva === 'cola-emails') renderAdminColaEmails();
 }
 
 /* ---------------- GESTIÓN FESTIVOS ----------------
@@ -3183,6 +3236,7 @@ function ajustarAlturasListasConfig_debounced_() {
     ajustarAlturaListaScrollable_('emails-config-lista');
     ajustarAlturaListaScrollable_('festivos-lista');
     ajustarAlturaListaScrollable_('tiendas-config-lista');
+    ajustarAlturaListaScrollable_('barrido-resultado');
   }, 120);
 }
 
@@ -3193,7 +3247,7 @@ function renderConfigEmails() {
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Emails agencias</h2>' +
+          '<h2>Email agencias</h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
@@ -3368,37 +3422,69 @@ function sincronizarAgrupacionesDesdeApp_() {
     });
 }
 
-/* ---------------- CONFIGURACIÓN: "Configuración tiendas" ----------------
- * Mismo patrón que "Emails agencias" (Config_Agrupaciones), pero sobre
- * Config_Tiendas: email de cada tienda para el aviso de "barrido de día".
- * Además, solo para admin, incluye el panel para lanzar el barrido: envía
- * a cada tienda con palets asignados ese día un correo con el total y la
- * fecha de entrega calculada (24H/48H/72H según el marcador "*"/"^" de su
- * nombre — ver detectarPlazoTienda_ en el backend). Requiere en Code.gs:
- * getTiendasConfig, guardarEmailTienda, eliminarTiendaConfig,
- * sincronizarTiendas y enviarAvisosTiendas.
+/* ---------------- CONFIGURACIÓN: "Email tiendas" y "Aviso a tiendas" ----------------
+ * Dos páginas relacionadas pero separadas:
+ * - "Email tiendas" (renderConfigTiendas): igual patrón que "Emails
+ *   agencias" (Config_Agrupaciones), pero sobre Config_Tiendas: email de
+ *   cada tienda para el aviso de "barrido de día".
+ * - "Aviso a tiendas" (renderAvisoTiendas): solo para admin, el panel para
+ *   lanzar el barrido: envía a cada tienda con palets asignados ese día un
+ *   correo con el total y la fecha de entrega calculada (24H/48H/72H según
+ *   el marcador "*"/"^" de su nombre — ver detectarPlazoTienda_ en el
+ *   backend).
+ * Requiere en Code.gs: getTiendasConfig, guardarEmailTienda,
+ * eliminarTiendaConfig, sincronizarTiendas y enviarAvisosTiendas.
  */
 let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
-let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, simulado: false };
-// Hora a partir de la cual se intenta el envío automático del aviso a
+let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, resultadoFecha: null, simulado: false };
+// Horas entre las que se intenta el envío automático del aviso a
 // tiendas (ver getConfigAvisoTiendas/guardarHoraAvisoTiendas en el
 // backend). null = todavía no se ha cargado desde el servidor.
-let HORA_AVISO_TIENDAS_ESTADO = { hora: null, cargando: false };
+//   hora        -> primer barrido (obligatoria para que el automático esté activo)
+//   horaLimite  -> último barrido de seguridad (opcional):
+//                    - vacía: el automático dispara UNA sola vez al día, en cuanto
+//                      se alcanza "hora". Definitivos posteriores ese día ya no
+//                      se avisan solos, hay que usar los botones de abajo.
+//                    - rellena: el automático se repite cada ~15 min mientras
+//                      "hora" <= ahora <= "horaLimite", avisando a las tiendas
+//                      que se van poniendo listas en esa ventana. Pasada
+//                      "horaLimite" no se envía nada más automáticamente ese día.
+let HORA_AVISO_TIENDAS_ESTADO = { hora: null, horaLimite: null, cargando: false };
+// NOTA: antes había aquí un intento de calcular "ya avisadas hoy" por
+// diferencia (total de tiendas activas menos la suma de los bloques del
+// resultado), asumiendo que toda tienda activa aparece siempre en algún
+// bloque. Esa suposición era falsa (hay tiendas activas que ese día ni
+// siquiera tienen ruta en el cuadrante -- se filtran por día de la semana
+// en enviar_avisos_tiendas -- así que tampoco aparecen en ningún bloque
+// sin haber sido avisadas) y daba un número incorrecto. Se sustituyó por
+// get_avisos_enviados_tiendas(p_fecha, p_token), un RPC nuevo en Supabase
+// que consulta directamente la tabla avisos_enviados_tiendas (la misma
+// que usa enviar_avisos_tiendas para saber a quién saltarse), así que el
+// dato es exacto.
+function cargarAvisosEnviadosTiendas_(fecha) {
+  return llamarApi_('getAvisosEnviadosTiendas', [fecha]).catch(function () {
+    return null; // si falla, sencillamente no se muestra el dato extra
+  });
+}
 
 function htmlBarridoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y cuyas rutas de ese día ya se hayan enviado todas como definitivo, con email configurado abajo.</p>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y cuyas rutas de ese día ya se hayan enviado todas como definitivo, con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola trabajo emails).</p>' +
       '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
         '<div class="admin-filtro-campo">' +
-          '<label>Envío automático diario a partir de</label>' +
+          '<label>Primer barrido a partir de</label>' +
           '<input type="time" id="barrido-hora-automatica" value="' + escapeAttr(HORA_AVISO_TIENDAS_ESTADO.hora || '') + '">' +
         '</div>' +
-        '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar hora</button>' +
+        '<div class="admin-filtro-campo">' +
+          '<label>Último barrido de seguridad (opcional)</label>' +
+          '<input type="time" id="barrido-hora-limite" value="' + escapeAttr(HORA_AVISO_TIENDAS_ESTADO.horaLimite || '') + '">' +
+        '</div>' +
+        '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar horas</button>' +
         '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-quitar-hora-aviso" title="Deja el aviso a tiendas en solo envío manual">Quitar (solo manual)</button>' +
       '</div>' +
-      '<p class="barrido-hora-nota">Cada 15 min la app comprueba si ya ha pasado esa hora. En cuanto se cumple, avisa a las tiendas que ya estén listas: aquellas cuyas rutas/agrupaciones de hoy YA se hayan enviado todas como definitivo a la agencia, aunque el resto del cuadrante del día siga pendiente. Si una tienda recibe de varias rutas, espera a que todas estén enviadas antes de avisarla. No hace falta que el día entero esté cerrado, y el barrido puede repetirse a lo largo del día según van llegando más definitivos: cada tienda solo recibe su aviso una vez. Si dejas el campo vacío, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
+      '<p class="barrido-hora-nota">Cada 15 min la app comprueba las horas configuradas. Si dejas vacío el <b>último barrido de seguridad</b>, el envío automático se dispara UNA sola vez al día en cuanto se alcanza el <b>primer barrido</b>: los definitivos que lleguen después ese día ya no se avisan solos (hace falta el botón manual de abajo). Si rellenas también el último barrido, la comprobación se repite cada ~15 min entre esas dos horas, avisando a las tiendas que se van poniendo listas (aquellas cuyas rutas/agrupaciones ya se hayan enviado todas como definitivo a la agencia) según van llegando más definitivos durante esa ventana; pasado el último barrido no se envía nada más automáticamente ese día. En cualquier caso cada tienda solo recibe su aviso una vez. Si dejas ambos campos vacíos, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -3413,7 +3499,9 @@ function vincularBarridoTiendas_() {
   const fechaInput = document.getElementById('barrido-fecha');
   if (fechaInput) {
     fechaInput.addEventListener('change', function (e) {
-      if (e.target.value) BARRIDO_TIENDAS_ESTADO.fecha = e.target.value;
+      if (!e.target.value) return;
+      BARRIDO_TIENDAS_ESTADO.fecha = e.target.value;
+      ejecutarBarridoTiendas_(true, true); // vista previa automática al cambiar de fecha, sin toast
     });
   }
   const btnPreview = document.getElementById('btn-barrido-preview');
@@ -3423,12 +3511,21 @@ function vincularBarridoTiendas_() {
     btnEnviar.onclick = function () {
       appConfirm(
         'Enviar avisos reales',
-        'Vas a enviar un correo real a cada tienda con palets asignados el ' + formatearFechaLarga(BARRIDO_TIENDAS_ESTADO.fecha) + '. Esta acción no se puede deshacer. ¿Seguro que quieres continuar?',
+        'Vas a encolar un correo real para cada tienda con palets asignados el ' + formatearFechaLarga(BARRIDO_TIENDAS_ESTADO.fecha) + '. Se irán enviando solos en los próximos minutos (máx. 30/min) y no se puede deshacer. ¿Seguro que quieres continuar?',
         function () { ejecutarBarridoTiendas_(false); }
       );
     };
   }
-  if (BARRIDO_TIENDAS_ESTADO.resultado) pintarResultadoBarridoTiendas_();
+  // Al abrir la página, vista previa automática: así se ve de un vistazo si
+  // hay tiendas ya avisadas hoy en un envío anterior, sin tener que pulsar
+  // nada. Si ya había un resultado en memoria para esta misma fecha (por
+  // ejemplo, al volver de otra pestaña de Configuración), se reutiliza en
+  // vez de repetir la llamada.
+  if (BARRIDO_TIENDAS_ESTADO.resultado && BARRIDO_TIENDAS_ESTADO.resultadoFecha === BARRIDO_TIENDAS_ESTADO.fecha) {
+    pintarResultadoBarridoTiendas_();
+  } else {
+    ejecutarBarridoTiendas_(true, true);
+  }
 
   const btnGuardarHora = document.getElementById('btn-guardar-hora-aviso');
   if (btnGuardarHora) btnGuardarHora.onclick = function () { guardarHoraAvisoTiendas_(); };
@@ -3436,16 +3533,18 @@ function vincularBarridoTiendas_() {
   if (btnQuitarHora) {
     btnQuitarHora.onclick = function () {
       const input = document.getElementById('barrido-hora-automatica');
+      const inputLimite = document.getElementById('barrido-hora-limite');
       if (input) input.value = '';
+      if (inputLimite) inputLimite.value = '';
       guardarHoraAvisoTiendas_();
     };
   }
   cargarHoraAvisoTiendas_();
 }
 
-/** Trae de Propiedades del script la hora configurada para el aviso
- *  automático a tiendas y rellena el input (solo si el admin no la ha
- *  tocado ya a mano mientras se cargaba). */
+/** Trae de Supabase las horas configuradas para el aviso automático a
+ *  tiendas y rellena los inputs (solo si el admin no los ha tocado ya a
+ *  mano mientras se cargaba). */
 function cargarHoraAvisoTiendas_() {
   if (HORA_AVISO_TIENDAS_ESTADO.cargando) return;
   HORA_AVISO_TIENDAS_ESTADO.cargando = true;
@@ -3453,8 +3552,11 @@ function cargarHoraAvisoTiendas_() {
     .then(function (cfg) {
       HORA_AVISO_TIENDAS_ESTADO.cargando = false;
       HORA_AVISO_TIENDAS_ESTADO.hora = (cfg && cfg.horaAutomatica) || '';
+      HORA_AVISO_TIENDAS_ESTADO.horaLimite = (cfg && cfg.horaLimite) || '';
       const input = document.getElementById('barrido-hora-automatica');
       if (input && document.activeElement !== input) input.value = HORA_AVISO_TIENDAS_ESTADO.hora;
+      const inputLimite = document.getElementById('barrido-hora-limite');
+      if (inputLimite && document.activeElement !== inputLimite) inputLimite.value = HORA_AVISO_TIENDAS_ESTADO.horaLimite;
     })
     .catch(function (err) {
       HORA_AVISO_TIENDAS_ESTADO.cargando = false;
@@ -3462,17 +3564,26 @@ function cargarHoraAvisoTiendas_() {
     });
 }
 
-/** Guarda la hora del input (o la borra, dejando el envío en solo manual). */
+/** Guarda las horas de los inputs (o las borra, dejando el envío en solo manual). */
 function guardarHoraAvisoTiendas_() {
   const input = document.getElementById('barrido-hora-automatica');
+  const inputLimite = document.getElementById('barrido-hora-limite');
   const btn = document.getElementById('btn-guardar-hora-aviso');
   const hora = input ? input.value : '';
+  const horaLimite = inputLimite ? inputLimite.value : '';
   if (btn) btn.disabled = true;
-  llamarApi_('guardarHoraAvisoTiendas', [hora])
+  llamarApi_('guardarHoraAvisoTiendas', [hora, horaLimite])
     .then(function () {
       if (btn) btn.disabled = false;
       HORA_AVISO_TIENDAS_ESTADO.hora = hora;
-      mostrarToast(hora ? 'Hora guardada: envío automático a partir de las ' + hora : 'Envío automático desactivado (solo manual)');
+      HORA_AVISO_TIENDAS_ESTADO.horaLimite = horaLimite;
+      mostrarToast(
+        !hora
+          ? 'Envío automático desactivado (solo manual)'
+          : (horaLimite
+              ? 'Horas guardadas: barridos automáticos entre las ' + hora + ' y las ' + horaLimite
+              : 'Hora guardada: un único barrido automático a las ' + hora)
+      );
     })
     .catch(function (err) {
       if (btn) btn.disabled = false;
@@ -3480,24 +3591,28 @@ function guardarHoraAvisoTiendas_() {
     });
 }
 
-function ejecutarBarridoTiendas_(simulacion) {
+function ejecutarBarridoTiendas_(simulacion, silencioso) {
   const resEl = document.getElementById('barrido-resultado');
   const btnPreview = document.getElementById('btn-barrido-preview');
   const btnEnviar = document.getElementById('btn-barrido-enviar');
   if (btnPreview) btnPreview.disabled = true;
   if (btnEnviar) btnEnviar.disabled = true;
-  if (resEl) resEl.innerHTML = '<div class="loader">' + (simulacion ? 'Calculando vista previa…' : 'Enviando correos…') + '</div>';
+  if (resEl) resEl.innerHTML = '<div class="loader">' + (simulacion ? 'Calculando vista previa…' : 'Encolando correos…') + '</div>';
 
-  llamarApi_('enviarAvisosTiendas', [BARRIDO_TIENDAS_ESTADO.fecha, simulacion])
+  const fechaSolicitada = BARRIDO_TIENDAS_ESTADO.fecha;
+  llamarApi_('enviarAvisosTiendas', [fechaSolicitada, simulacion])
     .then(function (resultado) {
       if (btnPreview) btnPreview.disabled = false;
       if (btnEnviar) btnEnviar.disabled = false;
       BARRIDO_TIENDAS_ESTADO.resultado = resultado;
+      BARRIDO_TIENDAS_ESTADO.resultadoFecha = fechaSolicitada;
       BARRIDO_TIENDAS_ESTADO.simulado = simulacion;
       pintarResultadoBarridoTiendas_();
-      mostrarToast(simulacion
-        ? 'Vista previa: ' + resultado.enviados.length + ' se enviarían'
-        : resultado.enviados.length + ' correo(s) enviado(s)');
+      if (!silencioso) {
+        mostrarToast(simulacion
+          ? 'Vista previa: ' + resultado.enviados.length + ' se enviarían'
+          : resultado.enviados.length + ' correo(s) encolado(s), se irán enviando a un ritmo máx. de 30/min');
+      }
     })
     .catch(function (err) {
       if (btnPreview) btnPreview.disabled = false;
@@ -3512,6 +3627,7 @@ function pintarResultadoBarridoTiendas_() {
   if (!resEl) return;
   const r = BARRIDO_TIENDAS_ESTADO.resultado;
   if (!r) { resEl.innerHTML = ''; return; }
+  const fecha = BARRIDO_TIENDAS_ESTADO.resultadoFecha;
 
   function listaColapsable(titulo, items, render) {
     if (!items.length) return '';
@@ -3523,36 +3639,81 @@ function pintarResultadoBarridoTiendas_() {
     );
   }
 
-  resEl.innerHTML =
-    '<div class="barrido-resumen">' +
-      '<div class="barrido-chip ok">' + r.enviados.length + (BARRIDO_TIENDAS_ESTADO.simulado ? ' se enviarían' : ' enviados') + '</div>' +
-      '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' pendientes de otras rutas</div>' +
-      '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
-      '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
-      '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
-      (r.errores.length ? '<div class="barrido-chip error">' + r.errores.length + ' con error</div>' : '') +
-    '</div>' +
-    listaColapsable(BARRIDO_TIENDAS_ESTADO.simulado ? 'Se enviarían' : 'Enviados', r.enviados, function (it) {
-      return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — entrega ' + formatearFechaLarga(it.fechaEntrega) + ' — ' + escapeHtml(it.email) + '</li>';
-    }) +
-    listaColapsable('Pendientes de otras rutas (aún sin enviar como definitivo)', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
-    listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
-    listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
-    listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
-    listaColapsable('Errores de envío', r.errores, function (it) { return '<li>' + escapeHtml(it.tienda) + ' — ' + escapeHtml(it.error) + '</li>'; });
+  cargarAvisosEnviadosTiendas_(fecha).then(function (yaAvisadas) {
+    // El resultado puede haber cambiado (otra fecha, otro clic) mientras se
+    // cargaba: si ya no es el que estamos pintando, no lo sobrescribas.
+    if (BARRIDO_TIENDAS_ESTADO.resultado !== r) return;
+
+    resEl.innerHTML =
+      '<div class="barrido-resumen">' +
+        '<div class="barrido-chip ok">' + r.enviados.length + (BARRIDO_TIENDAS_ESTADO.simulado ? ' se enviarían' : ' enviados') + '</div>' +
+        (yaAvisadas ? '<div class="barrido-chip' + (yaAvisadas.length ? ' info' : '') + '" title="Tiendas que ya recibieron su aviso real hoy en un envío anterior (dato real de la tabla avisos_enviados_tiendas).">' + yaAvisadas.length + ' ya avisadas hoy</div>' : '') +
+        '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' pendientes de otras rutas</div>' +
+        '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
+        '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
+        '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
+        (r.errores.length ? '<div class="barrido-chip error">' + r.errores.length + ' con error</div>' : '') +
+      '</div>' +
+      listaColapsable(BARRIDO_TIENDAS_ESTADO.simulado ? 'Se enviarían' : 'Encolados (se enviarán a 30/min)', r.enviados, function (it) {
+        return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — entrega ' + formatearFechaLarga(it.fechaEntrega) + ' — ' + escapeHtml(it.email) + '</li>';
+      }) +
+      listaColapsable('Ya avisadas hoy (envío anterior)', yaAvisadas || [], function (it) {
+        return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — enviado a las ' + formatearHoraCorta_(it.enviadoEn) + ' — ' + escapeHtml(it.email) + '</li>';
+      }) +
+      listaColapsable('Pendientes de otras rutas (aún sin enviar como definitivo)', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Errores de envío', r.errores, function (it) { return '<li>' + escapeHtml(it.tienda) + ' — ' + escapeHtml(it.error) + '</li>'; });
+
+    ajustarAlturaListaScrollable_('barrido-resultado');
+  });
+}
+
+/** Formatea un timestamp ISO (con hora) a "HH:MM" en hora local del
+ *  navegador. Usado solo para el listado de "Ya avisadas hoy". */
+function formatearHoraCorta_(isoTimestamp) {
+  if (!isoTimestamp) return '—';
+  const d = new Date(isoTimestamp);
+  if (isNaN(d.getTime())) return '—';
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+/** Página "Aviso a tiendas": el panel del barrido del día (envío del correo
+ *  con los palets que recibe cada tienda), separado de "Email tiendas" para
+ *  que cada pantalla se vea más despejada. Solo admin puede lanzarlo; para
+ *  quien no lo sea, se muestra un aviso de solo lectura. */
+function renderAvisoTiendas() {
+  const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+  if (!BARRIDO_TIENDAS_ESTADO.fecha) BARRIDO_TIENDAS_ESTADO.fecha = hoyStr();
+
+  cont.innerHTML = esAdmin()
+    ? htmlBarridoTiendasCard_()
+    : (
+      '<div class="vista-card">' +
+        '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
+        '<div class="emails-config-solo-lectura">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+          'Solo lectura: entra con la contraseña de administrador para poder lanzar el barrido y enviar avisos.' +
+        '</div>' +
+      '</div>'
+    );
+
+  if (esAdmin()) vincularBarridoTiendas_();
+  ajustarAlturaListaScrollable_('barrido-resultado');
+  window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
 function renderConfigTiendas() {
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
-  if (!BARRIDO_TIENDAS_ESTADO.fecha) BARRIDO_TIENDAS_ESTADO.fecha = hoyStr();
 
   cont.innerHTML =
-    (esAdmin() ? htmlBarridoTiendasCard_() : '') +
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Configuración tiendas</h2>' +
+          '<h2>Email tiendas</h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-tiendas" title="Vuelve a recorrer todas las hojas de día y añade las tiendas nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
@@ -3590,8 +3751,6 @@ function renderConfigTiendas() {
   cargarTiendasConfig_();
   ajustarAlturaListaScrollable_('tiendas-config-lista');
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
-
-  if (esAdmin()) vincularBarridoTiendas_();
 }
 
 function cargarTiendasConfig_() {
@@ -4014,6 +4173,154 @@ function formatearMinutosTranscurridos_(minutos) {
   if (horas < 24) return horas + ' h' + (restoMin ? ' ' + restoMin + ' min' : '');
   const dias = Math.floor(horas / 24);
   return dias + (dias === 1 ? ' día' : ' días');
+}
+
+/* ---------------- ADMINISTRACIÓN: "Cola trabajo emails" ----------------
+ * Los avisos de palets a tiendas (barrido del día, ver "Aviso a tiendas"
+ * en Configuración) ya NO se envían al momento: enviar_avisos_tiendas()
+ * los deja encolados en la tabla cola_emails_tiendas y un job de
+ * pg_cron (procesar_cola_emails_tiendas, cada minuto) los va mandando de
+ * verdad a un ritmo máximo de 30/min, para no saturar el SMTP.
+ * Esta página es solo de consulta/control de esa cola: contadores por
+ * estado, filtro por fecha y reintento manual de los que hayan quedado
+ * en error (tras 5 intentos automáticos fallidos).
+ */
+let ADMIN_COLA_EMAILS_ESTADO = { datos: null, fecha: '', refrescoAuto: null };
+
+function renderAdminColaEmails() {
+  const cont = document.getElementById('admin-contenido');
+  if (!cont) return;
+
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Cola trabajo emails</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-admin-refrescar" id="btn-cola-emails-refrescar" title="Volver a consultar la cola ahora mismo">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+            'Refrescar</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Los avisos de palets a tiendas se encolan aquí y se envían solos, a un ritmo máximo de 30 por minuto, para no saturar el correo. Esta pantalla se refresca sola cada 10 segundos mientras la tengas abierta.</p>' +
+      '<div class="admin-filtros">' +
+        '<div class="admin-filtro-campo"><label>Fecha (vacío = todas)</label><input type="date" id="cola-emails-fecha" value="' + escapeAttr(ADMIN_COLA_EMAILS_ESTADO.fecha) + '"></div>' +
+        '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-cola-emails-reintentar-todos">Reintentar todos los errores</button>' +
+      '</div>' +
+      '<div id="cola-emails-resultado"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-cola-emails-refrescar').onclick = function () { cargarColaEmailsAdmin_(true); };
+  document.getElementById('cola-emails-fecha').addEventListener('change', function (e) {
+    ADMIN_COLA_EMAILS_ESTADO.fecha = e.target.value || '';
+    cargarColaEmailsAdmin_();
+  });
+  document.getElementById('btn-cola-emails-reintentar-todos').onclick = function () { reintentarTodosErroresColaEmails_(); };
+
+  cargarColaEmailsAdmin_();
+
+  if (ADMIN_COLA_EMAILS_ESTADO.refrescoAuto) clearInterval(ADMIN_COLA_EMAILS_ESTADO.refrescoAuto);
+  ADMIN_COLA_EMAILS_ESTADO.refrescoAuto = setInterval(function () {
+    if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'cola-emails') {
+      clearInterval(ADMIN_COLA_EMAILS_ESTADO.refrescoAuto);
+      ADMIN_COLA_EMAILS_ESTADO.refrescoAuto = null;
+      return;
+    }
+    cargarColaEmailsAdmin_();
+  }, 10000);
+}
+
+function cargarColaEmailsAdmin_(esRefrescoManual) {
+  if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'cola-emails') return;
+  const resultadoEl = document.getElementById('cola-emails-resultado');
+  const btnRefrescar = document.getElementById('btn-cola-emails-refrescar');
+  if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
+  if (!esRefrescoManual && !ADMIN_COLA_EMAILS_ESTADO.datos && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+
+  llamarApi_('getColaEmailsTiendas', [ADMIN_COLA_EMAILS_ESTADO.fecha || null])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'cola-emails') return;
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      ADMIN_COLA_EMAILS_ESTADO.datos = datos;
+      pintarColaEmails_();
+    })
+    .catch(function (err) {
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      mostrarErrorServidor(err);
+      if (resultadoEl) resultadoEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar la cola de emails.</div>';
+    });
+}
+
+function pintarColaEmails_() {
+  const cont = document.getElementById('cola-emails-resultado');
+  if (!cont) return;
+  const datos = ADMIN_COLA_EMAILS_ESTADO.datos;
+  const resumen = (datos && datos.resumen) || { pendiente: 0, enviando: 0, enviado: 0, error: 0 };
+  const filas = (datos && datos.filas) || [];
+
+  let html =
+    '<div class="admin-resumen">' +
+      '<span class="cola-emails-chip pendiente">' + resumen.pendiente + ' pendientes</span>' +
+      '<span class="cola-emails-chip enviando">' + resumen.enviando + ' enviándose</span>' +
+      '<span class="cola-emails-chip enviado">' + resumen.enviado + ' enviados</span>' +
+      '<span class="cola-emails-chip error">' + resumen.error + ' con error</span>' +
+    '</div>';
+
+  if (!filas.length) {
+    html +=
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        'No hay correos en la cola' + (ADMIN_COLA_EMAILS_ESTADO.fecha ? ' para esta fecha.' : ' todavía.') +
+      '</div>';
+  } else {
+    html +=
+      '<table class="cola-emails-tabla">' +
+        '<thead><tr><th>Tienda</th><th>Email</th><th>Palets</th><th>Fecha aviso</th><th>Estado</th><th>Intentos</th><th></th></tr></thead>' +
+        '<tbody>' +
+        filas.map(pintarFilaColaEmail_).join('') +
+        '</tbody>' +
+      '</table>';
+  }
+
+  cont.innerHTML = html;
+
+  cont.querySelectorAll('[data-reintentar-id]').forEach(function (btn) {
+    btn.onclick = function () { reintentarEmailCola_(btn.getAttribute('data-reintentar-id')); };
+  });
+}
+
+function pintarFilaColaEmail_(f) {
+  const etiquetas = { pendiente: 'Pendiente', enviando: 'Enviando…', enviado: 'Enviado', error: 'Error' };
+  return (
+    '<tr>' +
+      '<td>' + escapeHtml(f.tienda) + '</td>' +
+      '<td>' + escapeHtml(f.email) + '</td>' +
+      '<td>' + escapeHtml(String(f.totalPalets)) + '</td>' +
+      '<td>' + escapeHtml(f.fecha) + '</td>' +
+      '<td><span class="cola-emails-estado ' + f.estado + '">' + etiquetas[f.estado] + '</span>' +
+        (f.estado === 'error' && f.error ? '<div class="cola-emails-error-detalle" title="' + escapeAttr(f.error) + '">' + escapeHtml(f.error) + '</div>' : '') +
+      '</td>' +
+      '<td>' + escapeHtml(String(f.intentos)) + '</td>' +
+      '<td>' + (f.estado === 'error' ? '<button type="button" class="btn-sincronizar-agrupaciones" data-reintentar-id="' + f.id + '">Reintentar</button>' : '') + '</td>' +
+    '</tr>'
+  );
+}
+
+function reintentarEmailCola_(id) {
+  llamarApi_('reintentarEmailCola', [Number(id)])
+    .then(function () {
+      mostrarToast('Correo puesto de nuevo en la cola, se enviará en el próximo minuto.');
+      cargarColaEmailsAdmin_();
+    })
+    .catch(function (err) { mostrarErrorServidor(err); });
+}
+
+function reintentarTodosErroresColaEmails_() {
+  llamarApi_('reintentarTodosErroresCola', [ADMIN_COLA_EMAILS_ESTADO.fecha || null])
+    .then(function (n) {
+      mostrarToast(n > 0 ? (n + ' correo(s) puesto(s) de nuevo en la cola.') : 'No había ningún correo en error.');
+      cargarColaEmailsAdmin_();
+    })
+    .catch(function (err) { mostrarErrorServidor(err); });
 }
 
 /* ---------------- CONFIGURACIÓN: "Plantilla conteos" ----------------
