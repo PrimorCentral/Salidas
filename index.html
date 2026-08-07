@@ -470,6 +470,36 @@
   .emails-config-badge.nueva { background: #f5deA0; color: #7a5417; }
   .emails-config-badge.sinuso { background: #f4d4d4; color: #8a3a3a; }
 
+  /* Fila de 7 botones "L M X J V S D": qué días de la semana recibe
+     entrega esta tienda. Afecta a la fecha prevista del aviso por email
+     (ver _sumar_dias_habiles en el backend), que solo cuenta como válidos
+     los días marcados aquí. Por defecto lunes-viernes sí, sábado y
+     domingo no. */
+  .emails-config-dias { display: flex; gap: 4px; flex-wrap: wrap; margin: 2px 0 10px; }
+  .emails-config-dia {
+    width: 30px; height: 26px; flex-shrink: 0;
+    border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
+    border-radius: 6px; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .emails-config-dia:hover:not(:disabled) { background: #f0f2f6; }
+  .emails-config-dia.activo { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .emails-config-dia.activo:hover:not(:disabled) { background: #267a5e; }
+  .emails-config-dia:disabled { opacity: .55; cursor: default; }
+
+  /* Píldoras de día del modal "Añadir tienda" (mismo lenguaje visual que
+     emails-config-dia, pero con el nombre completo del día en vez de una
+     sola letra: aquí se eligen días concretos, no un patrón semanal). */
+  .modal-anadir-tienda-dias { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .modal-anadir-tienda-dia-pill {
+    border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
+    border-radius: 20px; padding: 7px 14px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+  }
+  .modal-anadir-tienda-dia-pill:hover { background: #f0f2f6; }
+  .modal-anadir-tienda-dia-pill.activo { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .modal-anadir-tienda-dia-pill.activo:hover { background: #267a5e; }
+
   /* Panel "Aviso a tiendas (barrido del día)" */
   .barrido-resumen { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
   .barrido-chip {
@@ -542,7 +572,7 @@
     overflow-y: auto; min-height: 160px;
     padding-right: 6px; margin-right: -6px;
   }
-  /* Igual que #emails-config-lista: cabecera de "Email tiendas" (título,
+  /* Igual que #emails-config-lista: cabecera de "Configuración tiendas" (título,
      botón sincronizar, descripción y buscador) fija, solo esta caja
      desplaza. */
   #tiendas-config-lista {
@@ -1342,7 +1372,7 @@
     font-size: 14px; resize: vertical; min-height: 76px; margin-bottom: 16px;
   }
   .modal-box textarea:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
   .modal-actions button { border: none; border-radius: 9px; padding: 10px 18px; font-size: 13.5px; font-weight: 600; transition: filter .15s, transform .05s; }
   .modal-actions button:hover { filter: brightness(1.06); }
   .modal-actions button:active { transform: scale(.97); }
@@ -1905,7 +1935,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.7';
+const APP_VERSION_ACTUAL = '1.5.8';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2098,7 +2128,10 @@ const METODOS_REMOTOS_ = {
   getDiasPlantilla: 'getDiasPlantilla',
   editarTiendaPlantilla: 'editarTiendaPlantilla',
   añadirTiendaPlantilla: 'añadirTiendaPlantilla',
+  diasRutaMismoNombre: 'diasRutaMismoNombre',
   eliminarTiendaPlantilla: 'eliminarTiendaPlantilla',
+  eliminarTiendaPlantillaTodosDias: 'eliminarTiendaPlantillaTodosDias',
+  otrasAparicionesTiendaPlantilla: 'otrasAparicionesTiendaPlantilla',
   moverTiendaPlantilla: 'moverTiendaPlantilla',
   moverRutaPlantilla: 'moverRutaPlantilla',
   editarNombreRutaPlantilla: 'editarNombreRutaPlantilla',
@@ -2232,9 +2265,21 @@ const SUPABASE_ACCIONES_ = {
       p_limite: limite
     });
   },
+  diasRutaMismoNombre: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('dias_ruta_mismo_nombre', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
   eliminarTiendaPlantilla: function (args) {
     const dia = args[0], row = args[1];
     return llamarRpcSupabase_('eliminar_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
+  eliminarTiendaPlantillaTodosDias: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('eliminar_tienda_plantilla_todos_dias', { p_dia: dia, p_row: row });
+  },
+  otrasAparicionesTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('otras_apariciones_tienda_plantilla', { p_dia: dia, p_row: row });
   },
   // -- Supabase: Configuración tiendas + Aviso a tiendas (barrido del día) --
   getConfigAvisoTiendas: function () {
@@ -2277,6 +2322,22 @@ const SUPABASE_ACCIONES_ = {
   },
   sincronizarTiendas: function () {
     return llamarRpcSupabase_('sincronizar_tiendas', {});
+  },
+  buscarPosiblesDuplicadosTiendas: function () {
+    return llamarRpcSupabase_('buscar_posibles_duplicados_tiendas', {});
+  },
+  // -- Supabase: Rutas y tiendas — qué días de la semana recibe entrega
+  // cada tienda. Afecta a la fecha de entrega prevista que se calcula al
+  // enviar el aviso por email (ver _sumar_dias_habiles /
+  // _enviar_avisos_tiendas_interna): los días desmarcados no cuentan como
+  // día de entrega válido para esa tienda.
+  activarDiaEntregaTienda: function (args) {
+    const tienda = args[0], dia = args[1];
+    return llamarRpcSupabase_('activar_dia_entrega_tienda', { p_tienda: tienda, p_dia: dia });
+  },
+  desactivarDiaEntregaTienda: function (args) {
+    const tienda = args[0], dia = args[1];
+    return llamarRpcSupabase_('desactivar_dia_entrega_tienda', { p_tienda: tienda, p_dia: dia });
   },
   // -- Supabase: Rutas y tiendas — casillas opcionales (PESO / C.EXPRESS / PDF ESPECIAL) --
   // Las 3 casillas comparten exactamente el mismo patrón en el backend
@@ -2536,7 +2597,7 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 const CONFIG_SECCIONES = [
   { id: 'plantilla', label: 'Rutas y tiendas' },
   { id: 'emails', label: 'Email agencias' },
-  { id: 'tiendas', label: 'Email tiendas' },
+  { id: 'tiendas', label: 'Configuración tiendas' },
   { id: 'aviso-tiendas', label: 'Aviso a tiendas' }
   // futuras secciones de Configuración van aquí
 ];
@@ -3422,11 +3483,13 @@ function sincronizarAgrupacionesDesdeApp_() {
     });
 }
 
-/* ---------------- CONFIGURACIÓN: "Email tiendas" y "Aviso a tiendas" ----------------
+/* ---------------- CONFIGURACIÓN: "Configuración tiendas" y "Aviso a tiendas" ----------------
  * Dos páginas relacionadas pero separadas:
- * - "Email tiendas" (renderConfigTiendas): igual patrón que "Emails
+ * - "Configuración tiendas" (renderConfigTiendas): igual patrón que "Emails
  *   agencias" (Config_Agrupaciones), pero sobre Config_Tiendas: email de
- *   cada tienda para el aviso de "barrido de día".
+ *   cada tienda para el aviso de "barrido de día" y días de la semana en
+ *   que recibe entrega (L M X J V S D, usado para calcular la fecha
+ *   prevista del aviso).
  * - "Aviso a tiendas" (renderAvisoTiendas): solo para admin, el panel para
  *   lanzar el barrido: envía a cada tienda con palets asignados ese día un
  *   correo con el total y la fecha de entrega calculada (24H/48H/72H según
@@ -3680,7 +3743,7 @@ function formatearHoraCorta_(isoTimestamp) {
 }
 
 /** Página "Aviso a tiendas": el panel del barrido del día (envío del correo
- *  con los palets que recibe cada tienda), separado de "Email tiendas" para
+ *  con los palets que recibe cada tienda), separado de "Configuración tiendas" para
  *  que cada pantalla se vea más despejada. Solo admin puede lanzarlo; para
  *  quien no lo sea, se muestra un aviso de solo lectura. */
 function renderAvisoTiendas() {
@@ -3713,14 +3776,17 @@ function renderConfigTiendas() {
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Email tiendas</h2>' +
+          '<h2>Configuración tiendas</h2>' +
           '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-duplicados-tiendas" title="Compara los nombres de todas las tiendas para detectar la misma tienda escrita de forma distinta algún día">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+              'Buscar posibles duplicados</button>' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-tiendas" title="Vuelve a recorrer todas las hojas de día y añade las tiendas nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
               'Buscar y sincronizar cambios de tiendas</button>' +
           '</div>' +
         '</div>' +
-        '<p>Email de cada tienda, usado para avisarle por correo de los palets que va a recibir cuando se hace el barrido del día.</p>' +
+        '<p>Email de cada tienda, usado para avisarle por correo de los palets que va a recibir cuando se hace el barrido del día. Marca con L M X J V S D los días de la semana en que cada tienda recibe entrega, para que la fecha prevista del aviso sea correcta.</p>' +
         (esAdmin() ? '' :
           '<div class="emails-config-solo-lectura">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
@@ -3737,6 +3803,7 @@ function renderConfigTiendas() {
     '</div>';
 
   document.getElementById('btn-sincronizar-tiendas').onclick = sincronizarTiendasDesdeApp_;
+  document.getElementById('btn-duplicados-tiendas').onclick = buscarDuplicadosTiendas_;
 
   let temporizadorBusquedaTiendas = null;
   document.getElementById('tiendas-config-buscar').addEventListener('input', function (e) {
@@ -3797,6 +3864,26 @@ function pintarListaTiendas_() {
       ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
       : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>' : '');
     const idSeguro = 'tc' + idx;
+    const dias = it.dias || {};
+    const DIAS_FILA = [
+      { clave: 'lunes', letra: 'L' },
+      { clave: 'martes', letra: 'M' },
+      { clave: 'miercoles', letra: 'X' },
+      { clave: 'jueves', letra: 'J' },
+      { clave: 'viernes', letra: 'V' },
+      { clave: 'sabado', letra: 'S' },
+      { clave: 'domingo', letra: 'D' }
+    ];
+    const filaDias =
+      '<div class="emails-config-dias">' +
+        DIAS_FILA.map(function (d) {
+          const activo = !!dias[d.clave];
+          return '<button type="button" class="emails-config-dia' + (activo ? ' activo' : '') +
+            '" data-dia-tienda="' + escapeAttr(it.tienda) + '" data-dia="' + d.clave +
+            '" title="' + (activo ? 'Recibe entrega en ' : 'No recibe entrega en ') + d.clave +
+            '" ' + (esAdmin() ? '' : 'disabled') + '>' + d.letra + '</button>';
+        }).join('') +
+      '</div>';
     return (
       '<div class="' + clase + '">' +
         '<div class="emails-config-cabecera">' +
@@ -3806,6 +3893,7 @@ function pintarListaTiendas_() {
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
           '</button>' +
         '</div>' +
+        filaDias +
         '<div class="emails-config-campos">' +
           '<div class="emails-config-campo">' +
             '<label>Email</label>' +
@@ -3831,6 +3919,24 @@ function pintarListaTiendas_() {
   listaEl.querySelectorAll('[data-borrar]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarTiendaConfig_(btn.getAttribute('data-borrar')); };
   });
+  listaEl.querySelectorAll('[data-dia-tienda]').forEach(function (btn) {
+    btn.onclick = function () {
+      toggleDiaEntregaTienda_(btn.getAttribute('data-dia-tienda'), btn.getAttribute('data-dia'), btn);
+    };
+  });
+}
+
+function toggleDiaEntregaTienda_(tienda, dia, btn) {
+  const activarAhora = !btn.classList.contains('activo');
+  btn.disabled = true;
+  llamarApi_(activarAhora ? 'activarDiaEntregaTienda' : 'desactivarDiaEntregaTienda', [tienda, dia])
+    .then(function () {
+      cargarTiendasConfig_();
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      mostrarErrorServidor(err);
+    });
 }
 
 function guardarEmailTienda_(tienda, idSeguro, btn) {
@@ -3882,6 +3988,57 @@ function sincronizarTiendasDesdeApp_() {
       if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
       mostrarErrorServidor(err);
     });
+}
+
+/** Compara por similitud de texto todas las claves de tiendas y muestra
+ * en un modal las que se parecen mucho entre sí, para detectar la misma
+ * tienda escrita de forma distinta algún día (espacios, guiones,
+ * tildes...). El backend (buscar_posibles_duplicados_tiendas, con
+ * pg_trgm) hace la comparación; aquí solo se pinta el resultado. */
+function buscarDuplicadosTiendas_() {
+  const btn = document.getElementById('btn-duplicados-tiendas');
+  if (btn) { btn.classList.add('girando'); btn.disabled = true; }
+  llamarApi_('buscarPosiblesDuplicadosTiendas', [])
+    .then(function (pares) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      mostrarModalDuplicadosTiendas_(pares || []);
+    })
+    .catch(function (err) {
+      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
+      mostrarErrorServidor(err);
+    });
+}
+
+function mostrarModalDuplicadosTiendas_(pares) {
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Posibles tiendas duplicadas';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML = !pares.length
+    ? '<div class="modal-envio-ok">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' +
+        '<span>No se ha encontrado ningún nombre sospechosamente parecido.</span>' +
+      '</div>'
+    : '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Estos nombres se parecen mucho entre sí. Si son la misma tienda, corrige el nombre en "Rutas y tiendas" el día que esté distinto, para que quede igual todos los días.</p>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;">' +
+        pares.map(function (p) {
+          return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;">' +
+            '<div style="font-weight:700;font-size:13px;color:var(--navy);">' + escapeHtml(p.tienda1) + '</div>' +
+            '<div style="font-weight:700;font-size:13px;color:var(--navy);">' + escapeHtml(p.tienda2) + '</div>' +
+            '<div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">Coincidencia: ' + Math.round(p.similitud * 100) + '%</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML = '<button class="modal-confirm" id="modal-confirm-btn">Cerrar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-confirm-btn').onclick = cerrarModal;
 }
 
 /* ---------------- ADMINISTRACIÓN: "Palets forzados" ----------------
@@ -4386,12 +4543,21 @@ function desplazarRowsPlantillaDesde_(filaDesde, delta) {
  *  loader, sin pedir nada al servidor); la llamada real al backend va en
  *  segundo plano. Si falla, se revierte el cambio local y se repinta con
  *  los datos de antes (igual que "Gestión festivos" al borrar una nota). */
-function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito) {
+function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito, onExito) {
+  // onExito (opcional): recibe el resultado que devuelva la API cuando
+  // llegue, para acciones que necesitan reaccionar a algo que solo se
+  // sabe en el backend (p.ej. avisar de que un renombrado se ha
+  // propagado también a otros días). El toast optimista de arriba se
+  // sigue mostrando al momento como siempre; onExito puede completarlo
+  // o sustituirlo cuando responda el servidor.
   const copia = JSON.parse(JSON.stringify(PLANTILLA_ESTADO.secciones));
   mutarLocal();
   pintarPlantilla_();
-  if (mensajeExito) mostrarToast(mensajeExito);
+  if (mensajeExito && !onExito) mostrarToast(mensajeExito);
   llamarApi_(accionApi, argsApi)
+    .then(function (resultado) {
+      if (onExito) onExito(resultado);
+    })
     .catch(function (err) {
       PLANTILLA_ESTADO.secciones = copia;
       pintarPlantilla_();
@@ -5003,17 +5169,68 @@ function guardarTiendaPlantilla_(row, idSeguro) {
     const info = buscarTiendaPlantilla_(row);
     if (info) { info.tienda.nombre = nombre; info.tienda.limite = Number(limite); }
   };
-  guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado');
+  guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado',
+    function (resultado) {
+      const propagadas = (resultado && resultado.propagadas) || 0;
+      mostrarToast(propagadas > 0
+        ? 'Guardado (actualizado también en ' + propagadas + ' día(s) más donde aparecía)'
+        : 'Guardado');
+    });
 }
 
 function confirmarEliminarTiendaPlantilla_(row) {
-  appConfirm(
-    'Eliminar tienda',
-    '¿Seguro que quieres eliminar esta tienda de la plantilla? Esta acción no se puede deshacer.',
-    function () { eliminarTiendaPlantilla_(row); },
-    true
-  );
+  row = Number(row);
+  // Antes de pedir confirmación, se comprueba si esta misma tienda (misma
+  // clave interna) aparece también en otros días. Si es así, se ofrece
+  // borrarla de golpe en todos esos días a la vez, para no dejar "restos"
+  // sueltos que luego salgan como huérfanos en Configuración tiendas.
+  llamarApi_('otrasAparicionesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row])
+    .then(function (resultado) {
+      const dias = (resultado && resultado.dias) || [];
+      if (!dias.length) {
+        appConfirm(
+          'Eliminar tienda',
+          '¿Seguro que quieres eliminar esta tienda de la plantilla? Esta acción no se puede deshacer.',
+          function () { eliminarTiendaPlantilla_(row); },
+          true
+        );
+        return;
+      }
+      mostrarModalEliminarTiendaVariosDias_(row, dias);
+    })
+    .catch(mostrarErrorServidor);
 }
+
+/** Modal con 3 opciones cuando la tienda que se va a borrar también
+ *  aparece en otros días: cancelar, borrar solo el día actual, o borrar
+ *  de golpe en todos los días donde aparezca. */
+function mostrarModalEliminarTiendaVariosDias_(row, dias) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Esta tienda aparece en más días';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta misma tienda también está en: <b>' +
+      dias.map(escapeHtml).join(', ') +
+      '</b>. Si borras solo aquí, seguirá existiendo con normalidad en esos otros días (no se queda huérfana). Usa "Borrar en todos" solo si quieres quitarla por completo de la plantilla.</p>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-borrar-aqui-btn">Borrar solo aquí</button>' +
+    '<button class="modal-confirm danger" id="modal-borrar-todos-btn">Borrar en todos (' + (dias.length + 1) + ' días)</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-borrar-aqui-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row); };
+  document.getElementById('modal-borrar-todos-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantillaTodosDias_(row); };
+}
+
 function eliminarTiendaPlantilla_(row) {
   row = Number(row);
   const mutar = function () {
@@ -5023,6 +5240,21 @@ function eliminarTiendaPlantilla_(row) {
     desplazarRowsPlantillaDesde_(row + 1, -1);
   };
   guardarPlantillaOptimista_(mutar, 'eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Eliminada');
+}
+
+/** Borra esta tienda de golpe en TODOS los días donde aparezca (misma
+ *  clave interna). Como afecta a días que no se están viendo ahora mismo,
+ *  se recarga la plantilla del día actual desde el servidor en vez de
+ *  mutar el estado local a mano. */
+function eliminarTiendaPlantillaTodosDias_(row) {
+  row = Number(row);
+  llamarApi_('eliminarTiendaPlantillaTodosDias', [PLANTILLA_ESTADO.dia, row])
+    .then(function (resultado) {
+      const eliminadas = (resultado && resultado.eliminadas) || 1;
+      mostrarToast('Eliminada de ' + eliminadas + ' día(s)');
+      cargarPlantilla_({ silencioso: true });
+    })
+    .catch(mostrarErrorServidor);
 }
 
 function moverTiendaPlantilla_(row, direccion) {
@@ -5150,6 +5382,15 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
 }
 
 function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
+  // Antes de pintar el modal, se comprueba si esta misma ruta (misma
+  // "agrupación", p.ej. "TXT ANDORRA") existe también otros días, para
+  // poder ofrecer añadir la tienda nueva de golpe en esos días también.
+  llamarApi_('diasRutaMismoNombre', [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function (dias) { pintarModalAnadirTiendaPlantilla_(nombreRuta, dias || []); })
+    .catch(function () { pintarModalAnadirTiendaPlantilla_(nombreRuta, []); });
+}
+
+function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
@@ -5168,7 +5409,23 @@ function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
     '<div class="modal-campo">' +
       '<label for="modal-plantilla-nombre">Nombre de la tienda</label>' +
       '<input type="text" id="modal-plantilla-nombre" placeholder="Ej: 345- INDEPENDENCIA2">' +
-    '</div>';
+    '</div>' +
+    (otrosDias.length
+      ? '<div class="modal-campo">' +
+          '<label>"' + escapeHtml(nombreRuta) + '" también existe en estos días. ¿Añadir la tienda ahí también?</label>' +
+          '<div class="modal-anadir-tienda-dias">' +
+            otrosDias.map(function (d) {
+              return '<button type="button" class="modal-anadir-tienda-dia-pill" data-dia="' + escapeAttr(d) + '">' +
+                escapeHtml(d) +
+              '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>'
+      : '');
+
+  Array.prototype.forEach.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill'), function (pill) {
+    pill.onclick = function () { pill.classList.toggle('activo'); };
+  });
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -5183,12 +5440,25 @@ function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
     const nombre = inputNombre.value.trim();
     if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
     if (!nombre) { inputNombre.focus(); return; }
+    const diasElegidos = Array.prototype.slice.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill.activo'))
+      .map(function (pill) { return pill.getAttribute('data-dia'); });
     cerrarModal();
     // Inserta una fila nueva -- el backend decide en qué fila exacta
     // queda, así que hace falta volver a pedir la plantilla; modo
-    // "silencioso" (sin loader ni salto de scroll).
-    llamarApi_('añadirTiendaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, nombre, limite])
-      .then(function () { mostrarToast('Tienda añadida'); cargarPlantilla_({ silencioso: true }); })
+    // "silencioso" (sin loader ni salto de scroll). Si se han marcado
+    // otros días, se añade también ahí (mismo nombre y límite), en
+    // paralelo.
+    Promise.all(
+      [PLANTILLA_ESTADO.dia].concat(diasElegidos).map(function (dia) {
+        return llamarApi_('añadirTiendaPlantilla', [dia, nombreRuta, nombre, limite]);
+      })
+    )
+      .then(function () {
+        mostrarToast(diasElegidos.length
+          ? 'Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)'
+          : 'Tienda añadida');
+        cargarPlantilla_({ silencioso: true });
+      })
       .catch(mostrarErrorServidor);
   };
   setTimeout(function () { document.getElementById('modal-plantilla-nombre').focus(); }, 50);
