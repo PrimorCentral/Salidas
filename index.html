@@ -450,7 +450,10 @@
     display: none; align-items: center; gap: 6px; background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy);
     border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
   }
-  body.es-admin .btn-sincronizar-agrupaciones { display: flex !important; }
+  body.es-admin .btn-sincronizar-agrupaciones,
+  body.perm-agencias .btn-sincronizar-agrupaciones,
+  body.perm-tiendas .btn-sincronizar-agrupaciones,
+  body.perm-aviso_tiendas .btn-sincronizar-agrupaciones { display: flex !important; }
   .btn-sincronizar-agrupaciones:hover { background: #e1e5eb; }
   .btn-sincronizar-agrupaciones.girando svg { animation: girar-sinc 0.8s linear infinite; }
   @keyframes girar-sinc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -549,7 +552,18 @@
     display: none; background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 3px;
     border-radius: 5px;
   }
-  body.es-admin .emails-config-borrar { display: inline-flex !important; }
+  /* Estas 4 clases "emails-config-*" son genéricas y se reutilizan en varias
+     secciones de "Diseño" (Email agencias, Configuración tiendas, Aviso a
+     tiendas, Rutas y tiendas), cada una con su propio permiso -- por eso la
+     regla mira cualquiera de los cuatro (además de es-admin), en vez de uno
+     solo. No hay conflicto entre secciones: cada botón/campo concreto solo
+     existe en el DOM cuando su sección está abierta, y a esa sección ya se
+     llega solo si se tiene el permiso correspondiente. */
+  body.es-admin .emails-config-borrar,
+  body.perm-agencias .emails-config-borrar,
+  body.perm-tiendas .emails-config-borrar,
+  body.perm-aviso_tiendas .emails-config-borrar,
+  body.perm-plantilla .emails-config-borrar { display: inline-flex !important; }
   .emails-config-borrar:hover { color: var(--danger); background: #fff; }
   .emails-config-campos { display: flex; flex-direction: column; gap: 8px; }
   .emails-config-campo label {
@@ -561,14 +575,26 @@
     font-size: 13px; color: var(--ink); background: #f9fafb;
   }
   .emails-config-campo input:disabled { color: var(--ink-soft); cursor: default; }
-  body.es-admin .emails-config-campo input { background: #fff; }
-  body.es-admin .emails-config-campo input:disabled { background: #f9fafb; }
+  body.es-admin .emails-config-campo input,
+  body.perm-agencias .emails-config-campo input,
+  body.perm-tiendas .emails-config-campo input,
+  body.perm-aviso_tiendas .emails-config-campo input,
+  body.perm-plantilla .emails-config-campo input { background: #fff; }
+  body.es-admin .emails-config-campo input:disabled,
+  body.perm-agencias .emails-config-campo input:disabled,
+  body.perm-tiendas .emails-config-campo input:disabled,
+  body.perm-aviso_tiendas .emails-config-campo input:disabled,
+  body.perm-plantilla .emails-config-campo input:disabled { background: #f9fafb; }
   .emails-config-pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   .emails-config-guardar {
     display: none; align-items: center; gap: 5px; background: var(--navy); color: #fff; border: none;
     border-radius: 7px; padding: 6px 13px; font-size: 12px; font-weight: 700;
   }
-  body.es-admin .emails-config-guardar { display: flex !important; }
+  body.es-admin .emails-config-guardar,
+  body.perm-agencias .emails-config-guardar,
+  body.perm-tiendas .emails-config-guardar,
+  body.perm-aviso_tiendas .emails-config-guardar,
+  body.perm-plantilla .emails-config-guardar { display: flex !important; }
   .emails-config-guardar:hover { background: var(--navy-soft); }
   .emails-config-guardar:disabled { opacity: .55; cursor: default; }
   .emails-config-vacio {
@@ -580,7 +606,11 @@
     display: flex; align-items: center; gap: 8px; background: #f6f7fa; border: 1px solid var(--line);
     border-radius: 9px; padding: 9px 12px; font-size: 12px; color: var(--ink-soft); margin-bottom: 12px;
   }
-  body.es-admin .emails-config-solo-lectura { display: none !important; }
+  body.es-admin .emails-config-solo-lectura,
+  body.perm-agencias .emails-config-solo-lectura,
+  body.perm-tiendas .emails-config-solo-lectura,
+  body.perm-aviso_tiendas .emails-config-solo-lectura,
+  body.perm-plantilla .emails-config-solo-lectura { display: none !important; }
   .barrido-hora-nota {
     font-size: 12px; color: var(--ink-soft); margin: -4px 0 14px;
   }
@@ -1424,6 +1454,22 @@
   /* ---------- Modal "Enviar Previsión / Enviar Definitivo" (versión amplia) ---------- */
   .modal-box.ancho { max-width: 620px; }
 
+  /* ---------- Modal "Añadir/Editar usuario": mucho más ancho, con los
+     datos básicos a la izquierda y los permisos a la derecha, pensado
+     para verse entero de un vistazo sin necesidad de hacer scroll. ---------- */
+  .modal-box.usuario-form { max-width: 900px; }
+  .modal-usuario-grid { display: flex; gap: 30px; align-items: flex-start; }
+  .modal-usuario-col-izq { flex: 0 0 250px; display: flex; flex-direction: column; }
+  .modal-usuario-col-der { flex: 1; min-width: 0; }
+  .modal-usuario-col-der .permisos-grupos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .modal-usuario-col-der .permiso-grupo { padding: 9px 10px; }
+  .modal-usuario-col-der .permiso-item { padding: 5px 2px; }
+  @media (max-width: 720px) {
+    .modal-usuario-grid { flex-direction: column; gap: 0; }
+    .modal-usuario-col-izq { flex-basis: auto; width: 100%; }
+    .modal-usuario-col-der .permisos-grupos { grid-template-columns: 1fr; }
+  }
+
   .modal-envio-cabecera {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
     padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--line);
@@ -1727,19 +1773,23 @@
   .gestor-seleccion-contador { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; margin-bottom: 6px; }
   .gestor-aviso { font-size: 12px; color: var(--ink-soft); background: #f6f7f9; border-radius: 8px; padding: 8px 10px; }
 
-  /* ---------- PERMISOS (admin vs normal) ----------
+  /* ---------- PERMISOS (admin vs operario con permisos finos) ----------
      A PROPÓSITO al final de la hoja de estilos: en CSS, con la misma
      especificidad, gana la regla que aparece más abajo, y .btn-add-nota /
      .btn-cerrar-tienda / .btn-reabrir ya tienen su propio "display" definido
      más arriba (para su aspecto normal). Puesto aquí + !important, esto
      manda siempre por encima de esas reglas, esté donde esté cada una.
 
-     Oculto por defecto; solo se muestra cuando <body> tiene la clase
-     "es-admin" (la pone aplicarPermisosUI() tras un login correcto, según
-     el rol que devuelve el backend). Cubre: nota del día, nota de
-     agrupación, borrar nota, cerrar tienda y reabrir tienda. El usuario
-     normal sigue viendo el contenido de las notas y los cierres, solo no
-     puede crearlos/borrarlos. */
+     Oculto por defecto; se muestra cuando <body> tiene la clase "es-admin"
+     o la clase "perm-<clave>" del permiso correspondiente (las pone
+     aplicarPermisosUI() tras un login correcto, según el rol y los
+     permisos que devuelve el backend -- ver CATALOGO_PERMISOS). El usuario
+     sin ese permiso sigue viendo el contenido de las notas y los cierres,
+     solo no puede crearlos/borrarlos.
+     ".nota-chip .del" (borrar una nota o un cierre ya puesto) se muestra
+     con cualquiera de los tres, igual que hace eliminar_observacion en el
+     backend (verificar_permiso con ['notas','cierres','festivos'], vale
+     con tener uno solo). */
   #btn-nota-dia,
   #btn-festivos-anadir,
   .btn-add-nota,
@@ -1749,29 +1799,35 @@
   .festivos-del {
     display: none !important;
   }
-  body.es-admin #btn-nota-dia { display: flex !important; }
-  body.es-admin #btn-festivos-anadir { display: flex !important; }
-  body.es-admin .btn-add-nota { display: flex !important; }
-  body.es-admin .nota-chip .del { display: inline-block !important; }
-  body.es-admin .btn-cerrar-tienda { display: inline-flex !important; }
-  body.es-admin .festivos-del { display: inline-flex !important; }
-  body.es-admin .btn-reabrir { display: inline-block !important; }
+  body.es-admin #btn-nota-dia, body.perm-notas #btn-nota-dia { display: flex !important; }
+  body.es-admin #btn-festivos-anadir, body.perm-festivos #btn-festivos-anadir { display: flex !important; }
+  body.es-admin .btn-add-nota, body.perm-notas .btn-add-nota { display: flex !important; }
+  body.es-admin .nota-chip .del,
+  body.perm-notas .nota-chip .del,
+  body.perm-cierres .nota-chip .del,
+  body.perm-festivos .nota-chip .del { display: inline-block !important; }
+  body.es-admin .btn-cerrar-tienda, body.perm-cierres .btn-cerrar-tienda { display: inline-flex !important; }
+  body.es-admin .festivos-del, body.perm-festivos .festivos-del { display: inline-flex !important; }
+  body.es-admin .btn-reabrir, body.perm-cierres .btn-reabrir { display: inline-block !important; }
 
-  /* ---------- ADMINISTRACIÓN (solo admin) ----------
-     Todo el menú "Administración" es exclusivo de admin, igual que "Diseño"
-     (ver regla justo debajo): ningún operario tiene nada que hacer ni que
-     consultar en ninguna de las dos, así que se ocultan enteras en vez de
-     mostrarlas "apagadas". */
+  /* ---------- ADMINISTRACIÓN (admin, u operario con algún permiso de ese menú) ----------
+     El menú entero se oculta si no queda ninguna sección visible: admin lo
+     ve siempre completo (clase "es-admin"); un operario lo ve si tiene
+     marcado al menos uno de los permisos de ADMIN_SECCIONES (clase
+     "tiene-menu-administracion", la pone aplicarPermisosUI() calculando
+     seccionesAdminPermitidas_()). Dentro, poblarDropdownAdministracion()
+     ya solo lista las secciones concretas a las que tiene acceso --
+     "Servidores" nunca aparece para un operario. */
   #topbar-dropdown-administracion { display: none; }
-  body.es-admin #topbar-dropdown-administracion { display: block; }
+  body.es-admin #topbar-dropdown-administracion,
+  body.tiene-menu-administracion #topbar-dropdown-administracion { display: block; }
 
-  /* ---------- DISEÑO / CONFIGURACIÓN (solo admin) ----------
-     Antes se veía siempre, con sus opciones "apagadas" (sin poder pinchar)
-     para quien no fuera admin; ahora se oculta el menú entero, igual que
-     Administración -- ninguna de sus secciones (Emails agencias, Rutas y
-     tiendas) permite nada a un operario normal. */
+  /* ---------- DISEÑO / CONFIGURACIÓN (admin, u operario con algún permiso de ese menú) ----------
+     Mismo criterio que Administración, con "tiene-menu-diseno" /
+     seccionesConfigPermitidas_() en vez de las de Administración. */
   #topbar-dropdown-configuracion { display: none; }
-  body.es-admin #topbar-dropdown-configuracion { display: block; }
+  body.es-admin #topbar-dropdown-configuracion,
+  body.tiene-menu-diseno #topbar-dropdown-configuracion { display: block; }
 
   .admin-filtros { display: flex; align-items: flex-end; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
   .admin-filtro-campo { display: flex; flex-direction: column; gap: 4px; }
@@ -1848,6 +1904,53 @@
   .cola-emails-estado.enviado { background: #e4f7ea; color: #1a7f3c; }
   .cola-emails-estado.error { background: #fde8e8; color: var(--danger); }
   .cola-emails-error-detalle { font-size: 11px; color: var(--danger); margin-top: 3px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---- Administración > Usuarios ---- */
+  .usuarios-tabla td.usuarios-col-nombre { white-space: normal; min-width: 180px; font-weight: 600; }
+  .usuarios-badge-rol {
+    display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+  }
+  .usuarios-badge-rol.admin { background: #eef0f4; color: var(--navy); }
+  .usuarios-badge-rol.operario { background: #eef4f9; color: var(--ink-soft); }
+  .usuarios-badge-estado {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700;
+  }
+  .usuarios-badge-estado .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .usuarios-badge-estado.activo { background: #e4f3ec; color: var(--ok); }
+  .usuarios-badge-estado.inactivo { background: #fbe3e3; color: var(--danger); }
+  .usuarios-fila-acciones { display: flex; align-items: center; gap: 4px; }
+  .usuarios-btn-icono {
+    width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: #fff;
+    color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .usuarios-btn-icono:hover { background: #f2f4f7; color: var(--ink); }
+  .usuarios-btn-icono.peligro:hover { background: #fbe3e3; color: var(--danger); border-color: #f4d4d4; }
+  .modal-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal-pill {
+    padding: 7px 14px; border-radius: 20px; border: 1px solid var(--line); background: #fff;
+    color: var(--ink-soft); font-size: 12.5px; font-weight: 600;
+  }
+  .modal-pill.activo { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .modal-campo-check { display: flex; align-items: center; gap: 8px; }
+  .modal-campo-check input[type="checkbox"] { width: 16px; height: 16px; }
+  .modal-campo-check label { margin: 0; }
+  .modal-campo .modal-campo-ayuda { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  .permisos-grupos { display: flex; flex-direction: column; gap: 14px; }
+  .permiso-grupo { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafbfc; }
+  .permiso-grupo h4 {
+    margin: 0 0 8px; font-size: 11.5px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .permiso-item { display: flex; align-items: flex-start; gap: 9px; padding: 6px 2px; }
+  .permiso-item + .permiso-item { border-top: 1px solid var(--line); }
+  .permiso-item input[type="checkbox"] { width: 16px; height: 16px; margin-top: 2px; flex-shrink: 0; }
+  .permiso-item-textos { display: flex; flex-direction: column; gap: 1px; }
+  .permiso-item-etiqueta { font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .permiso-item-desc { font-size: 11.5px; color: var(--ink-soft); }
+  .permisos-admin-nota {
+    font-size: 12px; color: var(--ink-soft); background: #fafbfc; border: 1px dashed var(--line);
+    border-radius: 9px; padding: 10px 12px;
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -1870,9 +1973,15 @@
 
       <div class="campo-pass">
         <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <input type="text" id="login-usuario" placeholder="Usuario" autocomplete="username" autofocus>
+      </div>
+      <div class="campo-pass">
+        <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
-        <input type="password" id="login-pass" placeholder="Contraseña" autofocus>
+        <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password">
         <button type="button" class="toggle-pass" id="toggle-pass" aria-label="Mostrar contraseña">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
@@ -1884,7 +1993,7 @@
         <span class="spinner" id="login-spinner"></span>
         <span id="login-btn-text">Entrar</span>
       </button>
-      <p id="login-error">Contraseña incorrecta</p>
+      <p id="login-error">Usuario o contraseña incorrectos</p>
       <p class="login-footer">Acceso restringido al personal autorizado</p>
     </div>
     <div class="version-badge" id="login-version-badge"></div>
@@ -1966,7 +2075,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.9';
+const APP_VERSION_ACTUAL = '1.6.1';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -1978,10 +2087,21 @@ const TOKEN_STORAGE_KEY = 'conteos_diarios_token';
 // la app), aunque dentro de la misma sesión abierta el token siga viviendo
 // en memoria para no tener que reintroducir la contraseña en cada llamada.
 let SESSION_TOKEN = null;
-// Rol de la sesión actual: 'admin' | 'normal' | null (aún sin login). Solo
+// Rol de la sesión actual: 'admin' | 'operario' | null (aún sin login). Solo
 // el rol "admin" puede crear/borrar notas y cerrar/reabrir tiendas; se
 // guarda igual que el token, solo en memoria (no en localStorage).
 let SESSION_ROL = null;
+// Permisos finos del operario actual (objeto { clave: true, ... }, tal cual
+// devuelve login desde usuarios.permisos). Un admin no necesita mirar esto
+// -- ver tienePermiso() -- se queda vacío en su caso.
+let SESSION_PERMISOS = {};
+// Nombre completo de la persona que ha entrado (el que devuelve login desde
+// usuarios.nombre_completo), para mostrarlo en la topbar en vez del rol.
+let SESSION_NOMBRE = null;
+// Nombre de usuario con el que se ha entrado (el que devuelve login), por si
+// hace falta mostrarlo o compararlo (p.ej. en la pantalla de Usuarios, para
+// no dejar que alguien se desactive/borre a sí mismo). También en memoria.
+let SESSION_USUARIO = null;
 
 /* ---------------- SUPABASE ---------------- */
 // El login usa esta función RPC (login.sql / ya creada en tu proyecto) en
@@ -2012,20 +2132,20 @@ if (!supabaseClient) {
   console.info('[Supabase] cliente inicializado contra', SUPABASE_URL);
 }
 
-/** Llama a la RPC public.login con la contraseña tal cual la ha escrito el
- *  usuario (la comparación con el hash bcrypt la hace el propio Postgres).
- *  Devuelve { token, rol } si la contraseña es correcta, null si no lo es,
- *  o rechaza la Promise si hay un fallo real (red, Supabase mal
- *  configurado...). */
-function loginSupabase_(pass) {
+/** Llama a la RPC public.login con el usuario y la contraseña tal cual los
+ *  ha escrito la persona (la comparación con el hash bcrypt la hace el
+ *  propio Postgres). Devuelve { token, rol, usuario, permisos } si son
+ *  correctos, null si no lo son, o rechaza la Promise si hay un fallo real
+ *  (red, Supabase mal configurado...). */
+function loginSupabase_(usuario, pass) {
   if (!supabaseClient) {
     return Promise.reject(new Error('Supabase no está configurado todavía (revisa SUPABASE_URL / SUPABASE_ANON_KEY).'));
   }
-  return supabaseClient.rpc('login', { p_password: pass })
+  return supabaseClient.rpc('login', { p_usuario: usuario, p_password: pass })
     .then(function (resp) {
       if (resp.error) {
-        if (resp.error.message && resp.error.message.indexOf('Contraseña incorrecta') !== -1) {
-          return null; // contraseña mal -- no es un error de servidor
+        if (resp.error.message && resp.error.message.indexOf('Usuario o contraseña incorrectos') !== -1) {
+          return null; // credenciales mal -- no es un error de servidor
         }
         throw resp.error;
       }
@@ -2129,13 +2249,59 @@ function vincularBotonInstalar_() {
  *  ocultar en el momento los controles de notas/observaciones/cierres. */
 function esAdmin() { return SESSION_ROL === 'admin'; }
 
-/** Añade/quita la clase 'es-admin' en <body>, que es lo que la CSS usa
- *  para mostrar u ocultar los botones de solo-admin (ver reglas
- *  "body:not(.es-admin) ..." en el <style>). */
+/** true si la sesión actual puede realizar algo protegido por `clave`
+ *  (una de las de CATALOGO_PERMISOS). Un admin siempre puede -- igual que
+ *  hace verificar_permiso en el backend, que le deja pasar sin mirar la
+ *  columna "permisos". Para un operario, mira SESSION_PERMISOS. */
+function tienePermiso(clave) {
+  if (esAdmin()) return true;
+  return !!(SESSION_PERMISOS && SESSION_PERMISOS[clave]);
+}
+
+/** Secciones de "Diseño" / "Administración" que la sesión actual puede
+ *  ver, en el mismo orden del catálogo. Un admin las ve todas. */
+function seccionesConfigPermitidas_() { return CONFIG_SECCIONES.filter(function (s) { return tienePermiso(s.permiso); }); }
+function seccionesAdminPermitidas_() { return ADMIN_SECCIONES.filter(function (s) { return s.permiso && tienePermiso(s.permiso); }); }
+
+// Claves de CATALOGO_PERMISOS que se traducen en una clase "perm-<clave>"
+// en <body>, para que el CSS pueda mostrar botones sueltos (crear/borrar
+// notas, cerrar tienda...) sin tener que tocar JS cada vez. Se recalculan
+// aquí en vez de leer CATALOGO_PERMISOS directamente porque ese catálogo
+// vive más abajo en el archivo (se define junto al resto de "Usuarios").
+const CLAVES_PERMISOS_UI_ = [
+  'usuarios', 'notas', 'cierres', 'agencias',
+  'tiendas', 'plantilla', 'aviso_tiendas',
+  'festivos', 'palets_forzados', 'cola_emails'
+];
+
+/** Añade/quita la clase 'es-admin' en <body> (compatibilidad con las
+ *  reglas CSS ya existentes) y, para operarios, una clase "perm-<clave>"
+ *  por cada permiso fino que tengan marcado -- así el CSS puede mostrar
+ *  botones concretos (nota, cerrar tienda...) sin depender de ser admin.
+ *  También reconstruye los desplegables de "Diseño" y "Administración"
+ *  con solo las secciones a las que la sesión actual tiene acceso, y
+ *  reajusta la sección activa si la que había por defecto no es una de
+ *  ellas. */
 function aplicarPermisosUI() {
   document.body.classList.toggle('es-admin', esAdmin());
+  CLAVES_PERMISOS_UI_.forEach(function (clave) {
+    document.body.classList.toggle('perm-' + clave, tienePermiso(clave));
+  });
+
+  const configPermitidas = seccionesConfigPermitidas_();
+  const adminPermitidas = seccionesAdminPermitidas_();
+  document.body.classList.toggle('tiene-menu-diseno', configPermitidas.length > 0);
+  document.body.classList.toggle('tiene-menu-administracion', adminPermitidas.length > 0);
+
+  if (!configPermitidas.some(function (s) { return s.id === ESTADO_CONFIG.seccionActiva; })) {
+    ESTADO_CONFIG.seccionActiva = configPermitidas.length ? configPermitidas[0].id : ESTADO_CONFIG.seccionActiva;
+  }
+  if (!adminPermitidas.some(function (s) { return s.id === ESTADO_ADMIN.seccionActiva; })) {
+    ESTADO_ADMIN.seccionActiva = adminPermitidas.length ? adminPermitidas[0].id : ESTADO_ADMIN.seccionActiva;
+  }
+
   const elRol = document.getElementById('topbar-usuario-rol');
-  if (elRol) elRol.textContent = SESSION_ROL ? (esAdmin() ? 'Administrador' : 'Operario') : '';
+  if (elRol) elRol.textContent = SESSION_ROL ? (SESSION_NOMBRE || (esAdmin() ? 'Administrador' : 'Operario')) : '';
   poblarDropdownConfiguracion();
   poblarDropdownAdministracion();
 }
@@ -2187,7 +2353,12 @@ const METODOS_REMOTOS_ = {
   eliminarTiendaConfig: 'eliminarTiendaConfig',
   sincronizarTiendas: 'sincronizarTiendas',
   enviarAvisosTiendas: 'enviarAvisosTiendas',
-  getAvisosEnviadosTiendas: 'getAvisosEnviadosTiendas'
+  getAvisosEnviadosTiendas: 'getAvisosEnviadosTiendas',
+  getUsuarios: 'getUsuarios',
+  crearUsuario: 'crearUsuario',
+  editarUsuario: 'editarUsuario',
+  cambiarPasswordUsuario: 'cambiarPasswordUsuario',
+  eliminarUsuario: 'eliminarUsuario'
 };
 
 /** Llama a una función RPC de Postgres (Supabase) pasando SIEMPRE el token
@@ -2477,6 +2648,38 @@ const SUPABASE_ACCIONES_ = {
   editarTiendaPlantilla: function (args) {
     const dia = args[0], row = args[1], nombre = args[2], limite = args[3];
     return llamarRpcSupabase_('editar_tienda_plantilla', { p_dia: dia, p_row: row, p_nombre: nombre, p_limite: limite });
+  },
+  // -- Supabase: Administración: Usuarios --
+  getUsuarios: function () {
+    return llamarRpcSupabase_('get_usuarios', {});
+  },
+  crearUsuario: function (args) {
+    const usuario = args[0], nombreCompleto = args[1], password = args[2], rol = args[3], permisos = args[4];
+    return llamarRpcSupabase_('crear_usuario', {
+      p_usuario: usuario,
+      p_nombre_completo: nombreCompleto,
+      p_password: password,
+      p_rol: rol,
+      p_permisos: permisos || {}
+    });
+  },
+  editarUsuario: function (args) {
+    const id = args[0], usuario = args[1], nombreCompleto = args[2], rol = args[3], activo = args[4], permisos = args[5];
+    return llamarRpcSupabase_('editar_usuario', {
+      p_id: id,
+      p_usuario: usuario,
+      p_nombre_completo: nombreCompleto,
+      p_rol: rol,
+      p_activo: activo,
+      p_permisos: permisos || {}
+    });
+  },
+  cambiarPasswordUsuario: function (args) {
+    const id = args[0], passwordNuevo = args[1];
+    return llamarRpcSupabase_('cambiar_password_usuario', { p_id: id, p_password_nuevo: passwordNuevo });
+  },
+  eliminarUsuario: function (args) {
+    return llamarRpcSupabase_('eliminar_usuario', { p_id: args[0] });
   }
 };
 
@@ -2492,7 +2695,10 @@ function volverALogin_() {
   document.getElementById('login-screen').style.display = 'flex';
   SESSION_TOKEN = null;
   SESSION_ROL = null;
-  document.body.classList.remove('es-admin');
+  SESSION_NOMBRE = null;
+  SESSION_PERMISOS = {};
+  document.body.classList.remove('es-admin', 'tiene-menu-diseno', 'tiene-menu-administracion');
+  CLAVES_PERMISOS_UI_.forEach(function (clave) { document.body.classList.remove('perm-' + clave); });
   mostrarToast('Sesión caducada, vuelve a entrar', true);
 }
 
@@ -2504,13 +2710,18 @@ function cerrarSesion() {
   if (!window.confirm('¿Seguro que quieres salir?')) return;
   SESSION_TOKEN = null;
   SESSION_ROL = null;
-  document.body.classList.remove('es-admin');
+  SESSION_NOMBRE = null;
+  SESSION_PERMISOS = {};
+  document.body.classList.remove('es-admin', 'tiene-menu-diseno', 'tiene-menu-administracion');
+  CLAVES_PERMISOS_UI_.forEach(function (clave) { document.body.classList.remove('perm-' + clave); });
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  const campoUsuario = document.getElementById('login-usuario');
   const campoPass = document.getElementById('login-pass');
+  campoUsuario.value = '';
   campoPass.value = '';
   document.getElementById('login-error').style.display = 'none';
-  campoPass.focus();
+  campoUsuario.focus();
 }
 
 /** Aviso de confirmación al cerrar la pestaña/navegador (la X) o recargar
@@ -2580,15 +2791,17 @@ function ajustarAlturaTopbar_() {
 window.addEventListener('resize', ajustarAlturaTopbar_);
 
 function intentarLogin() {
+  const usuario = document.getElementById('login-usuario').value.trim();
   const pass = document.getElementById('login-pass').value;
   const btn = document.getElementById('btn-login');
   const spinner = document.getElementById('login-spinner');
   const btnText = document.getElementById('login-btn-text');
 
   document.getElementById('login-error').style.display = 'none';
+  if (!usuario) { document.getElementById('login-usuario').focus(); return; }
   btn.disabled = true; spinner.style.display = 'inline-block'; btnText.textContent = 'Comprobando…';
 
-  loginSupabase_(pass)
+  loginSupabase_(usuario, pass)
     .then(function (resultado) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
       if (!resultado) {
@@ -2597,6 +2810,9 @@ function intentarLogin() {
       }
       SESSION_TOKEN = resultado.token;
       SESSION_ROL = resultado.rol;
+      SESSION_USUARIO = resultado.usuario;
+      SESSION_NOMBRE = resultado.nombre_completo;
+      SESSION_PERMISOS = resultado.permisos || {};
       aplicarPermisosUI();
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'flex';
@@ -2610,6 +2826,9 @@ function intentarLogin() {
       mostrarErrorServidor(err);
     });
 }
+document.getElementById('login-usuario').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') document.getElementById('login-pass').focus();
+});
 document.getElementById('login-pass').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') intentarLogin();
 });
@@ -2626,10 +2845,10 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 // de la cabecera se construye con ellas; más secciones futuras solo se
 // añaden a esta lista).
 const CONFIG_SECCIONES = [
-  { id: 'plantilla', label: 'Rutas y tiendas' },
-  { id: 'emails', label: 'Email agencias' },
-  { id: 'tiendas', label: 'Configuración tiendas' },
-  { id: 'aviso-tiendas', label: 'Aviso a tiendas' }
+  { id: 'plantilla', label: 'Rutas y tiendas', permiso: 'plantilla' },
+  { id: 'emails', label: 'Email agencias', permiso: 'agencias' },
+  { id: 'tiendas', label: 'Configuración tiendas', permiso: 'tiendas' },
+  { id: 'aviso-tiendas', label: 'Aviso a tiendas', permiso: 'aviso_tiendas' }
   // futuras secciones de Configuración van aquí
 ];
 let ESTADO_CONFIG = { seccionActiva: 'emails' };
@@ -2637,12 +2856,15 @@ let ESTADO_CONFIG = { seccionActiva: 'emails' };
 // Secciones de "Administración": a diferencia de Configuración (ajustes que
 // definen cómo funciona la app), aquí van pantallas de solo lectura para
 // auditoría/consulta de lo que ya ha pasado (registros, historiales...).
-// Todo el menú es exclusivo de admin (ver CSS "#topbar-dropdown-administracion").
+// `permiso: null` = exclusiva de admin, ningún operario puede tenerla
+// aunque se le marquen permisos (caso de "Servidores": monitorización de
+// las cuentas puente, nada que un operario necesite consultar).
 const ADMIN_SECCIONES = [
-  { id: 'festivos', label: 'Gestión festivos' },
-  { id: 'palets-forzados', label: 'Palets forzados' },
-  { id: 'servidores', label: 'Servidores' },
-  { id: 'cola-emails', label: 'Cola trabajo emails' }
+  { id: 'festivos', label: 'Gestión festivos', permiso: 'festivos' },
+  { id: 'palets-forzados', label: 'Palets forzados', permiso: 'palets_forzados' },
+  { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
+  { id: 'servidores', label: 'Servidores', permiso: null },
+  { id: 'cola-emails', label: 'Cola trabajo emails', permiso: 'cola_emails' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
@@ -2676,15 +2898,15 @@ function cerrarDropdownsTopbar() {
   });
 }
 
-/** Construye la lista del desplegable de "Diseño" a partir de
- *  CONFIG_SECCIONES y engancha sus clics (cada uno navega directamente a
- *  esa sección y cierra el desplegable). Todo el menú ya está oculto por
- *  CSS para quien no sea admin (ver "#topbar-dropdown-configuracion" en
- *  <style>, igual que Administración), así que aquí no hace falta "apagar"
- *  las opciones una a una como antes. */
+/** Construye la lista del desplegable de "Diseño" a partir de las
+ *  secciones a las que la sesión actual tiene acceso (seccionesConfigPermitidas_,
+ *  admin las tiene todas; un operario solo las de sus permisos) y engancha
+ *  sus clics (cada uno navega directamente a esa sección y cierra el
+ *  desplegable). El menú entero además se oculta por CSS si no hay ninguna
+ *  sección permitida (ver clase "tiene-menu-diseno" en <style>). */
 function poblarDropdownConfiguracion() {
   const cont = document.getElementById('topbar-dropdown-menu-configuracion');
-  cont.innerHTML = CONFIG_SECCIONES.map(function (s) {
+  cont.innerHTML = seccionesConfigPermitidas_().map(function (s) {
     const activa = ESTADO.vista === 'configuracion' && s.id === ESTADO_CONFIG.seccionActiva;
     return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
   }).join('');
@@ -2708,14 +2930,15 @@ function marcarSeccionActivaEnDropdown() {
 }
 poblarDropdownConfiguracion();
 
-/** Construye la lista del desplegable de "Administración" a partir de
- *  ADMIN_SECCIONES. Todo el menú ya está oculto por CSS para quien no sea
- *  admin (ver "#topbar-dropdown-administracion" en <style>), así que aquí no
- *  hace falta "apagar" nada como en poblarDropdownConfiguracion. */
+/** Construye la lista del desplegable de "Administración" a partir de las
+ *  secciones a las que la sesión actual tiene acceso (seccionesAdminPermitidas_).
+ *  "Servidores" nunca aparece para un operario (permiso: null en
+ *  ADMIN_SECCIONES). El menú entero se oculta por CSS si no queda ninguna
+ *  sección permitida (ver clase "tiene-menu-administracion" en <style>). */
 function poblarDropdownAdministracion() {
   const cont = document.getElementById('topbar-dropdown-menu-administracion');
   if (!cont) return;
-  cont.innerHTML = ADMIN_SECCIONES.map(function (s) {
+  cont.innerHTML = seccionesAdminPermitidas_().map(function (s) {
     const activa = ESTADO.vista === 'administracion' && s.id === ESTADO_ADMIN.seccionActiva;
     return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
   }).join('');
@@ -2829,6 +3052,7 @@ function renderVistaAdministracion() {
 function renderSeccionAdminActiva() {
   if (ESTADO_ADMIN.seccionActiva === 'festivos') renderAdminFestivos();
   else if (ESTADO_ADMIN.seccionActiva === 'palets-forzados') renderAdminPaletsForzados();
+  else if (ESTADO_ADMIN.seccionActiva === 'usuarios') renderAdminUsuarios();
   else if (ESTADO_ADMIN.seccionActiva === 'servidores') renderAdminServidores();
   else if (ESTADO_ADMIN.seccionActiva === 'cola-emails') renderAdminColaEmails();
 }
@@ -3518,15 +3742,15 @@ function pintarListaEmails_() {
         '<div class="emails-config-campos">' +
           '<div class="emails-config-campo">' +
             '<label>Emails Definitivo (separados por comas)</label>' +
-            '<input type="text" id="' + idSeguro + '_emails" value="' + escapeAttr(it.emails.join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+            '<input type="text" id="' + idSeguro + '_emails" value="' + escapeAttr(it.emails.join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
           '</div>' +
           '<div class="emails-config-campo">' +
             '<label>Emails Previsión (separados por comas)</label>' +
-            '<input type="text" id="' + idSeguro + '_emailsPrevision" value="' + escapeAttr((it.emailsPrevision || []).join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+            '<input type="text" id="' + idSeguro + '_emailsPrevision" value="' + escapeAttr((it.emailsPrevision || []).join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
           '</div>' +
           '<div class="emails-config-campo">' +
             '<label>Notas</label>' +
-            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (esAdmin() ? '' : 'disabled') + '>' +
+            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
           '</div>' +
         '</div>' +
         '<div class="emails-config-pie">' +
@@ -3866,7 +4090,7 @@ function renderAvisoTiendas() {
   if (!cont) return;
   if (!BARRIDO_TIENDAS_ESTADO.fecha) BARRIDO_TIENDAS_ESTADO.fecha = hoyStr();
 
-  cont.innerHTML = esAdmin()
+  cont.innerHTML = tienePermiso('aviso_tiendas')
     ? htmlBarridoTiendasCard_()
     : (
       '<div class="vista-card">' +
@@ -3878,7 +4102,7 @@ function renderAvisoTiendas() {
       '</div>'
     );
 
-  if (esAdmin()) vincularBarridoTiendas_();
+  if (tienePermiso('aviso_tiendas')) vincularBarridoTiendas_();
   ajustarAlturaListaScrollable_('barrido-resultado');
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
@@ -3906,7 +4130,7 @@ function renderConfigTiendas() {
           '</div>' +
         '</div>' +
         '<p>Email de cada tienda, usado para avisarle por correo de los palets que va a recibir cuando se hace el barrido del día. Marca con L M X J V S D los días de la semana en que cada tienda recibe entrega, para que la fecha prevista del aviso sea correcta.</p>' +
-        (esAdmin() ? '' :
+        (tienePermiso('tiendas') ? '' :
           '<div class="emails-config-solo-lectura">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
             'Solo lectura: entra con la contraseña de administrador para poder editar, borrar o enviar avisos.' +
@@ -4079,7 +4303,7 @@ function pintarListaTiendas_() {
           return '<button type="button" class="emails-config-dia' + (activo ? ' activo' : '') +
             '" data-dia-tienda="' + escapeAttr(it.tienda) + '" data-dia="' + d.clave +
             '" title="' + (activo ? 'Recibe entrega en ' : 'No recibe entrega en ') + d.clave +
-            '" ' + (esAdmin() ? '' : 'disabled') + '>' + d.letra + '</button>';
+            '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' + d.letra + '</button>';
         }).join('') +
       '</div>';
     return (
@@ -4095,11 +4319,11 @@ function pintarListaTiendas_() {
         '<div class="emails-config-campos">' +
           '<div class="emails-config-campo">' +
             '<label>Email</label>' +
-            '<input type="text" id="' + idSeguro + '_email" value="' + escapeAttr(it.email || '') + '" placeholder="tienda@ejemplo.com" ' + (esAdmin() ? '' : 'disabled') + '>' +
+            '<input type="text" id="' + idSeguro + '_email" value="' + escapeAttr(it.email || '') + '" placeholder="tienda@ejemplo.com" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
           '</div>' +
           '<div class="emails-config-campo">' +
             '<label>Notas</label>' +
-            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (esAdmin() ? '' : 'disabled') + '>' +
+            '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
           '</div>' +
         '</div>' +
         '<div class="emails-config-pie">' +
@@ -4210,6 +4434,7 @@ function buscarDuplicadosTiendas_() {
 function mostrarModalDuplicadosTiendas_(pares) {
   document.getElementById('modal-box').classList.add('medio');
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Posibles tiendas duplicadas';
   document.getElementById('modal-text').style.display = 'none';
@@ -4530,6 +4755,416 @@ function formatearMinutosTranscurridos_(minutos) {
   return dias + (dias === 1 ? ' día' : ' días');
 }
 
+/* ---------------- ADMINISTRACIÓN: "Usuarios" ----------------
+ * CRUD de las cuentas que pueden entrar en la app (tabla "usuarios" en
+ * Supabase): usuario/contraseña, nombre completo (el que se muestra en la
+ * topbar), rol (admin/operario) y permisos finos (jsonb, solo aplica a
+ * Operarios -- ver CATALOGO_PERMISOS). El backend (verificar_permiso en
+ * Supabase) es quien realmente aplica estos permisos en cada función RPC;
+ * lo que se hace aquí en el cliente además de guardarlos es usarlos para
+ * enseñar u ocultar secciones del menú (ver aplicarPermisosUI_).
+ * Solo admin ve esta sección (todo el menú "Administración" ya está oculto
+ * por CSS para quien no lo sea). El backend (crear_usuario / editar_usuario
+ * / eliminar_usuario) protege además que siempre quede al menos un
+ * administrador activo, así que no hace falta duplicar esa comprobación
+ * aquí en el cliente. */
+let ADMIN_USUARIOS_ESTADO = { datos: null, filtroTexto: '' };
+
+/** Catálogo de permisos finos que se le pueden dar a un Operario. Cada
+ *  "clave" tiene que coincidir exactamente con la que usa verificar_permiso
+ *  en Supabase (ver crear_verificar_permiso / permiso_*.sql) — si se añade
+ *  un permiso nuevo en el backend, hay que añadirlo aquí también para que
+ *  se pueda activar/desactivar desde este formulario. Los Administradores
+ *  siempre tienen acceso a todo (verificar_permiso los deja pasar sin
+ *  mirar esta lista), así que este bloque solo se muestra para Operarios. */
+const CATALOGO_PERMISOS = [
+  {
+    grupo: 'Gestión general',
+    items: [
+      { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
+      { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
+      { clave: 'cierres', etiqueta: 'Cerrar y reabrir tiendas', desc: 'Marcar tiendas como cerradas o reabrirlas en la cuadrícula de conteos.' },
+      { clave: 'agencias', etiqueta: 'Agencias y emails', desc: 'Editar emails y notas de cada agrupación de rutas, y sincronizar agrupaciones.' },
+    ],
+  },
+  {
+    grupo: 'Diseño (configuración)',
+    items: [
+      { clave: 'tiendas', etiqueta: 'Configuración de tiendas', desc: 'Editar email y notas de cada tienda, días de entrega y sincronizar tiendas.' },
+      { clave: 'plantilla', etiqueta: 'Rutas y tiendas (plantilla)', desc: 'Límites, nombres, bloqueos y notas de carga de la plantilla de rutas y tiendas.' },
+      { clave: 'aviso_tiendas', etiqueta: 'Aviso a tiendas', desc: 'Configurar la hora del aviso automático y enviarlo manualmente.' },
+    ],
+  },
+  {
+    grupo: 'Administración',
+    items: [
+      { clave: 'festivos', etiqueta: 'Gestión de festivos', desc: 'Cierres y notas a nivel de día completo (no de una tienda o ruta concreta).' },
+      { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
+      { clave: 'cola_emails', etiqueta: 'Cola de trabajo de emails', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
+    ],
+  },
+];
+
+/** Devuelve el HTML de la cuadrícula de permisos, con las casillas ya
+ *  marcadas según `permisosActuales` (objeto { clave: true/false, ... }
+ *  tal cual viene/va en la columna jsonb "permisos" de la tabla usuarios). */
+function renderPermisosCheckboxes_(permisosActuales) {
+  const permisos = permisosActuales || {};
+  return '<div class="permisos-grupos">' +
+    CATALOGO_PERMISOS.map(function (grupo) {
+      return '<div class="permiso-grupo">' +
+        '<h4>' + escapeHtml(grupo.grupo) + '</h4>' +
+        grupo.items.map(function (item) {
+          const id = 'permiso-' + item.clave;
+          const marcado = permisos[item.clave] ? ' checked' : '';
+          return '<div class="permiso-item">' +
+            '<input type="checkbox" id="' + id + '" data-permiso-clave="' + escapeAttr(item.clave) + '"' + marcado + '>' +
+            '<div class="permiso-item-textos">' +
+              '<label class="permiso-item-etiqueta" for="' + id + '">' + escapeHtml(item.etiqueta) + '</label>' +
+              '<div class="permiso-item-desc">' + escapeHtml(item.desc) + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    }).join('') +
+  '</div>';
+}
+
+/** Lee las casillas marcadas del formulario y devuelve el objeto de
+ *  permisos { clave: true, ... } listo para mandar a crear_usuario /
+ *  editar_usuario (solo se incluyen las que están marcadas). */
+function leerPermisosMarcados_(custom) {
+  const permisos = {};
+  custom.querySelectorAll('[data-permiso-clave]').forEach(function (chk) {
+    if (chk.checked) permisos[chk.getAttribute('data-permiso-clave')] = true;
+  });
+  return permisos;
+}
+
+function renderAdminUsuarios() {
+  const cont = document.getElementById('admin-contenido');
+  if (!cont) return;
+
+  cont.innerHTML =
+    '<div class="vista-card">' +
+      '<div class="vista-card-header">' +
+        '<h2>Usuarios</h2>' +
+        '<div class="vista-card-header-acciones">' +
+          '<button type="button" class="btn-admin-refrescar" id="btn-admin-usuarios-refrescar" title="Volver a consultar la lista ahora mismo">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+            'Refrescar</button>' +
+          '<button type="button" class="btn-anadir-obs" id="btn-admin-usuarios-anadir">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+            'Añadir usuario</button>' +
+        '</div>' +
+      '</div>' +
+      '<p>Quién puede entrar en la app: usuario y contraseña de acceso, el nombre completo que se muestra arriba a la derecha, y si es administrador u operario.</p>' +
+      '<div class="emails-config-toolbar">' +
+        '<div class="emails-config-busqueda">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
+          '<input type="text" id="admin-usuarios-buscar" placeholder="Buscar por usuario o nombre…">' +
+        '</div>' +
+      '</div>' +
+      '<div id="admin-usuarios-resultado"><div class="loader">Cargando…</div></div>' +
+    '</div>';
+
+  document.getElementById('btn-admin-usuarios-refrescar').onclick = function () { cargarUsuariosAdmin_(true); };
+  document.getElementById('btn-admin-usuarios-anadir').onclick = function () { abrirModalUsuario_(null); };
+
+  let temporizadorBusquedaUsuarios = null;
+  document.getElementById('admin-usuarios-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusquedaUsuarios);
+    const valor = e.target.value;
+    temporizadorBusquedaUsuarios = setTimeout(function () {
+      ADMIN_USUARIOS_ESTADO.filtroTexto = valor.trim().toLowerCase();
+      pintarTablaUsuarios_();
+    }, 200);
+  });
+
+  if (ADMIN_USUARIOS_ESTADO.datos) {
+    pintarTablaUsuarios_();
+  } else {
+    cargarUsuariosAdmin_();
+  }
+}
+
+function cargarUsuariosAdmin_(esRefrescoManual) {
+  if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'usuarios') return;
+  const resultadoEl = document.getElementById('admin-usuarios-resultado');
+  const btnRefrescar = document.getElementById('btn-admin-usuarios-refrescar');
+  if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+
+  llamarApi_('getUsuarios', [])
+    .then(function (datos) {
+      if (ESTADO.vista !== 'administracion' || ESTADO_ADMIN.seccionActiva !== 'usuarios') return;
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      ADMIN_USUARIOS_ESTADO.datos = datos || [];
+      pintarTablaUsuarios_();
+    })
+    .catch(function (err) {
+      if (btnRefrescar) { btnRefrescar.classList.remove('girando'); btnRefrescar.disabled = false; }
+      mostrarErrorServidor(err);
+      if (resultadoEl) resultadoEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar la lista de usuarios.</div>';
+    });
+}
+
+function pintarTablaUsuarios_() {
+  const cont = document.getElementById('admin-usuarios-resultado');
+  if (!cont) return;
+  const datos = ADMIN_USUARIOS_ESTADO.datos || [];
+
+  const filtro = ADMIN_USUARIOS_ESTADO.filtroTexto;
+  const items = datos.filter(function (it) {
+    if (!filtro) return true;
+    const texto = (it.usuario + ' ' + (it.nombreCompleto || '')).toLowerCase();
+    return texto.indexOf(filtro) !== -1;
+  });
+
+  if (!items.length) {
+    cont.innerHTML =
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg>' +
+        (datos.length ? 'Ningún usuario coincide con la búsqueda.' : 'No hay usuarios todavía.') +
+      '</div>';
+    return;
+  }
+
+  const totalAdmin = datos.filter(function (it) { return it.rol === 'admin' && it.activo; }).length;
+
+  cont.innerHTML =
+    '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' usuario' : ' usuarios') +
+      ' · ' + totalAdmin + (totalAdmin === 1 ? ' administrador activo' : ' administradores activos') + '</div>' +
+    '<div class="admin-tabla-wrap"><table class="admin-tabla usuarios-tabla">' +
+      '<thead><tr><th>Nombre completo</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Creado</th><th></th></tr></thead>' +
+      '<tbody>' + items.map(function (it) {
+        return '<tr>' +
+          '<td class="usuarios-col-nombre">' + escapeHtml(it.nombreCompleto || '—') + '</td>' +
+          '<td>' + escapeHtml(it.usuario) + '</td>' +
+          '<td><span class="usuarios-badge-rol ' + it.rol + '">' + (it.rol === 'admin' ? 'Administrador' : 'Operario') + '</span></td>' +
+          '<td><span class="usuarios-badge-estado ' + (it.activo ? 'activo' : 'inactivo') + '"><span class="badge-dot"></span>' + (it.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
+          '<td>' + escapeHtml(it.creadoEn || '') + '</td>' +
+          '<td><div class="usuarios-fila-acciones">' +
+            '<button type="button" class="usuarios-btn-icono" title="Editar" data-editar="' + escapeAttr(it.id) + '">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+            '</button>' +
+            '<button type="button" class="usuarios-btn-icono" title="Cambiar contraseña" data-password="' + escapeAttr(it.id) + '">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3"/><path d="M16 7l3 3"/><path d="M19 4l3 3"/></svg>' +
+            '</button>' +
+            '<button type="button" class="usuarios-btn-icono peligro" title="Eliminar" data-eliminar="' + escapeAttr(it.id) + '">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+            '</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody>' +
+    '</table></div>';
+
+  cont.querySelectorAll('[data-editar]').forEach(function (btn) {
+    btn.onclick = function () {
+      const usuario = ADMIN_USUARIOS_ESTADO.datos.find(function (u) { return u.id === btn.getAttribute('data-editar'); });
+      if (usuario) abrirModalUsuario_(usuario);
+    };
+  });
+  cont.querySelectorAll('[data-password]').forEach(function (btn) {
+    btn.onclick = function () {
+      const usuario = ADMIN_USUARIOS_ESTADO.datos.find(function (u) { return u.id === btn.getAttribute('data-password'); });
+      if (usuario) abrirModalPasswordUsuario_(usuario);
+    };
+  });
+  cont.querySelectorAll('[data-eliminar]').forEach(function (btn) {
+    btn.onclick = function () {
+      const usuario = ADMIN_USUARIOS_ESTADO.datos.find(function (u) { return u.id === btn.getAttribute('data-eliminar'); });
+      if (usuario) confirmarEliminarUsuario_(usuario);
+    };
+  });
+}
+
+/** Modal de "Añadir usuario" (usuarioExistente = null) o "Editar usuario"
+ *  (usuarioExistente = fila de ADMIN_USUARIOS_ESTADO.datos). La contraseña
+ *  se pide aquí solo al crear; para cambiarla en un usuario ya existente
+ *  está el botón aparte (llave), vía abrirModalPasswordUsuario_. */
+function abrirModalUsuario_(usuarioExistente) {
+  const esNuevo = !usuarioExistente;
+
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.add('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = esNuevo ? 'Añadir usuario' : 'Editar usuario';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const rolInicial = usuarioExistente ? usuarioExistente.rol : 'operario';
+  const activoInicial = usuarioExistente ? !!usuarioExistente.activo : true;
+  const permisosIniciales = (usuarioExistente && usuarioExistente.permisos) || {};
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-usuario-grid">' +
+      '<div class="modal-usuario-col-izq">' +
+        '<div class="modal-campo">' +
+          '<label for="modal-usuario-nombre">Nombre completo</label>' +
+          '<input type="text" id="modal-usuario-nombre" placeholder="Ej: JOSE LUIS FRANCO FERNANDEZ" value="' + escapeAttr(usuarioExistente ? usuarioExistente.nombreCompleto : '') + '">' +
+        '</div>' +
+        '<div class="modal-campo">' +
+          '<label for="modal-usuario-usuario">Usuario (para entrar en la app)</label>' +
+          '<input type="text" id="modal-usuario-usuario" placeholder="Ej: 12942" value="' + escapeAttr(usuarioExistente ? usuarioExistente.usuario : '') + '">' +
+        '</div>' +
+        (esNuevo
+          ? '<div class="modal-campo">' +
+              '<label for="modal-usuario-password">Contraseña</label>' +
+              '<input type="password" id="modal-usuario-password" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+            '</div>'
+          : '') +
+        '<div class="modal-campo">' +
+          '<label>Rol</label>' +
+          '<div class="modal-pills" id="modal-usuario-rol-pills">' +
+            '<button type="button" class="modal-pill' + (rolInicial === 'admin' ? ' activo' : '') + '" data-rol="admin">Administrador</button>' +
+            '<button type="button" class="modal-pill' + (rolInicial === 'operario' ? ' activo' : '') + '" data-rol="operario">Operario</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="modal-campo">' +
+          '<div class="modal-campo-check">' +
+            '<input type="checkbox" id="modal-usuario-activo"' + (activoInicial ? ' checked' : '') + '>' +
+            '<label for="modal-usuario-activo">Activo (puede entrar en la app)</label>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-usuario-col-der">' +
+        '<div class="modal-campo" id="modal-usuario-permisos-wrap"' + (rolInicial === 'operario' ? '' : ' style="display:none"') + '>' +
+          '<label>Permisos</label>' +
+          renderPermisosCheckboxes_(permisosIniciales) +
+          '<div class="modal-campo-ayuda">Marca lo que este operario puede hacer. Lo que no esté marcado no lo verá ni podrá usarlo.</div>' +
+        '</div>' +
+        '<div class="modal-campo" id="modal-usuario-permisos-admin-nota"' + (rolInicial === 'admin' ? '' : ' style="display:none"') + '>' +
+          '<div class="permisos-admin-nota">Un Administrador tiene acceso a todo automáticamente, así que aquí no hay nada que marcar.</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  custom.querySelectorAll('#modal-usuario-rol-pills .modal-pill').forEach(function (pill) {
+    pill.onclick = function () {
+      custom.querySelectorAll('#modal-usuario-rol-pills .modal-pill').forEach(function (p) { p.classList.remove('activo'); });
+      pill.classList.add('activo');
+      const esOperario = pill.getAttribute('data-rol') === 'operario';
+      document.getElementById('modal-usuario-permisos-wrap').style.display = esOperario ? '' : 'none';
+      document.getElementById('modal-usuario-permisos-admin-nota').style.display = esOperario ? 'none' : '';
+    };
+  });
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">' + (esNuevo ? 'Crear usuario' : 'Guardar cambios') + '</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const inputNombre = document.getElementById('modal-usuario-nombre');
+    const inputUsuario = document.getElementById('modal-usuario-usuario');
+    const nombreCompleto = inputNombre.value.trim();
+    const usuario = inputUsuario.value.trim();
+    const rolElegido = custom.querySelector('#modal-usuario-rol-pills .modal-pill.activo');
+    const rol = rolElegido ? rolElegido.getAttribute('data-rol') : null;
+    const activo = document.getElementById('modal-usuario-activo').checked;
+
+    if (!usuario) { inputUsuario.focus(); return; }
+    if (!rol) { mostrarToast('Elige un rol', true); return; }
+
+    // Los administradores tienen acceso a todo por su rol, así que no se
+    // les guarda ningún permiso fino (el backend los deja pasar igual).
+    const permisos = rol === 'operario' ? leerPermisosMarcados_(custom) : {};
+
+    if (esNuevo) {
+      const inputPassword = document.getElementById('modal-usuario-password');
+      const password = inputPassword.value;
+      if (!password || password.length < 4) { inputPassword.focus(); return; }
+      const btn = document.getElementById('modal-confirm-btn');
+      btn.disabled = true;
+      llamarApi_('crearUsuario', [usuario, nombreCompleto, password, rol, permisos])
+        .then(function () {
+          cerrarModal();
+          mostrarToast('Usuario creado');
+          cargarUsuariosAdmin_(true);
+        })
+        .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
+    } else {
+      const btn = document.getElementById('modal-confirm-btn');
+      btn.disabled = true;
+      llamarApi_('editarUsuario', [usuarioExistente.id, usuario, nombreCompleto, rol, activo, permisos])
+        .then(function () {
+          cerrarModal();
+          mostrarToast('Usuario actualizado' + (usuario === SESSION_USUARIO ? ' (vuelve a entrar para ver el nombre nuevo arriba)' : ''));
+          cargarUsuariosAdmin_(true);
+        })
+        .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
+    }
+  };
+  setTimeout(function () { document.getElementById('modal-usuario-nombre').focus(); }, 50);
+}
+
+/** Modal pequeño solo para cambiar la contraseña de un usuario existente
+ *  (separado del formulario de editar, para no pedir la contraseña cada
+ *  vez que se toca el nombre o el rol). */
+function abrirModalPasswordUsuario_(usuarioExistente) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Cambiar contraseña';
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-text').textContent = 'Nueva contraseña para "' + (usuarioExistente.nombreCompleto || usuarioExistente.usuario) + '" (usuario ' + usuarioExistente.usuario + ').';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-usuario-password-nueva">Contraseña nueva</label>' +
+      '<input type="password" id="modal-usuario-password-nueva" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Cambiar contraseña</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const input = document.getElementById('modal-usuario-password-nueva');
+    const password = input.value;
+    if (!password || password.length < 4) { input.focus(); return; }
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true;
+    llamarApi_('cambiarPasswordUsuario', [usuarioExistente.id, password])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Contraseña actualizada');
+      })
+      .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
+  };
+  setTimeout(function () { document.getElementById('modal-usuario-password-nueva').focus(); }, 50);
+}
+
+function confirmarEliminarUsuario_(usuarioExistente) {
+  appConfirm(
+    'Eliminar usuario',
+    '¿Seguro que quieres eliminar a "' + (usuarioExistente.nombreCompleto || usuarioExistente.usuario) + '" (usuario ' + usuarioExistente.usuario + ')? No podrá volver a entrar en la app.',
+    function () {
+      llamarApi_('eliminarUsuario', [usuarioExistente.id])
+        .then(function () {
+          mostrarToast('Usuario eliminado');
+          cargarUsuariosAdmin_(true);
+        })
+        .catch(mostrarErrorServidor);
+    },
+    true
+  );
+}
+
 /* ---------------- ADMINISTRACIÓN: "Cola trabajo emails" ----------------
  * Los avisos de palets a tiendas (barrido del día, ver "Aviso a tiendas"
  * en Configuración) ya NO se envían al momento: enviar_avisos_tiendas()
@@ -4811,7 +5446,7 @@ function pintarDiasPlantilla_() {
   cont.innerHTML =
     '<div class="plantilla-dias">' + botonesDias + '</div>' +
     (PLANTILLA_ESTADO.dia ? buscadoresPlantillaHtml_() : '') +
-    (esAdmin() && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '');
+    (tienePermiso('plantilla') && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '');
   cont.querySelectorAll('.plantilla-dias button').forEach(function (btn) {
     btn.onclick = function () {
       if (btn.getAttribute('data-dia') === PLANTILLA_ESTADO.dia) return;
@@ -5048,7 +5683,7 @@ function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
   const titulo = bloqueado
     ? 'Quitar el bloqueo "NO" de ' + etiqueta + ' en esta tienda'
     : 'Bloquear ' + etiqueta + ' en esta tienda (pondrá "NO", no podrá recibir palets ahí)';
-  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (esAdmin() ? '' : ' disabled') + '>' + etiqueta + '</button>';
+  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' + etiqueta + '</button>';
 }
 
 function pintarPlantilla_() {
@@ -5091,17 +5726,17 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar="' + t.row + '"' + (ti === s.tiendas.length - 1 ? ' disabled' : '') + ' title="Bajar">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
-          '<input type="text" class="lim" id="' + idSeguro + '_lim" value="' + escapeAttr(t.limite) + '" title="Límite" ' + (esAdmin() ? '' : 'disabled') + '>' +
-          '<input type="text" class="nombre" id="' + idSeguro + '_nombre" value="' + escapeAttr(t.nombre) + '" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '<input type="text" class="lim" id="' + idSeguro + '_lim" value="' + escapeAttr(t.limite) + '" title="Límite" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
+          '<input type="text" class="nombre" id="' + idSeguro + '_nombre" value="' + escapeAttr(t.nombre) + '" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
           '<div class="plantilla-tienda-bloqueos">' +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
           '</div>' +
           (t.orden ? '<span class="plantilla-tienda-orden-chip" title="Orden de retirada: ' + escapeAttr(t.orden) + '">' + escapeHtml(t.orden) + '</span>' : '') +
-          '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (esAdmin() ? '' : ' disabled') + '>' +
+          '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
-          (esAdmin() ? (
+          (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-tienda-guardar" data-guardar-tienda="' + t.row + '" data-id="' + idSeguro + '" title="Guardar cambios" disabled>' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-tienda="' + t.row + '" title="Eliminar tienda">' +
@@ -5124,8 +5759,8 @@ function pintarPlantilla_() {
       const idn = 'nc' + si + '_' + ni;
       return (
         '<div class="plantilla-notacarga-item">' +
-          '<input type="text" id="' + idn + '" value="' + escapeAttr(n.texto) + '" ' + (esAdmin() ? '' : 'disabled') + '>' +
-          (esAdmin() ? (
+          '<input type="text" id="' + idn + '" value="' + escapeAttr(n.texto) + '" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
+          (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-tienda-guardar" data-guardar-notacarga="' + n.row + '" data-id="' + idn + '" title="Guardar" disabled>' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-notacarga="' + n.row + '" title="Eliminar nota de carga">' +
@@ -5144,9 +5779,9 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar-ruta="' + escapeAttr(s.nombre) + '"' + (si === PLANTILLA_ESTADO.secciones.length - 1 ? ' disabled' : '') + ' title="Bajar ruta">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
-          '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (esAdmin() ? '' : 'disabled') + '>' +
+          '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
-          (esAdmin() ? (
+          (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
@@ -5158,10 +5793,10 @@ function pintarPlantilla_() {
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
         '</div>' +
-        (notasCargaHtml || esAdmin() ? (
+        (notasCargaHtml || tienePermiso('plantilla') ? (
           '<div class="plantilla-notascarga">' +
             notasCargaHtml +
-            (esAdmin() ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
+            (tienePermiso('plantilla') ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
               '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir nota de carga</button>' : '') +
           '</div>'
         ) : '') +
@@ -5404,6 +6039,7 @@ function confirmarEliminarTiendaPlantilla_(row) {
  *  de golpe en todos los días donde aparezca. */
 function mostrarModalEliminarTiendaVariosDias_(row, dias) {
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.add('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-title').style.display = '';
@@ -5516,6 +6152,7 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Nota y orden de retirada';
   document.getElementById('modal-text').style.display = 'none';
@@ -5592,6 +6229,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir tienda';
   document.getElementById('modal-text').style.display = 'none';
@@ -5656,10 +6294,53 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
           ? 'Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)'
           : 'Tienda añadida');
         cargarPlantilla_({ silencioso: true });
+        abrirModalEmailTiendaNueva_(nombre);
       })
       .catch(mostrarErrorServidor);
   };
   setTimeout(function () { document.getElementById('modal-plantilla-nombre').focus(); }, 50);
+}
+
+/** Tras crear una tienda nueva, pregunta de una vez el email para los
+ *  avisos de palets (mismo destino que "Configuración tiendas" ->
+ *  guardarEmailTienda), en vez de obligar a ir a esa pantalla aparte a
+ *  buscarla. Si no se sabe el email todavía, "No configurar ahora" cierra
+ *  el modal sin guardar nada -- se puede rellenar más tarde desde
+ *  Configuración tiendas con normalidad. */
+function abrirModalEmailTiendaNueva_(nombreTienda) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Email de "' + nombreTienda + '"';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Se usa para avisar a la tienda por correo de los palets que va a recibir. Si no lo sabes todavía, puedes dejarlo para más tarde.</p>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-email-tienda-nueva">Email</label>' +
+      '<input type="email" id="modal-email-tienda-nueva" placeholder="tienda@ejemplo.com">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-no-configurar-btn">No configurar ahora</button>' +
+    '<button class="modal-confirm" id="modal-guardar-email-btn">Guardar email</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-no-configurar-btn').onclick = cerrarModal;
+  document.getElementById('modal-guardar-email-btn').onclick = function () {
+    const input = document.getElementById('modal-email-tienda-nueva');
+    const email = input.value.trim();
+    if (!email) { cerrarModal(); return; }
+    llamarApi_('guardarEmailTienda', [nombreTienda, email, ''])
+      .then(function () { cerrarModal(); mostrarToast('Email guardado'); })
+      .catch(mostrarErrorServidor);
+  };
+  setTimeout(function () { document.getElementById('modal-email-tienda-nueva').focus(); }, 50);
 }
 
 function guardarNombreRutaPlantilla_(nombreActual, idSeguro) {
@@ -5692,6 +6373,7 @@ function anadirRutaPlantilla_() {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir ruta nueva';
   document.getElementById('modal-text').style.display = 'none';
@@ -6693,6 +7375,7 @@ if (callback) callback(true, mensaje);
   function aplicarResultadoEnvio_(tipo, resultado) {
     if (tipo === 'prevision') {
       seccion.previsionEnviada = (resultado && resultado.previsionEnviada) || seccion.previsionEnviada || '';
+      seccion.previsionEnviadaPor = (resultado && resultado.enviadoPor) || seccion.previsionEnviadaPor || '';
 
       const badgeExistente = header.querySelector('.badge-prevision');
       if (badgeExistente) badgeExistente.remove();
@@ -6714,6 +7397,7 @@ if (callback) callback(true, mensaje);
     // tipo === 'definitivo'
     seccion.estado = 'enviado';
     seccion.horaEnvio = (resultado && resultado.horaEnvio) || seccion.horaEnvio || '';
+    seccion.enviadoPor = (resultado && resultado.enviadoPor) || seccion.enviadoPor || '';
     // OJO: seccion.previsionEnviada NO se limpia aquí a propósito: el
     // backend (Estado_Previsiones) tampoco se borra al enviar el
     // definitivo, así que si se había mandado antes una previsión, su
@@ -7164,7 +7848,11 @@ function Utilities_formatearFechaHora_(d) {
 }
 
 function badgeEstado(seccion) {
-  if (seccion.estado === 'enviado') return '<span class="badge badge-enviado"><span class="badge-dot"></span>Definitivo enviado ' + (seccion.horaEnvio || '') + '</span>';
+  if (seccion.estado === 'enviado') {
+    const texto = seccion.enviadoPor ? ('Definitivo enviado por: ' + escapeHtml(seccion.enviadoPor)) : 'Definitivo enviado';
+    const tooltip = seccion.horaEnvio ? ' title="' + escapeAttr(seccion.horaEnvio) + '"' : '';
+    return '<span class="badge badge-enviado"' + tooltip + '><span class="badge-dot"></span>' + texto + '</span>';
+  }
   if (seccion.estado === 'progreso') return '<span class="badge badge-progreso"><span class="badge-dot"></span>En progreso</span>';
   return ''; // ya no se muestra el badge "Pendiente" en la cabecera de la agrupación
 }
@@ -7175,7 +7863,9 @@ function badgeEstado(seccion) {
  *  estado — ambos pueden verse a la vez. */
 function badgePrevision(seccion) {
   if (!seccion.previsionEnviada) return '';
-  return '<span class="badge badge-prevision"><span class="badge-dot"></span>Previsión enviada ' + escapeHtml(seccion.previsionEnviada) + '</span>';
+  const texto = seccion.previsionEnviadaPor ? ('Previsión enviada por: ' + escapeHtml(seccion.previsionEnviadaPor)) : 'Previsión enviada';
+  const tooltip = ' title="' + escapeAttr(seccion.previsionEnviada) + '"';
+  return '<span class="badge badge-prevision"' + tooltip + '><span class="badge-dot"></span>' + texto + '</span>';
 }
 
 /**
@@ -7550,6 +8240,7 @@ function abrirGestorObservaciones(fechaInicial) {
   GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
 
   document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.add('medio');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir observación';
@@ -8214,6 +8905,7 @@ function mostrarErrorServidor(err) {
 function appConfirm(titulo, texto, onConfirm, peligro) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.toggle('peligro', !!peligro);
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = titulo;
@@ -8240,6 +8932,7 @@ function appPrompt(titulo, placeholder, onSubmit, mayusculas) {
   if (mayusculas === undefined) mayusculas = true;
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = titulo;
   document.getElementById('modal-text').style.display = 'none';
@@ -8289,6 +8982,7 @@ function appPrompt(titulo, placeholder, onSubmit, mayusculas) {
 function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
   const esDefinitivo = tipo === 'definitivo';
   document.getElementById('modal-box').classList.add('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-title').style.display = 'none';
   document.getElementById('modal-text').style.display = 'none';
@@ -8430,6 +9124,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('actualizacion');
+  document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
 }
 
