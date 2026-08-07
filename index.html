@@ -470,6 +470,37 @@
   .emails-config-badge.nueva { background: #f5deA0; color: #7a5417; }
   .emails-config-badge.sinuso { background: #f4d4d4; color: #8a3a3a; }
 
+  /* Contador de "Configuración tiendas": nº total de tiendas junto al título. */
+  .tiendas-config-total {
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: var(--bg2, #eef1f6); border-radius: 20px; padding: 2px 10px;
+    margin-left: 8px; white-space: nowrap;
+  }
+  .tiendas-config-total.sinuso-toggle {
+    cursor: pointer; background: #f4d4d4; color: #8a3a3a;
+    border: 1px solid transparent;
+  }
+  .tiendas-config-total.sinuso-toggle:hover { background: #efc4c4; }
+  .tiendas-config-total.sinuso-toggle.activo {
+    background: #8a3a3a; color: #fff; border-color: #8a3a3a;
+  }
+  .tiendas-config-total.nueva-toggle {
+    cursor: pointer; background: #f5deA0; color: #7a5417;
+    border: 1px solid transparent;
+  }
+  .tiendas-config-total.nueva-toggle:hover { background: #f0d485; }
+  .tiendas-config-total.nueva-toggle.activo {
+    background: #7a5417; color: #fff; border-color: #7a5417;
+  }
+  .tiendas-config-total.sinemail-toggle {
+    cursor: pointer; background: #dde3f7; color: #38468a;
+    border: 1px solid transparent;
+  }
+  .tiendas-config-total.sinemail-toggle:hover { background: #ccd5f2; }
+  .tiendas-config-total.sinemail-toggle.activo {
+    background: #38468a; color: #fff; border-color: #38468a;
+  }
+
   /* Fila de 7 botones "L M X J V S D": qué días de la semana recibe
      entrega esta tienda. Afecta a la fecha prevista del aviso por email
      (ver _sumar_dias_habiles en el backend), que solo cuenta como válidos
@@ -1935,7 +1966,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.5.8';
+const APP_VERSION_ACTUAL = '1.5.9';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3274,7 +3305,7 @@ function eliminarObservacionDesdeFestivos_(id) {
  * clase "es-admin" del <body>, igual que el resto de acciones de solo
  * administrador de la app).
  */
-let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
+let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
 
 // Calcula el alto disponible en pantalla para una lista con scroll propio
 // dentro de Configuración (para que sea ELLA la que se desplace, y no toda
@@ -3304,11 +3335,16 @@ function ajustarAlturasListasConfig_debounced_() {
 function renderConfigEmails() {
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
+
+  EMAILS_CONFIG_ESTADO.soloSinUso = false;
+  EMAILS_CONFIG_ESTADO.soloNueva = false;
+  EMAILS_CONFIG_ESTADO.soloSinEmail = false;
+
   cont.innerHTML =
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Email agencias</h2>' +
+          '<h2>Email agencias <span class="tiendas-config-total" id="emails-config-total"></span><span class="tiendas-config-total nueva-toggle" id="emails-config-nueva" title="Mostrar solo las agrupaciones nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="emails-config-sinuso" title="Mostrar solo las agrupaciones sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="emails-config-sinemail" title="Mostrar solo las agrupaciones sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
@@ -3347,6 +3383,72 @@ function renderConfigEmails() {
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
+/** Actualiza los contadores junto al título de "Email agencias": nº total,
+ *  nº "sin uso", nº "nueva" (falta email) y nº "sin email" (ninguna
+ *  agrupación con Definitivo ni Previsión rellenos, para que no se escape
+ *  ninguna aunque no esté marcada como "Nueva"). Los tres badges son
+ *  clicables y excluyentes entre sí. */
+function actualizarTotalEmailsConfig_() {
+  const elTotal = document.getElementById('emails-config-total');
+  const elSinUso = document.getElementById('emails-config-sinuso');
+  const elNueva = document.getElementById('emails-config-nueva');
+  const elSinEmail = document.getElementById('emails-config-sinemail');
+  if (!elTotal || !elSinUso || !elNueva || !elSinEmail) return;
+
+  const total = EMAILS_CONFIG_ESTADO.datos.length;
+  elTotal.textContent = total + (total === 1 ? ' agrupación' : ' agrupaciones');
+
+  const sinUso = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+    return /^SIN USO/i.test(it.estado || '');
+  }).length;
+  const nueva = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+    return /^NUEVA/i.test(it.estado || '');
+  }).length;
+  const sinEmail = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+    return (!it.emails || !it.emails.length) && (!it.emailsPrevision || !it.emailsPrevision.length);
+  }).length;
+
+  elSinUso.textContent = sinUso + ' sin uso';
+  elNueva.textContent = nueva + ' nueva' + (nueva === 1 ? '' : 's');
+  elSinEmail.textContent = sinEmail + ' sin email';
+  if (sinUso === 0) EMAILS_CONFIG_ESTADO.soloSinUso = false;
+  if (nueva === 0) EMAILS_CONFIG_ESTADO.soloNueva = false;
+  if (sinEmail === 0) EMAILS_CONFIG_ESTADO.soloSinEmail = false;
+  elSinUso.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloSinUso);
+  elNueva.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloNueva);
+  elSinEmail.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloSinEmail);
+
+  elSinUso.onclick = function () {
+    EMAILS_CONFIG_ESTADO.soloSinUso = !EMAILS_CONFIG_ESTADO.soloSinUso;
+    if (EMAILS_CONFIG_ESTADO.soloSinUso) { EMAILS_CONFIG_ESTADO.soloNueva = false; EMAILS_CONFIG_ESTADO.soloSinEmail = false; }
+    elSinUso.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloSinUso);
+    elNueva.classList.remove('activo');
+    elSinEmail.classList.remove('activo');
+    pintarListaEmails_();
+    ajustarAlturaListaScrollable_('emails-config-lista');
+  };
+
+  elNueva.onclick = function () {
+    EMAILS_CONFIG_ESTADO.soloNueva = !EMAILS_CONFIG_ESTADO.soloNueva;
+    if (EMAILS_CONFIG_ESTADO.soloNueva) { EMAILS_CONFIG_ESTADO.soloSinUso = false; EMAILS_CONFIG_ESTADO.soloSinEmail = false; }
+    elNueva.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloNueva);
+    elSinUso.classList.remove('activo');
+    elSinEmail.classList.remove('activo');
+    pintarListaEmails_();
+    ajustarAlturaListaScrollable_('emails-config-lista');
+  };
+
+  elSinEmail.onclick = function () {
+    EMAILS_CONFIG_ESTADO.soloSinEmail = !EMAILS_CONFIG_ESTADO.soloSinEmail;
+    if (EMAILS_CONFIG_ESTADO.soloSinEmail) { EMAILS_CONFIG_ESTADO.soloSinUso = false; EMAILS_CONFIG_ESTADO.soloNueva = false; }
+    elSinEmail.classList.toggle('activo', EMAILS_CONFIG_ESTADO.soloSinEmail);
+    elSinUso.classList.remove('activo');
+    elNueva.classList.remove('activo');
+    pintarListaEmails_();
+    ajustarAlturaListaScrollable_('emails-config-lista');
+  };
+}
+
 function cargarAgrupacionesConfig_() {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
   llamarApi_('getAgrupacionesConfig', [])
@@ -3354,6 +3456,7 @@ function cargarAgrupacionesConfig_() {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
       EMAILS_CONFIG_ESTADO.datos = datos || [];
       pintarListaEmails_();
+      actualizarTotalEmailsConfig_();
       ajustarAlturaListaScrollable_('emails-config-lista');
     })
     .catch(function (err) {
@@ -3369,6 +3472,10 @@ function pintarListaEmails_() {
 
   const filtro = EMAILS_CONFIG_ESTADO.filtroTexto;
   const items = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+    const sinEmail = (!it.emails || !it.emails.length) && (!it.emailsPrevision || !it.emailsPrevision.length);
+    if (EMAILS_CONFIG_ESTADO.soloSinUso && !/^SIN USO/i.test(it.estado || '')) return false;
+    if (EMAILS_CONFIG_ESTADO.soloNueva && !/^NUEVA/i.test(it.estado || '')) return false;
+    if (EMAILS_CONFIG_ESTADO.soloSinEmail && !sinEmail) return false;
     if (!filtro) return true;
     const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.emailsPrevision || []).join(' ') + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
@@ -3378,7 +3485,13 @@ function pintarListaEmails_() {
     listaEl.innerHTML =
       '<div class="emails-config-vacio">' +
         '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
-        (EMAILS_CONFIG_ESTADO.datos.length ? 'Ninguna agrupación coincide con la búsqueda.' : 'Todavía no hay agrupaciones en Config_Agrupaciones. Usa "Sincronizar con hojas de día" para traerlas.') +
+        (EMAILS_CONFIG_ESTADO.soloSinUso
+          ? 'Ninguna agrupación sin uso coincide con la búsqueda.'
+          : (EMAILS_CONFIG_ESTADO.soloNueva
+            ? 'Ninguna agrupación nueva coincide con la búsqueda.'
+            : (EMAILS_CONFIG_ESTADO.soloSinEmail
+              ? 'Ninguna agrupación sin email coincide con la búsqueda.'
+              : (EMAILS_CONFIG_ESTADO.datos.length ? 'Ninguna agrupación coincide con la búsqueda.' : 'Todavía no hay agrupaciones en Config_Agrupaciones. Usa "Sincronizar con hojas de día" para traerlas.')))) +
       '</div>';
     return;
   }
@@ -3386,10 +3499,12 @@ function pintarListaEmails_() {
   listaEl.innerHTML = items.map(function (it, idx) {
     const esNueva = /^NUEVA/i.test(it.estado || '');
     const esSinUso = /^SIN USO/i.test(it.estado || '');
-    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : ''));
+    const esSinEmail = !esNueva && (!it.emails || !it.emails.length) && (!it.emailsPrevision || !it.emailsPrevision.length);
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinuso' : '')));
     const badge = esNueva
       ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
-      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>' : '');
+      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>'
+        : (esSinEmail ? '<span class="emails-config-badge sinuso">Sin email</span>' : ''));
     const idSeguro = 'ec' + idx;
     return (
       '<div class="' + clase + '">' +
@@ -3498,7 +3613,7 @@ function sincronizarAgrupacionesDesdeApp_() {
  * Requiere en Code.gs: getTiendasConfig, guardarEmailTienda,
  * eliminarTiendaConfig, sincronizarTiendas y enviarAvisosTiendas.
  */
-let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '' };
+let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
 let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, resultadoFecha: null, simulado: false };
 // Horas entre las que se intenta el envío automático del aviso a
 // tiendas (ver getConfigAvisoTiendas/guardarHoraAvisoTiendas en el
@@ -3772,11 +3887,15 @@ function renderConfigTiendas() {
   const cont = document.getElementById('config-contenido');
   if (!cont) return;
 
+  TIENDAS_CONFIG_ESTADO.soloSinUso = false;
+  TIENDAS_CONFIG_ESTADO.soloNueva = false;
+  TIENDAS_CONFIG_ESTADO.soloSinEmail = false;
+
   cont.innerHTML =
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Configuración tiendas</h2>' +
+          '<h2>Configuración tiendas <span class="tiendas-config-total" id="tiendas-config-total"></span><span class="tiendas-config-total nueva-toggle" id="tiendas-config-nueva" title="Mostrar solo las tiendas nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="tiendas-config-sinuso" title="Mostrar solo las tiendas sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="tiendas-config-sinemail" title="Mostrar solo las tiendas sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-duplicados-tiendas" title="Compara los nombres de todas las tiendas para detectar la misma tienda escrita de forma distinta algún día">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
@@ -3820,6 +3939,73 @@ function renderConfigTiendas() {
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
+/** Actualiza los contadores junto al título de "Configuración tiendas":
+ *  nº total, nº "sin uso", nº "nueva" (falta email) y nº "sin email"
+ *  (ninguna tienda con el campo Email relleno, aunque no esté marcada
+ *  como "Nueva", para que no se escape ninguna). Los tres badges son
+ *  clicables: alternan un filtro que muestra solo esas tiendas, y son
+ *  excluyentes entre sí. */
+function actualizarTotalTiendasConfig_() {
+  const elTotal = document.getElementById('tiendas-config-total');
+  const elSinUso = document.getElementById('tiendas-config-sinuso');
+  const elNueva = document.getElementById('tiendas-config-nueva');
+  const elSinEmail = document.getElementById('tiendas-config-sinemail');
+  if (!elTotal || !elSinUso || !elNueva || !elSinEmail) return;
+
+  const total = TIENDAS_CONFIG_ESTADO.datos.length;
+  elTotal.textContent = total + (total === 1 ? ' tienda' : ' tiendas');
+
+  const sinUso = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+    return /^SIN USO/i.test(it.estado || '');
+  }).length;
+  const nueva = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+    return /^NUEVA/i.test(it.estado || '');
+  }).length;
+  const sinEmail = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+    return !it.email || !it.email.trim();
+  }).length;
+
+  elSinUso.textContent = sinUso + ' sin uso';
+  elNueva.textContent = nueva + ' nueva' + (nueva === 1 ? '' : 's');
+  elSinEmail.textContent = sinEmail + ' sin email';
+  if (sinUso === 0) TIENDAS_CONFIG_ESTADO.soloSinUso = false;
+  if (nueva === 0) TIENDAS_CONFIG_ESTADO.soloNueva = false;
+  if (sinEmail === 0) TIENDAS_CONFIG_ESTADO.soloSinEmail = false;
+  elSinUso.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloSinUso);
+  elNueva.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloNueva);
+  elSinEmail.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloSinEmail);
+
+  elSinUso.onclick = function () {
+    TIENDAS_CONFIG_ESTADO.soloSinUso = !TIENDAS_CONFIG_ESTADO.soloSinUso;
+    if (TIENDAS_CONFIG_ESTADO.soloSinUso) { TIENDAS_CONFIG_ESTADO.soloNueva = false; TIENDAS_CONFIG_ESTADO.soloSinEmail = false; }
+    elSinUso.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloSinUso);
+    elNueva.classList.remove('activo');
+    elSinEmail.classList.remove('activo');
+    pintarListaTiendas_();
+    ajustarAlturaListaScrollable_('tiendas-config-lista');
+  };
+
+  elNueva.onclick = function () {
+    TIENDAS_CONFIG_ESTADO.soloNueva = !TIENDAS_CONFIG_ESTADO.soloNueva;
+    if (TIENDAS_CONFIG_ESTADO.soloNueva) { TIENDAS_CONFIG_ESTADO.soloSinUso = false; TIENDAS_CONFIG_ESTADO.soloSinEmail = false; }
+    elNueva.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloNueva);
+    elSinUso.classList.remove('activo');
+    elSinEmail.classList.remove('activo');
+    pintarListaTiendas_();
+    ajustarAlturaListaScrollable_('tiendas-config-lista');
+  };
+
+  elSinEmail.onclick = function () {
+    TIENDAS_CONFIG_ESTADO.soloSinEmail = !TIENDAS_CONFIG_ESTADO.soloSinEmail;
+    if (TIENDAS_CONFIG_ESTADO.soloSinEmail) { TIENDAS_CONFIG_ESTADO.soloSinUso = false; TIENDAS_CONFIG_ESTADO.soloNueva = false; }
+    elSinEmail.classList.toggle('activo', TIENDAS_CONFIG_ESTADO.soloSinEmail);
+    elSinUso.classList.remove('activo');
+    elNueva.classList.remove('activo');
+    pintarListaTiendas_();
+    ajustarAlturaListaScrollable_('tiendas-config-lista');
+  };
+}
+
 function cargarTiendasConfig_() {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'tiendas') return;
   llamarApi_('getTiendasConfig', [])
@@ -3827,6 +4013,7 @@ function cargarTiendasConfig_() {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'tiendas') return;
       TIENDAS_CONFIG_ESTADO.datos = datos || [];
       pintarListaTiendas_();
+      actualizarTotalTiendasConfig_();
       ajustarAlturaListaScrollable_('tiendas-config-lista');
     })
     .catch(function (err) {
@@ -3842,6 +4029,9 @@ function pintarListaTiendas_() {
 
   const filtro = TIENDAS_CONFIG_ESTADO.filtroTexto;
   const items = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+    if (TIENDAS_CONFIG_ESTADO.soloSinUso && !/^SIN USO/i.test(it.estado || '')) return false;
+    if (TIENDAS_CONFIG_ESTADO.soloNueva && !/^NUEVA/i.test(it.estado || '')) return false;
+    if (TIENDAS_CONFIG_ESTADO.soloSinEmail && (it.email && it.email.trim())) return false;
     if (!filtro) return true;
     const texto = (it.tienda + ' ' + it.email + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
@@ -3851,7 +4041,13 @@ function pintarListaTiendas_() {
     listaEl.innerHTML =
       '<div class="emails-config-vacio">' +
         '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
-        (TIENDAS_CONFIG_ESTADO.datos.length ? 'Ninguna tienda coincide con la búsqueda.' : 'Todavía no hay tiendas en Config_Tiendas. Usa "Buscar y sincronizar cambios de tiendas" para traerlas de las hojas de día.') +
+        (TIENDAS_CONFIG_ESTADO.soloSinUso
+          ? 'Ninguna tienda sin uso coincide con la búsqueda.'
+          : (TIENDAS_CONFIG_ESTADO.soloNueva
+            ? 'Ninguna tienda nueva coincide con la búsqueda.'
+            : (TIENDAS_CONFIG_ESTADO.soloSinEmail
+              ? 'Ninguna tienda sin email coincide con la búsqueda.'
+              : (TIENDAS_CONFIG_ESTADO.datos.length ? 'Ninguna tienda coincide con la búsqueda.' : 'Todavía no hay tiendas en Config_Tiendas. Usa "Buscar y sincronizar cambios de tiendas" para traerlas de las hojas de día.')))) +
       '</div>';
     return;
   }
@@ -3859,10 +4055,12 @@ function pintarListaTiendas_() {
   listaEl.innerHTML = items.map(function (it, idx) {
     const esNueva = /^NUEVA/i.test(it.estado || '');
     const esSinUso = /^SIN USO/i.test(it.estado || '');
-    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : ''));
+    const esSinEmail = !esNueva && !(it.email && it.email.trim());
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinuso' : '')));
     const badge = esNueva
       ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
-      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>' : '');
+      : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>'
+        : (esSinEmail ? '<span class="emails-config-badge sinuso">Sin email</span>' : ''));
     const idSeguro = 'tc' + idx;
     const dias = it.dias || {};
     const DIAS_FILA = [
