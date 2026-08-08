@@ -464,6 +464,10 @@
   }
   .emails-config-item.nueva { border-color: #e8c675; background: #fffaf1; }
   .emails-config-item.sinuso { border-color: #e3b2b2; background: #fdf5f5; }
+  /* "Sin email" usaba antes el mismo estilo que "Sin uso" (fondo rosa) y se
+     confundían a simple vista. Ahora se queda sin color de fondo, solo con
+     el borde amarillo/ámbar, para distinguirlo claramente. */
+  .emails-config-item.sinemail { border-color: #e8c675; background: #fff; }
   .emails-config-cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .emails-config-nombre { font-weight: 700; font-size: 13.5px; color: var(--navy); flex: 1 1 auto; min-width: 0; }
   .emails-config-badge {
@@ -472,6 +476,8 @@
   }
   .emails-config-badge.nueva { background: #f5deA0; color: #7a5417; }
   .emails-config-badge.sinuso { background: #f4d4d4; color: #8a3a3a; }
+  .emails-config-badge.sinemail { background: #f5deA0; color: #7a5417; }
+  .emails-config-acciones-derecha { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 
   /* Contador de "Configuración tiendas": nº total de tiendas junto al título. */
   .tiendas-config-total {
@@ -509,7 +515,27 @@
      (ver _sumar_dias_habiles en el backend), que solo cuenta como válidos
      los días marcados aquí. Por defecto lunes-viernes sí, sábado y
      domingo no. */
-  .emails-config-dias { display: flex; gap: 4px; flex-wrap: wrap; margin: 2px 0 10px; }
+  /* Fila con las 3 informaciones de la tienda alineadas: días de entrega
+     configurables (editable), en qué días de conteo aparece realmente y en
+     qué agrupación de rutas está (ambas de solo lectura). En pantallas
+     estrechas se apilan una debajo de otra. */
+  .emails-config-fila-info {
+    display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start;
+    margin: 2px 0 10px;
+  }
+  .emails-config-fila-info-col { flex: 1 1 200px; min-width: 160px; }
+  .emails-config-dias-etiqueta {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .3px; color: var(--ink-soft); margin: 0 0 4px;
+  }
+  .emails-config-dias { display: flex; gap: 4px; flex-wrap: wrap; margin: 0; }
+  /* Texto informativo (no editable): en qué días de la semana aparece
+     realmente esta tienda dentro de las hojas de conteo (tiendas_ruta.dia_conteo)
+     y en qué agrupación de rutas está configurada (tiendas_ruta -> rutas.clave),
+     para diferenciarlo de los días de entrega, que sí son configurables. */
+  .emails-config-dias-conteo {
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+  }
   .emails-config-dia {
     width: 30px; height: 26px; flex-shrink: 0;
     border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
@@ -565,6 +591,13 @@
   body.perm-aviso_tiendas .emails-config-borrar,
   body.perm-plantilla .emails-config-borrar { display: inline-flex !important; }
   .emails-config-borrar:hover { color: var(--danger); background: #fff; }
+  .emails-config-borrar:disabled { opacity: .35; cursor: not-allowed; color: var(--ink-soft); }
+  .emails-config-borrar:disabled:hover { background: none; }
+  .emails-config-renombrar {
+    display: inline-flex; background: none; border: none; color: var(--amber-dark, #b8860b); flex-shrink: 0; padding: 3px;
+    border-radius: 5px; cursor: pointer;
+  }
+  .emails-config-renombrar:hover { background: #fdf6ea; }
   .emails-config-campos { display: flex; flex-direction: column; gap: 8px; }
   .emails-config-campo label {
     display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
@@ -575,6 +608,16 @@
     font-size: 13px; color: var(--ink); background: #f9fafb;
   }
   .emails-config-campo input:disabled { color: var(--ink-soft); cursor: default; }
+  .emails-config-campo select.emails-config-transito {
+    width: 100%; border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px;
+    font-size: 13px; color: var(--ink); background: #f9fafb; cursor: pointer;
+  }
+  .emails-config-campo select.emails-config-transito:disabled { color: var(--ink-soft); cursor: default; }
+  body.es-admin .emails-config-campo select.emails-config-transito,
+  body.perm-agencias .emails-config-campo select.emails-config-transito,
+  body.perm-tiendas .emails-config-campo select.emails-config-transito,
+  body.perm-aviso_tiendas .emails-config-campo select.emails-config-transito,
+  body.perm-plantilla .emails-config-campo select.emails-config-transito { background: #fff; }
   body.es-admin .emails-config-campo input,
   body.perm-agencias .emails-config-campo input,
   body.perm-tiendas .emails-config-campo input,
@@ -1148,8 +1191,8 @@
   .badge-solo-lectura { background: #eef1f5; color: var(--ink-soft); }
   .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
-  /* Mini badge de plazo de entrega (detectado desde "*" = 48H / "^" = 72H
-     en el nombre de la tienda, ver parsearMarcadorTienda()) */
+  /* Mini badge de plazo de entrega (viene del campo transito de
+     config_tiendas.transito_dias, ver badgeTransitoTienda()) */
   .badge-plazo {
     display: inline-flex; align-items: center; font-size: 10px; font-weight: 700;
     padding: 1px 6px; border-radius: 20px; margin-left: 6px; vertical-align: middle;
@@ -1157,10 +1200,13 @@
   }
   .badge-48h { background: #fdf1de; color: var(--amber-dark); }
   .badge-72h { background: #fbe3e3; color: var(--danger); }
+  .badge-96h { background: #f0e3fb; color: #7a3fb0; }
+  .badge-120h { background: #e3e6fb; color: #3f4fb0; }
 
   /* Agrupación bloqueada para edición (fecha demasiado antigua, o ya enviada) */
   .seccion-panel.no-editable table.conteo input.celda,
   .seccion-panel.no-editable table.conteo input.celda-total { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
+  .seccion-panel.no-editable table.conteo input.celda-total-visual { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
   .seccion-panel.no-editable .btn-cerrar-tienda,
   .seccion-panel.no-editable .btn-reabrir,
   .seccion-panel.no-editable .celda-no { opacity: .35; cursor: not-allowed; pointer-events: none; }
@@ -1364,10 +1410,19 @@
   table.conteo input.celda-total:focus { box-shadow: none; }
   table.conteo input.celda-total:disabled { background: #eef1f7; color: var(--navy); opacity: .6; }
 
+  table.conteo input.celda-total-visual {
+    width: 60px; padding: 8px 4px; font-weight: 800; font-size: 14px; color: var(--navy);
+    background: #eef1f7; border: 1.5px solid #d4dae4; cursor: default;
+  }
+  table.conteo input.celda-total-visual:focus { box-shadow: none; }
+  table.conteo input.celda-total-visual:disabled { background: #eef1f7; color: var(--navy); opacity: .6; }
+
   table.conteo tr.fila-aviso input.celda { border-color: var(--amber); background: #fdf6ea; }
-  table.conteo tr.fila-aviso input.celda-total { background: var(--amber); color: #2a1c04; border-color: var(--amber-dark); }
+  table.conteo tr.fila-aviso input.celda-total,
+  table.conteo tr.fila-aviso input.celda-total-visual { background: var(--amber); color: #2a1c04; border-color: var(--amber-dark); }
   table.conteo tr.fila-alerta input.celda { border-color: var(--danger); background: #fceded; color: var(--danger); }
-  table.conteo tr.fila-alerta input.celda-total { background: var(--danger); color: #fff; border-color: var(--danger); }
+  table.conteo tr.fila-alerta input.celda-total,
+  table.conteo tr.fila-alerta input.celda-total-visual { background: var(--danger); color: #fff; border-color: var(--danger); }
 
   /* Casilla que trae "NO" desde el Excel (esa tienda no debe recibir palets
      por esa vía). Se muestra en rojo, no editable; el botón "+" permite
@@ -1426,14 +1481,21 @@
     transition: max-width .18s ease;
     position: relative;
   }
-  .modal-box h3 { margin: 0 0 8px; font-size: 16px; }
+  .modal-cerrar-x {
+    position: absolute; top: 16px; right: 16px; width: 30px; height: 30px;
+    border: none; border-radius: 50%; background: transparent; color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .modal-cerrar-x:hover { background: #eef0f3; color: var(--ink); }
+  .modal-box h3 { margin: 0 0 8px; font-size: 16px; padding-right: 26px; }
   .modal-box p { margin: 0 0 16px; color: var(--ink-soft); font-size: 14px; line-height: 1.5; white-space: pre-line; }
   .modal-box textarea {
     width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
     font-size: 14px; resize: vertical; min-height: 76px; margin-bottom: 16px;
   }
   .modal-box textarea:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 18px; }
   .modal-actions button { border: none; border-radius: 9px; padding: 10px 18px; font-size: 13.5px; font-weight: 600; transition: filter .15s, transform .05s; }
   .modal-actions button:hover { filter: brightness(1.06); }
   .modal-actions button:active { transform: scale(.97); }
@@ -1452,18 +1514,23 @@
   }
 
   /* ---------- Modal "Enviar Previsión / Enviar Definitivo" (versión amplia) ---------- */
-  .modal-box.ancho { max-width: 620px; }
+  .modal-box.ancho { max-width: 680px; }
 
   /* ---------- Modal "Añadir/Editar usuario": mucho más ancho, con los
      datos básicos a la izquierda y los permisos a la derecha, pensado
      para verse entero de un vistazo sin necesidad de hacer scroll. ---------- */
-  .modal-box.usuario-form { max-width: 900px; }
-  .modal-usuario-grid { display: flex; gap: 30px; align-items: flex-start; }
-  .modal-usuario-col-izq { flex: 0 0 250px; display: flex; flex-direction: column; }
+  .modal-box.usuario-form {
+    max-width: 1100px; min-height: 620px; padding: 34px;
+    display: flex; flex-direction: column;
+  }
+  .modal-box.usuario-form #modal-custom { flex: 1; }
+  .modal-box.usuario-form .modal-actions { margin-top: 24px; flex-shrink: 0; }
+  .modal-usuario-grid { display: flex; gap: 36px; align-items: flex-start; }
+  .modal-usuario-col-izq { flex: 0 0 270px; display: flex; flex-direction: column; }
   .modal-usuario-col-der { flex: 1; min-width: 0; }
   .modal-usuario-col-der .permisos-grupos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .modal-usuario-col-der .permiso-grupo { padding: 9px 10px; }
-  .modal-usuario-col-der .permiso-item { padding: 5px 2px; }
+  .modal-usuario-col-der .permiso-grupo { padding: 13px 14px; }
+  .modal-usuario-col-der .permiso-item { padding: 8px 3px; }
   @media (max-width: 720px) {
     .modal-usuario-grid { flex-direction: column; gap: 0; }
     .modal-usuario-col-izq { flex-basis: auto; width: 100%; }
@@ -1935,6 +2002,9 @@
   .modal-campo-check input[type="checkbox"] { width: 16px; height: 16px; }
   .modal-campo-check label { margin: 0; }
   .modal-campo .modal-campo-ayuda { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+  .modal-permisos-cabecera { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .modal-permisos-cabecera label { margin: 0; }
+  .modal-campo-ayuda.modal-campo-ayuda-inline { margin-top: 0; }
   .permisos-grupos { display: flex; flex-direction: column; gap: 14px; }
   .permiso-grupo { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fafbfc; }
   .permiso-grupo h4 {
@@ -2036,6 +2106,9 @@
   <!-- MODAL -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-box" id="modal-box">
+      <button type="button" class="modal-cerrar-x" id="modal-cerrar-x" title="Cerrar" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
       <h3 id="modal-title"></h3>
       <p id="modal-text"></p>
       <div id="modal-custom" style="display:none;"></div>
@@ -2075,7 +2148,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.1';
+const APP_VERSION_ACTUAL = '1.6.2';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2350,7 +2423,10 @@ const METODOS_REMOTOS_ = {
   desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla',
   getTiendasConfig: 'getTiendasConfig',
   guardarEmailTienda: 'guardarEmailTienda',
+  guardarTransitoTienda: 'guardarTransitoTienda',
   eliminarTiendaConfig: 'eliminarTiendaConfig',
+  aparicionesTiendaConfig: 'aparicionesTiendaConfig',
+  renombrarTiendaConfig: 'renombrarTiendaConfig',
   sincronizarTiendas: 'sincronizarTiendas',
   enviarAvisosTiendas: 'enviarAvisosTiendas',
   getAvisosEnviadosTiendas: 'getAvisosEnviadosTiendas',
@@ -2519,8 +2595,24 @@ const SUPABASE_ACCIONES_ = {
     const tienda = args[0], email = args[1], notas = args[2];
     return llamarRpcSupabase_('guardar_email_tienda', { p_tienda: tienda, p_email: email, p_notas: notas });
   },
+  guardarTransitoTienda: function (args) {
+    const tienda = args[0], transito = args[1];
+    return llamarRpcSupabase_('guardar_transito_tienda', { p_tienda: tienda, p_transito: transito });
+  },
   eliminarTiendaConfig: function (args) {
     return llamarRpcSupabase_('eliminar_tienda_config', { p_tienda: args[0] });
+  },
+  // -- Supabase: renombrar una tienda desde "Configuración tiendas". Se
+  // propaga a todas las filas de tiendas_ruta que compartan la clave
+  // (o sea, a todos los días donde aparezca esa tienda) y a su fila en
+  // config_tiendas. aparicionesTiendaConfig se usa antes, para avisar en
+  // cuántos días aparece la tienda que se va a renombrar.
+  aparicionesTiendaConfig: function (args) {
+    return llamarRpcSupabase_('apariciones_tienda_config', { p_clave: args[0] });
+  },
+  renombrarTiendaConfig: function (args) {
+    const claveActual = args[0], nombreNuevo = args[1];
+    return llamarRpcSupabase_('renombrar_tienda_config', { p_clave_actual: claveActual, p_nombre_nuevo: nombreNuevo });
   },
   sincronizarTiendas: function () {
     return llamarRpcSupabase_('sincronizar_tiendas', {});
@@ -3724,11 +3816,11 @@ function pintarListaEmails_() {
     const esNueva = /^NUEVA/i.test(it.estado || '');
     const esSinUso = /^SIN USO/i.test(it.estado || '');
     const esSinEmail = !esNueva && (!it.emails || !it.emails.length) && (!it.emailsPrevision || !it.emailsPrevision.length);
-    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinuso' : '')));
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinemail' : '')));
     const badge = esNueva
       ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
       : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>'
-        : (esSinEmail ? '<span class="emails-config-badge sinuso">Sin email</span>' : ''));
+        : (esSinEmail ? '<span class="emails-config-badge sinemail">Sin email</span>' : ''));
     const idSeguro = 'ec' + idx;
     return (
       '<div class="' + clase + '">' +
@@ -3873,7 +3965,7 @@ function htmlBarridoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y cuyas rutas de ese día ya se hayan enviado todas como definitivo, con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola trabajo emails).</p>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola trabajo emails).</p>' +
       '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
         '<div class="admin-filtro-campo">' +
           '<label>Primer barrido a partir de</label>' +
@@ -3886,7 +3978,7 @@ function htmlBarridoTiendasCard_() {
         '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar horas</button>' +
         '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-quitar-hora-aviso" title="Deja el aviso a tiendas en solo envío manual">Quitar (solo manual)</button>' +
       '</div>' +
-      '<p class="barrido-hora-nota">Cada 15 min la app comprueba las horas configuradas. Si dejas vacío el <b>último barrido de seguridad</b>, el envío automático se dispara UNA sola vez al día en cuanto se alcanza el <b>primer barrido</b>: los definitivos que lleguen después ese día ya no se avisan solos (hace falta el botón manual de abajo). Si rellenas también el último barrido, la comprobación se repite cada ~15 min entre esas dos horas, avisando a las tiendas que se van poniendo listas (aquellas cuyas rutas/agrupaciones ya se hayan enviado todas como definitivo a la agencia) según van llegando más definitivos durante esa ventana; pasado el último barrido no se envía nada más automáticamente ese día. En cualquier caso cada tienda solo recibe su aviso una vez. Si dejas ambos campos vacíos, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
+      '<p class="barrido-hora-nota">Cada 15 min la app comprueba las horas configuradas. Si dejas vacío el <b>último barrido de seguridad</b>, el envío automático se dispara UNA sola vez al día en cuanto se alcanza el <b>primer barrido</b>: los conteos que se pongan después ese día ya no se avisan solos (hace falta el botón manual de abajo). Si rellenas también el último barrido, la comprobación se repite cada ~15 min entre esas dos horas, avisando a las tiendas que se van poniendo listas (aquellas cuyo conteo ya esté puesto) según se van guardando más conteos durante esa ventana; pasado el último barrido no se envía nada más automáticamente ese día. En cualquier caso cada tienda solo recibe su aviso una vez. Si dejas ambos campos vacíos, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -4050,7 +4142,7 @@ function pintarResultadoBarridoTiendas_() {
       '<div class="barrido-resumen">' +
         '<div class="barrido-chip ok">' + r.enviados.length + (BARRIDO_TIENDAS_ESTADO.simulado ? ' se enviarían' : ' enviados') + '</div>' +
         (yaAvisadas ? '<div class="barrido-chip' + (yaAvisadas.length ? ' info' : '') + '" title="Tiendas que ya recibieron su aviso real hoy en un envío anterior (dato real de la tabla avisos_enviados_tiendas).">' + yaAvisadas.length + ' ya avisadas hoy</div>' : '') +
-        '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' pendientes de otras rutas</div>' +
+        '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' sin conteo guardado</div>' +
         '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
         '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
         '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
@@ -4062,7 +4154,7 @@ function pintarResultadoBarridoTiendas_() {
       listaColapsable('Ya avisadas hoy (envío anterior)', yaAvisadas || [], function (it) {
         return '<li>' + escapeHtml(it.tienda) + ' — ' + it.total + ' palet(s) — enviado a las ' + formatearHoraCorta_(it.enviadoEn) + ' — ' + escapeHtml(it.email) + '</li>';
       }) +
-      listaColapsable('Pendientes de otras rutas (aún sin enviar como definitivo)', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Sin conteo guardado', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
@@ -4280,11 +4372,11 @@ function pintarListaTiendas_() {
     const esNueva = /^NUEVA/i.test(it.estado || '');
     const esSinUso = /^SIN USO/i.test(it.estado || '');
     const esSinEmail = !esNueva && !(it.email && it.email.trim());
-    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinuso' : '')));
+    const clase = 'emails-config-item' + (esNueva ? ' nueva' : (esSinUso ? ' sinuso' : (esSinEmail ? ' sinemail' : '')));
     const badge = esNueva
       ? '<span class="emails-config-badge nueva">Nueva — falta email</span>'
       : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>'
-        : (esSinEmail ? '<span class="emails-config-badge sinuso">Sin email</span>' : ''));
+        : (esSinEmail ? '<span class="emails-config-badge sinemail">Sin email</span>' : ''));
     const idSeguro = 'tc' + idx;
     const dias = it.dias || {};
     const DIAS_FILA = [
@@ -4296,24 +4388,51 @@ function pintarListaTiendas_() {
       { clave: 'sabado', letra: 'S' },
       { clave: 'domingo', letra: 'D' }
     ];
+    const diasConteo = it.diasConteo || [];
+    const agrupaciones = it.agrupaciones || [];
     const filaDias =
-      '<div class="emails-config-dias">' +
-        DIAS_FILA.map(function (d) {
-          const activo = !!dias[d.clave];
-          return '<button type="button" class="emails-config-dia' + (activo ? ' activo' : '') +
-            '" data-dia-tienda="' + escapeAttr(it.tienda) + '" data-dia="' + d.clave +
-            '" title="' + (activo ? 'Recibe entrega en ' : 'No recibe entrega en ') + d.clave +
-            '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' + d.letra + '</button>';
-        }).join('') +
+      '<div class="emails-config-fila-info">' +
+        '<div class="emails-config-fila-info-col">' +
+          '<div class="emails-config-dias-etiqueta">Configuración días de entregas de palets</div>' +
+          '<div class="emails-config-dias">' +
+            DIAS_FILA.map(function (d) {
+              const activo = !!dias[d.clave];
+              return '<button type="button" class="emails-config-dia' + (activo ? ' activo' : '') +
+                '" data-dia-tienda="' + escapeAttr(it.tienda) + '" data-dia="' + d.clave +
+                '" title="' + (activo ? 'Recibe entrega en ' : 'No recibe entrega en ') + d.clave +
+                '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' + d.letra + '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>' +
+        '<div class="emails-config-fila-info-col">' +
+          '<div class="emails-config-dias-etiqueta">Configurada en los conteos del</div>' +
+          '<div class="emails-config-dias-conteo">' +
+            (diasConteo.length ? diasConteo.map(escapeHtml).join(', ') : '—') +
+          '</div>' +
+        '</div>' +
+        '<div class="emails-config-fila-info-col">' +
+          '<div class="emails-config-dias-etiqueta">Agrupación configurada</div>' +
+          '<div class="emails-config-dias-conteo">' +
+            (agrupaciones.length ? agrupaciones.map(escapeHtml).join(', ') : '—') +
+          '</div>' +
+        '</div>' +
       '</div>';
     return (
       '<div class="' + clase + '">' +
         '<div class="emails-config-cabecera">' +
-          '<span class="emails-config-nombre">' + escapeHtml(it.tienda) + '</span>' +
-          badge +
-          '<button type="button" class="emails-config-borrar" title="Eliminar de la configuración" data-borrar="' + escapeAttr(it.tienda) + '">' +
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
-          '</button>' +
+          '<span class="emails-config-nombre-wrap">' +
+            '<span class="emails-config-nombre">' + escapeHtml(it.tienda) + '</span>' +
+            (tienePermiso('tiendas') ?
+              '<button type="button" class="emails-config-renombrar" title="Cambiar el nombre de esta tienda" data-renombrar="' + escapeAttr(it.tienda) + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+              '</button>' : '') +
+          '</span>' +
+          '<span class="emails-config-acciones-derecha">' +
+            badge +
+            '<button type="button" class="emails-config-borrar" title="' + (esSinUso ? 'Eliminar de la configuración' : 'No se puede eliminar: esta tienda está activa en el cuadrante de algún día') + '" data-borrar="' + escapeAttr(it.tienda) + '" ' + (esSinUso ? '' : 'disabled') + '>' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+            '</button>' +
+          '</span>' +
         '</div>' +
         filaDias +
         '<div class="emails-config-campos">' +
@@ -4324,6 +4443,14 @@ function pintarListaTiendas_() {
           '<div class="emails-config-campo">' +
             '<label>Notas</label>' +
             '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
+          '</div>' +
+          '<div class="emails-config-campo">' +
+            '<label>Tránsito</label>' +
+            '<select class="emails-config-transito" data-transito-tienda="' + escapeAttr(it.tienda) + '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
+              TRANSITO_OPCIONES.map(function (op) {
+                return '<option value="' + op.valor + '"' + (Number(it.transito || 1) === op.valor ? ' selected' : '') + '>' + op.texto + '</option>';
+              }).join('') +
+            '</select>' +
           '</div>' +
         '</div>' +
         '<div class="emails-config-pie">' +
@@ -4339,13 +4466,51 @@ function pintarListaTiendas_() {
     btn.onclick = function () { guardarEmailTienda_(btn.getAttribute('data-guardar'), btn.getAttribute('data-id'), btn); };
   });
   listaEl.querySelectorAll('[data-borrar]').forEach(function (btn) {
-    btn.onclick = function () { confirmarEliminarTiendaConfig_(btn.getAttribute('data-borrar')); };
+    btn.onclick = function () {
+      if (btn.disabled) return;
+      confirmarEliminarTiendaConfig_(btn.getAttribute('data-borrar'));
+    };
+  });
+  listaEl.querySelectorAll('[data-renombrar]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalRenombrarTiendaConfig_(btn.getAttribute('data-renombrar')); };
   });
   listaEl.querySelectorAll('[data-dia-tienda]').forEach(function (btn) {
     btn.onclick = function () {
       toggleDiaEntregaTienda_(btn.getAttribute('data-dia-tienda'), btn.getAttribute('data-dia'), btn);
     };
   });
+  listaEl.querySelectorAll('[data-transito-tienda]').forEach(function (sel) {
+    sel.onchange = function () { guardarTransitoTienda_(sel.getAttribute('data-transito-tienda'), sel); };
+  });
+}
+
+/** Opciones del selector de tránsito en "Configuración tiendas". Sustituye
+ *  al viejo sistema de poner "*" (48H) o "^" (72H) al final del nombre de
+ *  la tienda: ahora el tránsito se guarda como campo propio en
+ *  config_tiendas.transito_dias (1 a 5) y se lee desde ahí en las
+ *  pantallas de conteo, en vez de parsearlo del nombre. */
+var TRANSITO_OPCIONES = [
+  { valor: 1, texto: '24h (1d)' },
+  { valor: 2, texto: '48h (2d)' },
+  { valor: 3, texto: '72h (3d)' },
+  { valor: 4, texto: '96h (4d)' },
+  { valor: 5, texto: '120h (5d)' }
+];
+
+function guardarTransitoTienda_(tienda, sel) {
+  const valorAnterior = sel.getAttribute('data-valor-anterior') || sel.value;
+  sel.disabled = true;
+  llamarApi_('guardarTransitoTienda', [tienda, Number(sel.value)])
+    .then(function () {
+      sel.setAttribute('data-valor-anterior', sel.value);
+      sel.disabled = false;
+      mostrarToast('Tránsito guardado');
+    })
+    .catch(function (err) {
+      sel.value = valorAnterior;
+      sel.disabled = false;
+      mostrarErrorServidor(err);
+    });
 }
 
 function toggleDiaEntregaTienda_(tienda, dia, btn) {
@@ -4376,10 +4541,88 @@ function guardarEmailTienda_(tienda, idSeguro, btn) {
     });
 }
 
+/** Modal para cambiar el nombre de una tienda desde "Configuración
+ *  tiendas". Antes de mostrar el formulario, consulta en cuántos días
+ *  (hojas de ruta activas) aparece esa tienda, para avisar de que el
+ *  cambio se propagará a todas ellas -- igual que ya pasaba al renombrar
+ *  desde "Rutas y tiendas (plantilla)". */
+function abrirModalRenombrarTiendaConfig_(claveActual) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Cambiar nombre de tienda';
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-text').textContent = 'Consultando en cuántos días aparece…';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-tienda-nombre-nuevo">Nombre nuevo</label>' +
+      '<input type="text" id="modal-tienda-nombre-nuevo" value="' + escapeAttr(claveActual) + '">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn" disabled>Cambiar nombre</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  llamarApi_('aparicionesTiendaConfig', [claveActual])
+    .then(function (resultado) {
+      const total = (resultado && resultado.total) || 0;
+      const dias = (resultado && resultado.dias) || [];
+      const ORDEN_DIAS_SEMANA = ['LUNES', 'MARTES', 'MIERCOLES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'SÁBADO', 'DOMINGO'];
+      const diasOrdenados = dias.slice().sort(function (a, b) {
+        const ia = ORDEN_DIAS_SEMANA.indexOf(String(a).toUpperCase());
+        const ib = ORDEN_DIAS_SEMANA.indexOf(String(b).toUpperCase());
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      document.getElementById('modal-text').textContent = total > 0
+        ? 'Esta tienda aparece en los conteos de ' + total + (total === 1 ? ' día' : ' días') +
+          (diasOrdenados.length ? ' (' + diasOrdenados.join(', ') + ')' : '') +
+          '. Si le cambias el nombre, también se cambiará en todos esos días.'
+        : 'Esta tienda no aparece actualmente en ningún día de las hojas de ruta activas.';
+      const btn = document.getElementById('modal-confirm-btn');
+      if (btn) btn.disabled = false;
+    })
+    .catch(function (err) {
+      document.getElementById('modal-text').textContent = '';
+      mostrarErrorServidor(err);
+    });
+
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const input = document.getElementById('modal-tienda-nombre-nuevo');
+    const nombreNuevo = input.value.trim();
+    if (!nombreNuevo) { input.focus(); return; }
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true;
+    llamarApi_('renombrarTiendaConfig', [claveActual, nombreNuevo])
+      .then(function (resultado) {
+        cerrarModal();
+        const propagadas = (resultado && resultado.propagadas) || 0;
+        mostrarToast('Nombre actualizado' + (propagadas ? ' en ' + propagadas + (propagadas === 1 ? ' sitio' : ' sitios') : ''));
+        cargarTiendasConfig_();
+      })
+      .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
+  };
+  setTimeout(function () { document.getElementById('modal-tienda-nombre-nuevo').focus(); document.getElementById('modal-tienda-nombre-nuevo').select(); }, 50);
+}
+
 function confirmarEliminarTiendaConfig_(tienda) {
+  const it = TIENDAS_CONFIG_ESTADO.datos.find(function (d) { return d.tienda === tienda; });
+  const esSinUso = !it || /^SIN USO/i.test(it.estado || '');
+  if (!esSinUso) {
+    mostrarToast('No se puede eliminar: esta tienda está activa en el cuadrante de algún día.');
+    return;
+  }
   appConfirm(
     'Eliminar de la configuración',
-    '¿Seguro que quieres eliminar "' + tienda + '" de Config_Tiendas? Si esa tienda se sigue usando en alguna hoja de día, no se le podrá enviar el aviso por email hasta que vuelvas a añadirla.',
+    '¿Seguro que quieres eliminar "' + tienda + '" de Config_Tiendas?',
     function () { eliminarTiendaConfig_(tienda); }
   );
 }
@@ -4781,7 +5024,6 @@ const CATALOGO_PERMISOS = [
   {
     grupo: 'Gestión general',
     items: [
-      { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
       { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
       { clave: 'cierres', etiqueta: 'Cerrar y reabrir tiendas', desc: 'Marcar tiendas como cerradas o reabrirlas en la cuadrícula de conteos.' },
       { clave: 'agencias', etiqueta: 'Agencias y emails', desc: 'Editar emails y notas de cada agrupación de rutas, y sincronizar agrupaciones.' },
@@ -4798,6 +5040,7 @@ const CATALOGO_PERMISOS = [
   {
     grupo: 'Administración',
     items: [
+      { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
       { clave: 'festivos', etiqueta: 'Gestión de festivos', desc: 'Cierres y notas a nivel de día completo (no de una tienda o ruta concreta).' },
       { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
       { clave: 'cola_emails', etiqueta: 'Cola de trabajo de emails', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
@@ -4909,6 +5152,21 @@ function cargarUsuariosAdmin_(esRefrescoManual) {
     });
 }
 
+/** El usuario "12942" es el administrador principal y no se puede editar,
+ *  cambiar de contraseña ni eliminar salvo que quien esté conectado sea
+ *  precisamente ese mismo usuario (SESSION_USUARIO). Además, desde ahora,
+ *  ningún Operario (aunque tenga el permiso "usuarios") puede tocar
+ *  ninguna cuenta con rol Administrador -- eso incluye asignar o quitar
+ *  ese rol, solo lo puede hacer otro Administrador. El backend
+ *  (editar_usuario / eliminar_usuario / cambiar_password_usuario) hace
+ *  además las mismas comprobaciones por su cuenta, así que esto es solo
+ *  para no mostrar botones que el servidor rechazaría igualmente. */
+function esUsuarioProtegidoIntocable_(usuario) {
+  if (usuario.usuario === '12942' && SESSION_USUARIO !== '12942') return true;
+  if (usuario.rol === 'admin' && !esAdmin()) return true;
+  return false;
+}
+
 function pintarTablaUsuarios_() {
   const cont = document.getElementById('admin-usuarios-resultado');
   if (!cont) return;
@@ -4945,15 +5203,21 @@ function pintarTablaUsuarios_() {
           '<td><span class="usuarios-badge-estado ' + (it.activo ? 'activo' : 'inactivo') + '"><span class="badge-dot"></span>' + (it.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
           '<td>' + escapeHtml(it.creadoEn || '') + '</td>' +
           '<td><div class="usuarios-fila-acciones">' +
-            '<button type="button" class="usuarios-btn-icono" title="Editar" data-editar="' + escapeAttr(it.id) + '">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
-            '</button>' +
-            '<button type="button" class="usuarios-btn-icono" title="Cambiar contraseña" data-password="' + escapeAttr(it.id) + '">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3"/><path d="M16 7l3 3"/><path d="M19 4l3 3"/></svg>' +
-            '</button>' +
-            '<button type="button" class="usuarios-btn-icono peligro" title="Eliminar" data-eliminar="' + escapeAttr(it.id) + '">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
-            '</button>' +
+            (esUsuarioProtegidoIntocable_(it) ?
+              '<button type="button" class="usuarios-btn-icono" title="Este usuario no se puede modificar" disabled>' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+              '</button>'
+            :
+              '<button type="button" class="usuarios-btn-icono" title="Editar" data-editar="' + escapeAttr(it.id) + '">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+              '</button>' +
+              '<button type="button" class="usuarios-btn-icono" title="Cambiar contraseña" data-password="' + escapeAttr(it.id) + '">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 20 3"/><path d="M16 7l3 3"/><path d="M19 4l3 3"/></svg>' +
+              '</button>' +
+              '<button type="button" class="usuarios-btn-icono peligro" title="Eliminar" data-eliminar="' + escapeAttr(it.id) + '">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+              '</button>'
+            ) +
           '</div></td>' +
         '</tr>';
       }).join('') +
@@ -5022,9 +5286,12 @@ function abrirModalUsuario_(usuarioExistente) {
         '<div class="modal-campo">' +
           '<label>Rol</label>' +
           '<div class="modal-pills" id="modal-usuario-rol-pills">' +
-            '<button type="button" class="modal-pill' + (rolInicial === 'admin' ? ' activo' : '') + '" data-rol="admin">Administrador</button>' +
-            '<button type="button" class="modal-pill' + (rolInicial === 'operario' ? ' activo' : '') + '" data-rol="operario">Operario</button>' +
+            (esAdmin()
+              ? '<button type="button" class="modal-pill' + (rolInicial === 'admin' ? ' activo' : '') + '" data-rol="admin">Administrador</button>'
+              : '') +
+            '<button type="button" class="modal-pill' + (rolInicial === 'operario' || !esAdmin() ? ' activo' : '') + '" data-rol="operario">Operario</button>' +
           '</div>' +
+          (!esAdmin() ? '<div class="modal-campo-ayuda">Solo un administrador puede asignar el rol de Administrador.</div>' : '') +
         '</div>' +
         '<div class="modal-campo">' +
           '<div class="modal-campo-check">' +
@@ -5035,9 +5302,11 @@ function abrirModalUsuario_(usuarioExistente) {
       '</div>' +
       '<div class="modal-usuario-col-der">' +
         '<div class="modal-campo" id="modal-usuario-permisos-wrap"' + (rolInicial === 'operario' ? '' : ' style="display:none"') + '>' +
-          '<label>Permisos</label>' +
+          '<div class="modal-permisos-cabecera">' +
+            '<label>Permisos</label>' +
+            '<span class="modal-campo-ayuda modal-campo-ayuda-inline">Marca lo que este operario puede hacer. Lo que no esté marcado no lo verá ni podrá usarlo.</span>' +
+          '</div>' +
           renderPermisosCheckboxes_(permisosIniciales) +
-          '<div class="modal-campo-ayuda">Marca lo que este operario puede hacer. Lo que no esté marcado no lo verá ni podrá usarlo.</div>' +
         '</div>' +
         '<div class="modal-campo" id="modal-usuario-permisos-admin-nota"' + (rolInicial === 'admin' ? '' : ' style="display:none"') + '>' +
           '<div class="permisos-admin-nota">Un Administrador tiene acceso a todo automáticamente, así que aquí no hay nada que marcar.</div>' +
@@ -7184,7 +7453,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     } else {
       attachCalculoYValidacion(tr);
       attachForzarNo(tr);
-      tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
+      tr.querySelectorAll('input.celda:not(.celda-total):not(.celda-total-visual)').forEach(function (input) {
         input.addEventListener('input', function () {
           marcarCambiosSinGuardar_();
           actualizarTotalPalets();
@@ -7902,25 +8171,29 @@ function quitarCodigoTienda(nombre) {
   return String(nombre).replace(/^\s*\d+\s*-\s*/, '').trim();
 }
 
+/** Quita un "*"/"^" residual del final del nombre, si lo hubiera (nombres
+ *  antiguos de antes de mover el tránsito a config_tiendas.transito_dias).
+ *  Es solo cosmético para lo que se pinta en pantalla; el badge de plazo
+ *  ya no depende de esto, ver badgeTransitoTienda(). */
+function quitarMarcadorNombre(nombre) {
+  return String(nombre || '').replace(/\s*[*^]\s*$/, '');
+}
+
 /**
- * Detecta si el nombre de una tienda termina en " *" (48H) o " ^" (72H) y
- * devuelve el nombre limpio (sin el marcador) junto con los datos del
- * badge a mostrar. Si no tiene marcador, badge es null.
- * Ej: "141- RIOJA *" -> { nombreLimpio: "141- RIOJA", badge: { texto: "48H", clase: "badge-48h" } }
- * OJO: esto es solo para lo que se PINTA en pantalla. El nombre real de la
- * tienda (con el "*"/"^" incluido) se sigue usando tal cual en data-nombre
- * y en todo lo que se envía al backend, porque así es como está guardado
- * en la columna "Tienda" de la hoja del día.
+ * Devuelve el badge de plazo de tránsito a partir del campo `transito`
+ * (1 a 5, ver config_tiendas.transito_dias) que ya viene en los datos de
+ * la tienda desde get_conteo_dia. transito=1 (24h) es el caso normal y no
+ * muestra badge, igual que antes cuando el nombre no llevaba marcador.
+ * Sustituye al viejo sistema de "*"/"^" al final del nombre de la tienda.
  */
-function parsearMarcadorTienda(nombre) {
-  const m = String(nombre || '').match(/^(.*?)\s*([*^])\s*$/);
-  if (!m) return { nombreLimpio: String(nombre || ''), badge: null };
-  return {
-    nombreLimpio: m[1],
-    badge: m[2] === '*'
-      ? { texto: '48H', clase: 'badge-48h' }
-      : { texto: '72H', clase: 'badge-72h' }
-  };
+var TRANSITO_BADGES = {
+  2: { texto: '48H', clase: 'badge-48h' },
+  3: { texto: '72H', clase: 'badge-72h' },
+  4: { texto: '96H', clase: 'badge-96h' },
+  5: { texto: '120H', clase: 'badge-120h' }
+};
+function badgeTransitoTienda(transito) {
+  return TRANSITO_BADGES[Number(transito)] || null;
 }
 
 /** "NO" tal cual viene del Excel (sin importar mayúsculas/espacios): esa
@@ -7945,9 +8218,10 @@ function celdaConteoHtml(campo, valor, forzado) {
 }
 
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress) {
-  const marcador = parsearMarcadorTienda(t.nombre);
-  const badgeHtml = marcador.badge
-    ? '<span class="badge-plazo ' + marcador.badge.clase + '">' + marcador.badge.texto + '</span>'
+  const nombreLimpio = quitarMarcadorNombre(t.nombre);
+  const badge = badgeTransitoTienda(t.transito);
+  const badgeHtml = badge
+    ? '<span class="badge-plazo ' + badge.clase + '">' + badge.texto + '</span>'
     : '';
   const notaHtml = (t.nota && !t.notaGrupoId)
     ? '<div class="nota-tienda" data-nota-base="' + escapeAttr(t.nota) + '">' + escapeHtml(t.nota) + '</div>'
@@ -7960,19 +8234,23 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     : '';
   if (t.cerrada) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
-      '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
+      '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
       '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
   return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
-    '<td class="nombre">' + escapeHtml(marcador.nombreLimpio) + badgeHtml + notaHtml + '</td>' +
+    '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
     '<td>' + celdaConteoHtml('c60', t.c60, !!(t.forzados && t.forzados.c60 !== undefined)) + '</td>' +
     '<td>' + celdaConteoHtml('pta', t.pta, !!(t.forzados && t.forzados.pta !== undefined)) + '</td>' +
     '<td>' + celdaConteoHtml('cart', t.cart, !!(t.forzados && t.forzados.cart !== undefined)) + '</td>' +
-    '<td><input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1"><div class="diff-nota"></div></td>' +
+    '<td>' +
+      '<input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1" style="display:none">' +
+      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
+      '<div class="diff-nota"></div>' +
+    '</td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
     (tieneCExpress ? '<td><input class="celda" data-campo="cexpress" type="number" step="0.01" value="' + (t.cexpress == null ? '' : t.cexpress) + '"></td>' : '') +
@@ -7993,7 +8271,25 @@ function attachCalculoYValidacion(tr) {
   const cartInput = tr.querySelector('input[data-campo="cart"]');
   const cexpressInput = tr.querySelector('input[data-campo="cexpress"]');
   const totalInput = tr.querySelector('input[data-campo="total"]');
+  const pdteInput = tr.querySelector('input[data-campo="pdte"]');
+  const totalVisualInput = tr.querySelector('input[data-campo="totalVisual"]');
   const nota = tr.querySelector('.diff-nota');
+
+  // recalcTotalVisual: solo actualiza lo que VE el usuario en la columna
+  // TOTAL (real + PDTE). No toca totalInput (el real), así que no afecta
+  // ni al aviso de límite del camión, ni al contador de cabecera de la
+  // agrupación, ni a lo que se manda a la agencia en previsión/definitivo
+  // — esos siguen leyendo solo el campo "total" real, sin PDTE.
+  function recalcTotalVisual() {
+    if (!totalVisualInput) return;
+    const real = totalInput.value === '' ? 0 : (parseFloat(totalInput.value) || 0);
+    const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
+    if (totalInput.value === '' && pdte === 0) {
+      totalVisualInput.value = '';
+    } else {
+      totalVisualInput.value = real + pdte;
+    }
+  }
 
   function recalcTotal() {
     if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '')) {
@@ -8006,6 +8302,7 @@ function attachCalculoYValidacion(tr) {
       totalInput.value = m + p + c + ce;
     }
     validar();
+    recalcTotalVisual();
   }
 
   function validar() {
@@ -8032,7 +8329,9 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
+  if (pdteInput) pdteInput.addEventListener('input', recalcTotalVisual);
   validar();
+  recalcTotalVisual();
 }
 
 /**
@@ -8128,7 +8427,7 @@ function attachValidacionGrupos(tableWrap) {
     }
 
     filas.forEach(function (tr) {
-      tr.querySelectorAll('input.celda:not(.celda-total)').forEach(function (input) {
+      tr.querySelectorAll('input.celda:not(.celda-total):not(.celda-total-visual)').forEach(function (input) {
         input.addEventListener('input', recalcGrupo);
       });
     });
@@ -9054,7 +9353,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
         '<div class="modal-envio-barra"><div class="modal-envio-barra-fill' + (completo ? ' completo' : '') + '" style="width:' + pct + '%"></div></div>' +
       '</div>' +
       '<div class="modal-envio-stat">' +
-        '<span class="lbl">Total palets</span>' +
+        '<span class="lbl">Total palets a cargar</span>' +
         '<span class="val">' + datos.totalPalets + '</span>' +
       '</div>' +
       '<div class="modal-envio-stat">' +
@@ -9127,6 +9426,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
 }
+document.getElementById('modal-cerrar-x').onclick = cerrarModal;
 
 /* ---------------- PWA: service worker + aviso de actualización ----------------
  * Cada vez que se despliega una versión nueva de la app (nuevo index.html,
