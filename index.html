@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Salida de Mercancía</title>
+<title>Salida Mercancía</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png" type="image/png">
 <meta name="theme-color" content="#1c2b45">
@@ -1957,11 +1957,22 @@
   .servidor-card-cuota-barra.baja > div { background: var(--danger); }
   .servidor-card-notas { font-size: 11.5px; color: var(--ink-soft); font-style: italic; border-top: 1px dashed var(--line); padding-top: 7px; margin-top: 2px; }
 
-  .cola-emails-chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin-right: 6px; background: #eef0f4; color: var(--ink-soft); }
+  .cola-emails-chip {
+    display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin-right: 6px;
+    background: #eef0f4; color: var(--ink-soft); cursor: pointer; border: 1px solid transparent; user-select: none;
+  }
   .cola-emails-chip.pendiente { background: #eef0f4; color: var(--ink-soft); }
+  .cola-emails-chip.pendiente:hover { background: #dfe2e9; }
+  .cola-emails-chip.pendiente.activo { background: var(--ink-soft); color: #fff; border-color: var(--ink-soft); }
   .cola-emails-chip.enviando { background: #fff4dd; color: var(--amber-dark); }
+  .cola-emails-chip.enviando:hover { background: #ffe9bd; }
+  .cola-emails-chip.enviando.activo { background: var(--amber-dark); color: #fff; border-color: var(--amber-dark); }
   .cola-emails-chip.enviado { background: #e4f7ea; color: #1a7f3c; }
+  .cola-emails-chip.enviado:hover { background: #cdefd9; }
+  .cola-emails-chip.enviado.activo { background: #1a7f3c; color: #fff; border-color: #1a7f3c; }
   .cola-emails-chip.error { background: #fde8e8; color: var(--danger); }
+  .cola-emails-chip.error:hover { background: #fbd4d4; }
+  .cola-emails-chip.error.activo { background: var(--danger); color: #fff; border-color: var(--danger); }
   .cola-emails-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
   .cola-emails-tabla th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding: 6px 8px; }
   .cola-emails-tabla td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -1971,6 +1982,7 @@
   .cola-emails-estado.enviado { background: #e4f7ea; color: #1a7f3c; }
   .cola-emails-estado.error { background: #fde8e8; color: var(--danger); }
   .cola-emails-error-detalle { font-size: 11px; color: var(--danger); margin-top: 3px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cola-emails-sin-fecha { color: var(--ink-soft); }
 
   /* ---- Administración > Usuarios ---- */
   .usuarios-tabla td.usuarios-col-nombre { white-space: normal; min-width: 180px; font-weight: 600; }
@@ -2038,8 +2050,8 @@
           <circle cx="17.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
         </svg>
       </div>
-      <h1>Salida de Mercancía</h1>
-      <p class="sub">Gestión de conteos y envío a agencias</p>
+      <h1>Salida Mercancía</h1>
+      <p class="sub">Gestión de conteos y avisos a tiendas y agencias</p>
 
       <div class="campo-pass">
         <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2064,7 +2076,6 @@
         <span id="login-btn-text">Entrar</span>
       </button>
       <p id="login-error">Usuario o contraseña incorrectos</p>
-      <p class="login-footer">Acceso restringido al personal autorizado</p>
     </div>
     <div class="version-badge" id="login-version-badge"></div>
   </div>
@@ -2148,7 +2159,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.2';
+const APP_VERSION_ACTUAL = '1.6.3';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2956,7 +2967,7 @@ const ADMIN_SECCIONES = [
   { id: 'palets-forzados', label: 'Palets forzados', permiso: 'palets_forzados' },
   { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
   { id: 'servidores', label: 'Servidores', permiso: null },
-  { id: 'cola-emails', label: 'Cola trabajo emails', permiso: 'cola_emails' }
+  { id: 'cola-emails', label: 'Cola de avisos a tiendas', permiso: 'cola_emails' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
@@ -3055,6 +3066,20 @@ function hoyStr() {
   return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
 }
 function pad2(n) { return String(n).padStart(2, '0'); }
+/** "2026-08-10" -> "10-08-2026". Si no viene en ese formato, se devuelve tal cual. */
+function fechaDDMMYYYY_(fecha) {
+  if (!fecha) return fecha;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha);
+  return m ? (m[3] + '-' + m[2] + '-' + m[1]) : fecha;
+}
+/** Timestamp ISO/con zona ("2026-08-08 17:31:00.013218+00") -> "08-08-2026 17:31",
+ *  en la hora local del navegador. Devuelve '' si no hay fecha. */
+function fechaHoraDDMMYYYY_(fechaHora) {
+  if (!fechaHora) return '';
+  const d = new Date(fechaHora);
+  if (isNaN(d.getTime())) return fechaHora;
+  return pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
 function anioMesDe(fecha) { return fecha.slice(0, 7); }
 function formatearFechaLarga(fecha) {
   const d = new Date(fecha + 'T12:00:00');
@@ -3965,7 +3990,7 @@ function htmlBarridoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola trabajo emails).</p>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola de avisos a tiendas).</p>' +
       '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
         '<div class="admin-filtro-campo">' +
           '<label>Primer barrido a partir de</label>' +
@@ -5043,7 +5068,7 @@ const CATALOGO_PERMISOS = [
       { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
       { clave: 'festivos', etiqueta: 'Gestión de festivos', desc: 'Cierres y notas a nivel de día completo (no de una tienda o ruta concreta).' },
       { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
-      { clave: 'cola_emails', etiqueta: 'Cola de trabajo de emails', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
+      { clave: 'cola_emails', etiqueta: 'Cola de avisos a tiendas', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
     ],
   },
 ];
@@ -5434,7 +5459,7 @@ function confirmarEliminarUsuario_(usuarioExistente) {
   );
 }
 
-/* ---------------- ADMINISTRACIÓN: "Cola trabajo emails" ----------------
+/* ---------------- ADMINISTRACIÓN: "Cola de avisos a tiendas" ----------------
  * Los avisos de palets a tiendas (barrido del día, ver "Aviso a tiendas"
  * en Configuración) ya NO se envían al momento: enviar_avisos_tiendas()
  * los deja encolados en la tabla cola_emails_tiendas y un job de
@@ -5444,16 +5469,18 @@ function confirmarEliminarUsuario_(usuarioExistente) {
  * estado, filtro por fecha y reintento manual de los que hayan quedado
  * en error (tras 5 intentos automáticos fallidos).
  */
-let ADMIN_COLA_EMAILS_ESTADO = { datos: null, fecha: '', refrescoAuto: null };
+let ADMIN_COLA_EMAILS_ESTADO = { datos: null, fecha: '', refrescoAuto: null, filtroEstado: 'encola' };
 
 function renderAdminColaEmails() {
   const cont = document.getElementById('admin-contenido');
   if (!cont) return;
 
+  ADMIN_COLA_EMAILS_ESTADO.filtroEstado = 'encola';
+
   cont.innerHTML =
     '<div class="vista-card">' +
       '<div class="vista-card-header">' +
-        '<h2>Cola trabajo emails</h2>' +
+        '<h2>Cola de avisos a tiendas</h2>' +
         '<div class="vista-card-header-acciones">' +
           '<button type="button" class="btn-admin-refrescar" id="btn-cola-emails-refrescar" title="Volver a consultar la cola ahora mismo">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
@@ -5509,31 +5536,62 @@ function cargarColaEmailsAdmin_(esRefrescoManual) {
     });
 }
 
+/** Etiquetas (en plural, tal cual se ven en los badges) para cada estado,
+ *  usadas tanto para pintar los chips como para el mensaje de "no hay
+ *  nada" cuando el filtro activo no tiene filas. */
+const COLA_EMAILS_ETIQUETAS_FILTRO_ = {
+  pendiente: 'pendientes',
+  enviando: 'enviándose',
+  enviado: 'enviados',
+  error: 'con error'
+};
+/** Igual que COLA_EMAILS_ETIQUETAS_FILTRO_ pero en singular, para el
+ *  mensaje "No hay ningún correo ___" cuando el filtro activo está vacío. */
+const COLA_EMAILS_ETIQUETAS_FILTRO_SINGULAR_ = {
+  pendiente: 'pendiente',
+  enviando: 'enviándose',
+  enviado: 'enviado',
+  error: 'con error',
+  encola: 'en cola'
+};
+
 function pintarColaEmails_() {
   const cont = document.getElementById('cola-emails-resultado');
   if (!cont) return;
   const datos = ADMIN_COLA_EMAILS_ESTADO.datos;
   const resumen = (datos && datos.resumen) || { pendiente: 0, enviando: 0, enviado: 0, error: 0 };
-  const filas = (datos && datos.filas) || [];
+  const todasLasFilas = (datos && datos.filas) || [];
+  const filtroEfectivo = ADMIN_COLA_EMAILS_ESTADO.filtroEstado;
+
+  const filas = !filtroEfectivo ? todasLasFilas
+    : (filtroEfectivo === 'encola'
+      ? todasLasFilas.filter(function (f) { return f.estado === 'pendiente' || f.estado === 'enviando'; })
+      : todasLasFilas.filter(function (f) { return f.estado === filtroEfectivo; }));
 
   let html =
     '<div class="admin-resumen">' +
-      '<span class="cola-emails-chip pendiente">' + resumen.pendiente + ' pendientes</span>' +
-      '<span class="cola-emails-chip enviando">' + resumen.enviando + ' enviándose</span>' +
-      '<span class="cola-emails-chip enviado">' + resumen.enviado + ' enviados</span>' +
-      '<span class="cola-emails-chip error">' + resumen.error + ' con error</span>' +
+      '<span class="cola-emails-chip pendiente' + ((filtroEfectivo === 'pendiente' || filtroEfectivo === 'encola') ? ' activo' : '') + '" data-filtro-estado="pendiente">' + resumen.pendiente + ' pendientes</span>' +
+      '<span class="cola-emails-chip enviando' + ((filtroEfectivo === 'enviando' || filtroEfectivo === 'encola') ? ' activo' : '') + '" data-filtro-estado="enviando">' + resumen.enviando + ' enviándose</span>' +
+      '<span class="cola-emails-chip enviado' + (filtroEfectivo === 'enviado' ? ' activo' : '') + '" data-filtro-estado="enviado">' + resumen.enviado + ' enviados</span>' +
+      '<span class="cola-emails-chip error' + (filtroEfectivo === 'error' ? ' activo' : '') + '" data-filtro-estado="error">' + resumen.error + ' con error</span>' +
     '</div>';
 
-  if (!filas.length) {
+  if (!todasLasFilas.length) {
     html +=
       '<div class="emails-config-vacio">' +
         '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
         'No hay correos en la cola' + (ADMIN_COLA_EMAILS_ESTADO.fecha ? ' para esta fecha.' : ' todavía.') +
       '</div>';
+  } else if (!filas.length) {
+    html +=
+      '<div class="emails-config-vacio">' +
+        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        'No hay ningún correo ' + COLA_EMAILS_ETIQUETAS_FILTRO_SINGULAR_[filtroEfectivo] + (ADMIN_COLA_EMAILS_ESTADO.fecha ? ' para esta fecha.' : '.') +
+      '</div>';
   } else {
     html +=
       '<table class="cola-emails-tabla">' +
-        '<thead><tr><th>Tienda</th><th>Email</th><th>Palets</th><th>Fecha aviso</th><th>Estado</th><th>Intentos</th><th></th></tr></thead>' +
+        '<thead><tr><th>Tienda</th><th>Email</th><th>Palets</th><th>Conteo</th><th>Fecha envío</th><th>Fecha llegada palets</th><th>Estado</th><th>Intentos</th><th></th></tr></thead>' +
         '<tbody>' +
         filas.map(pintarFilaColaEmail_).join('') +
         '</tbody>' +
@@ -5541,6 +5599,14 @@ function pintarColaEmails_() {
   }
 
   cont.innerHTML = html;
+
+  cont.querySelectorAll('[data-filtro-estado]').forEach(function (chip) {
+    chip.onclick = function () {
+      const estado = chip.getAttribute('data-filtro-estado');
+      ADMIN_COLA_EMAILS_ESTADO.filtroEstado = (ADMIN_COLA_EMAILS_ESTADO.filtroEstado === estado) ? null : estado;
+      pintarColaEmails_();
+    };
+  });
 
   cont.querySelectorAll('[data-reintentar-id]').forEach(function (btn) {
     btn.onclick = function () { reintentarEmailCola_(btn.getAttribute('data-reintentar-id')); };
@@ -5554,7 +5620,9 @@ function pintarFilaColaEmail_(f) {
       '<td>' + escapeHtml(f.tienda) + '</td>' +
       '<td>' + escapeHtml(f.email) + '</td>' +
       '<td>' + escapeHtml(String(f.totalPalets)) + '</td>' +
-      '<td>' + escapeHtml(f.fecha) + '</td>' +
+      '<td>' + escapeHtml(fechaDDMMYYYY_(f.fecha)) + '</td>' +
+      '<td>' + (f.enviadoEn ? escapeHtml(fechaHoraDDMMYYYY_(f.enviadoEn)) : '<span class="cola-emails-sin-fecha">—</span>') + '</td>' +
+      '<td>' + escapeHtml(fechaDDMMYYYY_(f.fechaEntrega)) + '</td>' +
       '<td><span class="cola-emails-estado ' + f.estado + '">' + etiquetas[f.estado] + '</span>' +
         (f.estado === 'error' && f.error ? '<div class="cola-emails-error-detalle" title="' + escapeAttr(f.error) + '">' + escapeHtml(f.error) + '</div>' : '') +
       '</td>' +
@@ -9487,7 +9555,7 @@ function mostrarModalActualizacion(versionNueva) {
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.05-6.75"/><path d="M21 4v5h-5"/></svg>' +
       '</div>' +
       '<h3>Actualización disponible</h3>' +
-      '<p>Hay una nueva versión de Salida de Mercancía lista para instalar.</p>' +
+      '<p>Hay una nueva versión de Salida Mercancía lista para instalar.</p>' +
       '<div class="actualizacion-versiones">' +
         '<span class="actualizacion-version-chip actual">v' + escapeHtml(APP_VERSION_ACTUAL) + '</span>' +
         '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' +
