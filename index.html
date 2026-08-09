@@ -121,13 +121,23 @@
   }
   header.topbar .brand { font-size: 15px; font-weight: 700; letter-spacing: .3px; flex: 0 0 auto; }
   header.topbar .brand span { color: var(--amber); }
-  header.topbar .topbar-fecha {
+  header.topbar .topbar-fecha-wrap {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    display: flex; align-items: center; gap: 8px; max-width: min(70vw, 520px);
+  }
+  header.topbar .topbar-fecha {
     text-align: center; font-size: 19px; font-weight: 800;
-    text-transform: capitalize; letter-spacing: .2px; padding: 0 12px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: min(60vw, 460px);
+    text-transform: capitalize; letter-spacing: .2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px;
     pointer-events: none;
   }
+  .btn-imprimir-dia {
+    background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 50%;
+    width: 30px; height: 30px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .btn-imprimir-dia:hover { background: rgba(255,255,255,.24); }
+  .btn-imprimir-dia svg { flex: 0 0 auto; }
   header.topbar .btn-hoy {
     background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 20px;
     padding: 7px 14px; font-size: 12.5px; font-weight: 600; flex: 0 0 auto;
@@ -142,6 +152,12 @@
     font-size: 12px; font-weight: 600; color: rgba(255,255,255,.8);
     text-transform: capitalize; white-space: nowrap;
   }
+  .btn-mi-usuario {
+    display: flex; align-items: center; gap: 6px; background: none; border: none;
+    color: rgba(255,255,255,.8); cursor: pointer; padding: 4px 6px; border-radius: 8px;
+  }
+  .btn-mi-usuario:hover { background: rgba(255,255,255,.12); color: #fff; }
+  .btn-mi-usuario svg { flex: 0 0 auto; }
   .btn-salir {
     background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.28); color: #fff;
     border-radius: 20px; padding: 6px 13px; font-size: 12px; font-weight: 600; white-space: nowrap;
@@ -199,6 +215,7 @@
 
   @media (max-width: 700px) {
     header.topbar .topbar-fecha { font-size: 14px; }
+    .btn-imprimir-dia { width: 26px; height: 26px; }
   }
 
   /* ---------- VISTAS "INICIO" Y "CONFIGURACIÓN" ---------- */
@@ -270,6 +287,7 @@
   }
   .festivos-stat.cierre .icono { background: #fbe2e2; color: #8a3a3a; }
   .festivos-stat.nota .icono { background: #fbe9c9; color: #7a5417; }
+  .festivos-stat.cambio .icono { background: #dbe7fb; color: #1f4e8c; }
   .festivos-stat .txt { display: flex; flex-direction: column; line-height: 1.1; }
   .festivos-stat .valor { font-size: 15px; font-weight: 800; color: var(--ink); }
   .festivos-stat .etiqueta { font-size: 10px; color: var(--ink-soft); font-weight: 600; }
@@ -394,19 +412,23 @@
     background: #f6f7fa; font-size: 12px;
   }
   .festivos-item.cierre { background: #fceded; }
+  .festivos-item.cambio { background: #eaf1fc; }
   .festivos-item-icon {
     width: 19px; height: 19px; border-radius: 6px; flex-shrink: 0; margin-top: 1px;
     display: flex; align-items: center; justify-content: center; background: #e4e8f0; color: var(--navy);
   }
   .festivos-item.cierre .festivos-item-icon { background: #f4d4d4; color: #8a3a3a; }
+  .festivos-item.cambio .festivos-item-icon { background: #cfe0f9; color: #1f4e8c; }
   .festivos-item-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0; }
   .festivos-item-tag {
     font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
     color: var(--ink-soft);
   }
   .festivos-item.cierre .festivos-item-tag { color: #8a3a3a; }
+  .festivos-item.cambio .festivos-item-tag { color: #1f4e8c; }
   .festivos-item-texto { color: var(--ink); line-height: 1.3; }
   .festivos-item.cierre .festivos-item-texto { color: #8a3a3a; }
+  .festivos-item.cambio .festivos-item-texto { color: #1f4e8c; }
   .festivos-del {
     background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 2px; margin-top: 1px;
     border-radius: 5px;
@@ -903,6 +925,10 @@
     box-sizing: border-box; color: var(--ink);
   }
   .modal-campo input:focus { border-color: var(--navy-soft); outline: none; }
+  .modal-campo input[readonly] { background: #f3f5f8; color: var(--ink-soft); cursor: default; }
+  .modal-campo input[readonly]:focus { border-color: #d8dde4; box-shadow: none; }
+  .mi-usuario-separador { border: none; border-top: 1px solid #e6e9ee; margin: 18px 0; }
+  .mi-usuario-permisos-vacio { font-size: 13px; color: var(--ink-soft); }
   .modal-dia-aviso {
     background: #eef1f7; color: var(--ink); border-radius: 8px; padding: 8px 10px;
     font-size: 12.5px; margin-bottom: 14px;
@@ -1023,8 +1049,10 @@
   .cal-day .dot { width: 5px; height: 5px; border-radius: 50%; }
   .dot-nota { background: var(--amber); }
   .dot-cierre { background: var(--danger); }
+  .dot-cambio { background: #1f4e8c; }
   .cal-day.seleccionado .dot-nota { background: #ffd898; }
   .cal-day.seleccionado .dot-cierre { background: #ff9d9d; }
+  .cal-day.seleccionado .dot-cambio { background: #a9c6f2; }
 
   .calendar-leyenda {
     display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: 11px; color: var(--ink-soft);
@@ -1050,6 +1078,15 @@
   .menu-rapido-panel h4 {
     margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); font-weight: 700;
   }
+  .menu-rapido-buscar {
+    display: flex; align-items: center; gap: 6px; background: #f6f7fa; border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 10px; margin-bottom: 10px;
+  }
+  .menu-rapido-buscar .emoji { font-size: 12px; line-height: 1; flex-shrink: 0; }
+  .menu-rapido-buscar input {
+    border: none; outline: none; font-size: 12.5px; flex: 1 1 auto; min-width: 0; color: var(--ink); background: none;
+  }
+  .menu-rapido-sin-resultados { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
   .menu-rapido-body { display: flex; flex-direction: column; gap: 4px; }
   .menu-rapido-vacio { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
   .menu-rapido-item {
@@ -1442,7 +1479,17 @@
 
   table.conteo tr.fila-cerrada { background: #fceded !important; }
   table.conteo tr.fila-cerrada td.nombre { color: #8a3a3a; }
-  .motivo-cierre { font-size: 10.5px; color: var(--danger); font-weight: 600; margin-top: 2px; max-width: 140px; }
+  .motivo-cierre { font-size: 13px; color: var(--danger); font-weight: 700; margin-top: 2px; max-width: none; width: 100%; text-align: center; }
+  /* Tienda que hoy SALE de esta agrupación por un cambio puntual (excepción):
+     tachada, en el mismo tono azul usado para "cambio" en el resto de la
+     app (Gestión festivos, mini calendario). */
+  table.conteo tr.fila-sale-excepcion { background: #eaf1fc !important; }
+  table.conteo tr.fila-sale-excepcion td.nombre { color: #1f4e8c; text-decoration: line-through; text-decoration-color: #6f93c4; }
+  .motivo-excepcion { color: #1f4e8c !important; max-width: none; width: 100%; font-size: 13px; font-weight: 700; text-align: center; }
+  /* Tienda que hoy ENTRA a esta agrupación por un cambio puntual (excepción):
+     toda la fila en amarillo suave para que resalte entre las de siempre. */
+  table.conteo tr.fila-entra-excepcion { background: #fff8de !important; }
+  table.conteo tr.fila-entra-excepcion td.nombre { color: #7a5417; }
 
   .btn-cerrar-tienda {
     background: none; border: none; color: var(--ink-soft); padding: 5px; border-radius: 6px; display: inline-flex;
@@ -1722,6 +1769,28 @@
      para que quepan bien las píldoras de tipo y los chips de selección) ---- */
   .modal-box.medio { max-width: 480px; }
 
+  /* ---------- Modal "Gestión de observaciones" (admin): más ancho y más
+     alto que el "medio" estándar, ya que aquí hay bastante más contenido
+     (píldoras de tipo, buscador con resultados desplegables, chips de
+     selección) y en pantallas de escritorio sobra espacio de sobra. En
+     pantallas estrechas cae a un ancho normal para no desbordar. ---------- */
+  .modal-box.gestor-obs { max-width: 760px; padding: 34px 38px; }
+  .modal-box.gestor-obs .gestor-form { gap: 20px; }
+  .modal-box.gestor-obs .gestor-tipo-pills { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .modal-box.gestor-obs .gestor-tipo-pill { padding: 14px 8px; font-size: 12.5px; }
+  .modal-box.gestor-obs .gestor-campo input[type="date"],
+  .modal-box.gestor-obs .gestor-campo input[type="text"],
+  .modal-box.gestor-obs .gestor-campo textarea { font-size: 15px; padding: 11px 13px; }
+  @media (max-width: 800px) {
+    .modal-box.gestor-obs { max-width: 480px; padding: 26px; }
+    .modal-box.gestor-obs .gestor-tipo-pills { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .modal-box.gestor-obs .gestor-tipo-pill { padding: 10px 6px; font-size: 11.5px; }
+  }
+  @media (max-width: 480px) {
+    .modal-box.gestor-obs .gestor-tipo-pills { grid-template-columns: 1fr; }
+    .modal-box.gestor-obs .gestor-tipo-pill { flex-direction: row; justify-content: flex-start; padding: 9px 12px; }
+  }
+
   /* ---------- GESTIÓN DE OBSERVACIONES (admin, cualquier día) ---------- */
   .gestor-form { display: flex; flex-direction: column; gap: 16px; }
 
@@ -1798,9 +1867,17 @@
   .gestor-busqueda-clear:hover { background: #dfe3e9; color: var(--ink); }
   .gestor-busqueda-clear.visible { display: flex; }
   .gestor-busqueda-resultados {
-    position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff;
-    border: 1px solid var(--line); border-radius: 8px; max-height: 320px; overflow-y: auto;
-    box-shadow: 0 8px 20px rgba(0,0,0,.12); z-index: 10;
+    /* position: fixed (no absolute): así el desplegable "escapa" del propio
+       modal en vez de quedar atrapado por su scroll interno. Si fuera
+       absolute (relativo al modal), cuando la lista era más alta de lo que
+       cabía había que hacer scroll del modal ENTERO para verla completa —
+       de ahí el corte feo con doble barra de scroll. Con fixed, la posición
+       y la altura máxima se calculan por JS (ver posicionarResultadosGestorObs_)
+       según el hueco real disponible en la pantalla en cada momento, así
+       nunca se corta ni depende de nada más. */
+    position: fixed; background: #fff;
+    border: 1px solid var(--line); border-radius: 8px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18); z-index: 300;
   }
   .gestor-busqueda-item { display: flex; align-items: center; gap: 10px; padding: 8px 11px; font-size: 13px; cursor: pointer; }
   .gestor-busqueda-item:hover { background: #f0f2f6; }
@@ -2033,6 +2110,100 @@
     font-size: 12px; color: var(--ink-soft); background: #fafbfc; border: 1px dashed var(--line);
     border-radius: 9px; padding: 10px 12px;
   }
+
+  /* ---------- IMPRESIÓN DEL CONTEO DEL DÍA ----------
+   * Objetivo: al imprimir (o "Guardar como PDF") desde la vista de Conteos
+   * Diarios, solo debe salir el contenido del día (cada agrupación con su
+   * tabla), nunca partido a mitad de una agrupación entre dos páginas.
+   * Todo lo demás (calendario, accesos rápidos, observaciones, cabecera de
+   * navegación, botones de acción) se oculta para la impresión. */
+  .print-fecha-titulo { display: none; }
+  @media print {
+    @page { size: A4 portrait; margin: 9mm; }
+
+    body * { visibility: hidden; }
+    #dia-contenido, #dia-contenido * { visibility: visible; }
+
+    header.topbar, .col-calendario, .col-resumen,
+    #modal-overlay, #toast { display: none !important; }
+
+    /* #app es un contenedor flex con min-height:100vh y <main> tiene
+       flex:1: eso hace que en pantalla "main" se estire para ocupar toda la
+       ventana. Al paginar para imprimir, Chrome reserva esa altura
+       estirada como si fuera contenido real de la página 1 (aunque esté
+       vacía) y manda el primer bloque entero a la página 2, dejando una
+       hoja casi en blanco. Se anula el estirado solo en impresión para que
+       la altura de cada página la marque el contenido real. */
+    #app { display: block !important; min-height: 0 !important; }
+    main { flex: none !important; min-height: 0 !important; }
+
+    #main, .layout-grid, .col-contenido { display: block !important; margin: 0 !important; padding: 0 !important; }
+    .col-contenido > * { max-width: none !important; }
+    #dia-contenido { position: static !important; }
+
+    .print-fecha-titulo {
+      display: block !important; visibility: visible !important;
+      font-size: 20px; font-weight: 800; text-transform: capitalize;
+      margin: 0 0 14px; padding: 0;
+    }
+
+    /* Cada agrupación entera (cabecera + notas + tabla) no debe partirse
+       entre páginas; si no cabe entera en lo que queda de página, salta a
+       la siguiente. Se aplica también a la tabla y sus filas por separado
+       porque una <table> puede fragmentarse por su cuenta (repitiendo la
+       fila de cabecera en la página siguiente) aunque el contenedor que la
+       envuelve tenga break-inside:avoid. */
+    .seccion-panel, .seccion-body, .seccion-acciones, .table-wrap,
+    table.conteo, table.conteo tbody, table.conteo tr {
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    .seccion-panel {
+      box-shadow: none !important; margin-bottom: 12px !important;
+    }
+    .seccion-panel.colapsada .seccion-body,
+    .seccion-panel.colapsada .seccion-notas,
+    .seccion-panel.colapsada .seccion-notas-carga { display: block !important; }
+
+    /* Botones y controles de edición: no tienen sentido en papel. */
+    .btn-header-guardar, .btn-header-prevision, .btn-header-definitivo,
+    .btn-add-nota, .btn-pdf-seccion, .btn-pdf-especial-seccion,
+    .btn-toggle-colapsar, .btn-deshacer-envio, .btn-cerrar-tienda, .btn-reabrir,
+    table.conteo th:last-child, table.conteo td:last-child { display: none !important; }
+
+    table.conteo input.celda, table.conteo input.celda-total,
+    table.conteo input.celda-total-visual, table.conteo input.celda-no {
+      border: none !important; background: transparent !important; color: #000 !important;
+    }
+
+    .aviso-datos-antiguos { display: none !important; }
+
+    /* Tamaños compactos para que quepan más filas por página (algunas
+       agrupaciones tienen 20+ tiendas) sin que ninguna se corte entre
+       páginas, pero sin pasarse de pequeño: hay margen de sobra incluso
+       para la agrupación más grande, así que se aprovecha para que se lea
+       bien y se llene mejor la hoja. */
+    .seccion-header .badge-total-palets { display: none !important; }
+    .seccion-header { padding: 9px 12px !important; gap: 10px !important; row-gap: 4px !important; }
+    .seccion-header .icono-agrup { width: 30px !important; height: 30px !important; font-size: 12px !important; border-radius: 8px !important; }
+    .seccion-header .name { font-size: 15px !important; }
+    .seccion-header .count { font-size: 11.5px !important; }
+    .seccion-header .badge-ubicacion, .seccion-header .badge {
+      font-size: 11px !important; padding: 2px 8px !important;
+    }
+    .seccion-notas-carga, .seccion-notas { padding: 0 12px 7px !important; gap: 4px !important; }
+    .nota-carga-chip, .nota-chip { padding: 5px 9px !important; font-size: 11px !important; line-height: 1.25 !important; }
+    .orden-retirada { padding-top: 8px !important; margin-top: 4px !important; }
+    .orden-retirada-titulo { font-size: 9px !important; margin-bottom: 3px !important; }
+    .orden-retirada ol { font-size: 10.5px !important; line-height: 1.35 !important; padding-left: 15px !important; }
+    .seccion-acciones { padding: 10px !important; flex-basis: 120px !important; }
+    table.conteo { font-size: 12.5px !important; }
+    table.conteo thead th { padding: 6px 6px !important; }
+    table.conteo td { padding: 6px 6px !important; }
+    table.conteo td.nombre { font-size: 12.5px !important; }
+    table.conteo input.celda, table.conteo input.celda-total, table.conteo input.celda-total-visual {
+      padding: 5px 4px !important; font-size: 12.5px !important; min-height: 0 !important;
+    }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -2102,11 +2273,23 @@
           <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-administracion"></div>
         </div>
       </nav>
-      <div class="topbar-fecha" id="topbar-fecha"></div>
+      <div class="topbar-fecha-wrap" id="topbar-fecha-wrap">
+        <div class="topbar-fecha" id="topbar-fecha"></div>
+        <button type="button" class="btn-imprimir-dia" id="btn-imprimir-dia" title="Imprimir el conteo de este día">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </button>
+      </div>
       <div class="topbar-derecha">
         <span class="sync-indicator-global" id="sync-indicator-global"></span>
         <div class="topbar-usuario">
-          <span class="topbar-usuario-rol" id="topbar-usuario-rol">&nbsp;</span>
+          <button type="button" class="btn-mi-usuario" id="btn-mi-usuario" title="Mi usuario">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span class="topbar-usuario-rol" id="topbar-usuario-rol">&nbsp;</span>
+          </button>
           <button type="button" class="btn-salir" onclick="cerrarSesion()">Salir</button>
         </div>
       </div>
@@ -2159,7 +2342,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.3';
+const APP_VERSION_ACTUAL = '1.6.4';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2355,7 +2538,7 @@ function seccionesAdminPermitidas_() { return ADMIN_SECCIONES.filter(function (s
 const CLAVES_PERMISOS_UI_ = [
   'usuarios', 'notas', 'cierres', 'agencias',
   'tiendas', 'plantilla', 'aviso_tiendas',
-  'festivos', 'palets_forzados', 'cola_emails'
+  'festivos', 'palets_forzados', 'cola_emails', 'ver_cuadrante_completo'
 ];
 
 /** Añade/quita la clase 'es-admin' en <body> (compatibilidad con las
@@ -2739,6 +2922,21 @@ const SUPABASE_ACCIONES_ = {
   eliminarObservacion: function (args) {
     return llamarRpcSupabase_('eliminar_observacion', { p_id: args[0] });
   },
+  // -- Supabase: Cambios puntuales de agrupación (excepciones por fecha) --
+  guardarExcepcionTienda: function (args) {
+    const c = args[0];
+    return llamarRpcSupabase_('guardar_excepcion_tienda', {
+      p_fecha: c.fecha,
+      p_dia: c.dia,
+      p_agrupacion_origen: c.agrupacionOrigen,
+      p_tienda: c.tienda,
+      p_agrupacion_destino: c.agrupacionDestino,
+      p_transito: (c.transito != null ? c.transito : null)
+    });
+  },
+  eliminarExcepcionTienda: function (args) {
+    return llamarRpcSupabase_('eliminar_excepcion_tienda', { p_id: args[0] });
+  },
   // -- Supabase: Administración: Palets forzados --
   getPaletsForzadosAdmin: function (args) {
     const fechaIni = args[0], fechaFin = args[1];
@@ -2780,6 +2978,10 @@ const SUPABASE_ACCIONES_ = {
   cambiarPasswordUsuario: function (args) {
     const id = args[0], passwordNuevo = args[1];
     return llamarRpcSupabase_('cambiar_password_usuario', { p_id: id, p_password_nuevo: passwordNuevo });
+  },
+  cambiarMiPassword: function (args) {
+    const passwordActual = args[0], passwordNuevo = args[1];
+    return llamarRpcSupabase_('cambiar_mi_password', { p_password_actual: passwordActual, p_password_nuevo: passwordNuevo });
   },
   eliminarUsuario: function (args) {
     return llamarRpcSupabase_('eliminar_usuario', { p_id: args[0] });
@@ -2939,6 +3141,8 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
   const input = document.getElementById('login-pass');
   input.type = input.type === 'password' ? 'text' : 'password';
 });
+document.getElementById('btn-mi-usuario').addEventListener('click', abrirModalMiUsuario_);
+document.getElementById('btn-imprimir-dia').addEventListener('click', function () { window.print(); });
 
 /* ---------------- NAVEGACIÓN PRINCIPAL (cabecera) ---------------- */
 // Vive en el HTML estático de la cabecera (no se redibuja con cada día), así
@@ -2963,7 +3167,7 @@ let ESTADO_CONFIG = { seccionActiva: 'emails' };
 // aunque se le marquen permisos (caso de "Servidores": monitorización de
 // las cuentas puente, nada que un operario necesite consultar).
 const ADMIN_SECCIONES = [
-  { id: 'festivos', label: 'Gestión festivos', permiso: 'festivos' },
+  { id: 'festivos', label: 'Cierres y cambios', permiso: 'festivos' },
   { id: 'palets-forzados', label: 'Palets forzados', permiso: 'palets_forzados' },
   { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
   { id: 'servidores', label: 'Servidores', permiso: null },
@@ -3105,7 +3309,7 @@ function cambiarVista(vista, seccion) {
   document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
     btn.classList.toggle('activa', btn.dataset.vista === vista);
   });
-  document.getElementById('topbar-fecha').style.display = (vista === 'conteos') ? '' : 'none';
+  document.getElementById('topbar-fecha-wrap').style.display = (vista === 'conteos') ? '' : 'none';
   document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
 
   if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
@@ -3254,7 +3458,7 @@ function renderAdminFestivos() {
     '<div class="vista-card">' +
       '<div class="festivos-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Gestión festivos</h2>' +
+          '<h2>Cierres y cambios</h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-festivos-filtro' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierto' : '') + '" id="btn-festivos-filtro-toggle" title="Filtrar">' +
               '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>' +
@@ -3289,6 +3493,7 @@ function renderAdminFestivos() {
                   '<button type="button" class="activo" data-tipo="todos">Todos</button>' +
                   '<button type="button" data-tipo="cierre">Cierres</button>' +
                   '<button type="button" data-tipo="nota">Observaciones</button>' +
+                  '<button type="button" data-tipo="cambio">Cambios</button>' +
                 '</div>' +
                 '<div class="festivos-filtro-fechas">' +
                   '<input type="date" id="festivos-desde" aria-label="Desde">' +
@@ -3416,7 +3621,7 @@ function cargarFestivos() {
       const diasRango = diasDeRango_(inicio, fin);
       const fechasConContenido = diasRango.filter(function (fecha) {
         const info = infoPorFecha[fecha];
-        return info && (info.tieneNotas || info.tieneCierres);
+        return info && (info.tieneNotas || info.tieneCierres || info.tieneExcepciones);
       });
       return Promise.all(fechasConContenido.map(function (fecha) {
         return llamarApi_('getConteoDia', [fecha]).catch(function () { return null; });
@@ -3452,6 +3657,9 @@ function aplanarDatosFestivos_(datosDias) {
       });
       (seccion.tiendas || []).forEach(function (t) {
         if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'Tienda cerrada', id: t.cierreId });
+      });
+      (seccion.excepcionesSalida || []).forEach(function (e) {
+        lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', texto: e.texto, id: e.id });
       });
     });
   });
@@ -3501,10 +3709,14 @@ function aplicarFiltrosFestivos_() {
 
 function renderStatsFestivos_(statsEl, grupos) {
   if (!statsEl) return;
-  let totalCierres = 0, totalNotas = 0, diasConContenido = 0;
+  let totalCierres = 0, totalNotas = 0, totalCambios = 0, diasConContenido = 0;
   grupos.forEach(function (g) {
     if (g.items.length) diasConContenido++;
-    g.items.forEach(function (it) { it.tipo === 'cierre' ? totalCierres++ : totalNotas++; });
+    g.items.forEach(function (it) {
+      if (it.tipo === 'cierre') totalCierres++;
+      else if (it.tipo === 'cambio') totalCambios++;
+      else totalNotas++;
+    });
   });
   statsEl.innerHTML =
     '<div class="festivos-stat">' +
@@ -3518,6 +3730,10 @@ function renderStatsFestivos_(statsEl, grupos) {
     '<div class="festivos-stat nota">' +
       '<span class="icono">' + ICONO_NOTA_ + '</span>' +
       '<span class="txt"><span class="valor">' + totalNotas + '</span><span class="etiqueta">nota' + (totalNotas === 1 ? '' : 's') + '</span></span>' +
+    '</div>' +
+    '<div class="festivos-stat cambio">' +
+      '<span class="icono">' + ICONO_CAMBIO_ + '</span>' +
+      '<span class="txt"><span class="valor">' + totalCambios + '</span><span class="etiqueta">cambio' + (totalCambios === 1 ? '' : 's') + '</span></span>' +
     '</div>';
 }
 
@@ -3546,10 +3762,10 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     col.className = 'festivos-dia-col' + (esHoy ? ' es-hoy' : '') + (g.items.length ? '' : ' vacio');
     const itemsHtml = g.items.length
       ? g.items.map(function (it) {
-          const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : 'festivos-item';
-          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : ICONO_NOTA_;
+          const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : (it.tipo === 'cambio' ? 'festivos-item cambio' : 'festivos-item');
+          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? ICONO_CAMBIO_ : ICONO_NOTA_);
           const delBtn = it.id
-            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" title="Eliminar">' +
+            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '" title="Eliminar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
           return '<div class="' + clase + '">' +
@@ -3585,12 +3801,13 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
   });
 
   listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
-    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id')); };
+    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo')); };
   });
 }
 
 const ICONO_NOTA_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
 const ICONO_CIERRE_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>';
+const ICONO_CAMBIO_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 
 // Quita del caché local (FESTIVOS_ESTADO.datosCache) el elemento con el id
 // indicado, sin tocar el servidor: permite repintar al instante tras borrar,
@@ -3611,12 +3828,19 @@ function quitarDeCacheFestivos_(id) {
           t.motivoCierre = '';
           t.cierreId = null;
         }
+        if (t.excepcionId === id) {
+          t.entraPorExcepcion = false;
+          t.excepcionId = null;
+        }
       });
+      if (seccion.excepcionesSalida) {
+        seccion.excepcionesSalida = seccion.excepcionesSalida.filter(function (e) { return e.id !== id; });
+      }
     });
   });
 }
 
-function eliminarObservacionDesdeFestivos_(id) {
+function eliminarObservacionDesdeFestivos_(id, tipo) {
   appConfirm(
     'Eliminar registro',
     '¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.',
@@ -3626,7 +3850,8 @@ function eliminarObservacionDesdeFestivos_(id) {
       quitarDeCacheFestivos_(id);
       aplicarFiltrosFestivos_();
       mostrarToast('Eliminado');
-      llamarApi_('eliminarObservacion', [id])
+      const accion = tipo === 'cambio' ? 'eliminarExcepcionTienda' : 'eliminarObservacion';
+      llamarApi_(accion, [id])
         .catch(function (err) {
           FESTIVOS_ESTADO.datosCache = copiaCache;
           aplicarFiltrosFestivos_();
@@ -5052,6 +5277,7 @@ const CATALOGO_PERMISOS = [
       { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
       { clave: 'cierres', etiqueta: 'Cerrar y reabrir tiendas', desc: 'Marcar tiendas como cerradas o reabrirlas en la cuadrícula de conteos.' },
       { clave: 'agencias', etiqueta: 'Agencias y emails', desc: 'Editar emails y notas de cada agrupación de rutas, y sincronizar agrupaciones.' },
+      { clave: 'ver_cuadrante_completo', etiqueta: 'Ver cuadrante completo', desc: 'Ver los conteos de fechas lejanas (más allá de hoy + 1 día) con todos los datos, igual que un administrador, en vez de la versión reducida (solo tiendas y cierres, sin límites, celdas de conteo ni plazos de entrega).' },
     ],
   },
   {
@@ -5066,7 +5292,7 @@ const CATALOGO_PERMISOS = [
     grupo: 'Administración',
     items: [
       { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
-      { clave: 'festivos', etiqueta: 'Gestión de festivos', desc: 'Cierres y notas a nivel de día completo (no de una tienda o ruta concreta).' },
+      { clave: 'festivos', etiqueta: 'Cierres y cambios', desc: 'Cierres, notas y cambios puntuales de agrupación a nivel de día completo (no de una tienda o ruta concreta).' },
       { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
       { clave: 'cola_emails', etiqueta: 'Cola de avisos a tiendas', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
     ],
@@ -5441,6 +5667,95 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
       .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
   };
   setTimeout(function () { document.getElementById('modal-usuario-password-nueva').focus(); }, 50);
+}
+
+/** Modal "Mi usuario": abre el icono de persona en la topbar. Muestra los
+ *  datos de la sesión actual (nombre, usuario, rol, permisos) en solo
+ *  lectura -- ya vienen en memoria desde el login (SESSION_*), no hace
+ *  falta pedirlos otra vez al servidor -- y debajo deja cambiar la propia
+ *  contraseña (pidiendo la actual, a diferencia del cambio de contraseña
+ *  de OTRO usuario desde Administración, que no la pide). */
+function abrirModalMiUsuario_() {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Mi usuario';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const esAdministrador = esAdmin();
+  const clavesPermisos = Object.keys(SESSION_PERMISOS || {}).filter(function (c) { return SESSION_PERMISOS[c]; });
+  const etiquetasPermisos = [];
+  CATALOGO_PERMISOS.forEach(function (grupo) {
+    grupo.items.forEach(function (item) {
+      if (clavesPermisos.indexOf(item.clave) !== -1) etiquetasPermisos.push(item.etiqueta);
+    });
+  });
+  const permisosHtml = esAdministrador
+    ? '<div class="modal-pills"><span class="modal-pill activo">Acceso a todo (Administrador)</span></div>'
+    : (etiquetasPermisos.length
+        ? '<div class="modal-pills">' + etiquetasPermisos.map(function (e) { return '<span class="modal-pill activo">' + escapeHtml(e) + '</span>'; }).join('') + '</div>'
+        : '<div class="mi-usuario-permisos-vacio">Sin permisos adicionales asignados.</div>');
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label>Nombre completo</label>' +
+      '<input type="text" readonly value="' + escapeAttr(SESSION_NOMBRE || '') + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label>Usuario</label>' +
+      '<input type="text" readonly value="' + escapeAttr(SESSION_USUARIO || '') + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label>Rol</label>' +
+      '<input type="text" readonly value="' + (esAdministrador ? 'Administrador' : 'Operario') + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label>Permisos</label>' +
+      permisosHtml +
+    '</div>' +
+    '<hr class="mi-usuario-separador">' +
+    '<div class="modal-campo">' +
+      '<label for="mi-usuario-password-actual">Contraseña actual</label>' +
+      '<input type="password" id="mi-usuario-password-actual" autocomplete="current-password">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="mi-usuario-password-nueva">Contraseña nueva</label>' +
+      '<input type="password" id="mi-usuario-password-nueva" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="mi-usuario-password-repetir">Repetir contraseña nueva</label>' +
+      '<input type="password" id="mi-usuario-password-repetir" autocomplete="new-password">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Cambiar contraseña</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const inputActual = document.getElementById('mi-usuario-password-actual');
+    const inputNueva = document.getElementById('mi-usuario-password-nueva');
+    const inputRepetir = document.getElementById('mi-usuario-password-repetir');
+
+    if (!inputActual.value) { mostrarToast('Escribe tu contraseña actual', true); inputActual.focus(); return; }
+    if (!inputNueva.value || inputNueva.value.length < 4) { mostrarToast('La contraseña nueva debe tener al menos 4 caracteres', true); inputNueva.focus(); return; }
+    if (inputRepetir.value !== inputNueva.value) { mostrarToast('Las dos contraseñas nuevas no coinciden', true); inputRepetir.focus(); return; }
+
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true;
+    llamarApi_('cambiarMiPassword', [inputActual.value, inputNueva.value])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Contraseña actualizada');
+      })
+      .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
+  };
 }
 
 function confirmarEliminarUsuario_(usuarioExistente) {
@@ -6784,6 +7099,10 @@ function renderShellPrincipal() {
         '</div>' +
         '<div class="menu-rapido-panel">' +
           '<h4>Acceso rápido a agrupación</h4>' +
+          '<div class="menu-rapido-buscar">' +
+            '<span class="emoji">🔍</span>' +
+            '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…">' +
+          '</div>' +
           '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio">Cargando…</div></div>' +
         '</div>' +
       '</aside>' +
@@ -6811,6 +7130,16 @@ function renderShellPrincipal() {
     ESTADO.calendarioColapsado = !ESTADO.calendarioColapsado;
     document.getElementById('calendar-panel').classList.toggle('colapsado', ESTADO.calendarioColapsado);
   };
+
+  let temporizadorBusquedaMenuRapido_ = null;
+  document.getElementById('menu-rapido-buscar-input').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusquedaMenuRapido_);
+    const valor = e.target.value;
+    temporizadorBusquedaMenuRapido_ = setTimeout(function () {
+      MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(valor.trim());
+      pintarMenuRapido_();
+    }, 150);
+  });
 }
 
 /* ---------------- CALENDARIO ---------------- */
@@ -6873,6 +7202,7 @@ function renderCalendario(dias) {
     let dots = '';
     if (info.tieneNotas) dots += '<span class="dot dot-nota"></span>';
     if (info.tieneCierres) dots += '<span class="dot dot-cierre"></span>';
+    if (info.tieneExcepciones) dots += '<span class="dot dot-cambio"></span>';
 
     const diaNum = Number(info.fecha.slice(8, 10));
     const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y mañana"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : '');
@@ -6898,6 +7228,7 @@ function renderCalendario(dias) {
       '<span><span class="sw" style="background:var(--ok)"></span>Enviado</span>' +
       '<span><span class="dot dot-nota" style="width:8px;height:8px;"></span>Con notas</span>' +
       '<span><span class="dot dot-cierre" style="width:8px;height:8px;"></span>Con cierres</span>' +
+      '<span><span class="dot dot-cambio" style="width:8px;height:8px;"></span>Con cambios</span>' +
     '</div>';
 
   document.getElementById('cal-prev').onclick = function () { cambiarMes(-1); };
@@ -6930,8 +7261,17 @@ function renderContenidoDia(data) {
   const cont = document.getElementById('dia-contenido');
   const wrap = document.createElement('div');
 
+  const fechaLarga = formatearFechaLarga(data.fecha);
   const topbarFecha = document.getElementById('topbar-fecha');
-  if (topbarFecha) topbarFecha.textContent = formatearFechaLarga(data.fecha);
+  if (topbarFecha) topbarFecha.textContent = fechaLarga;
+
+  // Título de fecha que solo se ve al imprimir (ver @media print): la
+  // cabecera normal (header.topbar) se oculta en la impresión, así que este
+  // título la sustituye para que siga saliendo la fecha en el papel.
+  const tituloImpresion = document.createElement('div');
+  tituloImpresion.className = 'print-fecha-titulo';
+  tituloImpresion.textContent = 'SALIDA MERCANCÍA — ' + fechaLarga;
+  wrap.appendChild(tituloImpresion);
 
   if (data.bloqueada) {
     const msg = document.createElement('div');
@@ -7023,18 +7363,45 @@ function tituloEstadoMenuRapido_(seccion) {
   }
 }
 
+let MENU_RAPIDO_ESTADO = { secciones: [], filtro: '' };
+
 function renderMenuRapido(data) {
+  MENU_RAPIDO_ESTADO.secciones = data.secciones || [];
+  // Si se cambia de día y el input de búsqueda sigue en pantalla (el panel
+  // no se destruye al recargar el conteo), respetamos lo que haya escrito;
+  // el propio input conserva su valor porque el shell no se vuelve a pintar.
+  pintarMenuRapido_();
+}
+
+/** Repinta "Acceso rápido a agrupación" aplicando MENU_RAPIDO_ESTADO.filtro
+ *  (ya normalizado sin acentos/mayúsculas). Una agrupación se muestra si su
+ *  propio nombre coincide, o si coincide el nombre de alguna tienda dentro
+ *  de ella (en ese caso se sigue abriendo la agrupación entera al pulsar,
+ *  igual que el resto de accesos rápidos). */
+function pintarMenuRapido_() {
   const body = document.getElementById('menu-rapido-body');
   if (!body) return;
 
-  const secciones = data.secciones || [];
+  const secciones = MENU_RAPIDO_ESTADO.secciones;
   if (!secciones.length) {
     body.innerHTML = '<div class="menu-rapido-vacio">Sin agrupaciones para este día.</div>';
     return;
   }
 
+  const filtro = MENU_RAPIDO_ESTADO.filtro;
+  const secccionesFiltradas = !filtro ? secciones : secciones.filter(function (seccion) {
+    const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
+    if (normalizarBusquedaPlantilla_(titulo).indexOf(filtro) !== -1) return true;
+    return (seccion.tiendas || []).some(function (t) { return normalizarBusquedaPlantilla_(t.nombre).indexOf(filtro) !== -1; });
+  });
+
+  if (!secccionesFiltradas.length) {
+    body.innerHTML = '<div class="menu-rapido-sin-resultados">Ninguna agrupación ni tienda coincide con la búsqueda.</div>';
+    return;
+  }
+
   body.innerHTML = '';
-  secciones.forEach(function (seccion) {
+  secccionesFiltradas.forEach(function (seccion) {
     const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -7043,7 +7410,7 @@ function renderMenuRapido(data) {
     btn.innerHTML =
       '<span class="dot" title="' + escapeAttr(tituloEstadoMenuRapido_(seccion)) + '"></span>' +
       '<span class="titulo">' + escapeHtml(titulo) + '</span>' +
-      '<span class="count">' + seccion.tiendas.length + '</span>';
+      '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + '</span>';
     btn.onclick = function () { irASeccion(seccion.nombre); };
     body.appendChild(btn);
   });
@@ -7268,7 +7635,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<div class="icono-agrup">' + iniciales + '</div>' +
     '<div class="info"><div class="name-row">' +
     '<span class="name">' + escapeHtml(partes.titulo) + '</span>' + badgeUbicacion +
-    '<span class="count">' + seccion.tiendas.length + ' tienda(s)</span>' +
+    '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
     '</div></div>' +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     badgeEstado(seccion) +
@@ -7489,7 +7856,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (seccion.estado === 'enviado') return;
     let tieneDatos = false;
     tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
-      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada')) return;
+      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-sale-excepcion')) return;
       tr.querySelectorAll('input.celda').forEach(function (inp) {
         const v = String(inp.value || '').trim();
         if (v !== '' && v.toUpperCase() !== 'NO') tieneDatos = true;
@@ -7506,6 +7873,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-grupo-header')) {
       return; // fila-resumen del grupo: no es una tienda, no lleva inputs
+    }
+    if (tr.classList.contains('fila-sale-excepcion')) {
+      return; // tienda que hoy sale por otra agrupación: solo un td-colspan informativo, sin inputs
     }
     if (tr.classList.contains('fila-cerrada')) {
       const btnReabrir = tr.querySelector('.btn-reabrir');
@@ -7619,7 +7989,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const excedidas = [];
     const pesoFaltante = [];
     tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
-      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada')) return;
+      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-sale-excepcion')) return;
       totalTiendas++;
       const totalInput = tr.querySelector('input[data-campo="total"]');
       const valor = totalInput ? parseFloat(totalInput.value) : NaN;
@@ -7815,6 +8185,17 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         'CERRADA', '', '', '', ''
+      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
+      return;
+    }
+
+    if (tr.classList.contains('fila-sale-excepcion')) {
+      const limiteCelda = tr.querySelector('td.limite');
+      const motivo = tr.querySelector('.motivo-excepcion');
+      filas.push([
+        nombre,
+        limiteCelda ? limiteCelda.textContent.trim() : '',
+        motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', '', '', ''
       ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
       return;
     }
@@ -8066,6 +8447,13 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
           limiteCelda ? limiteCelda.textContent.trim() : '', nombre,
           { content: 'CERRADA', colSpan: 4, styles: { fontStyle: 'bold', textColor: [201, 79, 79] } }
         ];
+      } else if (tr.classList.contains('fila-sale-excepcion')) {
+        const limiteCelda = tr.querySelector('td.limite');
+        const motivo = tr.querySelector('.motivo-excepcion');
+        celdasPropias = [
+          limiteCelda ? limiteCelda.textContent.trim() : '', nombre,
+          { content: motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', colSpan: 4, styles: { fontStyle: 'bold', textColor: [31, 78, 140] } }
+        ];
       } else {
         function valorCampo(campo) {
           const inp = tr.querySelector('input[data-campo="' + campo + '"]');
@@ -8308,7 +8696,25 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
-  return '<tr class="' + claseGrupo.trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
+  // Tienda que HOY sale por otra agrupación por un "cambio puntual"
+  // (excepción): se mantiene visible aquí, en su agrupación de siempre,
+  // pero tachada y sin celdas de conteo — igual que una tienda cerrada,
+  // pero dejando claro que no está cerrada: solo sale por otro sitio hoy.
+  // Se gestiona (y se quita) desde "Gestión festivos", no desde aquí.
+  if (t.salePorExcepcion) {
+    return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
+      '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
+      '<td class="limite">' + t.limite + '</td>' +
+      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
+      '<td></td>' +
+      '</tr>';
+  }
+  // Tienda que HOY entra aquí procedente de otra agrupación por un "cambio
+  // puntual": se resalta toda la fila en amarillo suave para que no pase
+  // desapercibida entre las tiendas de siempre de esta agrupación.
+  const claseExcepcionEntrada = t.entraPorExcepcion ? ' fila-entra-excepcion' : '';
+  const tituloEntrada = t.entraPorExcepcion ? ' title="Sale por aquí hoy por un cambio puntual (excepción), no es de esta agrupación habitualmente."' : '';
+  return '<tr class="' + (claseGrupo.trim() + claseExcepcionEntrada).trim() + '" data-row="' + t.row + '" data-limite="' + t.limite + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + tituloEntrada + '>' +
     '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
     '<td class="limite">' + t.limite + '</td>' +
     '<td>' + celdaConteoHtml('c60', t.c60, !!(t.forzados && t.forzados.c60 !== undefined)) + '</td>' +
@@ -8608,7 +9014,8 @@ function abrirGestorObservaciones(fechaInicial) {
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.add('gestor-obs');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir observación';
   document.getElementById('modal-text').style.display = 'none';
@@ -8649,6 +9056,9 @@ function crearFormularioGestorObs_() {
         '<button type="button" class="gestor-tipo-pill" data-tipo="cierre">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>' +
           'Cerrar tienda</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="cambio">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' +
+          'Cambio puntual</button>' +
       '</div>' +
       '<div class="gestor-aviso" id="gestor-aviso-dia" style="display:none;margin-top:8px;">Ese día de la semana no tiene hoja de conteo: solo se puede añadir una nota general.</div>' +
     '</div>' +
@@ -8661,6 +9071,15 @@ function crearFormularioGestorObs_() {
       '</div>' +
       '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un cierre para cada una.</div>' +
       '<div id="gestor-seleccion-actual" style="margin-top:10px;"></div>' +
+    '</div>' +
+    '<div class="gestor-campo" id="gestor-transito-campo" style="display:none;">' +
+      '<label>Plazo de entrega para este cambio</label>' +
+      '<div class="gestor-tipo-pills">' +
+        '<button type="button" class="gestor-tipo-pill gestor-transito-pill activa" data-opcion="actual">Mantener el plazo actual de la tienda</button>' +
+        '<button type="button" class="gestor-tipo-pill gestor-transito-pill" data-opcion="nuevo">Usar un plazo distinto solo para este cambio</button>' +
+      '</div>' +
+      '<select id="gestor-transito-select" style="display:none;margin-top:8px;"></select>' +
+      '<div class="gestor-campo-ayuda">Por si la agencia por la que sale hoy no sirve en el mismo plazo que la habitual. No cambia el plazo normal de la tienda, solo el de este envío puntual.</div>' +
     '</div>' +
     '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
       '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
@@ -8705,17 +9124,49 @@ function crearFormularioGestorObs_() {
     el.setSelectionRange(inicio, fin);
   });
 
-  wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (btn) {
+  wrap.querySelectorAll('.gestor-tipo-pill[data-tipo]').forEach(function (btn) {
     btn.onclick = function () {
       if (btn.disabled) return;
-      wrap.querySelectorAll('.gestor-tipo-pill').forEach(function (b) { b.classList.remove('activa'); });
+      wrap.querySelectorAll('.gestor-tipo-pill[data-tipo]').forEach(function (b) { b.classList.remove('activa'); });
       btn.classList.add('activa');
       GESTOR_OBS.tipo = btn.getAttribute('data-tipo');
-      GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
+      GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre'
+        ? []
+        : (GESTOR_OBS.tipo === 'cambio' ? { origen: null, destino: null, transitoOverride: null } : null);
       document.getElementById('gestor-busqueda').value = '';
       const btnLimpiar = document.getElementById('gestor-busqueda-clear');
       if (btnLimpiar) btnLimpiar.classList.remove('visible');
       actualizarFormularioSegunTipo_();
+    };
+  });
+
+  // Opciones de plazo (24h..120h) para el paso 3 de "Cambio puntual": se
+  // reutiliza TRANSITO_OPCIONES, la misma lista que en Configuración de
+  // tiendas, para que ambos sitios ofrezcan siempre los mismos valores.
+  const selectTransito = wrap.querySelector('#gestor-transito-select');
+  selectTransito.innerHTML = TRANSITO_OPCIONES.map(function (op) {
+    return '<option value="' + op.valor + '">' + op.texto + '</option>';
+  }).join('');
+  selectTransito.addEventListener('change', function () {
+    const sel = GESTOR_OBS.seleccion || {};
+    sel.transitoOverride = Number(selectTransito.value);
+    GESTOR_OBS.seleccion = sel;
+  });
+
+  wrap.querySelectorAll('.gestor-transito-pill').forEach(function (btn) {
+    btn.onclick = function () {
+      wrap.querySelectorAll('.gestor-transito-pill').forEach(function (b) { b.classList.remove('activa'); });
+      btn.classList.add('activa');
+      const sel = GESTOR_OBS.seleccion || {};
+      if (btn.getAttribute('data-opcion') === 'nuevo') {
+        sel.transitoOverride = Number(selectTransito.value) || (sel.origen && sel.origen.transito) || 1;
+        selectTransito.value = String(sel.transitoOverride);
+        selectTransito.style.display = '';
+      } else {
+        sel.transitoOverride = null;
+        selectTransito.style.display = 'none';
+      }
+      GESTOR_OBS.seleccion = sel;
     };
   });
 
@@ -8726,7 +9177,7 @@ function crearFormularioGestorObs_() {
     // la siguiente no debe borrar las que ya se marcaron. En "Nota de
     // agrupación" solo hay una elegida a la vez, así que escribir sí la
     // sustituye (se está buscando otra distinta).
-    if (GESTOR_OBS.tipo !== 'cierre') GESTOR_OBS.seleccion = null;
+    if (GESTOR_OBS.tipo !== 'cierre' && GESTOR_OBS.tipo !== 'cambio') GESTOR_OBS.seleccion = null;
     btnLimpiarBusqueda.classList.toggle('visible', !!inputBusqueda.value);
     actualizarSeleccionGestorObs_();
     renderResultadosBusquedaGestorObs_(inputBusqueda.value);
@@ -8737,7 +9188,7 @@ function crearFormularioGestorObs_() {
   btnLimpiarBusqueda.addEventListener('click', function () {
     inputBusqueda.value = '';
     btnLimpiarBusqueda.classList.remove('visible');
-    if (GESTOR_OBS.tipo !== 'cierre') GESTOR_OBS.seleccion = null;
+    if (GESTOR_OBS.tipo !== 'cierre' && GESTOR_OBS.tipo !== 'cambio') GESTOR_OBS.seleccion = null;
     actualizarSeleccionGestorObs_();
     renderResultadosBusquedaGestorObs_('');
     inputBusqueda.focus();
@@ -8756,6 +9207,9 @@ function actualizarFormularioSegunTipo_() {
   const inputBusqueda = document.getElementById('gestor-busqueda');
   if (!campoBusqueda) return;
 
+  const campoTexto = textoArea.closest('.gestor-campo');
+  if (campoTexto) campoTexto.style.display = '';
+
   if (GESTOR_OBS.tipo === 'general') {
     campoBusqueda.style.display = 'none';
     ayuda.style.display = 'none';
@@ -8768,6 +9222,21 @@ function actualizarFormularioSegunTipo_() {
     inputBusqueda.placeholder = 'Busca una agrupación…';
     textoLabel.textContent = 'Nota';
     textoArea.placeholder = 'Escribe la nota para esta agrupación…';
+  } else if (GESTOR_OBS.tipo === 'cambio') {
+    campoBusqueda.style.display = 'block';
+    ayuda.style.display = 'block';
+    const sel = GESTOR_OBS.seleccion || {};
+    if (!sel.origen) {
+      label.textContent = 'Tienda que cambia';
+      inputBusqueda.placeholder = 'Busca la tienda que sale por otra agrupación…';
+      ayuda.textContent = 'Elige la tienda que, solo este día, sale por una agrupación distinta a la suya.';
+    } else {
+      label.textContent = 'Agrupación destino';
+      inputBusqueda.placeholder = 'Busca la agrupación por la que sale…';
+      ayuda.textContent = 'Elige la agrupación (activa ese mismo día) por la que sale ' + sel.origen.tienda + '.';
+    }
+    if (campoTexto) campoTexto.style.display = 'none';
+    actualizarSeccionTransitoGestorObs_();
   } else {
     campoBusqueda.style.display = 'block';
     ayuda.style.display = 'block';
@@ -8778,6 +9247,36 @@ function actualizarFormularioSegunTipo_() {
   }
   document.getElementById('gestor-busqueda-resultados').style.display = 'none';
   actualizarSeleccionGestorObs_();
+}
+
+/** Muestra/oculta y rellena el paso 3 de "Cambio puntual" (plazo de
+ *  entrega): solo tiene sentido una vez elegidas tienda de origen Y
+ *  agrupación destino. Se deja siempre en "mantener el plazo actual" salvo
+ *  que el usuario haya tocado ya el select (sel.transitoOverride != null). */
+function actualizarSeccionTransitoGestorObs_() {
+  const campo = document.getElementById('gestor-transito-campo');
+  if (!campo) return;
+  const sel = GESTOR_OBS.seleccion || {};
+  if (GESTOR_OBS.tipo !== 'cambio' || !sel.origen || !sel.destino) {
+    campo.style.display = 'none';
+    return;
+  }
+  campo.style.display = 'block';
+
+  const badgeActual = badgeTransitoTienda(sel.origen.transito);
+  const textoActual = badgeActual ? badgeActual.texto : '24H';
+  const pillActual = campo.querySelector('.gestor-transito-pill[data-opcion="actual"]');
+  if (pillActual) pillActual.textContent = 'Mantener el plazo actual de la tienda (' + textoActual + ')';
+
+  const usaNuevo = sel.transitoOverride != null;
+  campo.querySelectorAll('.gestor-transito-pill').forEach(function (b) {
+    b.classList.toggle('activa', (b.getAttribute('data-opcion') === 'nuevo') === usaNuevo);
+  });
+  const selectEl = document.getElementById('gestor-transito-select');
+  if (selectEl) {
+    selectEl.style.display = usaNuevo ? '' : 'none';
+    if (usaNuevo) selectEl.value = String(sel.transitoOverride);
+  }
 }
 
 /** Actualiza el texto del botón "Guardar" para reflejar cuántos cierres se van a crear (si es más de uno). */
@@ -8813,6 +9312,43 @@ function actualizarSeleccionGestorObs_() {
         renderResultadosBusquedaGestorObs_(document.getElementById('gestor-busqueda').value);
       };
     });
+    return;
+  }
+
+  if (GESTOR_OBS.tipo === 'cambio') {
+    const sel = GESTOR_OBS.seleccion || {};
+    if (!sel.origen) { cont.innerHTML = ''; return; }
+    let html = '<div class="gestor-seleccion-chips"><span class="gestor-seleccion-chip">' +
+      escapeHtml(sel.origen.tienda + ' (' + sel.origen.agrupacion + ')') +
+      '<button type="button" id="gestor-quitar-origen">×</button></span>';
+    if (sel.destino) {
+      html += '<span class="gestor-seleccion-chip">→ ' + escapeHtml(sel.destino) +
+        '<button type="button" id="gestor-quitar-destino">×</button></span>';
+    }
+    html += '</div>';
+    cont.innerHTML = html;
+    document.getElementById('gestor-quitar-origen').onclick = function () {
+      GESTOR_OBS.seleccion = { origen: null, destino: null, transitoOverride: null };
+      document.getElementById('gestor-busqueda').value = '';
+      actualizarFormularioSegunTipo_();
+      const inputBusq = document.getElementById('gestor-busqueda');
+      if (inputBusq) inputBusq.focus();
+      renderResultadosBusquedaGestorObs_('');
+    };
+    const btnQuitarDestino = document.getElementById('gestor-quitar-destino');
+    if (btnQuitarDestino) {
+      btnQuitarDestino.onclick = function () {
+        sel.destino = null;
+        sel.transitoOverride = null;
+        document.getElementById('gestor-busqueda').value = '';
+        actualizarSeleccionGestorObs_();
+        actualizarSeccionTransitoGestorObs_();
+        const inputBusq = document.getElementById('gestor-busqueda');
+        if (inputBusq) inputBusq.focus();
+        renderResultadosBusquedaGestorObs_('');
+      };
+    }
+    actualizarSeccionTransitoGestorObs_();
     return;
   }
 
@@ -8897,7 +9433,7 @@ function cargarDatosDiaGestorObs_(fecha) {
 
       if (sinDia && GESTOR_OBS.tipo !== 'general') {
         GESTOR_OBS.tipo = 'general';
-        document.querySelectorAll('.gestor-tipo-pill').forEach(function (b) {
+        document.querySelectorAll('.gestor-tipo-pill[data-tipo]').forEach(function (b) {
           b.classList.toggle('activa', b.getAttribute('data-tipo') === 'general');
         });
       }
@@ -8978,9 +9514,43 @@ const GESTOR_OBS_LIMITE_VISIBLE_ = 60;
  * escribieras: se ha quitado ese límite (ver GESTOR_OBS_LIMITE_VISIBLE_,
  * que solo acota cuántas se pintan de golpe, no cuántas se buscan).
  */
+/** Calcula dónde debe colocarse el desplegable de resultados (posición fija
+ *  respecto a la pantalla, no al modal) y cuánto alto puede tener como
+ *  máximo según el hueco real que quede debajo del buscador. Se llama cada
+ *  vez que se va a mostrar el desplegable, así siempre encaja aunque el
+ *  modal tenga scroll, la ventana se haya redimensionado, etc. */
+function posicionarResultadosGestorObs_() {
+  const cont = document.getElementById('gestor-busqueda-resultados');
+  const wrap = document.querySelector('.gestor-busqueda-wrap');
+  if (!cont || !wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  const margenInferior = 16;
+  const espacioAbajo = window.innerHeight - rect.bottom - margenInferior;
+  const espacioArriba = rect.top - margenInferior;
+  // Preferimos abrir hacia abajo; si hay muy poco hueco ahí pero arriba hay
+  // claramente más sitio, abrimos hacia arriba en su lugar.
+  const haciaArriba = espacioAbajo < 160 && espacioArriba > espacioAbajo;
+  cont.style.left = rect.left + 'px';
+  cont.style.width = rect.width + 'px';
+  if (haciaArriba) {
+    cont.style.top = '';
+    cont.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    cont.style.maxHeight = Math.max(120, Math.min(400, espacioArriba)) + 'px';
+  } else {
+    cont.style.bottom = '';
+    cont.style.top = (rect.bottom + 4) + 'px';
+    cont.style.maxHeight = Math.max(120, Math.min(400, espacioAbajo)) + 'px';
+  }
+}
+window.addEventListener('resize', function () {
+  const cont = document.getElementById('gestor-busqueda-resultados');
+  if (cont && cont.style.display !== 'none') posicionarResultadosGestorObs_();
+});
+
 function renderResultadosBusquedaGestorObs_(query) {
   const cont = document.getElementById('gestor-busqueda-resultados');
   if (!cont) return;
+  posicionarResultadosGestorObs_();
 
   if (!GESTOR_OBS.datosDia) {
     cont.innerHTML = '<div class="gestor-busqueda-vacio">Cargando…</div>';
@@ -9019,6 +9589,90 @@ function renderResultadosBusquedaGestorObs_(query) {
         document.getElementById('gestor-busqueda').value = it.label;
         cont.style.display = 'none';
         actualizarSeleccionGestorObs_();
+      };
+    });
+    return;
+  }
+
+  if (GESTOR_OBS.tipo === 'cambio') {
+    const sel = GESTOR_OBS.seleccion || { origen: null, destino: null };
+
+    if (!sel.origen) {
+      // ---- Paso 1: elegir la tienda que cambia (agrupado por agrupación/ruta, selección única) ----
+      const grupos = [];
+      secciones.forEach(function (s) {
+        const tiendas = (s.tiendas || []).filter(function (t) {
+          if (t.entraPorExcepcion) return false; // ya está aquí por otro cambio puntual: no se puede volver a mover
+          return !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
+        });
+        if (tiendas.length) grupos.push({ agrupacion: s.nombre, tiendas: tiendas });
+      });
+
+      if (!grupos.length) {
+        cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay tiendas disponibles') + '</div>';
+        cont.style.display = 'block';
+        return;
+      }
+
+      const planas = [];
+      let html = '';
+      grupos.forEach(function (g) {
+        html += '<div class="gestor-busqueda-grupo"><span>' + escapeHtml(g.agrupacion) + ' · ' + g.tiendas.length + '</span></div>';
+        g.tiendas.forEach(function (t) {
+          const idx = planas.length;
+          planas.push({ agrupacion: g.agrupacion, tienda: t.nombre, transito: t.transito });
+          html += '<div class="gestor-busqueda-item" data-idx="' + idx + '">' +
+            '<span class="gestor-busqueda-item-texto">' + resaltarCoincidenciaGestorObs_(t.nombre, q) + '</span></div>';
+        });
+      });
+      cont.innerHTML = html;
+      cont.style.display = 'block';
+      cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
+        el.onclick = function () {
+          const it = planas[Number(el.getAttribute('data-idx'))];
+          GESTOR_OBS.seleccion = { origen: { agrupacion: it.agrupacion, tienda: it.tienda, transito: it.transito }, destino: null, transitoOverride: null };
+          document.getElementById('gestor-busqueda').value = '';
+          cont.style.display = 'none';
+          actualizarFormularioSegunTipo_();
+          // Pasamos al paso 2: abrimos ya la lista de agrupaciones destino en
+          // vez de esperar a que el buscador reciba el evento "focus" (si ya
+          // lo tenía, el navegador no lo vuelve a disparar y el desplegable
+          // se quedaba cerrado sin más).
+          const inputBusq = document.getElementById('gestor-busqueda');
+          if (inputBusq) inputBusq.focus();
+          renderResultadosBusquedaGestorObs_('');
+        };
+      });
+      return;
+    }
+
+    // ---- Paso 2: elegir la agrupación destino (activa ese mismo día, distinta de la de origen) ----
+    const items = secciones
+      .map(function (s) { return { label: s.nombre }; })
+      .filter(function (it) { return it.label !== sel.origen.agrupacion; })
+      .filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return a.label.localeCompare(b.label, 'es'); });
+
+    if (!items.length) {
+      cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay otras agrupaciones ese día') + '</div>';
+      cont.style.display = 'block';
+      return;
+    }
+
+    cont.innerHTML = items.map(function (it, i) {
+      return '<div class="gestor-busqueda-item" data-idx="' + i + '"><span class="gestor-busqueda-item-texto">' +
+        resaltarCoincidenciaGestorObs_(it.label, q) + '</span></div>';
+    }).join('');
+    cont.style.display = 'block';
+    cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
+      el.onclick = function () {
+        const it = items[Number(el.getAttribute('data-idx'))];
+        sel.destino = it.label;
+        GESTOR_OBS.seleccion = sel;
+        document.getElementById('gestor-busqueda').value = it.label;
+        cont.style.display = 'none';
+        actualizarSeleccionGestorObs_();
+        actualizarSeccionTransitoGestorObs_();
       };
     });
     return;
@@ -9130,6 +9784,11 @@ function guardarDesdeGestorObs_() {
   const fecha = GESTOR_OBS.fecha;
   if (!fecha) { mostrarToast('Elige una fecha', true); return; }
 
+  if (GESTOR_OBS.tipo === 'cambio') {
+    guardarCambioPuntualDesdeGestor_();
+    return;
+  }
+
   const texto = (document.getElementById('gestor-texto').value || '').trim();
   if (!texto) { document.getElementById('gestor-texto').focus(); return; }
 
@@ -9178,6 +9837,41 @@ function guardarDesdeGestorObs_() {
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
       if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
         agregarObservacionesACacheFestivos_(fecha, dia, guardados);
+      }
+    })
+    .catch(function (err) {
+      if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar'; }
+      mostrarErrorServidor(err);
+    });
+}
+
+/** Valida y guarda un "cambio puntual" (una tienda sale, solo esa fecha, por
+ *  una agrupación distinta a la suya), llamando a guardarExcepcionTienda. */
+function guardarCambioPuntualDesdeGestor_() {
+  const fecha = GESTOR_OBS.fecha;
+  const dia = (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.dia) || '';
+  const sel = GESTOR_OBS.seleccion || {};
+  if (!sel.origen) { mostrarToast('Busca y elige la tienda que cambia', true); return; }
+  if (!sel.destino) { mostrarToast('Busca y elige la agrupación de destino', true); return; }
+
+  const btnGuardar = document.getElementById('modal-confirm-btn');
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
+
+  llamarApi_('guardarExcepcionTienda', [{
+    fecha: fecha,
+    dia: dia,
+    agrupacionOrigen: sel.origen.agrupacion,
+    tienda: sel.origen.tienda,
+    agrupacionDestino: sel.destino,
+    transito: (sel.transitoOverride != null ? sel.transitoOverride : null)
+  }])
+    .then(function () {
+      cerrarModal();
+      mostrarToast('Cambio puntual guardado');
+      if (document.getElementById('calendar-body')) cargarCalendario();
+      if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
+        cargarFestivos();
       }
     })
     .catch(function (err) {
@@ -9239,11 +9933,23 @@ function agregarObservacionesACacheFestivos_(fecha, dia, guardados) {
 // Cierra el desplegable de resultados de búsqueda del gestor si se hace clic
 // fuera de él. Se registra una única vez (no dentro de cada apertura del
 // modal) para no acumular listeners repetidos en el documento.
+//
+// OJO: usamos e.composedPath() en vez de e.target.closest(...). Al elegir la
+// tienda de origen en "Cambio puntual", el propio clic reconstruye al vuelo
+// el contenido del desplegable (para mostrar ya el paso 2, agrupación
+// destino) — con lo cual el elemento exacto donde se hizo clic queda
+// desconectado del árbol DOM antes de que este listener llegue a mirarlo.
+// e.target.closest('.gestor-busqueda-wrap') entonces no encuentra nada (el
+// nodo ya no cuelga de ningún padre) y cerraba el desplegable justo después
+// de abrirlo. composedPath() recoge la cadena de ancestros tal como estaba
+// en el momento del clic, así que sigue siendo fiable aunque el DOM cambie
+// durante el propio evento.
 document.addEventListener('click', function (e) {
   const res = document.getElementById('gestor-busqueda-resultados');
-  if (res && res.style.display !== 'none' && !e.target.closest('.gestor-busqueda-wrap')) {
-    res.style.display = 'none';
-  }
+  if (!res || res.style.display === 'none') return;
+  const dentroDelBuscador = (typeof e.composedPath === 'function' ? e.composedPath() : [])
+    .some(function (el) { return el && el.classList && el.classList.contains('gestor-busqueda-wrap'); });
+  if (!dentroDelBuscador) res.style.display = 'none';
 });
 
 /* ---------------- UI HELPERS ---------------- */
@@ -9492,6 +10198,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('actualizacion');
   document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.remove('gestor-obs');
   document.getElementById('modal-title').style.display = '';
 }
 document.getElementById('modal-cerrar-x').onclick = cerrarModal;
@@ -9534,7 +10241,7 @@ function mostrarModalActualizacion(versionNueva) {
 
   const overlay = document.getElementById('modal-overlay');
   const cajaModal = document.getElementById('modal-box');
-  cajaModal.classList.remove('ancho', 'medio', 'peligro');
+  cajaModal.classList.remove('ancho', 'medio', 'peligro', 'gestor-obs');
   cajaModal.classList.add('actualizacion');
   overlay.classList.add('overlay-actualizacion');
 
