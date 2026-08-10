@@ -2048,6 +2048,7 @@
   table.admin-tabla tbody tr:last-child td { border-bottom: none; }
   table.admin-tabla tbody tr:nth-child(even) { background: #fafbfc; }
   table.admin-tabla td.admin-col-palets { font-weight: 700; color: var(--navy); text-align: center; }
+  table.admin-tabla th.admin-col-palets { text-align: center; }
   table.admin-tabla td.admin-col-tienda { white-space: normal; min-width: 160px; }
 
   /* ---- Administración > Servidores ---- */
@@ -2384,7 +2385,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.7';
+const APP_VERSION_ACTUAL = '1.6.8';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -5269,7 +5270,7 @@ function pintarTablaPaletsForzados_() {
   cont.innerHTML =
     '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' registro' : ' registros') + '</div>' +
     '<div class="admin-tabla-wrap"><table class="admin-tabla">' +
-      '<thead><tr><th>Fecha</th><th>Día</th><th>Tienda</th><th>Columna</th><th>Palets</th><th>Registrado</th></tr></thead>' +
+      '<thead><tr><th>Fecha</th><th>Día</th><th>Tienda</th><th>Columna</th><th class="admin-col-palets">Palets</th><th>Usuario</th><th>Registrado</th></tr></thead>' +
       '<tbody>' + items.map(function (it) {
         return '<tr>' +
           '<td>' + escapeHtml(formatearFechaCorta_(it.fecha)) + '</td>' +
@@ -5277,6 +5278,7 @@ function pintarTablaPaletsForzados_() {
           '<td class="admin-col-tienda">' + escapeHtml(it.tienda) + '</td>' +
           '<td>' + escapeHtml(it.columna) + '</td>' +
           '<td class="admin-col-palets">' + escapeHtml(String(it.palets)) + '</td>' +
+          '<td>' + escapeHtml(it.usuario || '—') + '</td>' +
           '<td>' + escapeHtml(it.fechaHora) + '</td>' +
         '</tr>';
       }).join('') +
