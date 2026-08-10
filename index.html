@@ -475,7 +475,8 @@
   body.es-admin .btn-sincronizar-agrupaciones,
   body.perm-agencias .btn-sincronizar-agrupaciones,
   body.perm-tiendas .btn-sincronizar-agrupaciones,
-  body.perm-aviso_tiendas .btn-sincronizar-agrupaciones { display: flex !important; }
+  body.perm-aviso_tiendas .btn-sincronizar-agrupaciones,
+  body.perm-cola_emails .btn-sincronizar-agrupaciones { display: flex !important; }
   .btn-sincronizar-agrupaciones:hover { background: #e1e5eb; }
   .btn-sincronizar-agrupaciones.girando svg { animation: girar-sinc 0.8s linear infinite; }
   @keyframes girar-sinc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -601,16 +602,17 @@
     border-radius: 5px;
   }
   /* Estas 4 clases "emails-config-*" son genéricas y se reutilizan en varias
-     secciones de "Diseño" (Email agencias, Configuración tiendas, Aviso a
-     tiendas, Rutas y tiendas), cada una con su propio permiso -- por eso la
-     regla mira cualquiera de los cuatro (además de es-admin), en vez de uno
-     solo. No hay conflicto entre secciones: cada botón/campo concreto solo
-     existe en el DOM cuando su sección está abierta, y a esa sección ya se
-     llega solo si se tiene el permiso correspondiente. */
+     secciones de "Diseño" (Email agencias, Configuración tiendas,
+     Configuración hora aviso tiendas, Rutas y tiendas), cada una con su
+     propio permiso -- por eso la regla mira cualquiera de los cuatro
+     (además de es-admin), en vez de uno solo. No hay conflicto entre
+     secciones: cada botón/campo concreto solo existe en el DOM cuando su
+     sección está abierta, y a esa sección ya se llega solo si se tiene el
+     permiso correspondiente. */
   body.es-admin .emails-config-borrar,
   body.perm-agencias .emails-config-borrar,
   body.perm-tiendas .emails-config-borrar,
-  body.perm-aviso_tiendas .emails-config-borrar,
+  body.perm-config_hora_aviso_tiendas .emails-config-borrar,
   body.perm-plantilla .emails-config-borrar { display: inline-flex !important; }
   .emails-config-borrar:hover { color: var(--danger); background: #fff; }
   .emails-config-borrar:disabled { opacity: .35; cursor: not-allowed; color: var(--ink-soft); }
@@ -638,17 +640,17 @@
   body.es-admin .emails-config-campo select.emails-config-transito,
   body.perm-agencias .emails-config-campo select.emails-config-transito,
   body.perm-tiendas .emails-config-campo select.emails-config-transito,
-  body.perm-aviso_tiendas .emails-config-campo select.emails-config-transito,
+  body.perm-config_hora_aviso_tiendas .emails-config-campo select.emails-config-transito,
   body.perm-plantilla .emails-config-campo select.emails-config-transito { background: #fff; }
   body.es-admin .emails-config-campo input,
   body.perm-agencias .emails-config-campo input,
   body.perm-tiendas .emails-config-campo input,
-  body.perm-aviso_tiendas .emails-config-campo input,
+  body.perm-config_hora_aviso_tiendas .emails-config-campo input,
   body.perm-plantilla .emails-config-campo input { background: #fff; }
   body.es-admin .emails-config-campo input:disabled,
   body.perm-agencias .emails-config-campo input:disabled,
   body.perm-tiendas .emails-config-campo input:disabled,
-  body.perm-aviso_tiendas .emails-config-campo input:disabled,
+  body.perm-config_hora_aviso_tiendas .emails-config-campo input:disabled,
   body.perm-plantilla .emails-config-campo input:disabled { background: #f9fafb; }
   .emails-config-pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   .emails-config-guardar {
@@ -658,7 +660,7 @@
   body.es-admin .emails-config-guardar,
   body.perm-agencias .emails-config-guardar,
   body.perm-tiendas .emails-config-guardar,
-  body.perm-aviso_tiendas .emails-config-guardar,
+  body.perm-config_hora_aviso_tiendas .emails-config-guardar,
   body.perm-plantilla .emails-config-guardar { display: flex !important; }
   .emails-config-guardar:hover { background: var(--navy-soft); }
   .emails-config-guardar:disabled { opacity: .55; cursor: default; }
@@ -674,12 +676,52 @@
   body.es-admin .emails-config-solo-lectura,
   body.perm-agencias .emails-config-solo-lectura,
   body.perm-tiendas .emails-config-solo-lectura,
-  body.perm-aviso_tiendas .emails-config-solo-lectura,
+  body.perm-config_hora_aviso_tiendas .emails-config-solo-lectura,
   body.perm-plantilla .emails-config-solo-lectura { display: none !important; }
   .barrido-hora-nota {
-    font-size: 12px; color: var(--ink-soft); margin: -4px 0 14px;
+    font-size: 12.5px; color: var(--ink-soft); margin: -4px 0 14px;
+    background: #f9fafb; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 18px;
   }
+  .barrido-hora-nota p { margin: 0 0 6px; }
+  .barrido-hora-nota p:not(:first-child) { margin-top: 14px; }
+  .barrido-hora-nota p b { color: var(--navy); font-size: 12.5px; }
+  .barrido-hora-nota ul { margin: 0; padding-left: 20px; }
+  .barrido-hora-nota li { margin-bottom: 6px; }
+  .barrido-hora-nota li:last-child { margin-bottom: 0; }
+  /* Toggle de la fila "Sábado": "Adelantar aviso de las rutas de domingo".
+     Al activarlo, el barrido automático del sábado avisa ya de las rutas
+     de domingo (offset_dias=1) en vez de las del propio sábado, para que
+     la tienda reciba el aviso mientras todavía está abierta (ver
+     _comprobar_aviso_automatico_tiendas en Supabase). */
+  .barrido-sabado-domingo-toggle {
+    background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11px; padding: 5px 10px; border-radius: 7px; white-space: nowrap; cursor: pointer;
+  }
+  .barrido-sabado-domingo-toggle:hover:not(:disabled) { background: #eef1f7; }
+  .barrido-sabado-domingo-toggle:disabled { opacity: .35; cursor: default; }
+  .barrido-sabado-domingo-toggle.activo { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .barrido-sabado-domingo-toggle.activo:hover:not(:disabled) { background: #267a5e; }
   #barrido-hora-automatica-fila { margin-bottom: 6px; }
+  .barrido-dias-tabla-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; }
+  table.barrido-dias-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.barrido-dias-tabla th {
+    text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--ink-soft); background: #f6f7fa; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  table.barrido-dias-tabla td {
+    padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle;
+  }
+  table.barrido-dias-tabla tr:last-child td { border-bottom: none; }
+  table.barrido-dias-tabla .barrido-dia-nombre { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  table.barrido-dias-tabla input[type="time"] {
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12.5px; color: var(--ink); background: #f9fafb;
+  }
+  .barrido-dia-quitar {
+    background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy); border-radius: 8px;
+    padding: 5px 10px; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  }
+  .barrido-dia-quitar:hover { background: #e1e5eb; }
   /* El resultado del barrido (chips + listas colapsables) tiene su propio
      scroll, igual que #emails-config-lista: así la cabecera de la tarjeta
      (título, fecha, botones) se queda fija y es esta caja la que se
@@ -2342,7 +2384,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.4';
+const APP_VERSION_ACTUAL = '1.6.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2537,7 +2579,7 @@ function seccionesAdminPermitidas_() { return ADMIN_SECCIONES.filter(function (s
 // vive más abajo en el archivo (se define junto al resto de "Usuarios").
 const CLAVES_PERMISOS_UI_ = [
   'usuarios', 'notas', 'cierres', 'agencias',
-  'tiendas', 'plantilla', 'aviso_tiendas',
+  'tiendas', 'plantilla', 'aviso_tiendas', 'config_hora_aviso_tiendas',
   'festivos', 'palets_forzados', 'cola_emails', 'ver_cuadrante_completo'
 ];
 
@@ -2758,8 +2800,8 @@ const SUPABASE_ACCIONES_ = {
     return llamarRpcSupabase_('get_config_aviso_tiendas', {});
   },
   guardarHoraAvisoTiendas: function (args) {
-    const hora = args[0], horaLimite = args[1];
-    return llamarRpcSupabase_('guardar_hora_aviso_tiendas', { p_hora: hora, p_hora_limite: horaLimite || null });
+    const dias = args[0]; // [{dia, horaAutomatica, horaLimite}, ...] los 7 días
+    return llamarRpcSupabase_('guardar_hora_aviso_tiendas', { p_dias: dias });
   },
   enviarAvisosTiendas: function (args) {
     const fecha = args[0], simulacion = args[1];
@@ -3155,7 +3197,7 @@ const CONFIG_SECCIONES = [
   { id: 'plantilla', label: 'Rutas y tiendas', permiso: 'plantilla' },
   { id: 'emails', label: 'Email agencias', permiso: 'agencias' },
   { id: 'tiendas', label: 'Configuración tiendas', permiso: 'tiendas' },
-  { id: 'aviso-tiendas', label: 'Aviso a tiendas', permiso: 'aviso_tiendas' }
+  { id: 'config-hora-aviso-tiendas', label: 'Configuración hora aviso tiendas', permiso: 'config_hora_aviso_tiendas' }
   // futuras secciones de Configuración van aquí
 ];
 let ESTADO_CONFIG = { seccionActiva: 'emails' };
@@ -3171,7 +3213,8 @@ const ADMIN_SECCIONES = [
   { id: 'palets-forzados', label: 'Palets forzados', permiso: 'palets_forzados' },
   { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
   { id: 'servidores', label: 'Servidores', permiso: null },
-  { id: 'cola-emails', label: 'Cola de avisos a tiendas', permiso: 'cola_emails' }
+  { id: 'cola-emails', label: 'Cola de avisos a tiendas', permiso: 'cola_emails' },
+  { id: 'simulacion-aviso-tiendas', label: 'Simulación envío tiendas', permiso: 'aviso_tiendas' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
@@ -3357,7 +3400,7 @@ function renderVistaConfiguracion() {
 function renderSeccionConfigActiva() {
   if (ESTADO_CONFIG.seccionActiva === 'emails') renderConfigEmails();
   else if (ESTADO_CONFIG.seccionActiva === 'plantilla') renderConfigPlantilla();
-  else if (ESTADO_CONFIG.seccionActiva === 'aviso-tiendas') renderAvisoTiendas();
+  else if (ESTADO_CONFIG.seccionActiva === 'config-hora-aviso-tiendas') renderConfigHoraAvisoTiendas();
   else if (ESTADO_CONFIG.seccionActiva === 'tiendas') renderConfigTiendas();
 }
 
@@ -3376,6 +3419,7 @@ function renderSeccionAdminActiva() {
   else if (ESTADO_ADMIN.seccionActiva === 'usuarios') renderAdminUsuarios();
   else if (ESTADO_ADMIN.seccionActiva === 'servidores') renderAdminServidores();
   else if (ESTADO_ADMIN.seccionActiva === 'cola-emails') renderAdminColaEmails();
+  else if (ESTADO_ADMIN.seccionActiva === 'simulacion-aviso-tiendas') renderSimulacionAvisoTiendas();
 }
 
 /* ---------------- GESTIÓN FESTIVOS ----------------
@@ -3874,12 +3918,12 @@ function eliminarObservacionDesdeFestivos_(id, tipo) {
 let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
 
 // Calcula el alto disponible en pantalla para una lista con scroll propio
-// dentro de Configuración (para que sea ELLA la que se desplace, y no toda
-// la página): mide dónde termina la cabecera fija de encima y deja un
-// margen para el padding inferior de la tarjeta, en vez de usar un número
-// fijo en CSS que no encaja en todas las pantallas.
+// dentro de Configuración o Administración (para que sea ELLA la que se
+// desplace, y no toda la página): mide dónde termina la cabecera fija de
+// encima y deja un margen para el padding inferior de la tarjeta, en vez
+// de usar un número fijo en CSS que no encaja en todas las pantallas.
 function ajustarAlturaListaScrollable_(idLista) {
-  if (ESTADO.vista !== 'configuracion') return;
+  if (ESTADO.vista !== 'configuracion' && ESTADO.vista !== 'administracion') return;
   const listaEl = document.getElementById(idLista);
   if (!listaEl) return;
   const top = listaEl.getBoundingClientRect().top;
@@ -4171,29 +4215,45 @@ function sincronizarAgrupacionesDesdeApp_() {
  *   cada tienda para el aviso de "barrido de día" y días de la semana en
  *   que recibe entrega (L M X J V S D, usado para calcular la fecha
  *   prevista del aviso).
- * - "Aviso a tiendas" (renderAvisoTiendas): solo para admin, el panel para
- *   lanzar el barrido: envía a cada tienda con palets asignados ese día un
- *   correo con el total y la fecha de entrega calculada (24H/48H/72H según
- *   el marcador "*"/"^" de su nombre — ver detectarPlazoTienda_ en el
- *   backend).
+ * - "Configuración hora aviso tiendas" (renderConfigHoraAvisoTiendas, dentro
+ *   de Configuración): solo para admin, la config de horas del barrido
+ *   automático por día de la semana.
+ * - "Simulación envío tiendas" (renderSimulacionAvisoTiendas, dentro de
+ *   Administración): solo para admin, el panel para lanzar el barrido a
+ *   mano: envía a cada tienda con palets asignados ese día un correo con el
+ *   total y la fecha de entrega calculada (24H/48H/72H según el marcador
+ *   "*"/"^" de su nombre — ver detectarPlazoTienda_ en el backend).
  * Requiere en Code.gs: getTiendasConfig, guardarEmailTienda,
  * eliminarTiendaConfig, sincronizarTiendas y enviarAvisosTiendas.
  */
 let TIENDAS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
 let BARRIDO_TIENDAS_ESTADO = { fecha: null, resultado: null, resultadoFecha: null, simulado: false };
+// Días de la semana para la config del barrido automático, numerados en
+// ISO (1=lunes ... 7=domingo, igual que extract(isodow from fecha) en
+// Postgres) para que casen directo con dia_semana en config_aviso_tiendas_dias.
+const DIAS_SEMANA_AVISO = [
+  { num: 1, nombre: 'Lunes' },
+  { num: 2, nombre: 'Martes' },
+  { num: 3, nombre: 'Miércoles' },
+  { num: 4, nombre: 'Jueves' },
+  { num: 5, nombre: 'Viernes' },
+  { num: 6, nombre: 'Sábado' },
+  { num: 7, nombre: 'Domingo' }
+];
 // Horas entre las que se intenta el envío automático del aviso a
-// tiendas (ver getConfigAvisoTiendas/guardarHoraAvisoTiendas en el
-// backend). null = todavía no se ha cargado desde el servidor.
-//   hora        -> primer barrido (obligatoria para que el automático esté activo)
+// tiendas, UNA config independiente por día de la semana (ver
+// getConfigAvisoTiendas/guardarHoraAvisoTiendas en el backend).
+// dias[n] = { hora, horaLimite } para el día ISO n (1=lunes..7=domingo).
+//   hora        -> primer barrido (obligatoria para que el automático esté activo ese día)
 //   horaLimite  -> último barrido de seguridad (opcional):
-//                    - vacía: el automático dispara UNA sola vez al día, en cuanto
-//                      se alcanza "hora". Definitivos posteriores ese día ya no
+//                    - vacía: el automático dispara UNA sola vez ese día, en cuanto
+//                      se alcanza "hora". Conteos que se pongan después ese día ya no
 //                      se avisan solos, hay que usar los botones de abajo.
 //                    - rellena: el automático se repite cada ~15 min mientras
 //                      "hora" <= ahora <= "horaLimite", avisando a las tiendas
 //                      que se van poniendo listas en esa ventana. Pasada
 //                      "horaLimite" no se envía nada más automáticamente ese día.
-let HORA_AVISO_TIENDAS_ESTADO = { hora: null, horaLimite: null, cargando: false };
+let HORA_AVISO_TIENDAS_ESTADO = { dias: {}, cargando: false };
 // NOTA: antes había aquí un intento de calcular "ya avisadas hoy" por
 // diferencia (total de tiendas activas menos la suma de los bloques del
 // resultado), asumiendo que toda tienda activa aparece siempre en algún
@@ -4211,24 +4271,177 @@ function cargarAvisosEnviadosTiendas_(fecha) {
   });
 }
 
-function htmlBarridoTiendasCard_() {
+function htmlConfigHoraAvisoTiendasCard_() {
+  return (
+    '<div class="vista-card" id="config-hora-aviso-tiendas-card" style="margin-bottom:16px;">' +
+      '<div class="vista-card-header"><h2>Configuración hora aviso tiendas</h2></div>' +
+      '<p>Configura, para cada día de la semana, a partir de qué hora se intenta el envío automático del aviso a tiendas (barrido del día) y, opcionalmente, hasta qué hora se sigue reintentando. La vista previa y el envío manual están en <b>Simulación envío tiendas</b>.</p>' +
+      '<div class="barrido-dias-tabla-wrap" id="barrido-hora-automatica-fila">' +
+        '<table class="barrido-dias-tabla">' +
+          '<thead><tr><th>Día</th><th>Primer barrido a partir de</th><th>Último barrido de seguridad (opcional)</th><th></th><th></th></tr></thead>' +
+          '<tbody>' +
+            DIAS_SEMANA_AVISO.map(function (d) {
+              const cfg = HORA_AVISO_TIENDAS_ESTADO.dias[d.num] || {};
+              const esSabado = d.num === 6;
+              const adelantaDomingo = !!cfg.offsetDias;
+              return (
+                '<tr data-dia="' + d.num + '">' +
+                  '<td class="barrido-dia-nombre">' + d.nombre + '</td>' +
+                  '<td><input type="time" id="barrido-hora-automatica-' + d.num + '" value="' + escapeAttr(cfg.hora || '') + '"></td>' +
+                  '<td><input type="time" id="barrido-hora-limite-' + d.num + '" value="' + escapeAttr(cfg.horaLimite || '') + '"></td>' +
+                  '<td>' + (esSabado ?
+                    '<button type="button" class="barrido-sabado-domingo-toggle' + (adelantaDomingo ? ' activo' : '') + '" id="barrido-sabado-avisa-domingo" data-activo="' + (adelantaDomingo ? '1' : '0') + '" title="Si lo activas, el barrido automático del sábado avisa también de las rutas de domingo (además de las del propio sábado, si las hubiera), porque el domingo la tienda está cerrada y no vería el email hasta el lunes.">Avisar también del Domingo</button>'
+                    : '') +
+                  '</td>' +
+                  '<td><button type="button" class="barrido-dia-quitar" data-dia="' + d.num + '" title="Borra las horas de ' + d.nombre + ' (deja ese día en solo manual, no afecta a los demás días)">Borrar horas</button></td>' +
+                '</tr>'
+              );
+            }).join('') +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+      '<div class="admin-filtros">' +
+        '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar horas</button>' +
+      '</div>' +
+      '<div class="barrido-hora-nota">' +
+        '<p><b>Cómo funciona el barrido automático</b></p>' +
+        '<ul>' +
+          '<li>Cada 15 min la app comprueba las horas configuradas para el día de la semana en curso.</li>' +
+          '<li>Si dejas vacío el <b>último barrido de seguridad</b> de un día, el envío se dispara <b>una sola vez</b> en cuanto se alcanza el <b>primer barrido</b>: los conteos que se pongan después ese día ya no se avisan solos (hace falta el botón manual de <b>Simulación envío tiendas</b>).</li>' +
+          '<li>Si rellenas también el <b>último barrido</b>, la comprobación se repite cada ~15 min entre esas dos horas, avisando a las tiendas que se van poniendo listas según se guardan más conteos durante esa ventana. Pasado el último barrido, ese día no se envía nada más en automático.</li>' +
+          '<li>Cada tienda solo recibe su aviso una vez al día, se mande por el camino que se mande.</li>' +
+          '<li>Deja ambos campos de un día en blanco (o pulsa <b>Borrar horas</b>) para que ese día el envío sea siempre manual.</li>' +
+        '</ul>' +
+        '<p><b>Por qué existe «Avisar también del Domingo» en la fila de Sábado</b></p>' +
+        '<ul>' +
+          '<li>Las rutas de domingo son operativamente de domingo: el conteo, los envíos a la agencia y el histórico se manejan con fecha de domingo.</li>' +
+          '<li>Pero ese día la tienda está cerrada, así que un aviso enviado en domingo no lo verían hasta el lunes.</li>' +
+          '<li>Con el toggle activado en la fila de <b>Sábado</b>, el barrido automático del sábado avisa por adelantado de esas rutas de domingo (con el conteo que haya hasta ese momento), además de las rutas propias del sábado si algún día las hubiera.</li>' +
+          '<li>El barrido del propio <b>Domingo</b> se sigue lanzando igual y sirve de repaso de seguridad: como es idempotente, solo avisa a las tiendas que se quedaron sin aviso el sábado (conteo puesto tarde, sábado en solo-manual, etc.), sin duplicar avisos a las que ya se avisaron.</li>' +
+        '</ul>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function vincularConfigHoraAvisoTiendas_() {
+  const btnGuardarHora = document.getElementById('btn-guardar-hora-aviso');
+  if (btnGuardarHora) btnGuardarHora.onclick = function () { guardarHoraAvisoTiendas_(); };
+  // Un botón "Quitar" por fila de día: limpia solo los dos inputs de ese
+  // día y guarda ya (mismo RPC que "Guardar horas", que siempre manda la
+  // config de los 7 días juntos).
+  document.querySelectorAll('.barrido-dia-quitar').forEach(function (btn) {
+    btn.onclick = function () {
+      const dia = btn.getAttribute('data-dia');
+      const input = document.getElementById('barrido-hora-automatica-' + dia);
+      const inputLimite = document.getElementById('barrido-hora-limite-' + dia);
+      if (input) input.value = '';
+      if (inputLimite) inputLimite.value = '';
+      guardarHoraAvisoTiendas_();
+    };
+  });
+  // Toggle "Avisar también del Domingo" (solo fila Sábado):
+  // cambia su estado visual y guarda ya, igual que "Quitar".
+  const btnSabadoDomingo = document.getElementById('barrido-sabado-avisa-domingo');
+  if (btnSabadoDomingo) {
+    btnSabadoDomingo.onclick = function () {
+      const activo = btnSabadoDomingo.getAttribute('data-activo') === '1';
+      const nuevoActivo = !activo;
+      btnSabadoDomingo.setAttribute('data-activo', nuevoActivo ? '1' : '0');
+      btnSabadoDomingo.classList.toggle('activo', nuevoActivo);
+      guardarHoraAvisoTiendas_(
+        nuevoActivo
+          ? 'Activado: el barrido del sábado avisará también de las rutas de domingo'
+          : 'Desactivado: el barrido del sábado ya no avisa de las rutas de domingo'
+      );
+    };
+  }
+  cargarHoraAvisoTiendas_();
+}
+
+/** Trae de Supabase las horas configuradas para el aviso automático a
+ *  tiendas (una config por día de la semana) y rellena los inputs (solo
+ *  los que el admin no ha tocado ya a mano mientras se cargaba). */
+function cargarHoraAvisoTiendas_() {
+  if (HORA_AVISO_TIENDAS_ESTADO.cargando) return;
+  HORA_AVISO_TIENDAS_ESTADO.cargando = true;
+  llamarApi_('getConfigAvisoTiendas', [])
+    .then(function (dias) {
+      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
+      const nuevoDias = {};
+      (dias || []).forEach(function (d) {
+        nuevoDias[d.dia] = {
+          hora: d.horaAutomatica || '',
+          horaLimite: d.horaLimite || '',
+          offsetDias: d.offsetDias || 0
+        };
+      });
+      HORA_AVISO_TIENDAS_ESTADO.dias = nuevoDias;
+      DIAS_SEMANA_AVISO.forEach(function (d) {
+        const cfg = nuevoDias[d.num] || { hora: '', horaLimite: '', offsetDias: 0 };
+        const input = document.getElementById('barrido-hora-automatica-' + d.num);
+        if (input && document.activeElement !== input) input.value = cfg.hora;
+        const inputLimite = document.getElementById('barrido-hora-limite-' + d.num);
+        if (inputLimite && document.activeElement !== inputLimite) inputLimite.value = cfg.horaLimite;
+      });
+      const btnSabadoDomingo = document.getElementById('barrido-sabado-avisa-domingo');
+      if (btnSabadoDomingo) {
+        const adelantaDomingo = !!(nuevoDias[6] && nuevoDias[6].offsetDias);
+        btnSabadoDomingo.setAttribute('data-activo', adelantaDomingo ? '1' : '0');
+        btnSabadoDomingo.classList.toggle('activo', adelantaDomingo);
+      }
+    })
+    .catch(function (err) {
+      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
+      mostrarErrorServidor(err);
+    });
+}
+
+/** Guarda de golpe las horas de los 7 días (o las borra en el día que se
+ *  haya dejado vacío, dejando el envío automático desactivado solo ese
+ *  día). */
+function guardarHoraAvisoTiendas_(mensajePersonalizado) {
+  const btn = document.getElementById('btn-guardar-hora-aviso');
+  const btnSabadoDomingo = document.getElementById('barrido-sabado-avisa-domingo');
+  const dias = DIAS_SEMANA_AVISO.map(function (d) {
+    const input = document.getElementById('barrido-hora-automatica-' + d.num);
+    const inputLimite = document.getElementById('barrido-hora-limite-' + d.num);
+    return {
+      dia: d.num,
+      horaAutomatica: input ? input.value : '',
+      horaLimite: inputLimite ? inputLimite.value : '',
+      offsetDias: (d.num === 6 && !!btnSabadoDomingo && btnSabadoDomingo.getAttribute('data-activo') === '1') ? 1 : 0
+    };
+  });
+  if (btn) btn.disabled = true;
+  llamarApi_('guardarHoraAvisoTiendas', [dias])
+    .then(function () {
+      if (btn) btn.disabled = false;
+      const nuevoDias = {};
+      let diasActivos = 0;
+      dias.forEach(function (d) {
+        nuevoDias[d.dia] = { hora: d.horaAutomatica, horaLimite: d.horaLimite, offsetDias: d.offsetDias };
+        if (d.horaAutomatica) diasActivos++;
+      });
+      HORA_AVISO_TIENDAS_ESTADO.dias = nuevoDias;
+      mostrarToast(
+        mensajePersonalizado ||
+        (diasActivos === 0
+          ? 'Envío automático desactivado (solo manual todos los días)'
+          : 'Horas guardadas: ' + diasActivos + (diasActivos === 1 ? ' día con' : ' días con') + ' barrido automático')
+      );
+    })
+    .catch(function (err) {
+      if (btn) btn.disabled = false;
+      mostrarErrorServidor(err);
+    });
+}
+
+function htmlSimulacionAvisoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
-      '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado abajo. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Administración → Cola de avisos a tiendas).</p>' +
-      '<div class="admin-filtros" id="barrido-hora-automatica-fila">' +
-        '<div class="admin-filtro-campo">' +
-          '<label>Primer barrido a partir de</label>' +
-          '<input type="time" id="barrido-hora-automatica" value="' + escapeAttr(HORA_AVISO_TIENDAS_ESTADO.hora || '') + '">' +
-        '</div>' +
-        '<div class="admin-filtro-campo">' +
-          '<label>Último barrido de seguridad (opcional)</label>' +
-          '<input type="time" id="barrido-hora-limite" value="' + escapeAttr(HORA_AVISO_TIENDAS_ESTADO.horaLimite || '') + '">' +
-        '</div>' +
-        '<button type="button" class="btn-admin-buscar" id="btn-guardar-hora-aviso">Guardar horas</button>' +
-        '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-quitar-hora-aviso" title="Deja el aviso a tiendas en solo envío manual">Quitar (solo manual)</button>' +
-      '</div>' +
-      '<p class="barrido-hora-nota">Cada 15 min la app comprueba las horas configuradas. Si dejas vacío el <b>último barrido de seguridad</b>, el envío automático se dispara UNA sola vez al día en cuanto se alcanza el <b>primer barrido</b>: los conteos que se pongan después ese día ya no se avisan solos (hace falta el botón manual de abajo). Si rellenas también el último barrido, la comprobación se repite cada ~15 min entre esas dos horas, avisando a las tiendas que se van poniendo listas (aquellas cuyo conteo ya esté puesto) según se van guardando más conteos durante esa ventana; pasado el último barrido no se envía nada más automáticamente ese día. En cualquier caso cada tienda solo recibe su aviso una vez. Si dejas ambos campos vacíos, el envío sigue siendo siempre manual con los botones de abajo.</p>' +
+      '<div class="vista-card-header"><h2>Simulación envío tiendas</h2></div>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado en Configuración tiendas. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos, ver Configuración hora aviso tiendas) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Cola de avisos a tiendas).</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -4239,7 +4452,7 @@ function htmlBarridoTiendasCard_() {
   );
 }
 
-function vincularBarridoTiendas_() {
+function vincularSimulacionAvisoTiendas_() {
   const fechaInput = document.getElementById('barrido-fecha');
   if (fechaInput) {
     fechaInput.addEventListener('change', function (e) {
@@ -4270,69 +4483,6 @@ function vincularBarridoTiendas_() {
   } else {
     ejecutarBarridoTiendas_(true, true);
   }
-
-  const btnGuardarHora = document.getElementById('btn-guardar-hora-aviso');
-  if (btnGuardarHora) btnGuardarHora.onclick = function () { guardarHoraAvisoTiendas_(); };
-  const btnQuitarHora = document.getElementById('btn-quitar-hora-aviso');
-  if (btnQuitarHora) {
-    btnQuitarHora.onclick = function () {
-      const input = document.getElementById('barrido-hora-automatica');
-      const inputLimite = document.getElementById('barrido-hora-limite');
-      if (input) input.value = '';
-      if (inputLimite) inputLimite.value = '';
-      guardarHoraAvisoTiendas_();
-    };
-  }
-  cargarHoraAvisoTiendas_();
-}
-
-/** Trae de Supabase las horas configuradas para el aviso automático a
- *  tiendas y rellena los inputs (solo si el admin no los ha tocado ya a
- *  mano mientras se cargaba). */
-function cargarHoraAvisoTiendas_() {
-  if (HORA_AVISO_TIENDAS_ESTADO.cargando) return;
-  HORA_AVISO_TIENDAS_ESTADO.cargando = true;
-  llamarApi_('getConfigAvisoTiendas', [])
-    .then(function (cfg) {
-      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
-      HORA_AVISO_TIENDAS_ESTADO.hora = (cfg && cfg.horaAutomatica) || '';
-      HORA_AVISO_TIENDAS_ESTADO.horaLimite = (cfg && cfg.horaLimite) || '';
-      const input = document.getElementById('barrido-hora-automatica');
-      if (input && document.activeElement !== input) input.value = HORA_AVISO_TIENDAS_ESTADO.hora;
-      const inputLimite = document.getElementById('barrido-hora-limite');
-      if (inputLimite && document.activeElement !== inputLimite) inputLimite.value = HORA_AVISO_TIENDAS_ESTADO.horaLimite;
-    })
-    .catch(function (err) {
-      HORA_AVISO_TIENDAS_ESTADO.cargando = false;
-      mostrarErrorServidor(err);
-    });
-}
-
-/** Guarda las horas de los inputs (o las borra, dejando el envío en solo manual). */
-function guardarHoraAvisoTiendas_() {
-  const input = document.getElementById('barrido-hora-automatica');
-  const inputLimite = document.getElementById('barrido-hora-limite');
-  const btn = document.getElementById('btn-guardar-hora-aviso');
-  const hora = input ? input.value : '';
-  const horaLimite = inputLimite ? inputLimite.value : '';
-  if (btn) btn.disabled = true;
-  llamarApi_('guardarHoraAvisoTiendas', [hora, horaLimite])
-    .then(function () {
-      if (btn) btn.disabled = false;
-      HORA_AVISO_TIENDAS_ESTADO.hora = hora;
-      HORA_AVISO_TIENDAS_ESTADO.horaLimite = horaLimite;
-      mostrarToast(
-        !hora
-          ? 'Envío automático desactivado (solo manual)'
-          : (horaLimite
-              ? 'Horas guardadas: barridos automáticos entre las ' + hora + ' y las ' + horaLimite
-              : 'Hora guardada: un único barrido automático a las ' + hora)
-      );
-    })
-    .catch(function (err) {
-      if (btn) btn.disabled = false;
-      mostrarErrorServidor(err);
-    });
 }
 
 function ejecutarBarridoTiendas_(simulacion, silencioso) {
@@ -4423,20 +4573,43 @@ function formatearHoraCorta_(isoTimestamp) {
   return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 
-/** Página "Aviso a tiendas": el panel del barrido del día (envío del correo
- *  con los palets que recibe cada tienda), separado de "Configuración tiendas" para
- *  que cada pantalla se vea más despejada. Solo admin puede lanzarlo; para
- *  quien no lo sea, se muestra un aviso de solo lectura. */
-function renderAvisoTiendas() {
+/** Página "Configuración hora aviso tiendas": solo la tabla de horas por
+ *  día de la semana del barrido automático, separada de "Simulación envío
+ *  tiendas" para que cada pantalla se vea más despejada. Solo admin puede
+ *  tocarlo; para quien no lo sea, se muestra un aviso de solo lectura. */
+function renderConfigHoraAvisoTiendas() {
   const cont = document.getElementById('config-contenido');
+  if (!cont) return;
+
+  cont.innerHTML = tienePermiso('config_hora_aviso_tiendas')
+    ? htmlConfigHoraAvisoTiendasCard_()
+    : (
+      '<div class="vista-card">' +
+        '<div class="vista-card-header"><h2>Configuración hora aviso tiendas</h2></div>' +
+        '<div class="emails-config-solo-lectura">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+          'Solo lectura: entra con la contraseña de administrador para poder configurar las horas del barrido.' +
+        '</div>' +
+      '</div>'
+    );
+
+  if (tienePermiso('config_hora_aviso_tiendas')) vincularConfigHoraAvisoTiendas_();
+}
+
+/** Página "Simulación envío tiendas": el panel del barrido del día (vista
+ *  previa y envío real del correo con los palets que recibe cada tienda).
+ *  Solo admin puede lanzarlo; para quien no lo sea, se muestra un aviso de
+ *  solo lectura. */
+function renderSimulacionAvisoTiendas() {
+  const cont = document.getElementById('admin-contenido');
   if (!cont) return;
   if (!BARRIDO_TIENDAS_ESTADO.fecha) BARRIDO_TIENDAS_ESTADO.fecha = hoyStr();
 
   cont.innerHTML = tienePermiso('aviso_tiendas')
-    ? htmlBarridoTiendasCard_()
+    ? htmlSimulacionAvisoTiendasCard_()
     : (
       '<div class="vista-card">' +
-        '<div class="vista-card-header"><h2>Aviso a tiendas (barrido del día)</h2></div>' +
+        '<div class="vista-card-header"><h2>Simulación envío tiendas</h2></div>' +
         '<div class="emails-config-solo-lectura">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
           'Solo lectura: entra con la contraseña de administrador para poder lanzar el barrido y enviar avisos.' +
@@ -4444,7 +4617,7 @@ function renderAvisoTiendas() {
       '</div>'
     );
 
-  if (tienePermiso('aviso_tiendas')) vincularBarridoTiendas_();
+  if (tienePermiso('aviso_tiendas')) vincularSimulacionAvisoTiendas_();
   ajustarAlturaListaScrollable_('barrido-resultado');
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
@@ -5276,7 +5449,6 @@ const CATALOGO_PERMISOS = [
     items: [
       { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
       { clave: 'cierres', etiqueta: 'Cerrar y reabrir tiendas', desc: 'Marcar tiendas como cerradas o reabrirlas en la cuadrícula de conteos.' },
-      { clave: 'agencias', etiqueta: 'Agencias y emails', desc: 'Editar emails y notas de cada agrupación de rutas, y sincronizar agrupaciones.' },
       { clave: 'ver_cuadrante_completo', etiqueta: 'Ver cuadrante completo', desc: 'Ver los conteos de fechas lejanas (más allá de hoy + 1 día) con todos los datos, igual que un administrador, en vez de la versión reducida (solo tiendas y cierres, sin límites, celdas de conteo ni plazos de entrega).' },
     ],
   },
@@ -5285,7 +5457,8 @@ const CATALOGO_PERMISOS = [
     items: [
       { clave: 'tiendas', etiqueta: 'Configuración de tiendas', desc: 'Editar email y notas de cada tienda, días de entrega y sincronizar tiendas.' },
       { clave: 'plantilla', etiqueta: 'Rutas y tiendas (plantilla)', desc: 'Límites, nombres, bloqueos y notas de carga de la plantilla de rutas y tiendas.' },
-      { clave: 'aviso_tiendas', etiqueta: 'Aviso a tiendas', desc: 'Configurar la hora del aviso automático y enviarlo manualmente.' },
+      { clave: 'agencias', etiqueta: 'Agencias y emails', desc: 'Editar emails y notas de cada agrupación de rutas, y sincronizar agrupaciones.' },
+      { clave: 'config_hora_aviso_tiendas', etiqueta: 'Configuración hora aviso tiendas', desc: 'Configurar, día a día, la hora a partir de la cual se dispara el aviso automático a tiendas (y la hora límite de reintento, si la hay).' },
     ],
   },
   {
@@ -5295,6 +5468,7 @@ const CATALOGO_PERMISOS = [
       { clave: 'festivos', etiqueta: 'Cierres y cambios', desc: 'Cierres, notas y cambios puntuales de agrupación a nivel de día completo (no de una tienda o ruta concreta).' },
       { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
       { clave: 'cola_emails', etiqueta: 'Cola de avisos a tiendas', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
+      { clave: 'aviso_tiendas', etiqueta: 'Simulación envío tiendas', desc: 'Lanzar la vista previa del barrido del día y el envío manual real de avisos a tiendas.' },
     ],
   },
 ];
