@@ -2384,7 +2384,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.6';
+const APP_VERSION_ACTUAL = '1.6.7';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -5958,7 +5958,7 @@ function confirmarEliminarUsuario_(usuarioExistente) {
  * estado, filtro por fecha y reintento manual de los que hayan quedado
  * en error (tras 5 intentos automáticos fallidos).
  */
-let ADMIN_COLA_EMAILS_ESTADO = { datos: null, fecha: '', refrescoAuto: null, filtroEstado: 'encola' };
+let ADMIN_COLA_EMAILS_ESTADO = { datos: null, fecha: hoyStr(), refrescoAuto: null, filtroEstado: 'encola' };
 
 function renderAdminColaEmails() {
   const cont = document.getElementById('admin-contenido');
