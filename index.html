@@ -144,6 +144,25 @@
   }
   header.topbar .btn-hoy:hover { background: rgba(255,255,255,.22); }
   .topbar-derecha { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; margin-left: auto; }
+  .topbar-reloj {
+    font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.75);
+    white-space: nowrap; letter-spacing: .2px; font-variant-numeric: tabular-nums;
+  }
+  /* Temporizador del autorefresco del conteo del día: deliberadamente muy
+   * discreto (más pequeño y tenue que el reloj) para que se pueda mirar de
+   * reojo sin que distraiga; solo se muestra en la vista de conteos, ver
+   * cambiarVista() y actualizarTemporizadorRefrescoConteo_(). */
+  .topbar-refresco-conteo {
+    display: none; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,.45);
+    white-space: nowrap; letter-spacing: .2px; font-variant-numeric: tabular-nums;
+  }
+  .topbar-refresco-conteo.visible { display: flex; }
+  .topbar-refresco-conteo .punto-refresco {
+    width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.4); flex: 0 0 auto;
+  }
+  .topbar-refresco-conteo.recien-refrescado .punto-refresco { background: var(--amber); }
+  @media (max-width: 760px) { .topbar-refresco-conteo { display: none !important; } }
   .topbar-usuario {
     display: flex; align-items: center; gap: 8px; padding-left: 10px;
     border-left: 1px solid rgba(255,255,255,.18);
@@ -166,6 +185,7 @@
   @media (max-width: 700px) {
     .topbar-usuario-rol { display: none; }
     .topbar-usuario { border-left: none; padding-left: 0; }
+    .topbar-reloj { display: none; }
   }
 
   /* ---------- NAVEGACIÓN PRINCIPAL (cabecera) ----------
@@ -1221,26 +1241,39 @@
   .seccion-panel.estado-pendiente { border-left: 4px solid #c7cdd6; }
 
   .seccion-header {
-    display: flex; align-items: center; flex-wrap: wrap; row-gap: 6px; gap: 12px; padding: 14px 16px; user-select: none;
+    display: flex; flex-direction: column; row-gap: 10px; padding: 14px 16px; user-select: none;
   }
-  .seccion-header .icono-agrup {
+  .seccion-header-top { display: flex; align-items: center; gap: 12px; }
+  .seccion-header-top .icono-agrup {
     width: 40px; height: 40px; border-radius: 11px; background: #eef1f5; color: var(--navy);
     display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700;
   }
-  .seccion-header .info { flex: 1; min-width: 0; }
+  .seccion-header-top .info { flex: 1 1 auto; min-width: 120px; }
   .seccion-header .name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .seccion-header .name { font-weight: 800; font-size: 16px; line-height: 1.25; letter-spacing: .1px; }
   .seccion-header .count { color: var(--ink-soft); font-size: 12px; font-weight: 600; flex-shrink: 0; }
-  .seccion-header .btn-toggle-colapsar {
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  .seccion-header-top .btn-toggle-colapsar {
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: auto;
     width: 28px; height: 28px; border-radius: 7px; border: none; background: none; cursor: pointer; padding: 0;
   }
-  .seccion-header .btn-toggle-colapsar:hover { background: #f0f2f6; }
+  .seccion-header-top .btn-toggle-colapsar:hover { background: #f0f2f6; }
   .seccion-header .chevron { transition: transform .15s; color: var(--ink-soft); flex-shrink: 0; pointer-events: none; }
   .seccion-panel.colapsada .chevron { transform: rotate(-90deg); }
   .seccion-panel.colapsada .seccion-body { display: none; }
   .seccion-panel.colapsada .seccion-notas,
   .seccion-panel.colapsada .seccion-notas-carga { display: none; }
+
+  /* Fila fija de estado + acciones: siempre su propia línea a todo el
+   * ancho (no depende de si "cabe" junto al nombre). Badges y botones
+   * fluyen juntos de izquierda a derecha (sin forzar los extremos con
+   * space-between), así nunca queda un hueco vacío gigante cuando no hay
+   * badges de estado que mostrar (p.ej. agrupación "pendiente"). */
+  .seccion-header-meta {
+    display: flex; align-items: center; gap: 8px; row-gap: 6px; flex-wrap: wrap;
+  }
+  .seccion-header-badges { display: flex; align-items: center; gap: 8px; row-gap: 6px; flex-wrap: wrap; }
+  .seccion-header-acciones { display: flex; align-items: center; gap: 8px; row-gap: 6px; flex-wrap: wrap; }
+  .seccion-header-extra { display: flex; align-items: center; gap: 8px; row-gap: 6px; flex-wrap: wrap; margin-left: auto; }
 
   .badge-ubicacion {
     display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
@@ -1346,6 +1379,13 @@
   .btn-header-guardar.con-cambios {
     animation: pulso-guardar 1.6s ease-in-out infinite;
   }
+  /* Texto pequeño junto al botón "Guardar conteo" indicando cuándo se
+     guardó por última vez (se rellena y refresca desde JS). Vacío -> no
+     ocupa espacio ni se ve. */
+  .ultimo-guardado {
+    font-size: 10.5px; color: var(--ink-soft); white-space: nowrap; flex-shrink: 0;
+  }
+  .ultimo-guardado:empty { display: none; }
   @keyframes pulso-guardar {
     0%   { box-shadow: 0 0 0 0 rgba(47,143,111,.55); }
     70%  { box-shadow: 0 0 0 8px rgba(47,143,111,0); }
@@ -2328,6 +2368,8 @@
       </div>
       <div class="topbar-derecha">
         <span class="sync-indicator-global" id="sync-indicator-global"></span>
+        <div class="topbar-refresco-conteo" id="topbar-refresco-conteo" title="Tiempo hasta el próximo sondeo automático del conteo del día"></div>
+        <div class="topbar-reloj" id="topbar-reloj"></div>
         <div class="topbar-usuario">
           <button type="button" class="btn-mi-usuario" id="btn-mi-usuario" title="Mi usuario">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -2385,7 +2427,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.9';
+const APP_VERSION_ACTUAL = '1.7.1';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3329,6 +3371,19 @@ function fechaHoraDDMMYYYY_(fechaHora) {
   return pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
 }
 function anioMesDe(fecha) { return fecha.slice(0, 7); }
+
+/** Reloj en vivo de la cabecera: "11/08/2026  -  21:42:23h", hora local
+ *  del navegador, actualizado cada segundo. */
+function actualizarRelojTopbar_() {
+  const el = document.getElementById('topbar-reloj');
+  if (!el) return;
+  const d = new Date();
+  const fecha = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
+  const hora = pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  el.textContent = fecha + '  -  ' + hora + 'h';
+}
+actualizarRelojTopbar_();
+setInterval(actualizarRelojTopbar_, 1000);
 function formatearFechaLarga(fecha) {
   const d = new Date(fecha + 'T12:00:00');
   return DIAS_SEMANA_ES[d.getDay()] + ', ' + d.getDate() + ' de ' + MESES_ES[d.getMonth()] + ' de ' + d.getFullYear();
@@ -3354,6 +3409,8 @@ function cambiarVista(vista, seccion) {
     btn.classList.toggle('activa', btn.dataset.vista === vista);
   });
   document.getElementById('topbar-fecha-wrap').style.display = (vista === 'conteos') ? '' : 'none';
+  const elRefrescoConteo = document.getElementById('topbar-refresco-conteo');
+  if (elRefrescoConteo) elRefrescoConteo.classList.toggle('visible', vista === 'conteos');
   document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
 
   if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
@@ -7431,6 +7488,134 @@ function cargarConteoDia() {
   llamarApi_('getConteoDia', [ESTADO.fecha])
     .then(renderContenidoDia)
     .catch(mostrarErrorServidor);
+  iniciarAutorefrescoConteoDia_();
+}
+
+/**
+ * AUTORREFRESCO EN VIVO: varias personas pueden tener esta misma pantalla
+ * abierta a la vez en ordenadores distintos, así que cada cierto tiempo
+ * se vuelve a consultar el conteo del día en silencio, para que si otro
+ * ordenador guarda o envía algo, aquí se vea sin tener que recargar la
+ * página a mano.
+ *
+ * La regla de oro es que NUNCA debe notarse mientras se está trabajando:
+ * - No se toca ninguna agrupación con cambios sin guardar, un guardado en
+ *   curso, o el foco (el cursor escribiendo) dentro de ella — ver
+ *   panel._enUso() en crearSeccionPanel. Esa agrupación se deja tal cual
+ *   y se reintenta en el siguiente sondeo.
+ * - Una agrupación "libre" solo se reconstruye si sus datos han cambiado
+ *   de verdad (se compara con panel._firma); si no hay nada nuevo no se
+ *   toca el DOM para no perder el scroll ni el estado colapsado/expandido.
+ * - Nunca se mueve el scroll ni se muestra ningún loader/spinner: es un
+ *   refresco silencioso, no una recarga.
+ * - Se pausa solo cuando la pestaña está en segundo plano o cuando se
+ *   sale de la pantalla de conteos, y se reanuda al volver.
+ */
+let CONTEO_REFRESCO_INTERVALO_ = null;
+let CONTEO_REFRESCO_EN_VUELO_ = false;
+const CONTEO_REFRESCO_MS_ = 25000;
+
+// Temporizador visual (topbar, junto al reloj): puramente decorativo, no
+// afecta en nada a cuándo se sondea de verdad — solo pinta la cuenta atrás
+// hasta la próxima vez que el setInterval de arriba vaya a mirar. Ver
+// actualizarTemporizadorRefrescoConteo_().
+let CONTEO_REFRESCO_PROX_TS_ = null; // marca de tiempo (Date.now()) del próximo sondeo
+let CONTEO_REFRESCO_TICK_INTERVALO_ = null; // repinta el número cada segundo
+
+function iniciarAutorefrescoConteoDia_() {
+  if (CONTEO_REFRESCO_INTERVALO_) clearInterval(CONTEO_REFRESCO_INTERVALO_);
+  CONTEO_REFRESCO_PROX_TS_ = Date.now() + CONTEO_REFRESCO_MS_;
+  CONTEO_REFRESCO_INTERVALO_ = setInterval(function () {
+    CONTEO_REFRESCO_PROX_TS_ = Date.now() + CONTEO_REFRESCO_MS_;
+    if (ESTADO.vista !== 'conteos') {
+      clearInterval(CONTEO_REFRESCO_INTERVALO_);
+      CONTEO_REFRESCO_INTERVALO_ = null;
+      CONTEO_REFRESCO_PROX_TS_ = null;
+      return;
+    }
+    if (document.hidden) return; // pestaña en segundo plano: no gastar peticiones de balde
+    refrescarConteoDiaEnVivo_();
+  }, CONTEO_REFRESCO_MS_);
+  iniciarTicTacRefrescoConteo_();
+}
+
+/** Arranca (si no estaba ya en marcha) el repintado cada segundo del
+ *  numerito de cuenta atrás del topbar. Se para solo en cuanto se sale de
+ *  la vista de conteos (ver actualizarTemporizadorRefrescoConteo_), así que
+ *  no hace falta pararlo a mano al cambiar de pantalla. */
+function iniciarTicTacRefrescoConteo_() {
+  if (CONTEO_REFRESCO_TICK_INTERVALO_) return; // ya en marcha, no duplicar
+  actualizarTemporizadorRefrescoConteo_();
+  CONTEO_REFRESCO_TICK_INTERVALO_ = setInterval(actualizarTemporizadorRefrescoConteo_, 1000);
+}
+
+function actualizarTemporizadorRefrescoConteo_() {
+  const el = document.getElementById('topbar-refresco-conteo');
+  if (!el) return;
+  if (ESTADO.vista !== 'conteos') {
+    el.textContent = '';
+    if (CONTEO_REFRESCO_TICK_INTERVALO_) { clearInterval(CONTEO_REFRESCO_TICK_INTERVALO_); CONTEO_REFRESCO_TICK_INTERVALO_ = null; }
+    return;
+  }
+  if (CONTEO_REFRESCO_PROX_TS_ === null) { el.textContent = ''; return; }
+  const segundos = Math.max(0, Math.round((CONTEO_REFRESCO_PROX_TS_ - Date.now()) / 1000));
+  el.innerHTML = '<span class="punto-refresco"></span>' + segundos + 's';
+}
+
+/** Pequeño destello del puntito (se pone del color ámbar un instante) cada
+ *  vez que de verdad se ha completado un sondeo, para poder confirmar de
+ *  un vistazo que el autorefresco sigue vivo sin tener que fijarse en el
+ *  número. Puramente visual: no cambia ningún dato ni ningún temporizador. */
+function marcarRefrescoConteoRealizado_() {
+  const el = document.getElementById('topbar-refresco-conteo');
+  if (!el) return;
+  el.classList.add('recien-refrescado');
+  setTimeout(function () { el.classList.remove('recien-refrescado'); }, 900);
+}
+
+function refrescarConteoDiaEnVivo_() {
+  if (CONTEO_REFRESCO_EN_VUELO_) return; // ya hay un sondeo en curso, no solapar
+  const fechaDelSondeo = ESTADO.fecha;
+  CONTEO_REFRESCO_EN_VUELO_ = true;
+  llamarApi_('getConteoDia', [fechaDelSondeo])
+    .then(function (data) {
+      // Si mientras tanto el usuario cambió de fecha o de pantalla, esta
+      // respuesta ya no vale: se descarta en silencio.
+      if (ESTADO.vista !== 'conteos' || ESTADO.fecha !== fechaDelSondeo) return;
+      marcarRefrescoConteoRealizado_();
+      aplicarRefrescoConteoDiaEnVivo_(data);
+    })
+    .catch(function () {
+      // Un fallo puntual del sondeo en segundo plano no debe interrumpir
+      // a nadie con un error: se reintenta solo en el siguiente ciclo.
+    })
+    .finally(function () { CONTEO_REFRESCO_EN_VUELO_ = false; });
+}
+
+function aplicarRefrescoConteoDiaEnVivo_(data) {
+  // El resumen del día y el acceso rápido no tienen inputs ni foco que
+  // proteger, así que se repintan siempre enteros: es barato y mantiene
+  // esos contadores/puntos de estado siempre al día.
+  renderResumenDia(data);
+  renderMenuRapido(data);
+
+  if (data.bloqueada || !data.dia || !data.secciones || !data.secciones.length) return;
+
+  const cont = document.getElementById('dia-contenido');
+  if (!cont) return;
+  const panelesActuales = cont.querySelectorAll('.seccion-panel[data-seccion-key]');
+  const panelesPorClave = {};
+  panelesActuales.forEach(function (p) { panelesPorClave[p.getAttribute('data-seccion-key')] = p; });
+
+  data.secciones.forEach(function (seccion) {
+    const panelViejo = panelesPorClave[seccion.nombre];
+    if (!panelViejo) return; // agrupación nueva que no estaba antes: se verá al recargar/cambiar de fecha, no forzamos nada aquí
+    if (panelViejo._enUso && panelViejo._enUso()) return; // el usuario está trabajando aquí: no tocar
+    const firmaNueva = JSON.stringify([seccion, data.dia, data.esHoy]);
+    if (panelViejo._firma === firmaNueva) return; // sin cambios de verdad: no reconstruir el DOM para nada
+    const panelNuevo = crearSeccionPanel(seccion, data.dia, data.fecha, data.esHoy);
+    panelViejo.replaceWith(panelNuevo);
+  });
 }
 
 function renderContenidoDia(data) {
@@ -7773,6 +7958,34 @@ function marcarGuardando(panel, activo) {
   }
 }
 
+/**
+ * Texto "hace X" para el aviso de último guardado junto al botón
+ * "Guardar conteo" de cada agrupación. Cada agrupación registra aquí su
+ * propia función de refresco (ver REFRESCADORES_ULTIMO_GUARDADO_) y un
+ * único intervalo global las va llamando a todas cada 20s, para no tener
+ * un setInterval por cada agrupación abierta en pantalla.
+ */
+function formatearTiempoRelativo_(fecha) {
+  const segundos = Math.max(0, Math.round((Date.now() - fecha.getTime()) / 1000));
+  if (segundos < 10) return 'justo ahora';
+  if (segundos < 60) return 'hace ' + segundos + ' s';
+  const minutos = Math.round(segundos / 60);
+  if (minutos < 60) return 'hace ' + minutos + ' min';
+  const horas = Math.round(minutos / 60);
+  if (horas < 24) return 'hace ' + horas + ' h';
+  return 'hace ' + Math.round(horas / 24) + ' d';
+}
+let REFRESCADORES_ULTIMO_GUARDADO_ = [];
+setInterval(function () {
+  // Al re-renderizar (cambio de fecha, recarga de sección…) las agrupaciones
+  // viejas se sustituyen en el DOM, pero sus funciones seguirían aquí
+  // apuntando a nodos ya desconectados: se limpian solas de paso para que
+  // la lista no crezca sin límite en una sesión larga.
+  REFRESCADORES_ULTIMO_GUARDADO_ = REFRESCADORES_ULTIMO_GUARDADO_.filter(function (fn) {
+    return fn(); // cada función devuelve false si su nodo ya no está en el DOM
+  });
+}, 20000);
+
 function htmlBotonDeshacerEnvio_() {
   return '<button type="button" class="btn-deshacer-envio" title="Deshacer envío (solo se puede el mismo día)">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -7808,24 +8021,35 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   const header = document.createElement('div');
   header.className = 'seccion-header';
   header.innerHTML =
+    '<div class="seccion-header-top">' +
     '<div class="icono-agrup">' + iniciales + '</div>' +
     '<div class="info"><div class="name-row">' +
     '<span class="name">' + escapeHtml(partes.titulo) + '</span>' + badgeUbicacion +
     '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
+    badgeEstado(seccion) +
     '</div></div>' +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
-    badgeEstado(seccion) +
+    '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
+    '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
+    '</div>' +
+    '<div class="seccion-header-meta">' +
+    '<div class="seccion-header-badges">' +
     badgePrevision(seccion) +
     (seccion.estado === 'enviado' && esHoy ? htmlBotonDeshacerEnvio_() : '') +
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
-    (editable && seccion.estado !== 'enviado'
-      ? '<button type="button" class="btn-header-guardar sin-cambios" title="Guarda el conteo de esta agrupación. Los botones de envío no se activan hasta pulsar aquí.">Guardar conteo</button>'
-      : '') +
+    '</div>' +
+    '<div class="seccion-header-acciones">' +
     (editable && seccion.estado !== 'enviado' && !seccion.previsionEnviada
       ? '<button type="button" class="btn-header-prevision" title="Enviar previsión por email (no bloquea el conteo, se puede volver a enviar)">Enviar Previsión</button>'
       : '') +
     (editable && seccion.estado !== 'enviado'
       ? '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
+      : '') +
+    '</div>' +
+    '<div class="seccion-header-extra">' +
+    (editable && seccion.estado !== 'enviado'
+      ? '<button type="button" class="btn-header-guardar sin-cambios" title="Guarda el conteo de esta agrupación. Los botones de envío no se activan hasta pulsar aquí.">Guardar conteo</button>' +
+        '<span class="ultimo-guardado"></span>'
       : '') +
     '<button type="button" class="btn-add-nota" title="Añadir nota a esta agrupación">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>' +
@@ -7843,8 +8067,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="6" font-weight="800" fill="#ffffff">PDF+</text>' +
         '</svg></button>'
       : '') +
-    '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
-    '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>';
+    '</div>' +
+    '</div>';
   panel.appendChild(header);
 
   header.querySelector('.btn-add-nota').onclick = function (e) {
@@ -7947,19 +8171,33 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     });
     const el = header.querySelector('.total-palets-valor');
     if (el) el.textContent = suma;
+    return suma;
   }
-  actualizarTotalPalets();
+  const sumaInicialPalets = actualizarTotalPalets();
 
   // GUARDADO MANUAL: ya no se guarda solo mientras se escribe. En su
   // lugar, cualquier cambio en un input marca la agrupación como "con
   // cambios sin guardar" (botón "Guardar conteo" destacado y con pulso).
-  // Los botones "Enviar Previsión" / "Enviar Definitivo" empiezan
-  // SIEMPRE apagados y solo se activan tras pulsar "Guardar conteo" al
-  // menos una vez (haGuardadoAlMenosUnaVez); si después se vuelve a
-  // escribir algo, se apagan otra vez hasta el siguiente guardado.
+  // Los botones "Enviar Previsión" / "Enviar Definitivo" se activan si ya
+  // hay algún total guardado para esta agrupación (venga de esta sesión o
+  // de una anterior: si al recargar la página ya trae datos, no tiene
+  // sentido pedir pulsar "Guardar conteo" otra vez solo para desbloquear
+  // el envío). Si después se edita algo, se apagan otra vez hasta el
+  // siguiente guardado.
   const btnGuardarConteo = header.querySelector('.btn-header-guardar');
+  const spanUltimoGuardado = header.querySelector('.ultimo-guardado');
   let hayCambiosSinGuardar = false;
-  let haGuardadoAlMenosUnaVez = false;
+  let haGuardadoAlMenosUnaVez = sumaInicialPalets > 0;
+  let ultimoGuardadoEn = null; // Date del último guardado con éxito (esta sesión)
+  function refrescarTextoUltimoGuardado_() {
+    if (!spanUltimoGuardado || !spanUltimoGuardado.isConnected) return false;
+    if (ultimoGuardadoEn) {
+      spanUltimoGuardado.textContent = 'Guardado ' + formatearTiempoRelativo_(ultimoGuardadoEn);
+      spanUltimoGuardado.title = 'Guardado a las ' + ultimoGuardadoEn.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+    return true;
+  }
+  REFRESCADORES_ULTIMO_GUARDADO_.push(refrescarTextoUltimoGuardado_);
   function actualizarBotonesEnvio_() {
     const bloquear = !haGuardadoAlMenosUnaVez || hayCambiosSinGuardar;
     [header.querySelector('.btn-header-prevision'), header.querySelector('.btn-header-definitivo')].forEach(function (btn) {
@@ -7988,6 +8226,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     }
     actualizarBotonesEnvio_();
   }
+  // Se llama solo cuando de verdad ha habido una vuelta al servidor con
+  // éxito (no en el caso de "Guardar conteo" pulsado sin cambios), para
+  // que el "hace X min" refleje guardados reales.
+  function marcarGuardadoAhora_() {
+    ultimoGuardadoEn = new Date();
+    refrescarTextoUltimoGuardado_();
+  }
   // "Guardar conteo" siempre se puede pulsar (mientras sea editable),
   // haya o no cambios: si no hay nada nuevo que guardar, no llama al
   // servidor (evita una petición de red innecesaria), pero igualmente
@@ -8004,6 +8249,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         marcarGuardando(panel, false);
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarTodoGuardado_();
+        marcarGuardadoAhora_();
         if (onDone) onDone(true);
       })
       .catch(function (err) {
@@ -8020,6 +8266,30 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       autoguardarSeccion();
     };
   }
+
+  // GUARDADO AUTOMÁTICO AL PERDER EL FOCO: si el usuario termina de tocar
+  // una casilla de esta tabla y el foco se va fuera de ella (a otra
+  // agrupación, a un botón, o fuera de la página), se guarda solo, sin
+  // esperar a que pulse "Guardar conteo" a mano. Si el foco simplemente
+  // salta a otra casilla DENTRO de la misma tabla (lo normal al usar
+  // Tab o ir campo a campo), no se hace nada todavía: se espera a que de
+  // verdad termine con esta agrupación. El botón sigue ahí como respaldo
+  // manual y como indicador visual de si queda algo sin guardar.
+  tableWrap.addEventListener('focusout', function () {
+    if (!editable) return;
+    // No nos fiamos solo de e.relatedTarget (en algunos navegadores llega
+    // null al hacer clic fuera de la ventana o en un elemento no
+    // enfocable), así que se revisa en el siguiente tick dónde ha
+    // quedado realmente el foco.
+    setTimeout(function () {
+      const focoActual = document.activeElement;
+      const siguetocandoEstaTabla = focoActual && tableWrap.contains(focoActual);
+      if (siguetocandoEstaTabla) return; // saltó a otra casilla de la misma tabla: no hacer nada aún
+      if (!hayCambiosSinGuardar) return; // nada pendiente
+      autoguardarSeccion();
+    }, 0);
+  }, true);
+
   actualizarBotonesEnvio_(); // estado inicial: envío apagado hasta el primer "Guardar conteo" de esta sesión
 
   /** Recalcula EN VIVO (sin esperar a guardar ni a recargar) si esta
@@ -8299,8 +8569,8 @@ if (callback) callback(true, mensaje);
     const wrapTmp = document.createElement('div');
     wrapTmp.innerHTML = badgeEstado(seccion);
     const nuevoBadgeEstado = wrapTmp.firstElementChild;
-    const badgeTotalPalets = header.querySelector('.badge-total-palets');
-    if (nuevoBadgeEstado && badgeTotalPalets) badgeTotalPalets.insertAdjacentElement('afterend', nuevoBadgeEstado);
+    const countEl = header.querySelector('.name-row .count');
+    if (nuevoBadgeEstado && countEl) countEl.insertAdjacentElement('afterend', nuevoBadgeEstado);
 
     const btnPrevisionEl = header.querySelector('.btn-header-prevision');
     if (btnPrevisionEl) btnPrevisionEl.remove();
@@ -8321,6 +8591,30 @@ if (callback) callback(true, mensaje);
     tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, input.celda-no').forEach(function (btn) { btn.disabled = true; });
     actualizarMenuRapidoItem_(seccion);
   }
+
+  // AUTOREFRESCO EN VIVO (varios ordenadores a la vez): antes de devolver
+  // el panel se le cuelgan dos cosas para que refrescarConteoDiaEnVivo_()
+  // sepa si puede sustituirlo sin molestar:
+  //  - _firma: "foto" de los datos con los que se pintó, para no
+  //    reconstruir nada si el próximo sondeo trae exactamente lo mismo.
+  //  - _enUso: si hay cambios sin guardar, un guardado en curso, o el
+  //    foco está dentro de este panel, se considera que el usuario está
+  //    trabajando aquí y el refresco automático no debe tocarlo todavía
+  //    (se reintentará en el siguiente sondeo).
+  panel._firma = JSON.stringify([seccion, dia, esHoy]);
+  panel._enUso = function () {
+    // OJO: document.activeElement es por documento, no por ventana. Si el
+    // usuario hizo clic en una casilla de esta agrupación y luego cambió de
+    // ventana/pestaña SIN volver a tocar nada en esta página, el navegador
+    // no dispara "focusout" (el foco no se ha movido a otro elemento del
+    // DOM) y esa casilla se queda como activeElement para siempre, aunque
+    // la ventana ya no esté activa. Sin el "document.hasFocus() &&" de abajo,
+    // eso bloquearía el autorefresco de esta agrupación indefinidamente. Por
+    // eso el "cursor puesto en un campo" solo cuenta como "en uso" si la
+    // ventana realmente tiene el foco en este instante; los cambios sin
+    // guardar o un guardado en curso sí protegen siempre, foco o no.
+    return hayCambiosSinGuardar || (btnGuardarConteo && btnGuardarConteo.disabled) || (document.hasFocus() && panel.contains(document.activeElement));
+  };
 
   return panel;
 }
