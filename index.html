@@ -2385,7 +2385,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.6.8';
+const APP_VERSION_ACTUAL = '1.6.9';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -5707,7 +5707,7 @@ function abrirModalUsuario_(usuarioExistente) {
         (esNuevo
           ? '<div class="modal-campo">' +
               '<label for="modal-usuario-password">Contraseña</label>' +
-              '<input type="password" id="modal-usuario-password" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+              '<input type="password" id="modal-usuario-password" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
             '</div>'
           : '') +
         '<div class="modal-campo">' +
@@ -5776,7 +5776,7 @@ function abrirModalUsuario_(usuarioExistente) {
     if (esNuevo) {
       const inputPassword = document.getElementById('modal-usuario-password');
       const password = inputPassword.value;
-      if (!password || password.length < 4) { inputPassword.focus(); return; }
+      if (!password || password.length < 3) { inputPassword.focus(); return; }
       const btn = document.getElementById('modal-confirm-btn');
       btn.disabled = true;
       llamarApi_('crearUsuario', [usuario, nombreCompleto, password, rol, permisos])
@@ -5820,7 +5820,7 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
   custom.innerHTML =
     '<div class="modal-campo">' +
       '<label for="modal-usuario-password-nueva">Contraseña nueva</label>' +
-      '<input type="password" id="modal-usuario-password-nueva" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+      '<input type="password" id="modal-usuario-password-nueva" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
     '</div>';
 
   const actions = document.getElementById('modal-actions');
@@ -5832,7 +5832,7 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
   document.getElementById('modal-confirm-btn').onclick = function () {
     const input = document.getElementById('modal-usuario-password-nueva');
     const password = input.value;
-    if (!password || password.length < 4) { input.focus(); return; }
+    if (!password || password.length < 3) { input.focus(); return; }
     const btn = document.getElementById('modal-confirm-btn');
     btn.disabled = true;
     llamarApi_('cambiarPasswordUsuario', [usuarioExistente.id, password])
@@ -5901,7 +5901,7 @@ function abrirModalMiUsuario_() {
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="mi-usuario-password-nueva">Contraseña nueva</label>' +
-      '<input type="password" id="mi-usuario-password-nueva" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+      '<input type="password" id="mi-usuario-password-nueva" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="mi-usuario-password-repetir">Repetir contraseña nueva</label>' +
@@ -5920,7 +5920,7 @@ function abrirModalMiUsuario_() {
     const inputRepetir = document.getElementById('mi-usuario-password-repetir');
 
     if (!inputActual.value) { mostrarToast('Escribe tu contraseña actual', true); inputActual.focus(); return; }
-    if (!inputNueva.value || inputNueva.value.length < 4) { mostrarToast('La contraseña nueva debe tener al menos 4 caracteres', true); inputNueva.focus(); return; }
+    if (!inputNueva.value || inputNueva.value.length < 3) { mostrarToast('La contraseña nueva debe tener al menos 3 caracteres', true); inputNueva.focus(); return; }
     if (inputRepetir.value !== inputNueva.value) { mostrarToast('Las dos contraseñas nuevas no coinciden', true); inputRepetir.focus(); return; }
 
     const btn = document.getElementById('modal-confirm-btn');
