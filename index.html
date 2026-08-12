@@ -2427,7 +2427,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.7.1';
+const APP_VERSION_ACTUAL = '1.7.2';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3553,6 +3553,7 @@ function formatearFechaCorta_(fecha) {
 
 function renderAdminFestivos() {
   if (!FESTIVOS_ESTADO.semanaInicio) FESTIVOS_ESTADO.semanaInicio = lunesDeSemana_(hoyStr());
+  FESTIVOS_ESTADO.filtroTexto = '';
 
   const cont = document.getElementById('admin-contenido');
   if (!cont) return;
@@ -3974,6 +3975,9 @@ function eliminarObservacionDesdeFestivos_(id, tipo) {
  * administrador de la app).
  */
 let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
+/** Nº de tiendas configuradas por agrupación (clave de ruta), calculado a
+ *  partir de Config_Tiendas cada vez que se carga "Email agencias". */
+let TIENDAS_POR_AGRUPACION_CONFIG_ = {};
 
 // Calcula el alto disponible en pantalla para una lista con scroll propio
 // dentro de Configuración o Administración (para que sea ELLA la que se
@@ -4007,6 +4011,7 @@ function renderConfigEmails() {
   EMAILS_CONFIG_ESTADO.soloSinUso = false;
   EMAILS_CONFIG_ESTADO.soloNueva = false;
   EMAILS_CONFIG_ESTADO.soloSinEmail = false;
+  EMAILS_CONFIG_ESTADO.filtroTexto = '';
 
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -4014,6 +4019,12 @@ function renderConfigEmails() {
         '<div class="vista-card-header">' +
           '<h2>Email agencias <span class="tiendas-config-total" id="emails-config-total"></span><span class="tiendas-config-total nueva-toggle" id="emails-config-nueva" title="Mostrar solo las agrupaciones nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="emails-config-sinuso" title="Mostrar solo las agrupaciones sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="emails-config-sinemail" title="Mostrar solo las agrupaciones sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-pdf-emails" title="Exporta la lista visible (respeta el buscador y los filtros) a PDF">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+              'PDF</button>' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-excel-emails" title="Exporta la lista visible (respeta el buscador y los filtros) a Excel (CSV)">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+              'Excel</button>' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-agrupaciones" title="Vuelve a recorrer todas las hojas de día y añade las agrupaciones nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
               'Buscar y sincronizar cambios de agrupaciónes</button>' +
@@ -4035,6 +4046,8 @@ function renderConfigEmails() {
     '</div>';
 
   document.getElementById('btn-sincronizar-agrupaciones').onclick = sincronizarAgrupacionesDesdeApp_;
+  document.getElementById('btn-exportar-pdf-emails').onclick = exportarAgrupacionesConfigPDF_;
+  document.getElementById('btn-exportar-excel-emails').onclick = exportarAgrupacionesConfigExcel_;
 
   let temporizadorBusquedaEmails = null;
   document.getElementById('emails-config-buscar').addEventListener('input', function (e) {
@@ -4117,12 +4130,92 @@ function actualizarTotalEmailsConfig_() {
   };
 }
 
+/** Exporta a PDF la lista de agrupaciones visible en ese momento (respeta
+ *  el buscador y los badges "sin uso" / "nueva" / "sin email" activos), con
+ *  columnas Agrupación, Emails Definitivo, Emails Previsión, Días y Nota. */
+function exportarAgrupacionesConfigPDF_() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarErrorServidor({ message: 'No se pudo cargar el generador de PDF.' });
+    return;
+  }
+  const jsPDF = window.jspdf.jsPDF;
+  const items = obtenerAgrupacionesConfigFiltradas_();
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
+  doc.setFontSize(13);
+  doc.text('Email agencias', 14, 14);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(items.length + ' agrupación' + (items.length === 1 ? '' : 'es') + ' — ' + hoyStr(), 14, 20);
+  doc.setTextColor(0);
+
+  doc.autoTable({
+    startY: 25,
+    head: [['Agrupación', 'Emails Definitivo', 'Emails Previsión', 'Días', 'Nota']],
+    body: items.map(function (it) {
+      return [
+        it.agrupacion || '',
+        (it.emails || []).join(', '),
+        (it.emailsPrevision || []).join(', '),
+        (it.dias || []).join(', '),
+        it.notas || ''
+      ];
+    }),
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: { fillColor: [30, 41, 59] },
+    columnStyles: {
+      0: { cellWidth: 45 },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 60 },
+      3: { cellWidth: 45 },
+      4: { cellWidth: 'auto' }
+    }
+  });
+
+  doc.save('agrupaciones_' + hoyStr() + '.pdf');
+}
+
+/** Exporta a Excel (CSV con BOM y ; como separador) la misma lista visible
+ *  que la exportación a PDF, con las mismas columnas. */
+function exportarAgrupacionesConfigExcel_() {
+  const items = obtenerAgrupacionesConfigFiltradas_();
+  const filas = [['Agrupación', 'Emails Definitivo', 'Emails Previsión', 'Días', 'Nota']].concat(items.map(function (it) {
+    return [
+      it.agrupacion || '',
+      (it.emails || []).join(', '),
+      (it.emailsPrevision || []).join(', '),
+      (it.dias || []).join(', '),
+      it.notas || ''
+    ];
+  }));
+
+  const csv = filas.map(function (fila) {
+    return fila.map(function (campo) {
+      return '"' + String(campo == null ? '' : campo).replace(/"/g, '""') + '"';
+    }).join(';');
+  }).join('\r\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'agrupaciones_' + hoyStr() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
 function cargarAgrupacionesConfig_() {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
-  llamarApi_('getAgrupacionesConfig', [])
-    .then(function (datos) {
+  Promise.all([
+    llamarApi_('getAgrupacionesConfig', []),
+    llamarApi_('getTiendasConfig', [])
+  ])
+    .then(function (resultados) {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
-      EMAILS_CONFIG_ESTADO.datos = datos || [];
+      EMAILS_CONFIG_ESTADO.datos = resultados[0] || [];
+      TIENDAS_POR_AGRUPACION_CONFIG_ = calcularTiendasPorAgrupacion_(resultados[1] || []);
       pintarListaEmails_();
       actualizarTotalEmailsConfig_();
       ajustarAlturaListaScrollable_('emails-config-lista');
@@ -4134,12 +4227,27 @@ function cargarAgrupacionesConfig_() {
     });
 }
 
-function pintarListaEmails_() {
-  const listaEl = document.getElementById('emails-config-lista');
-  if (!listaEl) return;
+/** Cuenta, para cada agrupación (clave de ruta), cuántas tiendas tienen esa
+ *  agrupación entre las suyas (una tienda puede estar en varias agrupaciones
+ *  distintas según el día). Se usa en la tarjeta de "Email agencias" para
+ *  mostrar "Tiendas configuradas: X tiendas". */
+function calcularTiendasPorAgrupacion_(tiendas) {
+  const mapa = {};
+  (tiendas || []).forEach(function (t) {
+    (t.agrupaciones || []).forEach(function (a) {
+      mapa[a] = (mapa[a] || 0) + 1;
+    });
+  });
+  return mapa;
+}
 
+/** Aplica el buscador y los badges (sin uso / nueva / sin email) activos en
+ *  EMAILS_CONFIG_ESTADO sobre EMAILS_CONFIG_ESTADO.datos. Centralizado
+ *  aquí para que la lista en pantalla y las exportaciones a PDF/Excel
+ *  muestren siempre exactamente lo mismo. */
+function obtenerAgrupacionesConfigFiltradas_() {
   const filtro = EMAILS_CONFIG_ESTADO.filtroTexto;
-  const items = EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
+  return EMAILS_CONFIG_ESTADO.datos.filter(function (it) {
     const sinEmail = (!it.emails || !it.emails.length) && (!it.emailsPrevision || !it.emailsPrevision.length);
     if (EMAILS_CONFIG_ESTADO.soloSinUso && !/^SIN USO/i.test(it.estado || '')) return false;
     if (EMAILS_CONFIG_ESTADO.soloNueva && !/^NUEVA/i.test(it.estado || '')) return false;
@@ -4148,6 +4256,13 @@ function pintarListaEmails_() {
     const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.emailsPrevision || []).join(' ') + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
   });
+}
+
+function pintarListaEmails_() {
+  const listaEl = document.getElementById('emails-config-lista');
+  if (!listaEl) return;
+
+  const items = obtenerAgrupacionesConfigFiltradas_();
 
   if (!items.length) {
     listaEl.innerHTML =
@@ -4174,15 +4289,33 @@ function pintarListaEmails_() {
       : (esSinUso ? '<span class="emails-config-badge sinuso">Sin uso</span>'
         : (esSinEmail ? '<span class="emails-config-badge sinemail">Sin email</span>' : ''));
     const idSeguro = 'ec' + idx;
+    const dias = it.dias || [];
+    const nTiendas = TIENDAS_POR_AGRUPACION_CONFIG_[it.agrupacion] || 0;
+    const filaDias =
+      '<div class="emails-config-fila-info">' +
+        '<div class="emails-config-fila-info-col">' +
+          '<div class="emails-config-dias-etiqueta">Aparece en la hoja del</div>' +
+          '<div class="emails-config-dias-conteo">' +
+            (dias.length ? dias.map(escapeHtml).join(', ') : '—') +
+          '</div>' +
+        '</div>' +
+        '<div class="emails-config-fila-info-col">' +
+          '<div class="emails-config-dias-etiqueta">Tiendas configuradas</div>' +
+          '<div class="emails-config-dias-conteo">' +
+            nTiendas + (nTiendas === 1 ? ' tienda' : ' tiendas') +
+          '</div>' +
+        '</div>' +
+      '</div>';
     return (
       '<div class="' + clase + '">' +
         '<div class="emails-config-cabecera">' +
           '<span class="emails-config-nombre">' + escapeHtml(it.agrupacion) + '</span>' +
           badge +
-          '<button type="button" class="emails-config-borrar" title="Eliminar de la configuración" data-borrar="' + escapeAttr(it.agrupacion) + '">' +
+          '<button type="button" class="emails-config-borrar" title="' + (dias.length ? 'No se puede eliminar: todavía aparece en alguna hoja de día' : 'Eliminar de la configuración') + '" data-borrar="' + escapeAttr(it.agrupacion) + '" ' + (dias.length ? 'disabled' : '') + '>' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
           '</button>' +
         '</div>' +
+        filaDias +
         '<div class="emails-config-campos">' +
           '<div class="emails-config-campo">' +
             '<label>Emails Definitivo (separados por comas)</label>' +
@@ -4687,6 +4820,7 @@ function renderConfigTiendas() {
   TIENDAS_CONFIG_ESTADO.soloSinUso = false;
   TIENDAS_CONFIG_ESTADO.soloNueva = false;
   TIENDAS_CONFIG_ESTADO.soloSinEmail = false;
+  TIENDAS_CONFIG_ESTADO.filtroTexto = '';
 
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -4694,6 +4828,12 @@ function renderConfigTiendas() {
         '<div class="vista-card-header">' +
           '<h2>Configuración tiendas <span class="tiendas-config-total" id="tiendas-config-total"></span><span class="tiendas-config-total nueva-toggle" id="tiendas-config-nueva" title="Mostrar solo las tiendas nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="tiendas-config-sinuso" title="Mostrar solo las tiendas sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="tiendas-config-sinemail" title="Mostrar solo las tiendas sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-pdf-tiendas" title="Exporta la lista visible (respeta el buscador y los filtros) a PDF">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+              'PDF</button>' +
+            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-excel-tiendas" title="Exporta la lista visible (respeta el buscador y los filtros) a Excel (CSV)">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
+              'Excel</button>' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-duplicados-tiendas" title="Compara los nombres de todas las tiendas para detectar la misma tienda escrita de forma distinta algún día">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
               'Buscar posibles duplicados</button>' +
@@ -4720,6 +4860,8 @@ function renderConfigTiendas() {
 
   document.getElementById('btn-sincronizar-tiendas').onclick = sincronizarTiendasDesdeApp_;
   document.getElementById('btn-duplicados-tiendas').onclick = buscarDuplicadosTiendas_;
+  document.getElementById('btn-exportar-pdf-tiendas').onclick = exportarTiendasConfigPDF_;
+  document.getElementById('btn-exportar-excel-tiendas').onclick = exportarTiendasConfigExcel_;
 
   let temporizadorBusquedaTiendas = null;
   document.getElementById('tiendas-config-buscar').addEventListener('input', function (e) {
@@ -4803,6 +4945,71 @@ function actualizarTotalTiendasConfig_() {
   };
 }
 
+/** Exporta a PDF la lista de tiendas visible en ese momento (respeta el
+ *  buscador y los badges "sin uso" / "nueva" / "sin email" activos), con
+ *  columnas Tienda, Email, Tránsito y Nota. Usa jsPDF + autoTable, ya
+ *  cargados por CDN en el <head> para los PDFs de conteo. */
+function exportarTiendasConfigPDF_() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    mostrarErrorServidor({ message: 'No se pudo cargar el generador de PDF.' });
+    return;
+  }
+  const jsPDF = window.jspdf.jsPDF;
+  const items = obtenerTiendasConfigFiltradas_();
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'p' });
+  doc.setFontSize(13);
+  doc.text('Configuración tiendas', 14, 14);
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(items.length + ' tienda' + (items.length === 1 ? '' : 's') + ' — ' + hoyStr(), 14, 20);
+  doc.setTextColor(0);
+
+  doc.autoTable({
+    startY: 25,
+    head: [['Tienda', 'Email', 'Tránsito', 'Nota']],
+    body: items.map(function (it) {
+      return [it.tienda || '', it.email || '', transitoTextoTienda_(it.transito), it.notas || ''];
+    }),
+    styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+    headStyles: { fillColor: [30, 41, 59] },
+    columnStyles: {
+      0: { cellWidth: 45 },
+      1: { cellWidth: 55 },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 'auto' }
+    }
+  });
+
+  doc.save('tiendas_' + hoyStr() + '.pdf');
+}
+
+/** Exporta a Excel (CSV con BOM y ; como separador, para que Excel en
+ *  español lo abra bien de un doble clic) la misma lista visible que la
+ *  exportación a PDF, con las mismas columnas. */
+function exportarTiendasConfigExcel_() {
+  const items = obtenerTiendasConfigFiltradas_();
+  const filas = [['Tienda', 'Email', 'Tránsito', 'Nota']].concat(items.map(function (it) {
+    return [it.tienda || '', it.email || '', transitoTextoTienda_(it.transito), it.notas || ''];
+  }));
+
+  const csv = filas.map(function (fila) {
+    return fila.map(function (campo) {
+      return '"' + String(campo == null ? '' : campo).replace(/"/g, '""') + '"';
+    }).join(';');
+  }).join('\r\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tiendas_' + hoyStr() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
 function cargarTiendasConfig_() {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'tiendas') return;
   llamarApi_('getTiendasConfig', [])
@@ -4820,12 +5027,13 @@ function cargarTiendasConfig_() {
     });
 }
 
-function pintarListaTiendas_() {
-  const listaEl = document.getElementById('tiendas-config-lista');
-  if (!listaEl) return;
-
+/** Aplica el buscador y los badges (sin uso / nueva / sin email) activos en
+ *  TIENDAS_CONFIG_ESTADO sobre TIENDAS_CONFIG_ESTADO.datos. Centralizado
+ *  aquí para que la lista en pantalla y las exportaciones a PDF/Excel
+ *  muestren siempre exactamente lo mismo. */
+function obtenerTiendasConfigFiltradas_() {
   const filtro = TIENDAS_CONFIG_ESTADO.filtroTexto;
-  const items = TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
+  return TIENDAS_CONFIG_ESTADO.datos.filter(function (it) {
     if (TIENDAS_CONFIG_ESTADO.soloSinUso && !/^SIN USO/i.test(it.estado || '')) return false;
     if (TIENDAS_CONFIG_ESTADO.soloNueva && !/^NUEVA/i.test(it.estado || '')) return false;
     if (TIENDAS_CONFIG_ESTADO.soloSinEmail && (it.email && it.email.trim())) return false;
@@ -4833,6 +5041,20 @@ function pintarListaTiendas_() {
     const texto = (it.tienda + ' ' + it.email + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
   });
+}
+
+/** Texto legible ("48h (2d)") para el valor numérico (1-5) de tránsito,
+ *  reutilizando las mismas etiquetas que el desplegable de la lista. */
+function transitoTextoTienda_(valor) {
+  const op = TRANSITO_OPCIONES.filter(function (o) { return o.valor === Number(valor || 1); })[0];
+  return op ? op.texto : TRANSITO_OPCIONES[0].texto;
+}
+
+function pintarListaTiendas_() {
+  const listaEl = document.getElementById('tiendas-config-lista');
+  if (!listaEl) return;
+
+  const items = obtenerTiendasConfigFiltradas_();
 
   if (!items.length) {
     listaEl.innerHTML =
@@ -5217,6 +5439,7 @@ function renderAdminPaletsForzados() {
   // incidencias recientes sin cargar todo el histórico de golpe.
   if (!ADMIN_PALETS_ESTADO.fechaIni) ADMIN_PALETS_ESTADO.fechaIni = fechaHaceDiasJs_(30);
   if (!ADMIN_PALETS_ESTADO.fechaFin) ADMIN_PALETS_ESTADO.fechaFin = hoyStr();
+  ADMIN_PALETS_ESTADO.filtroTexto = '';
 
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -5571,6 +5794,8 @@ function leerPermisosMarcados_(custom) {
 function renderAdminUsuarios() {
   const cont = document.getElementById('admin-contenido');
   if (!cont) return;
+
+  ADMIN_USUARIOS_ESTADO.filtroTexto = '';
 
   cont.innerHTML =
     '<div class="vista-card">' +
