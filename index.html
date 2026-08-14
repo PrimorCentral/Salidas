@@ -928,6 +928,13 @@
   .plantilla-ruta-cexpress:hover { background: #eef1f7; }
   .plantilla-ruta-cexpress.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
   .plantilla-ruta-cexpress.activo:hover { filter: brightness(1.08); }
+  .plantilla-ruta-sobrestock {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-ruta-sobrestock:hover { background: #eef1f7; }
+  .plantilla-ruta-sobrestock.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-sobrestock.activo:hover { filter: brightness(1.08); }
   .plantilla-ruta-pdfespecial {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
@@ -2427,7 +2434,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.7.2';
+const APP_VERSION_ACTUAL = '1.7.3';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2698,6 +2705,8 @@ const METODOS_REMOTOS_ = {
   desactivarPdfEspecial: 'desactivarPdfEspecial',
   activarCExpressRuta: 'activarCExpressRuta',
   desactivarCExpressRuta: 'desactivarCExpressRuta',
+  activarSobrestockRuta: 'activarSobrestockRuta',
+  desactivarSobrestockRuta: 'desactivarSobrestockRuta',
   bloquearCampoTiendaPlantilla: 'bloquearCampoTiendaPlantilla',
   desbloquearCampoTiendaPlantilla: 'desbloquearCampoTiendaPlantilla',
   getTiendasConfig: 'getTiendasConfig',
@@ -2912,7 +2921,7 @@ const SUPABASE_ACCIONES_ = {
     const tienda = args[0], dia = args[1];
     return llamarRpcSupabase_('desactivar_dia_entrega_tienda', { p_tienda: tienda, p_dia: dia });
   },
-  // -- Supabase: Rutas y tiendas — casillas opcionales (PESO / C.EXPRESS / PDF ESPECIAL) --
+  // -- Supabase: Rutas y tiendas — casillas opcionales (PESO / C.EXPRESS / SOBRESTOCK / PDF ESPECIAL) --
   // Las 3 casillas comparten exactamente el mismo patrón en el backend
   // (activar_x_ruta / desactivar_x_ruta, con p_dia + p_nombre_ruta): solo
   // se pedía migrar C.EXPRESS y PDF ESPECIAL, pero PESO usaba el mismo
@@ -2934,6 +2943,14 @@ const SUPABASE_ACCIONES_ = {
   desactivarCExpressRuta: function (args) {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('desactivar_cexpress_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  activarSobrestockRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_sobrestock_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarSobrestockRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_sobrestock_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
   },
   activarPdfEspecial: function (args) {
     const dia = args[0], nombreRuta = args[1];
@@ -6894,6 +6911,7 @@ function pintarPlantilla_() {
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
+            '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
@@ -7008,6 +7026,9 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-cexpress]').forEach(function (btn) {
     btn.onclick = function () { toggleCExpressRutaPlantilla_(btn.getAttribute('data-toggle-cexpress'), btn.getAttribute('data-cexpress-activo') === '1'); };
   });
+  listaEl.querySelectorAll('[data-toggle-sobrestock]').forEach(function (btn) {
+    btn.onclick = function () { toggleSobrestockRutaPlantilla_(btn.getAttribute('data-toggle-sobrestock'), btn.getAttribute('data-sobrestock-activo') === '1'); };
+  });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
   });
@@ -7062,6 +7083,28 @@ function toggleCExpressRutaPlantilla_(nombreRuta, activoActualmente) {
     return;
   }
   guardarPlantillaOptimista_(mutar, 'activarCExpressRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla C.EXPRESS activada');
+}
+
+/** Activa/desactiva la casilla SOBRESTOCK de una ruta desde "Rutas y
+ *  tiendas". Igual que C.EXPRESS: al desactivarla se pide confirmación
+ *  porque borra los valores ya guardados en esa ruta (ver
+ *  desactivarSobrestockRuta en el backend), y SOBRESTOCK también se suma
+ *  al TOTAL de cada tienda (ver recalcTotal en attachCalculoYValidacion). */
+function toggleSobrestockRutaPlantilla_(nombreRuta, activoActualmente) {
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tieneSobrestock = !activoActualmente;
+  };
+  if (activoActualmente) {
+    appConfirm(
+      'Quitar la casilla SOBRESTOCK',
+      '¿Seguro que quieres quitar la casilla SOBRESTOCK de "' + nombreRuta + '"? Se borrarán los valores de SOBRESTOCK ya guardados en esta ruta.',
+      function () { guardarPlantillaOptimista_(mutar, 'desactivarSobrestockRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla SOBRESTOCK desactivada'); },
+      true
+    );
+    return;
+  }
+  guardarPlantillaOptimista_(mutar, 'activarSobrestockRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla SOBRESTOCK activada');
 }
 
 /** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".
@@ -8365,14 +8408,15 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress) : '';
-    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
     '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th>' +
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
     (seccion.tieneCExpress ? '<th>C.EXPRESS</th>' : '') +
+    (seccion.tieneSobrestock ? '<th>SOBRESTOCK</th>' : '') +
     '<th></th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
   if (!editable) {
@@ -8866,7 +8910,7 @@ const PDF_ANCHO_MM_ = 297; // ancho fijo tipo A4 apaisado
 const PDF_ALTO_A4_MM_ = 210; // alto estándar de un A4 apaisado
 
 /** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
- *  sin guardar) las filas [tienda, límite, 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS)]. */
+ *  sin guardar) las filas [tienda, límite, 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBRESTOCK)]. */
 function leerFilasPdfSeccion_(tableWrap, seccion) {
   const filas = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
@@ -8880,7 +8924,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         'CERRADA', '', '', '', ''
-      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
+      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
       return;
     }
 
@@ -8891,7 +8935,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : '',
         motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', '', '', ''
-      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []));
+      ].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
       return;
     }
 
@@ -8908,7 +8952,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       valorCampo('cart'),
       valorCampo('total'),
       valorCampo('pdte')
-    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []));
+    ].concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneSobrestock ? [valorCampo('sobrestock')] : []));
   });
   return filas;
 }
@@ -8970,13 +9014,14 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   }, 0);
   const filaTotal = ['TOTAL GENERAL', '', '', '', '', String(totalGeneral), '']
     .concat(seccion.tienePeso ? [''] : [])
-    .concat(seccion.tieneCExpress ? [''] : []);
+    .concat(seccion.tieneCExpress ? [''] : [])
+    .concat(seccion.tieneSobrestock ? [''] : []);
   const filasConTotal = filas.concat([filaTotal]);
   const indiceFilaTotal = filasConTotal.length - 1;
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])],
+    head: [['Tienda', 'Límite', '60', 'PTA', 'CART.', 'TOTAL', 'PDTE'].concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBRESTOCK'] : [])],
     body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
@@ -9301,13 +9346,13 @@ function badgePrevision(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
-function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress) {
+function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress, tieneSobrestock) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   const textoIzquierda = esTotal ? t.nota : tiendas;
   const chipInicial = esTotal ? '0 palets' : t.nota;
   return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
-    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '">' +
+    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +
@@ -9368,7 +9413,7 @@ function celdaConteoHtml(campo, valor, forzado) {
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress) {
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock) {
   const nombreLimpio = quitarMarcadorNombre(t.nombre);
   const badge = badgeTransitoTienda(t.transito);
   const badgeHtml = badge
@@ -9387,7 +9432,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
-      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
@@ -9400,7 +9445,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + t.limite + '</td>' +
-      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
+      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
       '<td></td>' +
       '</tr>';
   }
@@ -9423,6 +9468,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
     (tienePeso ? '<td><input class="celda" data-campo="peso" type="number" step="0.01" value="' + (t.peso == null ? '' : t.peso) + '"></td>' : '') +
     (tieneCExpress ? '<td><input class="celda" data-campo="cexpress" type="number" step="0.01" value="' + (t.cexpress == null ? '' : t.cexpress) + '"></td>' : '') +
+    (tieneSobrestock ? '<td><input class="celda" data-campo="sobrestock" type="number" step="0.01" value="' + (t.sobrestock == null ? '' : t.sobrestock) + '"></td>' : '') +
     '<td><button type="button" class="btn-cerrar-tienda" title="Marcar tienda como cerrada">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
     '</tr>';
@@ -9439,6 +9485,7 @@ function attachCalculoYValidacion(tr) {
   const ptaInput = tr.querySelector('input[data-campo="pta"]');
   const cartInput = tr.querySelector('input[data-campo="cart"]');
   const cexpressInput = tr.querySelector('input[data-campo="cexpress"]');
+  const sobrestockInput = tr.querySelector('input[data-campo="sobrestock"]');
   const totalInput = tr.querySelector('input[data-campo="total"]');
   const pdteInput = tr.querySelector('input[data-campo="pdte"]');
   const totalVisualInput = tr.querySelector('input[data-campo="totalVisual"]');
@@ -9461,14 +9508,15 @@ function attachCalculoYValidacion(tr) {
   }
 
   function recalcTotal() {
-    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '')) {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && (!sobrestockInput || sobrestockInput.value === '')) {
       totalInput.value = '';
     } else {
       const m = parseFloat(c60Input.value) || 0;
       const p = parseFloat(ptaInput.value) || 0;
       const c = parseFloat(cartInput.value) || 0;
       const ce = cexpressInput ? (parseFloat(cexpressInput.value) || 0) : 0;
-      totalInput.value = m + p + c + ce;
+      const so = sobrestockInput ? (parseFloat(sobrestockInput.value) || 0) : 0;
+      totalInput.value = m + p + c + ce + so;
     }
     validar();
     recalcTotalVisual();
@@ -9498,6 +9546,7 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
+  if (sobrestockInput) sobrestockInput.addEventListener('input', recalcTotal);
   if (pdteInput) pdteInput.addEventListener('input', recalcTotalVisual);
   validar();
   recalcTotalVisual();
@@ -9645,6 +9694,10 @@ function recogerFilas(tableWrap) {
     // (ver seccion.tieneCExpress).
     const cexpress = get('cexpress');
     if (cexpress !== undefined) fila.cexpress = cexpress;
+    // Igual que "peso" y "cexpress", "sobrestock" solo existe si la ruta lo
+    // tiene activado (ver seccion.tieneSobrestock).
+    const sobrestock = get('sobrestock');
+    if (sobrestock !== undefined) fila.sobrestock = sobrestock;
     filas.push(fila);
   });
   return filas;
