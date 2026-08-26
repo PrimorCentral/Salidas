@@ -131,6 +131,21 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px;
     pointer-events: none;
   }
+  /* La fecha del centro se centra con position:absolute respecto a TODA
+     la barra superior -- en pantallas anchas hay hueco de sobra entre el
+     menú (izquierda) y el reloj/usuario (derecha) y no se nota, pero en
+     ventanas más estrechas (portátiles, ventana no maximizada) ese
+     centro absoluto puede caer encima de los botones del menú. Por
+     debajo de este ancho, se saca del position:absolute y pasa a ocupar
+     su sitio normal en la fila (con margin:auto para seguir quedando
+     centrada en el hueco libre), así nunca puede superponerse. */
+  @media (max-width: 1300px) {
+    header.topbar { flex-wrap: wrap; row-gap: 6px; }
+    header.topbar .topbar-fecha-wrap {
+      position: static; transform: none; left: auto; top: auto;
+      margin: 0 auto; max-width: none;
+    }
+  }
   .btn-imprimir-dia {
     background: rgba(255,255,255,.12); border: none; color: #fff; border-radius: 50%;
     width: 30px; height: 30px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
@@ -853,12 +868,20 @@
     display: flex; align-items: center; gap: 6px; padding: 9px 10px; background: #f7f8fa;
     border-bottom: 1px solid var(--line);
   }
-  .plantilla-ruta-header input {
-    flex: 1 1 auto; min-width: 0; border: 1px solid transparent; background: none; font-weight: 800;
-    color: var(--navy); font-size: 13.5px; border-radius: 6px; padding: 5px 7px;
+  .plantilla-ruta-nombre-texto {
+    font-weight: 800; color: var(--navy); font-size: 13.5px; padding: 5px 7px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
-  .plantilla-ruta-header input:focus { border-color: var(--navy-soft); background: #fff; outline: none; }
-  .plantilla-ruta-header input:disabled { color: var(--ink); }
+  /* Lápiz "Editar ruta" (nombre, ubicación y hora de carga), justo al
+     lado del nombre de la agrupación. */
+  .plantilla-ruta-editar {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-ruta-editar:hover { background: #eef1f7; color: var(--navy); }
+  /* Ocupa el hueco entre el contador "X tiendas" (que ahora va pegado al
+     nombre) y el resto de botones de la cabecera, para que estos últimos
+     sigan quedando alineados a la derecha como siempre. */
+  .plantilla-ruta-spacer { flex: 1 1 auto; }
   .plantilla-ruta-borrar, .plantilla-tienda-borrar {
     background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
   }
@@ -868,23 +891,26 @@
   }
   .plantilla-tienda-guardar:hover { color: var(--navy); background: #eef1f7; }
   .plantilla-tienda-guardar:disabled { opacity: .3; cursor: default; background: none !important; color: var(--ink-soft) !important; }
-  .plantilla-tienda.dirty { background: #fdf6ea; }
-  .plantilla-tienda.dirty input.lim, .plantilla-tienda.dirty input.nombre { border-color: var(--amber); background: #fff; }
-  .plantilla-tienda.dirty .plantilla-tienda-guardar:not(:disabled) { color: var(--amber-dark); }
-  .plantilla-ruta-header.dirty { background: #fdf6ea; }
-  .plantilla-ruta-header.dirty input { border-color: var(--amber); background: #fff; }
-  .plantilla-ruta-header.dirty .plantilla-tienda-guardar:not(:disabled) { color: var(--amber-dark); }
   .plantilla-tiendas { display: flex; flex-direction: column; }
   .plantilla-tienda {
     display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--line);
   }
   .plantilla-tienda:first-child { border-top: none; }
-  .plantilla-tienda input.lim {
+  /* Límite, número y nombre ahora son de solo lectura en la fila (se
+     editan desde el modal que abre el lápiz) -- se mantienen con el
+     mismo aspecto de "chip" de antes para no perder la referencia visual
+     rápida, pero sin aspecto de campo editable. */
+  .plantilla-tienda .lim {
     width: 40px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
-    padding: 5px 4px; font-size: 12.5px;
+    padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
-  .plantilla-tienda input.nombre {
-    flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 12.5px;
+  .plantilla-tienda .numero {
+    width: 46px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
+  }
+  .plantilla-tienda .nombre {
+    flex: 1 1 auto; min-width: 0; padding: 5px 8px; font-size: 12.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .plantilla-tienda-flechas { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
   .plantilla-tienda-flechas button {
@@ -996,6 +1022,11 @@
   .modal-campo input:focus { border-color: var(--navy-soft); outline: none; }
   .modal-campo input[readonly] { background: #f3f5f8; color: var(--ink-soft); cursor: default; }
   .modal-campo input[readonly]:focus { border-color: #d8dde4; box-shadow: none; }
+  .modal-campo select {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 13.5px;
+    box-sizing: border-box; color: var(--ink); background: #fff;
+  }
+  .modal-campo select:focus { border-color: var(--navy-soft); outline: none; }
   .mi-usuario-separador { border: none; border-top: 1px solid #e6e9ee; margin: 18px 0; }
   .mi-usuario-permisos-vacio { font-size: 13px; color: var(--ink-soft); }
   .modal-dia-aviso {
@@ -1010,6 +1041,18 @@
   .plantilla-tienda-nota:hover:not(:disabled) { background: #eef1f7; color: var(--navy); }
   .plantilla-tienda-nota:disabled { opacity: .35; cursor: default; }
   .plantilla-tienda-nota.con-dato { color: var(--amber-dark); }
+  /* Botón "Mover a otra agrupación" en cada fila de tienda de "Rutas y
+     tiendas" (mismo aspecto que el resto de botones-icono de la fila). */
+  .plantilla-tienda-mover {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-tienda-mover:hover { background: #eef1f7; color: var(--navy); }
+  /* Botón de lápiz "Editar tienda" (límite, número y nombre), justo al
+     lado del de eliminar. */
+  .plantilla-tienda-editar {
+    background: none; border: none; color: var(--ink-soft); border-radius: 6px; padding: 6px; flex-shrink: 0;
+  }
+  .plantilla-tienda-editar:hover { background: #eef1f7; color: var(--navy); }
   .plantilla-notascarga {
     padding: 6px 10px; border-top: 1px dashed var(--line); border-bottom: 1px solid var(--line); background: #fbfbfc;
   }
@@ -2202,97 +2245,153 @@
   }
 
   /* ---------- IMPRESIÓN DEL CONTEO DEL DÍA ----------
-   * Objetivo: al imprimir (o "Guardar como PDF") desde la vista de Conteos
-   * Diarios, solo debe salir el contenido del día (cada agrupación con su
-   * tabla), nunca partido a mitad de una agrupación entre dos páginas.
-   * Todo lo demás (calendario, accesos rápidos, observaciones, cabecera de
-   * navegación, botones de acción) se oculta para la impresión. */
-  .print-fecha-titulo { display: none; }
+   * Ya NO se imprime el contenido de la pantalla (tarjetas, colores,
+   * botones…): al pulsar imprimir se construye aparte, desde cero, una
+   * hoja de cuadrícula pensada para rellenar a mano en papel (ver
+   * construirHojaImpresionDia_() e imprimirConteoDia_()), que es lo único
+   * visible mientras se imprime. En pantalla normal este contenedor no se
+   * ve nunca. */
+  #hoja-impresion-manual { display: none; }
   @media print {
     @page { size: A4 portrait; margin: 9mm; }
-
-    body * { visibility: hidden; }
-    #dia-contenido, #dia-contenido * { visibility: visible; }
-
-    header.topbar, .col-calendario, .col-resumen,
-    #modal-overlay, #toast { display: none !important; }
-
-    /* #app es un contenedor flex con min-height:100vh y <main> tiene
-       flex:1: eso hace que en pantalla "main" se estire para ocupar toda la
-       ventana. Al paginar para imprimir, Chrome reserva esa altura
-       estirada como si fuera contenido real de la página 1 (aunque esté
-       vacía) y manda el primer bloque entero a la página 2, dejando una
-       hoja casi en blanco. Se anula el estirado solo en impresión para que
-       la altura de cada página la marque el contenido real. */
-    #app { display: block !important; min-height: 0 !important; }
-    main { flex: none !important; min-height: 0 !important; }
-
-    #main, .layout-grid, .col-contenido { display: block !important; margin: 0 !important; padding: 0 !important; }
-    .col-contenido > * { max-width: none !important; }
-    #dia-contenido { position: static !important; }
-
-    .print-fecha-titulo {
-      display: block !important; visibility: visible !important;
-      font-size: 20px; font-weight: 800; text-transform: capitalize;
-      margin: 0 0 14px; padding: 0;
+    /* El fondo gris de la app (var(--bg), puesto en <body>) se ve por
+       detrás de ".hi-pagina" en el hueco vacío que deja al final de cada
+       hoja (ocupa los 279mm completos para poder anclar el pie abajo, ver
+       .hi-pagina más adelante) -- y si el navegador tiene activado
+       "imprimir gráficos de fondo" ese gris sale también en el papel. Se
+       fuerza blanco aquí para que ese hueco quede siempre en blanco,
+       tanto si el usuario tiene esa opción activada como si no. */
+    html, body, #hoja-impresion-manual {
+      background: #fff !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    /* OJO: visibility:hidden NO quita el espacio que ocupa un elemento en
+       la página, solo lo hace invisible -- así que el resto de la app
+       (calendario, todas las agrupaciones de la pantalla, etc.) seguía
+       "contando" para la paginación aunque no se viera, y salían
+       decenas de páginas en blanco. Con display:none sí se quita del
+       todo del flujo, así el alto de la página lo marca solo el
+       contenido real de la hoja de impresión. */
+    #app, #modal-overlay, #toast { display: none !important; }
+    #hoja-impresion-manual {
+      display: block !important; position: static !important;
+      color: #000; font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Cada agrupación entera (cabecera + notas + tabla) no debe partirse
-       entre páginas; si no cabe entera en lo que queda de página, salta a
-       la siguiente. Se aplica también a la tabla y sus filas por separado
-       porque una <table> puede fragmentarse por su cuenta (repitiendo la
-       fila de cabecera en la página siguiente) aunque el contenedor que la
-       envuelve tenga break-inside:avoid. */
-    .seccion-panel, .seccion-body, .seccion-acciones, .table-wrap,
-    table.conteo, table.conteo tbody, table.conteo tr {
-      break-inside: avoid; page-break-inside: avoid;
+    .hi-cabecera {
+      border: 1px solid #000; padding: 5px 10px; margin-bottom: 8px;
+      display: flex; justify-content: center; gap: 6px; font-size: 12.5px;
     }
-    .seccion-panel {
-      box-shadow: none !important; margin-bottom: 12px !important;
-    }
-    .seccion-panel.colapsada .seccion-body,
-    .seccion-panel.colapsada .seccion-notas,
-    .seccion-panel.colapsada .seccion-notas-carga { display: block !important; }
-
-    /* Botones y controles de edición: no tienen sentido en papel. */
-    .btn-header-guardar, .btn-header-prevision, .btn-header-definitivo,
-    .btn-add-nota, .btn-pdf-seccion, .btn-pdf-especial-seccion,
-    .btn-toggle-colapsar, .btn-deshacer-envio, .btn-cerrar-tienda, .btn-reabrir,
-    table.conteo th:last-child, table.conteo td:last-child { display: none !important; }
-
-    table.conteo input.celda, table.conteo input.celda-total,
-    table.conteo input.celda-total-visual, table.conteo input.celda-no {
-      border: none !important; background: transparent !important; color: #000 !important;
+    .hi-cabecera b { font-weight: 800; }
+    .hi-aviso {
+      text-align: center; font-weight: 800; font-size: 11px; text-transform: uppercase;
+      margin: 0 0 12px; line-height: 1.5;
     }
 
-    .aviso-datos-antiguos { display: none !important; }
+    /* Paginación manual (ver paginarYMontarHojaImpresion_ en el JS): cada
+       ".hi-pagina" ocupa el alto útil completo de una hoja A4 (297mm menos
+       los 2x9mm de margen de @page = 279mm), así el pie de cada una queda
+       pegado a su borde inferior real (flex + justify-content:space-between)
+       sin necesidad de position:fixed -- que solo repite lo mismo en cada
+       hoja, pero no permite saber ni mostrar "página N de X", porque el
+       navegador nunca expone cuántas páginas va a imprimir en total. Aquí
+       en cambio se calcula de antemano midiendo alturas reales, por eso el
+       número total sí puede ser correcto. */
+    .hi-pagina {
+      display: flex; flex-direction: column; justify-content: space-between;
+      min-height: 279mm; background: #fff;
+    }
+    .hi-pagina-salto { page-break-after: always; break-after: page; }
+    .hi-pagina-contenido { flex: 0 0 auto; }
+    .hi-pie-pagina {
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: end;
+      column-gap: 10px; font-size: 9.5px; color: #000;
+      padding-top: 3px; border-top: 1px solid #000; margin-top: 10px;
+    }
+    .hi-pie-titulo { text-align: center; font-weight: 700; text-transform: uppercase; }
+    .hi-pie-num { text-align: right; font-weight: 600; white-space: nowrap; }
 
-    /* Tamaños compactos para que quepan más filas por página (algunas
-       agrupaciones tienen 20+ tiendas) sin que ninguna se corte entre
-       páginas, pero sin pasarse de pequeño: hay margen de sobra incluso
-       para la agrupación más grande, así que se aprovecha para que se lea
-       bien y se llene mejor la hoja. */
-    .seccion-header .badge-total-palets { display: none !important; }
-    .seccion-header { padding: 9px 12px !important; gap: 10px !important; row-gap: 4px !important; }
-    .seccion-header .icono-agrup { width: 30px !important; height: 30px !important; font-size: 12px !important; border-radius: 8px !important; }
-    .seccion-header .name { font-size: 15px !important; }
-    .seccion-header .count { font-size: 11.5px !important; }
-    .seccion-header .badge-ubicacion, .seccion-header .badge {
-      font-size: 11px !important; padding: 2px 8px !important;
+    /* Cada agrupación (cabecera + tabla + cajas laterales) no debe
+       partirse entre páginas; si no cabe entera en lo que queda de
+       página, salta entera a la siguiente. Todo el andamiaje de esta hoja
+       son <table> anidadas -- a propósito, en vez de flexbox: los
+       navegadores paginan de forma mucho más fiable tablas y bloques
+       normales que contenedores flex (con flex, break-inside:avoid no se
+       respeta de forma consistente al imprimir). */
+    .hi-grupo { break-inside: avoid; page-break-inside: avoid; margin-bottom: 14px; }
+    .hi-grupo-titulo {
+      background: var(--amber); border: 1px solid #000; border-bottom: none;
+      font-weight: 800; font-size: 14px; text-transform: uppercase; padding: 5px 10px;
+      text-align: center;
     }
-    .seccion-notas-carga, .seccion-notas { padding: 0 12px 7px !important; gap: 4px !important; }
-    .nota-carga-chip, .nota-chip { padding: 5px 9px !important; font-size: 11px !important; line-height: 1.25 !important; }
-    .orden-retirada { padding-top: 8px !important; margin-top: 4px !important; }
-    .orden-retirada-titulo { font-size: 9px !important; margin-bottom: 3px !important; }
-    .orden-retirada ol { font-size: 10.5px !important; line-height: 1.35 !important; padding-left: 15px !important; }
-    .seccion-acciones { padding: 10px !important; flex-basis: 120px !important; }
-    table.conteo { font-size: 12.5px !important; }
-    table.conteo thead th { padding: 6px 6px !important; }
-    table.conteo td { padding: 6px 6px !important; }
-    table.conteo td.nombre { font-size: 12.5px !important; }
-    table.conteo input.celda, table.conteo input.celda-total, table.conteo input.celda-total-visual {
-      padding: 5px 4px !important; font-size: 12.5px !important; min-height: 0 !important;
+    .hi-notas-carga {
+      border: 1px solid #000; border-top: none; border-bottom: none; padding: 4px 10px;
+      font-size: 10.5px; font-style: italic; text-align: center;
     }
+    .hi-notas-carga div + div { margin-top: 2px; }
+
+    /* Todo el bloque (tabla + TOTAL + "quitar en este orden") va dentro de
+       UN ÚNICO rectángulo exterior continuo: el borde lo dibuja esta
+       tabla contenedora (.hi-layout) en sus 4 lados; las columnas de
+       dentro (tabla / total / orden) solo llevan un borde izquierdo, a
+       modo de línea divisoria interior, nunca un borde propio por fuera
+       -- así no hay piezas sueltas ni bordes que se corten. */
+    .hi-layout {
+      width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed;
+      border: 1px solid #000; break-inside: avoid; page-break-inside: avoid;
+    }
+    .hi-layout > tbody > tr > td { vertical-align: top; padding: 0; }
+    .hi-tabla-cell { width: auto; }
+    .hi-total-cell { width: 80px; }
+    .hi-orden-cell { width: 130px; }
+
+    /* La tabla interior no dibuja su propio borde exterior (izquierda,
+       arriba, abajo) porque ya lo pone el rectángulo de fuera -- solo las
+       líneas internas de la cuadrícula (entre filas y columnas). */
+    .hi-tabla { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    .hi-tabla th, .hi-tabla td { border: 1px solid #000; padding: 3px 4px; text-align: center; }
+    .hi-tabla th { font-size: 9px; font-weight: 800; text-transform: uppercase; background: #f0f0f0; }
+    .hi-tabla thead tr:first-child th { border-top: none; }
+    .hi-tabla tr td:first-child, .hi-tabla tr th:first-child { border-left: none; }
+    .hi-tabla tbody tr:last-child td { border-bottom: none; }
+    .hi-tabla td.hi-lim { width: 26px; font-weight: 700; }
+    .hi-tabla td.hi-nombre { text-align: left; font-weight: 700; white-space: nowrap; }
+    .hi-tabla td.hi-blanco { height: 20px; } /* celda vacía para rellenar a mano */
+    .hi-tabla td.hi-no { font-weight: 800; line-height: 1; } /* "NO" de origen: se marca con X en vez de dejarla en blanco, sin agrandar la fila */
+
+    /* Fila de cabecera de una agrupación de rutas (p.ej. "INGENIO + INGENIO
+       2"): fondo más marcado, borde superior grueso para que se note dónde
+       empieza el bloque. */
+    .hi-tabla tr.hi-fila-grupo td {
+      background: #e3e6ea; text-align: left; font-style: italic; font-weight: 800;
+      font-size: 9.5px; text-transform: uppercase; border-top: 2px solid #000 !important;
+    }
+    /* Todas las filas de tiendas que pertenecen a esa agrupación (no solo la
+       cabecera) llevan el mismo fondo tenue, para que se vea de un vistazo
+       qué tiendas están dentro del bloque y cuáles no. */
+    .hi-tabla tr.hi-fila-grupo-miembro td { background: #f4f5f7; }
+    /* Última fila de la agrupación: borde inferior grueso que cierra el
+       bloque, dejando claro que las filas siguientes (sin este fondo) ya
+       son tiendas sueltas y no forman parte de esa ruta. */
+    .hi-tabla tr.hi-fila-grupo-fin td { border-bottom: 2px solid #000 !important; }
+
+    /* La celda del TOTAL ocupa toda la altura de la agrupación (para que
+       la línea divisoria llegue de arriba a abajo), pero el recuadro
+       donde se escribe el número va centrado en medio de ese espacio y
+       es más grande, no una cajita pequeña pegada arriba. */
+    .hi-total-cell { border-left: 1px solid #000; text-align: center; padding: 4px; vertical-align: middle; }
+    .hi-total-label { font-weight: 800; font-size: 10px; text-transform: uppercase; margin-bottom: 5px; }
+    .hi-total-box { border: 1px solid #000; height: 60px; width: 60px; margin: 0 auto; }
+
+    /* Va dentro del mismo rectángulo exterior que la tabla y el TOTAL
+       (border-left hace de línea divisoria), pero sin caja propia
+       alrededor del texto: solo texto libre. */
+    .hi-orden-cell { border-left: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+    .hi-orden-wrap { padding-left: 6px; }
+    .hi-orden-label { font-weight: 800; font-size: 8.5px; text-transform: uppercase; margin-bottom: 3px; text-align: center; }
+    .hi-orden-tabla { width: 100%; border-collapse: collapse; font-size: 9px; }
+    .hi-orden-tabla td { border: none; padding: 1px 0; }
+    .hi-orden-tabla td.hi-orden-num { width: 16px; font-weight: 700; }
   }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2389,6 +2488,12 @@
     <main id="main"></main>
   </div>
 
+  <!-- Hoja de impresión del conteo del día: se genera aparte (ver
+       construirHojaImpresionDia_ / imprimirConteoDia_), como cuadrícula
+       pensada para rellenar a mano, independiente del diseño de pantalla.
+       Solo es visible mientras se imprime (ver @media print). -->
+  <div id="hoja-impresion-manual"></div>
+
   <!-- MODAL -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal-box" id="modal-box">
@@ -2434,7 +2539,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.7.3';
+const APP_VERSION_ACTUAL = '1.7.4';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2847,6 +2952,18 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], row = args[1];
     return llamarRpcSupabase_('otras_apariciones_tienda_plantilla', { p_dia: dia, p_row: row });
   },
+  // -- Supabase: Rutas y tiendas -- mover una tienda a otra agrupación
+  // (ruta) del mismo día sin borrarla y volverla a crear, así que no
+  // pierde su email/notas de "Configuración tiendas" (eso vive aparte,
+  // en config_tiendas, ligado a la "clave" de la tienda, que no cambia).
+  moverTiendaAgrupacionPlantilla: function (args) {
+    const dia = args[0], row = args[1], destino = args[2];
+    return llamarRpcSupabase_('mover_tienda_agrupacion_plantilla', { p_dia: dia, p_row: row, p_nombre_seccion_destino: destino });
+  },
+  moverTiendaAgrupacionPlantillaTodosDias: function (args) {
+    const dia = args[0], row = args[1], destino = args[2];
+    return llamarRpcSupabase_('mover_tienda_agrupacion_plantilla_todos_dias', { p_dia: dia, p_row: row, p_nombre_seccion_destino: destino });
+  },
   // -- Supabase: Configuración tiendas + Aviso a tiendas (barrido del día) --
   getConfigAvisoTiendas: function () {
     return llamarRpcSupabase_('get_config_aviso_tiendas', {});
@@ -3178,7 +3295,9 @@ let ESTADO = {
   fecha: null,          // 'YYYY-MM-DD' seleccionada
   anioMes: null,        // 'YYYY-MM' mostrado en el calendario
   calendarioColapsado: true,
-  colapsadas: new Set() // nombres de agrupación colapsadas manualmente (persiste al recargar el día)
+  colapsadas: new Set(), // nombres de agrupación colapsadas manualmente (persiste al recargar el día)
+  datosDiaActual: null  // último `data` completo de getConteoDia recibido (secciones, notasGenerales…);
+                         // se usa para construir la hoja de impresión manual bajo demanda, sin re-pedirlo al servidor.
 };
 
 /* ---------------- LOGIN ---------------- */
@@ -3244,7 +3363,7 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
   input.type = input.type === 'password' ? 'text' : 'password';
 });
 document.getElementById('btn-mi-usuario').addEventListener('click', abrirModalMiUsuario_);
-document.getElementById('btn-imprimir-dia').addEventListener('click', function () { window.print(); });
+document.getElementById('btn-imprimir-dia').addEventListener('click', function () { imprimirConteoDia_(); });
 
 /* ---------------- NAVEGACIÓN PRINCIPAL (cabecera) ---------------- */
 // Vive en el HTML estático de la cabecera (no se redibuja con cada día), así
@@ -6800,6 +6919,17 @@ function resaltarTiendaPlantilla_(row) {
 
 
 
+/** Si el nombre de una tienda sigue el formato estándar "NNN - NOMBRE"
+ *  (3 dígitos, guion, nombre), lo separa en { numero, resto } para poder
+ *  editarlo con los mismos dos campos que "Añadir tienda" (evita volver a
+ *  mezclar formatos al editar). Las pocas tiendas antiguas que no siguen
+ *  ese formato (p.ej. sin número) devuelven null y se editan como texto
+ *  libre, igual que siempre. */
+function dividirNombreTiendaPlantilla_(nombre) {
+  const m = String(nombre || '').match(/^(\d{3})\s*-\s*(.*)$/);
+  return m ? { numero: m[1], resto: m[2] } : null;
+}
+
 /** Botón pequeño "60"/"PTA"/"CART." para bloquear (poner "NO") o
  *  desbloquear la casilla correspondiente de una tienda, desde "Rutas y
  *  tiendas". campo: 'c60' | 'pta' | 'cart'. Visible para todos (para que
@@ -6809,7 +6939,7 @@ function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
   const bloqueado = campo === 'c60' ? t.bloqueo60 : (campo === 'pta' ? t.bloqueoPta : t.bloqueoCart);
   const titulo = bloqueado
     ? 'Quitar el bloqueo "NO" de ' + etiqueta + ' en esta tienda'
-    : 'Bloquear ' + etiqueta + ' en esta tienda (pondrá "NO", no podrá recibir palets ahí)';
+    : 'Bloquear la casilla ' + etiqueta + ' en los conteos';
   return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' + etiqueta + '</button>';
 }
 
@@ -6845,6 +6975,12 @@ function pintarPlantilla_() {
       }
       const enGrupo = restantesGrupo > 0;
 
+      const partesNombre = dividirNombreTiendaPlantilla_(t.nombre);
+      const camposNombreHtml = partesNombre
+        ? '<span class="numero" title="Número de tienda">' + escapeHtml(partesNombre.numero) + '</span>' +
+          '<span class="nombre" title="Nombre de la tienda">' + escapeHtml(partesNombre.resto) + '</span>'
+        : '<span class="nombre" title="Nombre de la tienda">' + escapeHtml(t.nombre) + '</span>';
+
       piezasTiendas.push(
         '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + '" data-tienda-row="' + t.row + '">' +
           '<div class="plantilla-tienda-flechas">' +
@@ -6853,8 +6989,8 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar="' + t.row + '"' + (ti === s.tiendas.length - 1 ? ' disabled' : '') + ' title="Bajar">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
-          '<input type="text" class="lim" id="' + idSeguro + '_lim" value="' + escapeAttr(t.limite) + '" title="Límite" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
-          '<input type="text" class="nombre" id="' + idSeguro + '_nombre" value="' + escapeAttr(t.nombre) + '" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
+          '<span class="lim" title="Límite">' + escapeHtml(t.limite) + '</span>' +
+          camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
@@ -6864,8 +7000,10 @@ function pintarPlantilla_() {
           '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
           (tienePermiso('plantilla') ? (
-            '<button type="button" class="plantilla-tienda-guardar" data-guardar-tienda="' + t.row + '" data-id="' + idSeguro + '" title="Guardar cambios" disabled>' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
+            '<button type="button" class="plantilla-tienda-mover" data-mover-tienda="' + t.row + '" title="Mover a otra agrupación">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></button>' +
+            '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + t.row + '" title="Editar tienda">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-tienda="' + t.row + '" title="Eliminar tienda">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
@@ -6906,8 +7044,13 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar-ruta="' + escapeAttr(s.nombre) + '"' + (si === PLANTILLA_ESTADO.secciones.length - 1 ? ' disabled' : '') + ' title="Bajar ruta">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
-          '<input type="text" value="' + escapeAttr(s.nombre) + '" id="pr' + si + '_nombre" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
+          '<span class="plantilla-ruta-nombre-texto">' + escapeHtml(s.nombre) + '</span>' +
+          (tienePermiso('plantilla')
+            ? '<button type="button" class="plantilla-ruta-editar" data-editar-ruta="' + escapeAttr(s.nombre) + '" title="Editar nombre, ubicación y hora de carga">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
+            : '') +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
+          '<div class="plantilla-ruta-spacer"></div>' +
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
@@ -6915,8 +7058,6 @@ function pintarPlantilla_() {
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
-            '<button type="button" class="plantilla-tienda-guardar" data-guardar-ruta="' + escapeAttr(s.nombre) + '" data-id="pr' + si + '_nombre" title="Guardar nombre de ruta" disabled>' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
             '<button type="button" class="plantilla-ruta-borrar" data-borrar-ruta="' + escapeAttr(s.nombre) + '" title="Eliminar ruta completa">' +
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
@@ -6964,12 +7105,14 @@ function pintarPlantilla_() {
     input.addEventListener('input', refrescar);
   });
 
-  listaEl.querySelectorAll('[data-guardar-tienda]').forEach(function (btn) {
-
-    btn.onclick = function () { guardarTiendaPlantilla_(btn.getAttribute('data-guardar-tienda'), btn.getAttribute('data-id')); };
+  listaEl.querySelectorAll('[data-editar-tienda]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalEditarTiendaPlantilla_(btn.getAttribute('data-editar-tienda')); };
   });
   listaEl.querySelectorAll('[data-borrar-tienda]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarTiendaPlantilla_(btn.getAttribute('data-borrar-tienda')); };
+  });
+  listaEl.querySelectorAll('[data-mover-tienda]').forEach(function (btn) {
+    btn.onclick = function () { confirmarMoverTiendaPlantilla_(btn.getAttribute('data-mover-tienda')); };
   });
   listaEl.querySelectorAll('[data-subir]').forEach(function (btn) {
     btn.onclick = function () { moverTiendaPlantilla_(btn.getAttribute('data-subir'), 'arriba'); };
@@ -6986,37 +7129,10 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-anadir-tienda-ruta]').forEach(function (btn) {
     btn.onclick = function () { abrirModalAnadirTiendaPlantilla_(btn.getAttribute('data-anadir-tienda-ruta')); };
   });
-  listaEl.querySelectorAll('[data-guardar-ruta]').forEach(function (btn) {
-    btn.onclick = function () { guardarNombreRutaPlantilla_(btn.getAttribute('data-guardar-ruta'), btn.getAttribute('data-id')); };
+  listaEl.querySelectorAll('[data-editar-ruta]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalEditarRutaPlantilla_(btn.getAttribute('data-editar-ruta')); };
   });
 
-  // Marca en naranja la fila/cabecera y habilita "Guardar" solo cuando el
-  // valor de un campo difiere de con el que se pintó (input.defaultValue
-  // conserva el valor original aunque el usuario escriba encima).
-  listaEl.querySelectorAll('.plantilla-tienda').forEach(function (fila) {
-    const lim = fila.querySelector('input.lim');
-    const nombre = fila.querySelector('input.nombre');
-    const boton = fila.querySelector('.plantilla-tienda-guardar');
-    if (!lim || !nombre || !boton) return;
-    const refrescar = function () {
-      const cambiado = lim.value !== lim.defaultValue || nombre.value !== nombre.defaultValue;
-      fila.classList.toggle('dirty', cambiado);
-      boton.disabled = !cambiado;
-    };
-    lim.addEventListener('input', refrescar);
-    nombre.addEventListener('input', refrescar);
-  });
-  listaEl.querySelectorAll('.plantilla-ruta-header').forEach(function (cabecera) {
-    const nombre = cabecera.querySelector('input');
-    const boton = cabecera.querySelector('[data-guardar-ruta]');
-    if (!nombre || !boton) return;
-    const refrescar = function () {
-      const cambiado = nombre.value !== nombre.defaultValue;
-      cabecera.classList.toggle('dirty', cambiado);
-      boton.disabled = !cambiado;
-    };
-    nombre.addEventListener('input', refrescar);
-  });
   listaEl.querySelectorAll('[data-borrar-ruta]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarRutaPlantilla_(btn.getAttribute('data-borrar-ruta')); };
   });
@@ -7147,21 +7263,106 @@ function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
   );
 }
 
-function guardarTiendaPlantilla_(row, idSeguro) {
+/** Botón de lápiz de una fila de tienda: abre un modal para editar el
+ *  límite, el número y el nombre a la vez (en vez de los campos sueltos
+ *  que había antes en la propia fila). */
+function abrirModalEditarTiendaPlantilla_(row) {
   row = Number(row);
-  const nombre = document.getElementById(idSeguro + '_nombre').value;
-  const limite = document.getElementById(idSeguro + '_lim').value;
-  const mutar = function () {
-    const info = buscarTiendaPlantilla_(row);
-    if (info) { info.tienda.nombre = nombre; info.tienda.limite = Number(limite); }
+  const info = buscarTiendaPlantilla_(row);
+  if (!info) return;
+  const partes = dividirNombreTiendaPlantilla_(info.tienda.nombre);
+
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Editar tienda';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-editar-tienda-lim">Límite de palets diarios</label>' +
+      '<input type="text" id="modal-editar-tienda-lim" inputmode="numeric" value="' + escapeAttr(info.tienda.limite) + '">' +
+    '</div>' +
+    (partes
+      ? '<div class="modal-campo">' +
+          '<label for="modal-editar-tienda-numero">Número de tienda (3 dígitos)</label>' +
+          '<input type="text" id="modal-editar-tienda-numero" inputmode="numeric" maxlength="3" value="' + escapeAttr(partes.numero) + '">' +
+        '</div>' +
+        '<div class="modal-campo">' +
+          '<label for="modal-editar-tienda-nombre">Nombre de la tienda</label>' +
+          '<input type="text" id="modal-editar-tienda-nombre" style="text-transform:uppercase;" value="' + escapeAttr(partes.resto) + '">' +
+          '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-editar-tienda-preview"></span>".</span>' +
+        '</div>'
+      : '<div class="modal-campo">' +
+          '<label for="modal-editar-tienda-nombre">Nombre de la tienda</label>' +
+          '<input type="text" id="modal-editar-tienda-nombre" value="' + escapeAttr(info.tienda.nombre) + '">' +
+        '</div>');
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  const inputLim = document.getElementById('modal-editar-tienda-lim');
+  const inputNumero = document.getElementById('modal-editar-tienda-numero');
+  const inputNombre = document.getElementById('modal-editar-tienda-nombre');
+
+  if (inputNumero) {
+    const preview = document.getElementById('modal-editar-tienda-preview');
+    const actualizarPreview_ = function () {
+      const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+      const nom = inputNombre.value.trim().replace(/\s+/g, ' ');
+      preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
+    };
+    inputNumero.oninput = function () {
+      inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+      actualizarPreview_();
+    };
+    inputNombre.oninput = function () {
+      const pos = inputNombre.selectionStart;
+      inputNombre.value = inputNombre.value.toUpperCase();
+      inputNombre.setSelectionRange(pos, pos);
+      actualizarPreview_();
+    };
+    actualizarPreview_();
+  }
+
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const limite = inputLim.value.trim();
+    if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
+    let nombre;
+    if (inputNumero) {
+      const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+      if (!numero) { inputNumero.focus(); return; }
+      const resto = inputNombre.value.trim().replace(/\s+/g, ' ').toUpperCase();
+      if (!resto) { inputNombre.focus(); return; }
+      nombre = numero.padStart(3, '0') + ' - ' + resto;
+    } else {
+      const libre = inputNombre.value.trim();
+      if (!libre) { inputNombre.focus(); return; }
+      nombre = libre;
+    }
+    cerrarModal();
+    const mutar = function () {
+      const infoActual = buscarTiendaPlantilla_(row);
+      if (infoActual) { infoActual.tienda.nombre = nombre; infoActual.tienda.limite = Number(limite); }
+    };
+    guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado',
+      function (resultado) {
+        const propagadas = (resultado && resultado.propagadas) || 0;
+        mostrarToast(propagadas > 0
+          ? 'Guardado (actualizado también en ' + propagadas + ' día(s) más donde aparecía)'
+          : 'Guardado');
+      });
   };
-  guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado',
-    function (resultado) {
-      const propagadas = (resultado && resultado.propagadas) || 0;
-      mostrarToast(propagadas > 0
-        ? 'Guardado (actualizado también en ' + propagadas + ' día(s) más donde aparecía)'
-        : 'Guardado');
-    });
+  setTimeout(function () { inputLim.focus(); }, 50);
 }
 
 function confirmarEliminarTiendaPlantilla_(row) {
@@ -7239,6 +7440,148 @@ function eliminarTiendaPlantillaTodosDias_(row) {
     .then(function (resultado) {
       const eliminadas = (resultado && resultado.eliminadas) || 1;
       mostrarToast('Eliminada de ' + eliminadas + ' día(s)');
+      cargarPlantilla_({ silencioso: true });
+    })
+    .catch(mostrarErrorServidor);
+}
+
+/** Punto de entrada del botón "Mover a otra agrupación" de cada fila de
+ *  tienda. Reutiliza PLANTILLA_ESTADO.secciones (ya cargado en memoria)
+ *  para ofrecer como destino cualquier otra agrupación del día actual, sin
+ *  tener que pedir nada más al servidor todavía. */
+function confirmarMoverTiendaPlantilla_(row) {
+  row = Number(row);
+  const info = buscarTiendaPlantilla_(row);
+  if (!info) return;
+  const seccionActual = info.seccion.nombre;
+  const destinos = PLANTILLA_ESTADO.secciones
+    .map(function (s) { return s.nombre; })
+    .filter(function (nombre) { return nombre !== seccionActual; });
+  if (!destinos.length) {
+    mostrarToast('No hay otra agrupación en este día a la que mover esta tienda', true);
+    return;
+  }
+  mostrarModalMoverTiendaPlantilla_(row, info.tienda.nombre, seccionActual, destinos);
+}
+
+/** Modal para elegir a qué agrupación (del mismo día) se mueve la tienda. */
+function mostrarModalMoverTiendaPlantilla_(row, nombreTienda, seccionActual, destinos) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Mover tienda de agrupación';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label>Tienda</label>' +
+      '<input type="text" value="' + escapeAttr(nombreTienda) + '" readonly>' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label>Agrupación actual</label>' +
+      '<input type="text" value="' + escapeAttr(seccionActual) + '" readonly>' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-mover-destino">Mover a</label>' +
+      '<select id="modal-mover-destino">' +
+        destinos.map(function (d) { return '<option value="' + escapeAttr(d) + '">' + escapeHtml(d) + '</option>'; }).join('') +
+      '</select>' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Continuar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const destino = document.getElementById('modal-mover-destino').value;
+    cerrarModal();
+    prepararMoverTiendaPlantilla_(row, destino);
+  };
+}
+
+/** Tras elegir la agrupación destino, comprueba (igual que al eliminar) si
+ *  esta misma tienda (misma clave interna) aparece también en otros días.
+ *  Si es así, ofrece moverla de golpe en todos esos días también, en vez
+ *  de mover solo la fila de hoy. */
+function prepararMoverTiendaPlantilla_(row, destino) {
+  llamarApi_('otrasAparicionesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row])
+    .then(function (resultado) {
+      const dias = (resultado && resultado.dias) || [];
+      if (!dias.length) {
+        moverTiendaAgrupacionPlantilla_(row, destino);
+        return;
+      }
+      mostrarModalMoverTiendaVariosDias_(row, destino, dias);
+    })
+    .catch(mostrarErrorServidor);
+}
+
+/** Modal con 3 opciones cuando la tienda que se va a mover también
+ *  aparece en otros días: cancelar, mover solo el día actual, o mover de
+ *  golpe en todos los días donde aparezca (a la agrupación con el mismo
+ *  nombre elegido; si algún día no tiene una agrupación con ese nombre,
+ *  esa aparición se deja tal cual, no se fuerza ni se pierde). */
+function mostrarModalMoverTiendaVariosDias_(row, destino, dias) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Esta tienda aparece en más días';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta misma tienda también está en: <b>' +
+      dias.map(escapeHtml).join(', ') +
+      '</b>. Si mueves solo aquí, en esos otros días seguirá saliendo por su agrupación de siempre. Usa "Mover en todos" para llevarla también a "' +
+      escapeHtml(destino) + '" en los días donde exista una agrupación con ese mismo nombre (si algún día no la tiene, se deja como está ahí).</p>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-mover-aqui-btn">Mover solo aquí</button>' +
+    '<button class="modal-confirm" id="modal-mover-todos-btn">Mover en todos (' + (dias.length + 1) + ' días)</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-mover-aqui-btn').onclick = function () { cerrarModal(); moverTiendaAgrupacionPlantilla_(row, destino); };
+  document.getElementById('modal-mover-todos-btn').onclick = function () { cerrarModal(); moverTiendaAgrupacionPlantillaTodosDias_(row, destino); };
+}
+
+/** Mueve la tienda SOLO en el día que se está viendo ahora mismo. Como
+ *  afecta a la numeración de filas (la tienda pasa a otra ruta, así que
+ *  cambia su posición en el orden general del día), se recarga la
+ *  plantilla desde el servidor en vez de mutar el estado local a mano
+ *  (mismo motivo que moverTiendaPlantilla_ / eliminarTiendaPlantillaTodosDias_). */
+function moverTiendaAgrupacionPlantilla_(row, destino) {
+  llamarApi_('moverTiendaAgrupacionPlantilla', [PLANTILLA_ESTADO.dia, row, destino])
+    .then(function () {
+      mostrarToast('Tienda movida a "' + destino + '"');
+      cargarPlantilla_({ silencioso: true });
+    })
+    .catch(mostrarErrorServidor);
+}
+
+/** Mueve esta tienda (misma clave interna) en TODOS los días donde
+ *  aparezca, a la agrupación con el mismo nombre elegido. */
+function moverTiendaAgrupacionPlantillaTodosDias_(row, destino) {
+  llamarApi_('moverTiendaAgrupacionPlantillaTodosDias', [PLANTILLA_ESTADO.dia, row, destino])
+    .then(function (resultado) {
+      const movidas = (resultado && resultado.movidas) || 0;
+      const omitidas = (resultado && resultado.omitidas) || 0;
+      mostrarToast(
+        'Movida en ' + movidas + ' día(s)' +
+        (omitidas ? ' (' + omitidas + ' sin cambios: ese día no tiene esa agrupación, o ya tiene una tienda con ese número)' : '')
+      );
       cargarPlantilla_({ silencioso: true });
     })
     .catch(mostrarErrorServidor);
@@ -7396,8 +7739,13 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
       '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Ej: 6">' +
     '</div>' +
     '<div class="modal-campo">' +
-      '<label for="modal-plantilla-nombre">Nombre de la tienda</label>' +
-      '<input type="text" id="modal-plantilla-nombre" placeholder="Ej: 345- INDEPENDENCIA2">' +
+      '<label for="modal-plantilla-numero">Número de tienda (3 dígitos)</label>' +
+      '<input type="text" id="modal-plantilla-numero" inputmode="numeric" maxlength="3" placeholder="Ej: 062">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-plantilla-nombre-tienda">Nombre de la tienda</label>' +
+      '<input type="text" id="modal-plantilla-nombre-tienda" style="text-transform:uppercase;" placeholder="Ej: ISLAZUL">' +
+      '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-plantilla-preview">000 - …</span>", igual que el resto de tiendas.</span>' +
     '</div>' +
     (otrosDias.length
       ? '<div class="modal-campo">' +
@@ -7416,6 +7764,30 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
     pill.onclick = function () { pill.classList.toggle('activo'); };
   });
 
+  // El número solo admite dígitos (máx. 3) y el nombre se fuerza a
+  // mayúsculas mientras se escribe -- así el operario no puede dejar el
+  // nombre a medio formatear ni mezclar mayúsculas/minúsculas, que es lo
+  // que hacía que la misma tienda acabase con dos formatos distintos.
+  const inputNumero = document.getElementById('modal-plantilla-numero');
+  const inputNombreTienda = document.getElementById('modal-plantilla-nombre-tienda');
+  const preview = document.getElementById('modal-plantilla-preview');
+  const actualizarPreview_ = function () {
+    const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    const nom = inputNombreTienda.value.trim().replace(/\s+/g, ' ');
+    preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
+  };
+  inputNumero.oninput = function () {
+    inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    actualizarPreview_();
+  };
+  inputNombreTienda.oninput = function () {
+    const pos = inputNombreTienda.selectionStart;
+    inputNombreTienda.value = inputNombreTienda.value.toUpperCase();
+    inputNombreTienda.setSelectionRange(pos, pos);
+    actualizarPreview_();
+  };
+  actualizarPreview_();
+
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
@@ -7424,85 +7796,221 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
     const inputLim = document.getElementById('modal-plantilla-lim');
-    const inputNombre = document.getElementById('modal-plantilla-nombre');
     const limite = inputLim.value.trim();
-    const nombre = inputNombre.value.trim();
     if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
-    if (!nombre) { inputNombre.focus(); return; }
+    const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    if (!numero) { inputNumero.focus(); return; }
+    const nombreTienda = inputNombreTienda.value.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!nombreTienda) { inputNombreTienda.focus(); return; }
+    // Número siempre a 3 dígitos (rellena con ceros a la izquierda si se
+    // han escrito solo 1 o 2), y nombre siempre en mayúsculas con un
+    // único espacio de separación -- así el formato final es idéntico
+    // pase lo que pase por lo que se haya escrito.
+    const nombre = numero.padStart(3, '0') + ' - ' + nombreTienda;
     const diasElegidos = Array.prototype.slice.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill.activo'))
       .map(function (pill) { return pill.getAttribute('data-dia'); });
-    cerrarModal();
-    // Inserta una fila nueva -- el backend decide en qué fila exacta
-    // queda, así que hace falta volver a pedir la plantilla; modo
-    // "silencioso" (sin loader ni salto de scroll). Si se han marcado
-    // otros días, se añade también ahí (mismo nombre y límite), en
-    // paralelo.
-    Promise.all(
-      [PLANTILLA_ESTADO.dia].concat(diasElegidos).map(function (dia) {
-        return llamarApi_('añadirTiendaPlantilla', [dia, nombreRuta, nombre, limite]);
-      })
-    )
+
+    const btnConfirmar = document.getElementById('modal-confirm-btn');
+    const avisoPrevio = document.getElementById('modal-plantilla-error');
+    if (avisoPrevio) avisoPrevio.remove();
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = 'Añadiendo…';
+
+    // Primero se intenta en el día que se está viendo. El backend
+    // rechaza (sin insertar nada) si esa misma tienda ya existe ese día
+    // en cualquier agrupación -- si pasa, se deja el modal ABIERTO con
+    // los datos escritos y se muestra el motivo, en vez de cerrarlo y
+    // perder lo escrito.
+    llamarApi_('añadirTiendaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, nombre, limite])
       .then(function () {
-        mostrarToast(diasElegidos.length
-          ? 'Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)'
-          : 'Tienda añadida');
+        cerrarModal();
         cargarPlantilla_({ silencioso: true });
-        abrirModalEmailTiendaNueva_(nombre);
+        if (!diasElegidos.length) {
+          mostrarToast('Tienda añadida');
+          abrirModalConfigurarTiendaNueva_(nombre);
+          return;
+        }
+        // El día principal ya está añadido; los demás días marcados se
+        // intentan aparte -- si alguno falla (p.ej. porque ya existiera
+        // ahí), no se deshace lo del día principal, solo se avisa de
+        // cuáles no se han podido añadir y por qué.
+        Promise.allSettled(
+          diasElegidos.map(function (dia) {
+            return llamarApi_('añadirTiendaPlantilla', [dia, nombreRuta, nombre, limite]);
+          })
+        ).then(function (resultados) {
+          const fallos = resultados
+            .map(function (r, i) {
+              return r.status === 'rejected'
+                ? diasElegidos[i] + ' (' + (r.reason && r.reason.message ? r.reason.message : 'error') + ')'
+                : null;
+            })
+            .filter(Boolean);
+          if (fallos.length) {
+            mostrarToast('Tienda añadida. No se pudo añadir en: ' + fallos.join('; '), true);
+          } else {
+            mostrarToast('Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)');
+          }
+          abrirModalConfigurarTiendaNueva_(nombre);
+        });
       })
-      .catch(mostrarErrorServidor);
+      .catch(function (err) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = 'Añadir tienda';
+        const aviso = document.createElement('div');
+        aviso.id = 'modal-plantilla-error';
+        aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
+        aviso.textContent = (err && err.message) ? err.message : 'No se ha podido añadir la tienda.';
+        document.getElementById('modal-custom').appendChild(aviso);
+      });
   };
-  setTimeout(function () { document.getElementById('modal-plantilla-nombre').focus(); }, 50);
+  setTimeout(function () { inputNumero.focus(); }, 50);
 }
 
-/** Tras crear una tienda nueva, pregunta de una vez el email para los
- *  avisos de palets (mismo destino que "Configuración tiendas" ->
- *  guardarEmailTienda), en vez de obligar a ir a esa pantalla aparte a
- *  buscarla. Si no se sabe el email todavía, "No configurar ahora" cierra
- *  el modal sin guardar nada -- se puede rellenar más tarde desde
- *  Configuración tiendas con normalidad. */
-function abrirModalEmailTiendaNueva_(nombreTienda) {
+/** Tras crear una tienda nueva, pregunta de una vez email, notas y
+ *  tránsito -- los MISMOS datos que se rellenan en "Configuración
+ *  tiendas" (guardarEmailTienda + guardarTransitoTienda) -- en vez de
+ *  obligar a ir a esa pantalla aparte a buscarla y pulsar "Sincronizar".
+ *  Así no hay riesgo de olvidarse y dejar la tienda a medio configurar.
+ *  Si no se sabe nada todavía, "No configurar ahora" cierra el modal sin
+ *  guardar nada -- se puede rellenar más tarde desde Configuración
+ *  tiendas con normalidad (ahí seguirá apareciendo como "Nueva -- falta
+ *  añadir email" hasta que se rellene). */
+function abrirModalConfigurarTiendaNueva_(nombreTienda) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Email de "' + nombreTienda + '"';
+  document.getElementById('modal-title').textContent = 'Configurar "' + nombreTienda + '"';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
-    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Se usa para avisar a la tienda por correo de los palets que va a recibir. Si no lo sabes todavía, puedes dejarlo para más tarde.</p>' +
+    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Mismos datos que en "Configuración tiendas": el email se usa para avisar a la tienda de los palets que va a recibir. Si no los sabes todavía, puedes dejarlo para más tarde.</p>' +
     '<div class="modal-campo">' +
-      '<label for="modal-email-tienda-nueva">Email</label>' +
-      '<input type="email" id="modal-email-tienda-nueva" placeholder="tienda@ejemplo.com">' +
+      '<label for="modal-config-tienda-email">Email</label>' +
+      '<input type="email" id="modal-config-tienda-email" placeholder="tienda@ejemplo.com">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-config-tienda-notas">Notas</label>' +
+      '<input type="text" id="modal-config-tienda-notas" placeholder="Notas libres (opcional)">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-config-tienda-transito">Tránsito</label>' +
+      '<select id="modal-config-tienda-transito">' +
+        TRANSITO_OPCIONES.map(function (op) {
+          return '<option value="' + op.valor + '"' + (op.valor === 1 ? ' selected' : '') + '>' + op.texto + '</option>';
+        }).join('') +
+      '</select>' +
     '</div>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-no-configurar-btn">No configurar ahora</button>' +
-    '<button class="modal-confirm" id="modal-guardar-email-btn">Guardar email</button>';
+    '<button class="modal-confirm" id="modal-guardar-config-tienda-btn">Guardar</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-no-configurar-btn').onclick = cerrarModal;
-  document.getElementById('modal-guardar-email-btn').onclick = function () {
-    const input = document.getElementById('modal-email-tienda-nueva');
-    const email = input.value.trim();
-    if (!email) { cerrarModal(); return; }
-    llamarApi_('guardarEmailTienda', [nombreTienda, email, ''])
-      .then(function () { cerrarModal(); mostrarToast('Email guardado'); })
+  document.getElementById('modal-guardar-config-tienda-btn').onclick = function () {
+    const email = document.getElementById('modal-config-tienda-email').value.trim();
+    const notas = document.getElementById('modal-config-tienda-notas').value.trim();
+    const transito = Number(document.getElementById('modal-config-tienda-transito').value);
+    cerrarModal();
+    // Se guardan siempre los dos (aunque email/notas se hayan dejado en
+    // blanco), para que la fila de config_tiendas quede creada de una vez
+    // -- así, aunque no se sepa el email todavía, la tienda ya no
+    // aparecerá como huérfana en "Configuración tiendas" hasta que
+    // alguien pulse "Sincronizar" a mano.
+    Promise.all([
+      llamarApi_('guardarEmailTienda', [nombreTienda, email, notas]),
+      llamarApi_('guardarTransitoTienda', [nombreTienda, transito])
+    ])
+      .then(function () { mostrarToast('Tienda configurada'); })
       .catch(mostrarErrorServidor);
   };
-  setTimeout(function () { document.getElementById('modal-email-tienda-nueva').focus(); }, 50);
+  setTimeout(function () { document.getElementById('modal-config-tienda-email').focus(); }, 50);
 }
 
-function guardarNombreRutaPlantilla_(nombreActual, idSeguro) {
-  const nombreNuevo = document.getElementById(idSeguro).value;
-  const mutar = function () {
-    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreActual; });
-    if (s) s.nombre = nombreNuevo;
+/** Si el nombre de una agrupación sigue el formato habitual
+ *  "NOMBRE (UBICACION HORA)" -- incluyendo variantes reales como
+ *  "GAITE 8:00", "AMBAS NAVES 14:00 - 19:00", "PTA -", "GAITE NOCHE",
+ *  "PTA Y GAITE" (sin hora) -- lo separa en sus 3 partes para poder
+ *  editarlas por separado. Si no encaja en ningún caso conocido, deja la
+ *  ubicación/hora en blanco y el nombre completo tal cual, sin inventar
+ *  ni perder nada. */
+function dividirNombreRutaPlantilla_(nombreCompleto) {
+  const texto = String(nombreCompleto || '').trim();
+  const m = texto.match(/^(.*?)\s*\(\s*(.*?)\s*\)\s*$/);
+  if (!m) return { nombre: texto, ubicacion: '', hora: '' };
+  const nombre = m[1].trim();
+  const contenido = m[2].replace(/\s+/g, ' ').trim();
+  const m2 = contenido.match(/^(.*?)\s+(\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?|-|NOCHE)$/i);
+  if (m2) return { nombre: nombre, ubicacion: m2[1].trim(), hora: m2[2].trim() };
+  return { nombre: nombre, ubicacion: contenido, hora: '' };
+}
+
+/** Lápiz junto al nombre de una agrupación: abre un modal para editar el
+ *  nombre, la ubicación de carga y la hora de carga por separado, en vez
+ *  de tener que reescribir la línea completa "NOMBRE (UBICACION HORA)" a
+ *  mano -- mismo formato que ya usa "Añadir ruta nueva". */
+function abrirModalEditarRutaPlantilla_(nombreActual) {
+  const partes = dividirNombreRutaPlantilla_(nombreActual);
+
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Editar ruta';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-nombre">Nombre de la ruta</label>' +
+      '<input type="text" id="modal-ruta-nombre" value="' + escapeAttr(partes.nombre) + '" placeholder="Ej: PRUEBA">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
+      '<input type="text" id="modal-ruta-ubicacion" value="' + escapeAttr(partes.ubicacion) + '" placeholder="Ej: GAITE">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-ruta-hora">Hora de carga</label>' +
+      '<input type="text" id="modal-ruta-hora" value="' + escapeAttr(partes.hora) + '" placeholder="Ej: 10:00 (déjalo en blanco si no aplica)">' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const inputNombre = document.getElementById('modal-ruta-nombre');
+    const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
+    const inputHora = document.getElementById('modal-ruta-hora');
+    const nombre = inputNombre.value.trim();
+    const ubicacion = inputUbicacion.value.trim();
+    const hora = inputHora.value.trim();
+    if (!nombre) { inputNombre.focus(); return; }
+    if (!ubicacion) { inputUbicacion.focus(); return; }
+
+    // Mismo formato que "Añadir ruta nueva": "NOMBRE (UBICACION HORA)",
+    // o "NOMBRE (UBICACION)" si se deja la hora en blanco (hay rutas
+    // reales sin una hora fija, p.ej. "CBL MALAGA (AMBAS NAVES)").
+    const nombreCompleto = nombre + ' (' + ubicacion + (hora ? ' ' + hora : '') + ')';
+    cerrarModal();
+    const mutar = function () {
+      const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreActual; });
+      if (s) s.nombre = nombreCompleto;
+    };
+    guardarPlantillaOptimista_(mutar, 'editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreCompleto], 'Ruta actualizada');
   };
-  guardarPlantillaOptimista_(mutar, 'editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreNuevo], 'Nombre actualizado');
+  setTimeout(function () { document.getElementById('modal-ruta-nombre').focus(); }, 50);
 }
 
 function confirmarEliminarRutaPlantilla_(nombreRuta) {
@@ -7861,6 +8369,7 @@ function refrescarConteoDiaEnVivo_() {
 }
 
 function aplicarRefrescoConteoDiaEnVivo_(data) {
+  ESTADO.datosDiaActual = data;
   // El resumen del día y el acceso rápido no tienen inputs ni foco que
   // proteger, así que se repintan siempre enteros: es barato y mantiene
   // esos contadores/puntos de estado siempre al día.
@@ -7887,20 +8396,13 @@ function aplicarRefrescoConteoDiaEnVivo_(data) {
 }
 
 function renderContenidoDia(data) {
+  ESTADO.datosDiaActual = data;
   const cont = document.getElementById('dia-contenido');
   const wrap = document.createElement('div');
 
   const fechaLarga = formatearFechaLarga(data.fecha);
   const topbarFecha = document.getElementById('topbar-fecha');
   if (topbarFecha) topbarFecha.textContent = fechaLarga;
-
-  // Título de fecha que solo se ve al imprimir (ver @media print): la
-  // cabecera normal (header.topbar) se oculta en la impresión, así que este
-  // título la sustituye para que siga saliendo la fecha en el papel.
-  const tituloImpresion = document.createElement('div');
-  tituloImpresion.className = 'print-fecha-titulo';
-  tituloImpresion.textContent = 'SALIDA MERCANCÍA — ' + fechaLarga;
-  wrap.appendChild(tituloImpresion);
 
   if (data.bloqueada) {
     const msg = document.createElement('div');
@@ -9392,10 +9894,304 @@ function badgeTransitoTienda(transito) {
   return TRANSITO_BADGES[Number(transito)] || null;
 }
 
+/** Punto de entrada del botón de imprimir: construye de cero la hoja de
+ *  cuadrícula manual (ver construirHojaImpresionDia_) a partir de los
+ *  últimos datos del día ya cargados, y lanza el diálogo de impresión del
+ *  navegador. No hace falta volver a pedir nada al servidor. */
+function imprimirConteoDia_() {
+  if (!ESTADO.datosDiaActual) {
+    mostrarToast('Espera a que termine de cargar el conteo del día antes de imprimir', true);
+    return;
+  }
+  construirHojaImpresionDia_(ESTADO.datosDiaActual);
+  window.print();
+}
+
+/** Construye, desde cero, la hoja de impresión en cuadrícula pensada para
+ *  rellenar A MANO (no reutiliza el HTML de pantalla en absoluto: colores,
+ *  botones, inputs... aquí no pintan nada). Cabecera con la fecha y el
+ *  aviso general del día, y luego cada agrupación con su tabla + caja de
+ *  TOTAL + caja de "quitar en este orden" al lado, tal como se venía
+ *  imprimiendo antes de esta aplicación.
+ *  IMPORTANTE: las celdas de conteo (60/PTA/CART./TOTAL/PDTE) se dejan
+ *  siempre en blanco a propósito -- es un papel para escribir con boli,
+ *  no un volcado de lo que ya haya escrito en pantalla. */
+function construirHojaImpresionDia_(data) {
+  const cont = document.getElementById('hoja-impresion-manual');
+  if (!cont) return;
+  cont.innerHTML = '';
+
+  // "2026-08-25" -> "25/08/2026" (con ceros, para "CONTEOS DE MIÉRCOLES - 25/08/2026").
+  const partesFecha = String(data.fecha || '').split('-');
+  const pad2_ = function (n) { return String(n).padStart(2, '0'); };
+  const fechaConCeros = partesFecha.length === 3
+    ? pad2_(partesFecha[2]) + '/' + pad2_(partesFecha[1]) + '/' + partesFecha[0]
+    : (data.fecha || '');
+
+  const tituloHoja = 'CONTEOS DE ' + String(data.dia || '').toUpperCase() + ' - ' + fechaConCeros;
+
+  const cabecera = document.createElement('div');
+  cabecera.className = 'hi-cabecera';
+  cabecera.innerHTML = '<b>' + escapeHtml(tituloHoja) + '</b>';
+
+  let aviso = null;
+  if (data.notasGenerales && data.notasGenerales.length) {
+    aviso = document.createElement('div');
+    aviso.className = 'hi-aviso';
+    aviso.innerHTML = data.notasGenerales.map(function (n) {
+      return '<div>' + escapeHtml(n.texto || '') + '</div>';
+    }).join('');
+  }
+
+  const grupos = (data.secciones || []).map(construirGrupoImpresionDia_);
+
+  paginarYMontarHojaImpresion_(cont, tituloHoja, cabecera, aviso, grupos);
+}
+
+/** Reparte cabecera + aviso + grupos entre tantas ".hi-pagina" como hagan
+ *  falta, cada una con el alto exacto de una hoja A4 (menos los márgenes de
+ *  @page), para poder poner "Página N de X" en el pie de cada una con el
+ *  total real -- dato que el navegador nunca expone durante la impresión,
+ *  así que aquí se pagina "a mano" en vez de fiarse del motor de impresión.
+ *  Para saber cuánto ocupa cada trozo se mide su alto real metiéndolo,
+ *  fuera de la pantalla, en un contenedor con el mismo ancho útil que
+ *  tendrá la página impresa (en mm, no en px: el mm de CSS es una unidad
+ *  fija -96px por pulgada, siempre igual-, así que la medida hecha en
+ *  pantalla normal predice fielmente lo que pasará al imprimir). */
+function paginarYMontarHojaImpresion_(cont, tituloHoja, cabecera, aviso, grupos) {
+  const ANCHO_UTIL_MM = 192; // A4 (210mm) - 2 x margen de @page (9mm)
+  const ALTO_UTIL_MM = 279;  // A4 (297mm) - 2 x margen de @page (9mm)
+  const MM_A_PX = 96 / 25.4; // conversión fija de CSS, independiente de la pantalla
+
+  const medidor = document.createElement('div');
+  medidor.style.cssText = 'position:absolute; left:-9999px; top:0; width:' + ANCHO_UTIL_MM + 'mm; visibility:hidden;';
+  document.body.appendChild(medidor);
+
+  const pieMedida = crearPiePaginaImpresion_(tituloHoja, 1, 1);
+  medidor.appendChild(cabecera);
+  if (aviso) medidor.appendChild(aviso);
+  medidor.appendChild(pieMedida);
+  const altoCabecera = cabecera.offsetHeight + (aviso ? aviso.offsetHeight : 0);
+  const altoPie = pieMedida.offsetHeight;
+  medidor.removeChild(pieMedida);
+
+  const alturasGrupos = grupos.map(function (g) {
+    medidor.appendChild(g);
+    const alto = g.offsetHeight + parseFloat(getComputedStyle(g).marginBottom || 0);
+    medidor.removeChild(g);
+    return alto;
+  });
+
+  document.body.removeChild(medidor);
+
+  const altoUtilPx = ALTO_UTIL_MM * MM_A_PX;
+  const presupuestoPagina1 = altoUtilPx - altoCabecera - altoPie;
+  const presupuestoPaginaSiguiente = altoUtilPx - altoPie;
+
+  // Reparto "greedy": se van metiendo grupos en la página actual mientras
+  // quepan; en cuanto uno no cabe, se cierra esa página y se abre otra.
+  // Los grupos nunca se parten (igual que antes con break-inside:avoid),
+  // solo que ahora la decisión de "no cabe, página nueva" se toma aquí en
+  // vez de dejársela al navegador.
+  const paginas = [[]];
+  let alturaUsada = 0;
+  let presupuestoActual = presupuestoPagina1;
+  grupos.forEach(function (g, i) {
+    const alto = alturasGrupos[i];
+    if (alturaUsada + alto > presupuestoActual && paginas[paginas.length - 1].length > 0) {
+      paginas.push([]);
+      alturaUsada = 0;
+      presupuestoActual = presupuestoPaginaSiguiente;
+    }
+    paginas[paginas.length - 1].push(g);
+    alturaUsada += alto;
+  });
+
+  const totalPaginas = paginas.length;
+  paginas.forEach(function (gruposPagina, idx) {
+    const pagina = document.createElement('div');
+    pagina.className = 'hi-pagina' + (idx < totalPaginas - 1 ? ' hi-pagina-salto' : '');
+
+    const contenido = document.createElement('div');
+    contenido.className = 'hi-pagina-contenido';
+    if (idx === 0) {
+      contenido.appendChild(cabecera);
+      if (aviso) contenido.appendChild(aviso);
+    }
+    gruposPagina.forEach(function (g) { contenido.appendChild(g); });
+    pagina.appendChild(contenido);
+
+    pagina.appendChild(crearPiePaginaImpresion_(tituloHoja, idx + 1, totalPaginas));
+    cont.appendChild(pagina);
+  });
+}
+
+/** Pie de una hoja impresa: mismo título de la cabecera a la izquierda/
+ *  centro, y "Página N de X" a la derecha del todo. */
+function crearPiePaginaImpresion_(tituloHoja, numPagina, totalPaginas) {
+  const pie = document.createElement('div');
+  pie.className = 'hi-pie-pagina';
+  pie.innerHTML =
+    '<span></span>' +
+    '<span class="hi-pie-titulo">' + escapeHtml(tituloHoja) + '</span>' +
+    '<span class="hi-pie-num">Página ' + numPagina + ' de ' + totalPaginas + '</span>';
+  return pie;
+}
+
+/** Construye un ".hi-grupo" (una agrupación completa) para la hoja de
+ *  impresión manual: título, notas de carga, tabla con filas en blanco
+ *  para rellenar, caja de TOTAL y caja de "quitar en este orden". */
+function construirGrupoImpresionDia_(seccion) {
+  const grupo = document.createElement('div');
+  grupo.className = 'hi-grupo';
+
+  const titulo = document.createElement('div');
+  titulo.className = 'hi-grupo-titulo';
+  titulo.textContent = seccion.nombre;
+  grupo.appendChild(titulo);
+
+  if (seccion.notasCarga && seccion.notasCarga.length) {
+    const notas = document.createElement('div');
+    notas.className = 'hi-notas-carga';
+    notas.innerHTML = seccion.notasCarga.map(function (texto) {
+      return '<div>' + escapeHtml(texto) + '</div>';
+    }).join('');
+    grupo.appendChild(notas);
+  }
+
+  // extraCols cuenta solo las columnas de datos en blanco (60/PTA/CART/
+  // TOTAL/PDTE + opcionales); la fila de cabecera de una agrupación (p.ej.
+  // "MENDEZ + FORUM ALG.") necesita cubrir TODAS las columnas de la tabla,
+  // así que a extraCols hay que sumarle las 2 columnas iniciales (LIM y
+  // nombre) para que la barra llegue hasta el final -- si no, se queda
+  // corta y no tapa las últimas columnas (TOTAL, PDTE...).
+  const extraCols = 5 + (seccion.tienePeso ? 1 : 0) + (seccion.tieneCExpress ? 1 : 0) + (seccion.tieneSobrestock ? 1 : 0);
+  const totalCols = extraCols + 2;
+
+  // Solo las tiendas que hoy hay que contar físicamente aquí: se dejan
+  // fuera las cerradas y las que hoy salen por otra agrupación (cambio
+  // puntual), igual que en pantalla no se cuentan ahí.
+  const tiendas = (seccion.tiendas || []).filter(function (t) { return !t.cerrada && !t.salePorExcepcion; });
+
+  const nombresPorGrupo = {};
+  tiendas.forEach(function (t) {
+    if (!t.notaGrupoId) return;
+    if (!nombresPorGrupo[t.notaGrupoId]) nombresPorGrupo[t.notaGrupoId] = [];
+    nombresPorGrupo[t.notaGrupoId].push(t.nombre);
+  });
+
+  const filasHtml = tiendas.map(function (t, i) {
+    const anterior = tiendas[i - 1];
+    const siguiente = tiendas[i + 1];
+    const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
+    const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
+    let html = '';
+    if (esPrimeraDeGrupo) {
+      const esTotal = t.notaGrupoTipo === 'total';
+      const nombresGrupo = (nombresPorGrupo[t.notaGrupoId] || []).map(quitarCodigoTienda).join(' + ');
+      // Si la ruta compartida trae una anotación de carga (ej. "8P MAX. POR
+      // RUTA - CARGA EN GAITE", lo mismo que se ve en pantalla en el chip de
+      // la cabecera del grupo), se añade también aquí -- en pantalla se ve
+      // aparte en un chip a la derecha, pero en el papel no hay chip, así
+      // que se pega al final del mismo renglón de cabecera.
+      const textoIzquierda = esTotal
+        ? t.nota
+        : (t.nota ? nombresGrupo + ' — ' + t.nota : nombresGrupo);
+      html += '<tr class="hi-fila-grupo"><td colspan="' + totalCols + '">' + escapeHtml(textoIzquierda) + '</td></tr>';
+    }
+    const badge = badgeTransitoTienda(t.transito);
+    // El "*" tras el nombre marca las tiendas que tienen una nota/aviso
+    // propio (ver icono de nota en pantalla) -- igual que en las hojas de
+    // toda la vida.
+    const sufijo = (badge ? ' (' + badge.texto + ')' : '') + (t.nota && !t.notaGrupoId ? ' *' : '');
+    // Las tiendas que pertenecen a una agrupación de rutas llevan un fondo
+    // tenue en TODAS sus filas (no solo en la cabecera), y la última de
+    // ellas cierra el bloque con un borde inferior grueso -- así se ve de
+    // un vistazo dónde empieza y termina la agrupación, sin confundirla
+    // con las tiendas sueltas que vienen después.
+    const claseFila = t.notaGrupoId
+      ? ' class="hi-fila-grupo-miembro' + (esUltimaDeGrupo ? ' hi-fila-grupo-fin' : '') + '"'
+      : '';
+    html += '<tr' + claseFila + '>' +
+      '<td class="hi-lim">' + escapeHtml(String(t.limite)) + '</td>' +
+      '<td class="hi-nombre">' + escapeHtml(quitarMarcadorNombre(t.nombre)) + escapeHtml(sufijo) + '</td>' +
+      celdaImpresionManual_(t.c60) + celdaImpresionManual_(t.pta) + celdaImpresionManual_(t.cart) +
+      '<td class="hi-blanco"></td><td class="hi-blanco"></td>' +
+      (seccion.tienePeso ? '<td class="hi-blanco"></td>' : '') +
+      (seccion.tieneCExpress ? '<td class="hi-blanco"></td>' : '') +
+      (seccion.tieneSobrestock ? '<td class="hi-blanco"></td>' : '') +
+      '</tr>';
+    return html;
+  }).join('');
+
+  const tabla = document.createElement('table');
+  tabla.className = 'hi-tabla';
+  tabla.innerHTML =
+    '<thead><tr><th>Lim</th><th></th><th>60</th><th>PTA</th><th>Cart.</th><th>Total</th><th>Pdte</th>' +
+    (seccion.tienePeso ? '<th>Peso</th>' : '') +
+    (seccion.tieneCExpress ? '<th>C.Express</th>' : '') +
+    (seccion.tieneSobrestock ? '<th>Sobrestock</th>' : '') +
+    '</tr></thead><tbody>' + filasHtml + '</tbody>';
+
+  const layout = document.createElement('table');
+  layout.className = 'hi-layout';
+  const tbody = document.createElement('tbody');
+  const fila = document.createElement('tr');
+
+  const tdTabla = document.createElement('td');
+  tdTabla.className = 'hi-tabla-cell';
+  tdTabla.appendChild(tabla);
+  fila.appendChild(tdTabla);
+
+  // El cuadro de TOTAL tiene un tamaño fijo pensado para agrupaciones con
+  // varias tiendas (la tabla, más alta, "sostiene" ese tamaño). Cuando la
+  // agrupación tiene muy pocas filas (p.ej. una sola tienda), ese mismo
+  // cuadro obliga a estirar la fila entera y queda un hueco enorme -- aquí
+  // se calcula un tamaño más pequeño para esos casos, en proporción al
+  // número de filas reales de la tabla (tiendas + cabeceras de subgrupo).
+  const filasTablaTotal = tiendas.length + Object.keys(nombresPorGrupo).length;
+  let ladoCajaTotal = 60;
+  if (filasTablaTotal <= 1) ladoCajaTotal = 30;
+  else if (filasTablaTotal === 2) ladoCajaTotal = 42;
+
+  const tdTotal = document.createElement('td');
+  tdTotal.className = 'hi-total-cell';
+  tdTotal.innerHTML = '<div class="hi-total-label">Total</div><div class="hi-total-box" style="width:' + ladoCajaTotal + 'px;height:' + ladoCajaTotal + 'px;"></div>';
+  fila.appendChild(tdTotal);
+
+  if (seccion.ordenRetirada && seccion.ordenRetirada.length) {
+    const tdOrden = document.createElement('td');
+    tdOrden.className = 'hi-orden-cell';
+    tdOrden.innerHTML =
+      '<div class="hi-orden-label">Quitar en este orden</div>' +
+      '<div class="hi-orden-wrap">' +
+      '<table class="hi-orden-tabla">' +
+      seccion.ordenRetirada.map(function (o, i) {
+        return '<tr><td class="hi-orden-num">' + (i + 1) + 'º</td><td>' + escapeHtml(o) + '</td></tr>';
+      }).join('') +
+      '</table>' +
+      '</div>';
+    fila.appendChild(tdOrden);
+  }
+
+  tbody.appendChild(fila);
+  layout.appendChild(tbody);
+  grupo.appendChild(layout);
+  return grupo;
+}
+
 /** "NO" tal cual viene del Excel (sin importar mayúsculas/espacios): esa
  *  tienda no debe recibir palets por esa vía ese día. */
 function esValorNo(v) {
   return String(v == null ? '' : v).trim().toUpperCase() === 'NO';
+}
+
+/** Celda de 60/PTA/CART en la hoja de impresión manual (construirGrupoImpresionDia_):
+ *  se deja en blanco para rellenar a mano, salvo que el valor de origen sea
+ *  "NO" (ver esValorNo), en cuyo caso se marca con una "X" para que quede
+ *  claro sobre el papel que esa tienda no debe recibir palets por esa vía. */
+function celdaImpresionManual_(valor) {
+  return esValorNo(valor) ? '<td class="hi-blanco hi-no">X</td>' : '<td class="hi-blanco"></td>';
 }
 
 /**
