@@ -1,5 +1,5 @@
 {
-  "name": "Salida de Mercancía",
+  "name": "Gestión Salidas",
   "short_name": "Salidas",
   "description": "Gestión de conteos y envío a agencias",
   "start_url": "./index.html",
