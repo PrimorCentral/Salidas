@@ -1008,13 +1008,60 @@
   .plantilla-grupo-bloque .plantilla-tienda { border-top-color: #e4eaf3; }
   .plantilla-tienda.primera { border-top: none; }
 
-  /* Orden de retirada de una tienda concreta ("QUITAR EN ESTE ORDEN"): se
-     muestra aparte, como insignia junto al nombre, para no confundirlo con
-     la nota de grupo de arriba. */
-  .plantilla-tienda-orden-chip {
-    flex-shrink: 0; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 10px; font-weight: 700; color: var(--amber-dark); background: #fbf1e2;
-    border-radius: 6px; padding: 4px 7px;
+  /* Botón "Orden retirada" de la cabecera de ruta: mismo patrón visual que
+     PESO/C.EXPRESS/SOBRESTOCK/PDF ESPECIAL (botón discreto que se resalta
+     en naranja/ámbar cuando ya hay un orden configurado). Sustituye a la
+     vieja etiqueta por tienda. */
+  .plantilla-ruta-orden {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .plantilla-ruta-orden:hover { background: #eef1f7; }
+  .plantilla-ruta-orden.activo { background: var(--amber-dark); color: #fff; border-color: var(--amber-dark); }
+  .plantilla-ruta-orden.activo:hover { filter: brightness(1.08); }
+
+  /* Modal de "Orden de retirada" a nivel de ruta: dos columnas — tiendas
+     disponibles (checkbox) y orden de retirada (arrastrable con el ratón
+     o el dedo, sin flechas: la posición se recalcula sola al soltar). */
+  .modal-box.orden-retirada-modal { max-width: 820px; }
+  .modal-orden-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .modal-orden-col { display: flex; flex-direction: column; min-width: 0; }
+  .modal-orden-col-titulo {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--ink-soft); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .modal-orden-col-contador { color: var(--amber-dark); }
+  .modal-orden-lista {
+    height: 62vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px;
+    background: #fff;
+  }
+  .modal-orden-item {
+    display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+    border-top: 1px solid var(--line); background: #fff;
+  }
+  .modal-orden-item:first-child { border-top: none; }
+  .modal-orden-item.marcada { background: #fbf1e2; }
+  .modal-orden-item.arrastrando { opacity: .4; }
+  .modal-orden-handle {
+    flex-shrink: 0; width: 26px; height: 30px; margin: -4px 0; display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft); cursor: grab; touch-action: none; border-radius: 4px;
+    -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
+  }
+  .modal-orden-handle svg { pointer-events: none; }
+  .modal-orden-handle:hover { background: #e1e5eb; }
+  .modal-orden-handle:active { cursor: grabbing; }
+  .modal-orden-check { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; }
+  .modal-orden-check input[type="checkbox"] { width: 16px; height: 16px; flex-shrink: 0; }
+  .modal-orden-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .modal-orden-pos {
+    flex-shrink: 0; min-width: 22px; text-align: center; font-size: 11px; font-weight: 800;
+    color: var(--amber-dark); background: #f3d9ab; border-radius: 6px; padding: 3px 6px;
+  }
+  @media (max-width: 620px) {
+    .modal-box.orden-retirada-modal { max-width: 480px; }
+    .modal-orden-columnas { grid-template-columns: 1fr; }
+    .modal-orden-lista { height: 30vh; }
   }
 
   .modal-campo { margin-bottom: 14px; }
@@ -2544,7 +2591,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.7.5';
+const APP_VERSION_ACTUAL = '1.7.6';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -3130,6 +3177,14 @@ const SUPABASE_ACCIONES_ = {
   editarOrdenTiendaPlantilla: function (args) {
     const dia = args[0], fila = args[1], orden = args[2];
     return llamarRpcSupabase_('editar_orden_tienda_plantilla', { p_dia: dia, p_row: fila, p_texto: orden });
+  },
+  // "Quitar en este orden" a nivel de ruta: reemplaza al viejo campo de
+  // texto libre por tienda. p_filas es el array de "row" (en el orden en
+  // que se deben quitar) de las tiendas elegidas en el modal; el backend
+  // comprueba que todas pertenecen a esa misma ruta.
+  establecerOrdenRetiradaRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1], filas = args[2];
+    return llamarRpcSupabase_('set_orden_retirada_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta, p_rows: filas });
   },
   // -- Supabase: Observaciones (notas generales, de agrupación y cierres) --
   guardarObservacion: function (args) {
@@ -6967,7 +7022,7 @@ function pintarPlantilla_() {
     const piezasTiendas = [];
     s.tiendas.forEach(function (t, ti) {
       const idSeguro = 'pt' + si + '_' + ti;
-      const tieneNotaOOrden = !!(t.nota || t.orden);
+      const tieneNota = !!t.nota;
 
       if (restantesGrupo <= 0 && t.nota) {
         restantesGrupo = Math.max(1, Number(t.notaNumFilas) || 1);
@@ -7001,8 +7056,7 @@ function pintarPlantilla_() {
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
           '</div>' +
-          (t.orden ? '<span class="plantilla-tienda-orden-chip" title="Orden de retirada: ' + escapeAttr(t.orden) + '">' + escapeHtml(t.orden) + '</span>' : '') +
-          '<button type="button" class="plantilla-tienda-nota' + (tieneNotaOOrden ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" data-nota-orden="' + escapeAttr(t.orden || '') + '" title="' + (tieneNotaOOrden ? 'Editar nota / orden de retirada' : 'Añadir nota / orden de retirada') + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
+          '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" title="' + (tieneNota ? 'Editar nota' : 'Añadir nota') + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-tienda-mover" data-mover-tienda="' + t.row + '" title="Mover a otra agrupación">' +
@@ -7061,6 +7115,10 @@ function pintarPlantilla_() {
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
+            '<button type="button" class="plantilla-ruta-orden' + (s.ordenRetirada && s.ordenRetirada.length ? ' activo' : '') + '" data-orden-ruta="' + escapeAttr(s.nombre) + '" title="' + (s.ordenRetirada && s.ordenRetirada.length ? 'Editar el orden de retirada (' + s.ordenRetirada.length + ' tienda(s))' : 'Configurar el orden en que se quitan los palets de esta ruta') + '">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
+              'Orden retirada' + (s.ordenRetirada && s.ordenRetirada.length ? ' (' + s.ordenRetirada.length + ')' : '') +
+            '</button>' +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
             '<button type="button" class="plantilla-ruta-borrar" data-borrar-ruta="' + escapeAttr(s.nombre) + '" title="Eliminar ruta completa">' +
@@ -7084,8 +7142,7 @@ function pintarPlantilla_() {
       abrirModalNotaTiendaPlantilla_(
         btn.getAttribute('data-nota-fila'),
         btn.getAttribute('data-nota-texto'),
-        Number(btn.getAttribute('data-nota-cantidad')) || 1,
-        btn.getAttribute('data-nota-orden')
+        Number(btn.getAttribute('data-nota-cantidad')) || 1
       );
     };
   });
@@ -7152,6 +7209,9 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
+  });
+  listaEl.querySelectorAll('[data-orden-ruta]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalOrdenRetiradaPlantilla_(btn.getAttribute('data-orden-ruta')); };
   });
   listaEl.querySelectorAll('[data-bloqueo-row]').forEach(function (btn) {
     btn.onclick = function () {
@@ -7649,13 +7709,13 @@ function abrirModalAnadirNotaCargaPlantilla_(nombreRuta) {
   });
 }
 
-function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, ordenActual) {
+function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Nota y orden de retirada';
+  document.getElementById('modal-title').textContent = 'Nota de la tienda';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
@@ -7669,10 +7729,6 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
     '<div class="modal-campo">' +
       '<label for="modal-nota-cantidad">Aplica a cuántas tiendas (empezando por esta)</label>' +
       '<input type="text" id="modal-nota-cantidad" inputmode="numeric" value="' + (notaCantidadActual || 1) + '">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-nota-orden">Orden de retirada ("QUITAR EN ESTE ORDEN")</label>' +
-      '<input type="text" id="modal-nota-orden" value="' + escapeAttr(ordenActual || '') + '" placeholder="Ej: nombre de la tienda">' +
     '</div>';
 
   const actions = document.getElementById('modal-actions');
@@ -7698,7 +7754,6 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
   document.getElementById('modal-confirm-btn').onclick = function () {
     const texto = document.getElementById('modal-nota-texto').value.trim();
     const cantidad = document.getElementById('modal-nota-cantidad').value.trim() || '1';
-    const orden = document.getElementById('modal-nota-orden').value.trim();
     cerrarModal();
 
     const tareas = [];
@@ -7707,7 +7762,6 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
     } else if (notaActual) {
       tareas.push(llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila]));
     }
-    tareas.push(llamarApi_('editarOrdenTiendaPlantilla', [PLANTILLA_ESTADO.dia, fila, orden]));
 
     Promise.all(tareas)
       .then(function () { mostrarToast('Guardado'); cargarPlantilla_({ silencioso: true }); })
@@ -7715,6 +7769,170 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual, or
   };
 
   setTimeout(function () { document.getElementById('modal-nota-texto').focus(); }, 50);
+}
+
+/**
+ * Modal de "Quitar en este orden" a nivel de RUTA (botón en la cabecera de
+ * la agrupación en "Rutas y tiendas"). Sustituye al viejo sistema de un
+ * campo de texto libre por tienda: aquí se eligen y ordenan directamente
+ * las tiendas de esa misma ruta (checkbox + flechas subir/bajar), así que
+ * nunca se puede escribir el nombre de una tienda que no está en la ruta
+ * ni que esté mal escrito.
+ */
+function abrirModalOrdenRetiradaPlantilla_(nombreRuta) {
+  const seccion = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+  if (!seccion) return;
+
+  // Estado local del modal: array de "row" (mismo identificador que usa
+  // el resto de "Rutas y tiendas") en el orden en que se deben quitar.
+  // Se parte del orden ya guardado (seccion.ordenRetirada, ya viene
+  // ordenado desde el backend).
+  let orden = (seccion.ordenRetirada || []).map(function (o) { return o.row; });
+
+  document.getElementById('modal-box').classList.add('ancho');
+  document.getElementById('modal-box').classList.add('orden-retirada-modal');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Orden de retirada — ' + nombreRuta;
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  function nombreLimpio(t) { return quitarCodigoTienda(quitarMarcadorNombre(t.nombre)); }
+  function tiendaPorRow(row) { return seccion.tiendas.find(function (t) { return t.row === row; }); }
+
+  // Arrastre con puntero (ratón o dedo) dentro de la lista de "Orden de
+  // retirada". Se escucha el movimiento/soltado en el "document" (no en el
+  // propio icono) porque, si el puntero se mueve deprisa, puede salirse
+  // por un instante de un icono tan pequeño y se perdería el arrastre.
+  function activarArrastre(lista) {
+    lista.querySelectorAll('[data-orden-handle]').forEach(function (handle) {
+      handle.onpointerdown = function (ev) {
+        if (ev.button !== undefined && ev.button !== 0 && ev.pointerType === 'mouse') return;
+        const item = handle.closest('.modal-orden-item');
+        if (!item) return;
+        ev.preventDefault();
+        item.classList.add('arrastrando');
+
+        function actualizarNumeros() {
+          Array.prototype.forEach.call(lista.children, function (el, i) {
+            const badge = el.querySelector('.modal-orden-pos');
+            if (badge) badge.textContent = (i + 1) + 'º';
+          });
+        }
+        function onMove(ev2) {
+          ev2.preventDefault();
+          const y = ev2.clientY;
+          const hermanos = Array.prototype.filter.call(lista.children, function (el) { return el !== item; });
+          let siguiente = null;
+          for (let i = 0; i < hermanos.length; i++) {
+            const r = hermanos[i].getBoundingClientRect();
+            if (y < r.top + r.height / 2) { siguiente = hermanos[i]; break; }
+          }
+          if (siguiente) lista.insertBefore(item, siguiente); else lista.appendChild(item);
+          actualizarNumeros();
+        }
+        function onUp() {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          document.removeEventListener('pointercancel', onUp);
+          item.classList.remove('arrastrando');
+          // El DOM ya está en el orden final: se traduce a la lista `orden`.
+          orden = Array.prototype.map.call(lista.children, function (el) {
+            return Number(el.getAttribute('data-row'));
+          });
+          pintar();
+        }
+        document.addEventListener('pointermove', onMove, { passive: false });
+        document.addEventListener('pointerup', onUp);
+        document.addEventListener('pointercancel', onUp);
+      };
+    });
+  }
+
+  function pintar() {
+    const disponibles = seccion.tiendas.filter(function (t) { return orden.indexOf(t.row) === -1; });
+
+    const disponiblesHtml = disponibles.map(function (t) {
+      return (
+        '<div class="modal-orden-item" data-row="' + t.row + '">' +
+          '<label class="modal-orden-check">' +
+            '<input type="checkbox" data-orden-check="' + t.row + '">' +
+            '<span>' + escapeHtml(nombreLimpio(t)) + '</span>' +
+          '</label>' +
+        '</div>'
+      );
+    }).join('');
+
+    const seleccionadasHtml = orden.map(function (row, i) {
+      const t = tiendaPorRow(row);
+      if (!t) return '';
+      return (
+        '<div class="modal-orden-item marcada" data-row="' + row + '">' +
+          '<span class="modal-orden-handle" data-orden-handle title="Arrastrar para reordenar">' +
+            '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="2" cy="2" r="1.4"/><circle cx="8" cy="2" r="1.4"/><circle cx="2" cy="7" r="1.4"/><circle cx="8" cy="7" r="1.4"/><circle cx="2" cy="12" r="1.4"/><circle cx="8" cy="12" r="1.4"/></svg>' +
+          '</span>' +
+          '<label class="modal-orden-check">' +
+            '<input type="checkbox" data-orden-check="' + row + '" checked>' +
+            '<span>' + escapeHtml(nombreLimpio(t)) + '</span>' +
+          '</label>' +
+          '<span class="modal-orden-pos">' + (i + 1) + 'º</span>' +
+        '</div>'
+      );
+    }).join('');
+
+    custom.innerHTML =
+      '<p class="modal-campo-ayuda" style="margin:0 0 12px;">Marca las tiendas que hay que quitar del camión. Para ponerlas en orden, arrastra cada una (con el icono de puntitos) dentro de "Orden de retirada": el número se pone solo.</p>' +
+      '<div class="modal-orden-columnas">' +
+        '<div class="modal-orden-col">' +
+          '<div class="modal-orden-col-titulo">Tiendas de la ruta</div>' +
+          '<div class="modal-orden-lista" id="orden-disponibles">' + (disponiblesHtml || '<div class="festivos-item-vacio">Todas están seleccionadas.</div>') + '</div>' +
+        '</div>' +
+        '<div class="modal-orden-col">' +
+          '<div class="modal-orden-col-titulo">Orden de retirada <span class="modal-orden-col-contador">(' + orden.length + ')</span></div>' +
+          '<div class="modal-orden-lista" id="orden-seleccionadas">' + (seleccionadasHtml || '<div class="festivos-item-vacio">Marca alguna tienda de la izquierda.</div>') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (seccion.tiendas.length ? '' : '<div class="festivos-item-vacio">Esta ruta no tiene tiendas.</div>');
+
+    custom.querySelectorAll('[data-orden-check]').forEach(function (chk) {
+      chk.onchange = function () {
+        const row = Number(chk.getAttribute('data-orden-check'));
+        if (chk.checked) {
+          if (orden.indexOf(row) === -1) orden.push(row);
+        } else {
+          orden = orden.filter(function (r) { return r !== row; });
+        }
+        pintar();
+      };
+    });
+
+    activarArrastre(document.getElementById('orden-seleccionadas'));
+  }
+  const actions = document.getElementById('modal-actions');
+  function pintarAcciones() {
+    actions.innerHTML =
+      (orden.length ? '<button class="modal-cancel" id="modal-quitar-orden-btn" style="margin-right:auto;">Quitar todas</button>' : '') +
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+      '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+    if (orden.length) {
+      document.getElementById('modal-quitar-orden-btn').onclick = function () { orden = []; pintarTodo(); };
+    }
+    document.getElementById('modal-confirm-btn').onclick = function () {
+      cerrarModal();
+      llamarApi_('establecerOrdenRetiradaRuta', [PLANTILLA_ESTADO.dia, nombreRuta, orden])
+        .then(function () { mostrarToast('Orden de retirada guardado'); cargarPlantilla_({ silencioso: true }); })
+        .catch(mostrarErrorServidor);
+    };
+  }
+  function pintarTodo() { pintar(); pintarAcciones(); }
+  pintarTodo();
+  document.getElementById('modal-overlay').style.display = 'flex';
 }
 
 function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
@@ -8892,7 +9110,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     ordenWrap.className = 'orden-retirada';
     ordenWrap.innerHTML =
       '<div class="orden-retirada-titulo">Quitar en este orden</div>' +
-      '<ol>' + seccion.ordenRetirada.map(function (o) { return '<li>' + escapeHtml(o) + '</li>'; }).join('') + '</ol>';
+      '<ol>' + seccion.ordenRetirada.map(function (o) { return '<li>' + escapeHtml(quitarCodigoTienda(quitarMarcadorNombre(o))) + '</li>'; }).join('') + '</ol>';
     acciones.appendChild(ordenWrap);
     body.appendChild(acciones);
   }
@@ -10172,7 +10390,7 @@ function construirGrupoImpresionDia_(seccion) {
       '<div class="hi-orden-wrap">' +
       '<table class="hi-orden-tabla">' +
       seccion.ordenRetirada.map(function (o, i) {
-        return '<tr><td class="hi-orden-num">' + (i + 1) + 'º</td><td>' + escapeHtml(o) + '</td></tr>';
+        return '<tr><td class="hi-orden-num">' + (i + 1) + 'º</td><td>' + escapeHtml(quitarCodigoTienda(quitarMarcadorNombre(o))) + '</td></tr>';
       }).join('') +
       '</table>' +
       '</div>';
@@ -11748,6 +11966,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('actualizacion');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.remove('gestor-obs');
+  document.getElementById('modal-box').classList.remove('orden-retirada-modal');
   document.getElementById('modal-title').style.display = '';
 }
 document.getElementById('modal-cerrar-x').onclick = cerrarModal;
