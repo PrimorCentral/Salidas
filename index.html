@@ -996,16 +996,25 @@
      abriendo la etiqueta de cada tienda una a una. Ahora la nota se pinta
      como cabecera del bloque de tiendas al que aplica, igual que en la
      hoja de reparto en papel. */
-  .plantilla-grupo-etiqueta {
-    display: flex; align-items: center; gap: 6px; padding: 6px 10px 5px 12px;
-    background: #eef4fb; color: var(--navy-soft); font-size: 11px; font-weight: 700;
-    letter-spacing: .01em; border-top: 1px solid var(--line);
+  /* Cada tienda que tiene un comentario suelto o pertenece a un grupo de
+     palets muestra una segunda línea, dentro de su propia fila, con el
+     texto correspondiente. Antes se dibujaba como una cabecera + bloque
+     que envolvía "las N siguientes tiendas contadas desde aquí", lo cual
+     solo se veía bien si esas tiendas eran consecutivas en la lista; al
+     permitir marcar cualquier combinación de tiendas para un grupo (ver
+     modal "Grupos de palets"), cada fila lleva ahora su propia etiqueta,
+     así funciona sea cual sea el orden o la separación entre ellas. */
+  .plantilla-tienda { flex-wrap: wrap; }
+  .plantilla-tienda.con-nota { border-left: 3px solid var(--prevision); background: #fbfcfe; }
+  .plantilla-tienda-notatxt {
+    flex-basis: 100%; display: flex; align-items: center; gap: 6px; margin-top: 1px; padding-left: 2px;
+    font-size: 11px; color: var(--navy-soft); font-weight: 600;
   }
-  .plantilla-grupo-etiqueta svg { flex-shrink: 0; opacity: .8; }
-  .plantilla-grupo-bloque {
-    border-left: 3px solid var(--prevision); background: #fbfcfe;
+  .plantilla-tienda-notatxt svg { flex-shrink: 0; opacity: .8; }
+  .plantilla-tienda-notatxt-extra {
+    color: var(--ink-soft); font-weight: 700; background: #eef4fb; padding: 2px 6px; border-radius: 5px;
+    white-space: nowrap;
   }
-  .plantilla-grupo-bloque .plantilla-tienda { border-top-color: #e4eaf3; }
   .plantilla-tienda.primera { border-top: none; }
 
   /* Botón "Orden retirada" de la cabecera de ruta: mismo patrón visual que
@@ -1020,6 +1029,14 @@
   .plantilla-ruta-orden:hover { background: #eef1f7; }
   .plantilla-ruta-orden.activo { background: var(--amber-dark); color: #fff; border-color: var(--amber-dark); }
   .plantilla-ruta-orden.activo:hover { filter: brightness(1.08); }
+  .plantilla-ruta-grupos {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .plantilla-ruta-grupos:hover { background: #eef1f7; }
+  .plantilla-ruta-grupos.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-grupos.activo:hover { filter: brightness(1.08); }
 
   /* Modal de "Orden de retirada" a nivel de ruta: dos columnas — tiendas
      disponibles (checkbox) y orden de retirada (arrastrable con el ratón
@@ -1034,7 +1051,7 @@
   .modal-orden-col-contador { color: var(--amber-dark); }
   .modal-orden-lista {
     height: 62vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px;
-    background: #fff;
+    background: #fff; overscroll-behavior: contain;
   }
   .modal-orden-item {
     display: flex; align-items: center; gap: 6px; padding: 8px 10px;
@@ -1063,6 +1080,34 @@
     .modal-orden-columnas { grid-template-columns: 1fr; }
     .modal-orden-lista { height: 30vh; }
   }
+
+  /* Modal "Grupos de palets" a nivel de ruta. */
+  .modal-grupos-lista { display: flex; flex-direction: column; gap: 14px; max-height: 60vh; overflow-y: auto; padding-right: 2px; }
+  .modal-grupo-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: #fbfcfe; }
+  .modal-grupo-card-fila { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  .modal-grupo-campo { display: flex; flex-direction: column; gap: 4px; flex: 1 1 160px; min-width: 140px; }
+  .modal-grupo-campo label { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+  .modal-grupo-campo input[type="text"] {
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px; font-size: 13px; width: 100%;
+  }
+  .modal-grupo-campo-limite { flex: 0 0 110px; min-width: 110px; }
+  .modal-grupo-campo-tipo {
+    flex: 0 0 auto; flex-direction: row; align-items: center; gap: 6px; cursor: pointer; padding-bottom: 7px;
+  }
+  .modal-grupo-campo-tipo span { font-size: 12px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; }
+  .modal-grupo-eliminar {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); border-radius: 7px; padding: 7px 9px;
+    color: #b3312c; margin-bottom: 1px;
+  }
+  .modal-grupo-eliminar:hover { background: #fdecea; border-color: #f3c6c2; }
+  .modal-grupo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .modal-grupo-chip {
+    display: flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 20px;
+    padding: 4px 10px 4px 6px; font-size: 12px; background: #fff; cursor: pointer;
+  }
+  .modal-grupo-chip input { width: 14px; height: 14px; flex-shrink: 0; }
+  .modal-grupo-chip.marcada { background: #fbf1e2; border-color: var(--amber-dark); }
+  .modal-grupo-chip.bloqueada { opacity: .45; cursor: not-allowed; background: #f3f4f6; }
 
   .modal-campo { margin-bottom: 14px; }
   .modal-campo:last-child { margin-bottom: 0; }
@@ -1704,7 +1749,11 @@
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(20,26,36,.55);
     display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+    overscroll-behavior: contain;
   }
+  /* Mientras hay un modal abierto, el fondo no debe desplazarse con la
+     rueda del ratón ni con gestos táctiles. */
+  body.modal-abierto { overflow: hidden; }
   .modal-box {
     background: #fff; border-radius: 16px; padding: 26px; max-width: 400px; width: 100%;
     box-shadow: 0 20px 50px rgba(0,0,0,.3);
@@ -2558,6 +2607,25 @@
       <textarea id="modal-textarea" style="display:none;" placeholder="Escribe aquí…"></textarea>
       <div class="modal-actions" id="modal-actions"></div>
     </div>
+    <script>
+      // Cada modal de la app abre/cierra poniendo display:flex/none en
+      // #modal-overlay directamente (no hay una única función "abrirModal").
+      // Para no tener que tocar cada punto donde se abre un modal, se
+      // observa ese cambio de estilo aquí y se bloquea el scroll del
+      // fondo (body) mientras cualquier modal esté visible.
+      (function () {
+        const overlay = document.getElementById('modal-overlay');
+        function sincronizar() {
+          const visible = getComputedStyle(overlay).display !== 'none';
+          document.body.classList.toggle('modal-abierto', visible);
+        }
+        new MutationObserver(sincronizar).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+        sincronizar();
+      })();
+      // El menú contextual del navegador (clic derecho) tampoco debería
+      // aparecer dentro de la app: se desactiva en toda la página.
+      document.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+    </script>
   </div>
 
   <div id="toast"></div>
@@ -2591,7 +2659,7 @@
 // sección PWA). Súbela a mano cada vez que despliegues, junto con
 // version.json y con CACHE_VERSION en service-worker.js (los tres deben
 // coincidir).
-const APP_VERSION_ACTUAL = '1.7.6';
+const APP_VERSION_ACTUAL = '1.7.7';
 {
   const badgeLogin = document.getElementById('login-version-badge');
   if (badgeLogin) badgeLogin.textContent = 'v' + APP_VERSION_ACTUAL;
@@ -2853,9 +2921,8 @@ const METODOS_REMOTOS_ = {
   añadirNotaCargaPlantilla: 'añadirNotaCargaPlantilla',
   editarNotaCargaPlantilla: 'editarNotaCargaPlantilla',
   eliminarNotaCargaPlantilla: 'eliminarNotaCargaPlantilla',
-  guardarNotaGrupoPlantilla: 'guardarNotaGrupoPlantilla',
-  eliminarNotaGrupoPlantilla: 'eliminarNotaGrupoPlantilla',
-  editarOrdenTiendaPlantilla: 'editarOrdenTiendaPlantilla',
+  editarNotaTiendaPlantilla: 'editarNotaTiendaPlantilla',
+  establecerGruposLimiteRuta: 'establecerGruposLimiteRuta',
   activarPesoRuta: 'activarPesoRuta',
   desactivarPesoRuta: 'desactivarPesoRuta',
   activarPdfEspecial: 'activarPdfEspecial',
@@ -3166,17 +3233,20 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], row = args[1];
     return llamarRpcSupabase_('eliminar_nota_carga_plantilla', { p_dia: dia, p_row: row });
   },
-  guardarNotaGrupoPlantilla: function (args) {
-    const dia = args[0], fila = args[1], cantidad = args[2], texto = args[3];
-    return llamarRpcSupabase_('guardar_nota_grupo_plantilla', { p_dia: dia, p_fila_inicio: fila, p_num_filas: cantidad, p_texto: texto });
+  // Comentario libre de UNA sola tienda (sin grupo ni límite). Si la
+  // tienda ya pertenece a un grupo de palets, el backend rechaza la
+  // llamada -- ese caso se edita desde "Grupos de palets" de la ruta.
+  editarNotaTiendaPlantilla: function (args) {
+    const dia = args[0], fila = args[1], texto = args[2];
+    return llamarRpcSupabase_('editar_nota_tienda_plantilla', { p_dia: dia, p_row: fila, p_texto: texto });
   },
-  eliminarNotaGrupoPlantilla: function (args) {
-    const dia = args[0], fila = args[1];
-    return llamarRpcSupabase_('eliminar_nota_grupo_plantilla', { p_dia: dia, p_fila: fila });
-  },
-  editarOrdenTiendaPlantilla: function (args) {
-    const dia = args[0], fila = args[1], orden = args[2];
-    return llamarRpcSupabase_('editar_orden_tienda_plantilla', { p_dia: dia, p_row: fila, p_texto: orden });
+  // Grupos de palets a nivel de ruta: reemplaza TODOS los grupos de esa
+  // ruta de una vez. p_grupos es un array de { texto, limite, tipo, rows }
+  // donde "rows" son las tiendas (mismo "row" que el resto de la app) que
+  // forman ese grupo; el backend comprueba que todas pertenecen a la ruta.
+  establecerGruposLimiteRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1], grupos = args[2];
+    return llamarRpcSupabase_('set_grupos_limite_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta, p_grupos: grupos });
   },
   // "Quitar en este orden" a nivel de ruta: reemplaza al viejo campo de
   // texto libre por tienda. p_filas es el array de "row" (en el orden en
@@ -7013,27 +7083,10 @@ function pintarPlantilla_() {
   }
 
   listaEl.innerHTML = PLANTILLA_ESTADO.secciones.map(function (s, si) {
-    // Agrupa las tiendas que comparten una misma nota de reparto (t.nota +
-    // t.notaNumFilas: "esta nota aplica a esta tienda y a las N-1
-    // siguientes"). Antes esa nota solo se veía abriendo, tienda a tienda,
-    // el pequeño icono de etiqueta; ahora se pinta como cabecera visible
-    // del bloque de tiendas al que corresponde.
-    let restantesGrupo = 0;
-    const piezasTiendas = [];
+    let piezasTiendas = [];
     s.tiendas.forEach(function (t, ti) {
       const idSeguro = 'pt' + si + '_' + ti;
       const tieneNota = !!t.nota;
-
-      if (restantesGrupo <= 0 && t.nota) {
-        restantesGrupo = Math.max(1, Number(t.notaNumFilas) || 1);
-        piezasTiendas.push(
-          '<div class="plantilla-grupo-etiqueta">' +
-            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>' +
-            '<span>' + escapeHtml(t.nota) + '</span>' +
-          '</div><div class="plantilla-grupo-bloque">'
-        );
-      }
-      const enGrupo = restantesGrupo > 0;
 
       const partesNombre = dividirNombreTiendaPlantilla_(t.nombre);
       const camposNombreHtml = partesNombre
@@ -7041,8 +7094,18 @@ function pintarPlantilla_() {
           '<span class="nombre" title="Nombre de la tienda">' + escapeHtml(partesNombre.resto) + '</span>'
         : '<span class="nombre" title="Nombre de la tienda">' + escapeHtml(t.nombre) + '</span>';
 
+      const notaLineaHtml = tieneNota
+        ? '<div class="plantilla-tienda-notatxt" title="' + (t.notaGrupoId ? 'Grupo de palets' : 'Comentario de la tienda') + '">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>' +
+            '<span>' + escapeHtml(t.nota) + '</span>' +
+            (t.notaGrupoId
+              ? '<span class="plantilla-tienda-notatxt-extra">' + (t.notaGrupoTipo === 'total' ? 'total' : ('máx ' + (t.notaLimite != null ? t.notaLimite : '?'))) + ' · ' + (t.notaNumFilas || 1) + ' tiendas</span>'
+              : '') +
+          '</div>'
+        : '';
+
       piezasTiendas.push(
-        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + '" data-tienda-row="' + t.row + '">' +
+        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + '" data-tienda-row="' + t.row + '">' +
           '<div class="plantilla-tienda-flechas">' +
             '<button type="button" data-subir="' + t.row + '"' + (ti === 0 ? ' disabled' : '') + ' title="Subir">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>' +
@@ -7056,7 +7119,7 @@ function pintarPlantilla_() {
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
           '</div>' +
-          '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-cantidad="' + (t.notaNumFilas || 1) + '" title="' + (tieneNota ? 'Editar nota' : 'Añadir nota') + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
+          '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-grupo="' + (t.notaGrupoId ? '1' : '0') + '" title="' + (t.notaGrupoId ? 'Pertenece a un grupo de palets: edítalo desde Grupos de palets' : (tieneNota ? 'Editar comentario' : 'Añadir comentario')) + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-tienda-mover" data-mover-tienda="' + t.row + '" title="Mover a otra agrupación">' +
@@ -7066,17 +7129,10 @@ function pintarPlantilla_() {
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-tienda="' + t.row + '" title="Eliminar tienda">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
+          notaLineaHtml +
         '</div>'
       );
-
-      if (enGrupo) {
-        restantesGrupo -= 1;
-        if (restantesGrupo <= 0) piezasTiendas.push('</div>');
-      }
     });
-    // Por si la nota apuntaba a más tiendas de las que realmente quedaban
-    // en la ruta, cerramos el bloque igualmente para no dejar el HTML mal formado.
-    if (restantesGrupo > 0) piezasTiendas.push('</div>');
     const tiendasHtml = piezasTiendas.join('');
 
     const notasCargaHtml = s.notasCarga.map(function (n, ni) {
@@ -7119,6 +7175,13 @@ function pintarPlantilla_() {
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
               'Orden retirada' + (s.ordenRetirada && s.ordenRetirada.length ? ' (' + s.ordenRetirada.length + ')' : '') +
             '</button>' +
+            (function () {
+              const numGrupos = new Set(s.tiendas.filter(function (t) { return t.notaGrupoId; }).map(function (t) { return t.notaGrupoId; })).size;
+              return '<button type="button" class="plantilla-ruta-grupos' + (numGrupos ? ' activo' : '') + '" data-grupos-ruta="' + escapeAttr(s.nombre) + '" title="' + (numGrupos ? 'Editar los grupos de palets (' + numGrupos + ')' : 'Agrupar tiendas que comparten un límite de palets') + '">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' +
+                'Grupos de palets' + (numGrupos ? ' (' + numGrupos + ')' : '') +
+              '</button>';
+            })() +
             '<button type="button" class="plantilla-ruta-anadir-tienda" data-anadir-tienda-ruta="' + escapeAttr(s.nombre) + '" title="Añadir tienda a esta ruta">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir tienda</button>' +
             '<button type="button" class="plantilla-ruta-borrar" data-borrar-ruta="' + escapeAttr(s.nombre) + '" title="Eliminar ruta completa">' +
@@ -7139,11 +7202,13 @@ function pintarPlantilla_() {
 
   listaEl.querySelectorAll('[data-nota-fila]').forEach(function (btn) {
     btn.onclick = function () {
-      abrirModalNotaTiendaPlantilla_(
-        btn.getAttribute('data-nota-fila'),
-        btn.getAttribute('data-nota-texto'),
-        Number(btn.getAttribute('data-nota-cantidad')) || 1
-      );
+      const row = Number(btn.getAttribute('data-nota-fila'));
+      if (btn.getAttribute('data-nota-grupo') === '1') {
+        const encontrado = buscarTiendaPlantilla_(row);
+        if (encontrado) abrirModalGruposLimitePlantilla_(encontrado.seccion.nombre);
+        return;
+      }
+      abrirModalNotaTiendaPlantilla_(row, btn.getAttribute('data-nota-texto'));
     };
   });
   listaEl.querySelectorAll('[data-guardar-notacarga]').forEach(function (btn) {
@@ -7212,6 +7277,9 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-orden-ruta]').forEach(function (btn) {
     btn.onclick = function () { abrirModalOrdenRetiradaPlantilla_(btn.getAttribute('data-orden-ruta')); };
+  });
+  listaEl.querySelectorAll('[data-grupos-ruta]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalGruposLimitePlantilla_(btn.getAttribute('data-grupos-ruta')); };
   });
   listaEl.querySelectorAll('[data-bloqueo-row]').forEach(function (btn) {
     btn.onclick = function () {
@@ -7709,13 +7777,13 @@ function abrirModalAnadirNotaCargaPlantilla_(nombreRuta) {
   });
 }
 
-function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual) {
+function abrirModalNotaTiendaPlantilla_(fila, notaActual) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Nota de la tienda';
+  document.getElementById('modal-title').textContent = 'Comentario de la tienda';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
@@ -7723,47 +7791,32 @@ function abrirModalNotaTiendaPlantilla_(fila, notaActual, notaCantidadActual) {
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-campo">' +
-      '<label for="modal-nota-texto">Nota (ej: 8P MAX. POR RUTA)</label>' +
-      '<input type="text" id="modal-nota-texto" value="' + escapeAttr(notaActual || '') + '" placeholder="Déjalo vacío para no poner nota">' +
+      '<label for="modal-nota-texto">Comentario (solo para esta tienda)</label>' +
+      '<input type="text" id="modal-nota-texto" value="' + escapeAttr(notaActual || '') + '" placeholder="Déjalo vacío para quitar el comentario">' +
     '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-nota-cantidad">Aplica a cuántas tiendas (empezando por esta)</label>' +
-      '<input type="text" id="modal-nota-cantidad" inputmode="numeric" value="' + (notaCantidadActual || 1) + '">' +
-    '</div>';
+    '<p class="modal-campo-ayuda" style="margin:2px 0 0;">Para poner un límite de palets compartido entre varias tiendas, usa el botón "Grupos de palets" de la cabecera de la ruta.</p>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
-    (notaActual ? '<button class="modal-cancel" id="modal-quitar-nota-btn" style="margin-right:auto;">Quitar nota</button>' : '') +
+    (notaActual ? '<button class="modal-cancel" id="modal-quitar-nota-btn" style="margin-right:auto;">Quitar comentario</button>' : '') +
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
     '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
 
-  // Esta nota puede abarcar varias tiendas (celda combinada K:L) y el
-  // backend recalcula esa agrupación; se pide la plantilla otra vez tras
-  // guardar, pero en modo "silencioso" (sin loader ni salto de scroll).
   if (notaActual) {
     document.getElementById('modal-quitar-nota-btn').onclick = function () {
       cerrarModal();
-      llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila])
-        .then(function () { mostrarToast('Nota eliminada'); cargarPlantilla_({ silencioso: true }); })
+      llamarApi_('editarNotaTiendaPlantilla', [PLANTILLA_ESTADO.dia, fila, ''])
+        .then(function () { mostrarToast('Comentario eliminado'); cargarPlantilla_({ silencioso: true }); })
         .catch(mostrarErrorServidor);
     };
   }
 
   document.getElementById('modal-confirm-btn').onclick = function () {
     const texto = document.getElementById('modal-nota-texto').value.trim();
-    const cantidad = document.getElementById('modal-nota-cantidad').value.trim() || '1';
     cerrarModal();
-
-    const tareas = [];
-    if (texto) {
-      tareas.push(llamarApi_('guardarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila, cantidad, texto]));
-    } else if (notaActual) {
-      tareas.push(llamarApi_('eliminarNotaGrupoPlantilla', [PLANTILLA_ESTADO.dia, fila]));
-    }
-
-    Promise.all(tareas)
+    llamarApi_('editarNotaTiendaPlantilla', [PLANTILLA_ESTADO.dia, fila, texto])
       .then(function () { mostrarToast('Guardado'); cargarPlantilla_({ silencioso: true }); })
       .catch(mostrarErrorServidor);
   };
@@ -7932,6 +7985,173 @@ function abrirModalOrdenRetiradaPlantilla_(nombreRuta) {
   }
   function pintarTodo() { pintar(); pintarAcciones(); }
   pintarTodo();
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+/**
+ * Modal de "Grupos de palets" a nivel de RUTA (botón junto a "Orden
+ * retirada"). Sustituye al viejo sistema de "nota + cuántas tiendas
+ * siguientes contadas desde aquí" -- aquí se marcan directamente las
+ * tiendas de checkbox (pueden estar salteadas, no hace falta que sean
+ * consecutivas) y el texto/límite/tipo van en campos propios, no
+ * escondidos dentro del texto libre.
+ */
+function abrirModalGruposLimitePlantilla_(nombreRuta) {
+  const seccion = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+  if (!seccion) return;
+
+  function nombreLimpio(t) { return quitarCodigoTienda(quitarMarcadorNombre(t.nombre)); }
+
+  // Reconstruye los grupos ya guardados a partir de las tiendas de la
+  // ruta: todas las que comparten el mismo notaGrupoId son un grupo.
+  const grupos = [];
+  const indicePorId = {};
+  seccion.tiendas.forEach(function (t) {
+    if (!t.notaGrupoId) return;
+    if (!(t.notaGrupoId in indicePorId)) {
+      indicePorId[t.notaGrupoId] = grupos.length;
+      grupos.push({ texto: t.nota || '', limite: t.notaLimite != null ? String(t.notaLimite) : '', tipo: t.notaGrupoTipo || '', rows: [] });
+    }
+    grupos[indicePorId[t.notaGrupoId]].rows.push(t.row);
+  });
+
+  document.getElementById('modal-box').classList.add('ancho');
+  document.getElementById('modal-box').classList.add('orden-retirada-modal');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Grupos de palets — ' + nombreRuta;
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  function filasOcupadasPorOtros(idx) {
+    const ocupadas = new Set();
+    grupos.forEach(function (g, i) {
+      if (i === idx) return;
+      g.rows.forEach(function (r) { ocupadas.add(r); });
+    });
+    return ocupadas;
+  }
+
+  function pintar() {
+    const tarjetasHtml = grupos.map(function (g, idx) {
+      const ocupadas = filasOcupadasPorOtros(idx);
+      const chipsHtml = seccion.tiendas.map(function (t) {
+        const marcada = g.rows.indexOf(t.row) !== -1;
+        const bloqueada = !marcada && ocupadas.has(t.row);
+        return (
+          '<label class="modal-grupo-chip' + (marcada ? ' marcada' : '') + (bloqueada ? ' bloqueada' : '') + '"' + (bloqueada ? ' title="Ya está en otro grupo de esta ruta"' : '') + '>' +
+            '<input type="checkbox" data-grupo-idx="' + idx + '" data-grupo-row="' + t.row + '"' + (marcada ? ' checked' : '') + (bloqueada ? ' disabled' : '') + '>' +
+            '<span>' + escapeHtml(nombreLimpio(t)) + '</span>' +
+          '</label>'
+        );
+      }).join('');
+
+      return (
+        '<div class="modal-grupo-card">' +
+          '<div class="modal-grupo-card-fila">' +
+            '<div class="modal-grupo-campo">' +
+              '<label>Texto</label>' +
+              '<input type="text" data-grupo-texto="' + idx + '" value="' + escapeAttr(g.texto) + '" placeholder="Ej: MAX POR RUTA">' +
+            '</div>' +
+            '<div class="modal-grupo-campo modal-grupo-campo-limite">' +
+              '<label>Límite palets</label>' +
+              '<input type="text" inputmode="numeric" data-grupo-limite="' + idx + '" value="' + escapeAttr(g.limite) + '" placeholder="Sin límite">' +
+            '</div>' +
+            '<label class="modal-grupo-campo modal-grupo-campo-tipo" title="Solo suma y muestra el total, sin avisar aunque se pase">' +
+              '<input type="checkbox" data-grupo-tipo="' + idx + '"' + (g.tipo === 'total' ? ' checked' : '') + '>' +
+              '<span>Solo informativo (sin aviso)</span>' +
+            '</label>' +
+            '<button type="button" class="modal-grupo-eliminar" data-grupo-eliminar="' + idx + '" title="Eliminar este grupo">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+            '</button>' +
+          '</div>' +
+          '<div class="modal-grupo-chips">' + chipsHtml + '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    custom.innerHTML =
+      '<p class="modal-campo-ayuda" style="margin:0 0 12px;">Marca qué tiendas comparten un límite de palets (o simplemente quieres sumarlas juntas). No hace falta que sean consecutivas, pero cada tienda solo puede estar en un grupo a la vez.</p>' +
+      '<div class="modal-grupos-lista">' + (tarjetasHtml || '<div class="festivos-item-vacio">Todavía no hay grupos en esta ruta.</div>') + '</div>' +
+      '<button type="button" class="plantilla-anadir-notacarga" id="modal-grupo-anadir" style="margin-top:12px;">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>';
+
+    custom.querySelectorAll('[data-grupo-texto]').forEach(function (inp) {
+      inp.oninput = function () { grupos[Number(inp.getAttribute('data-grupo-texto'))].texto = inp.value; };
+    });
+    custom.querySelectorAll('[data-grupo-limite]').forEach(function (inp) {
+      inp.oninput = function () {
+        inp.value = inp.value.replace(/\D/g, '').slice(0, 3);
+        grupos[Number(inp.getAttribute('data-grupo-limite'))].limite = inp.value;
+      };
+    });
+    custom.querySelectorAll('[data-grupo-tipo]').forEach(function (chk) {
+      chk.onchange = function () { grupos[Number(chk.getAttribute('data-grupo-tipo'))].tipo = chk.checked ? 'total' : ''; };
+    });
+    custom.querySelectorAll('[data-grupo-eliminar]').forEach(function (btn) {
+      btn.onclick = function () { grupos.splice(Number(btn.getAttribute('data-grupo-eliminar')), 1); pintar(); };
+    });
+    custom.querySelectorAll('[data-grupo-row]').forEach(function (chk) {
+      chk.onchange = function () {
+        const idx = Number(chk.getAttribute('data-grupo-idx'));
+        const row = Number(chk.getAttribute('data-grupo-row'));
+        const g = grupos[idx];
+        if (chk.checked) {
+          if (g.rows.indexOf(row) === -1) g.rows.push(row);
+        } else {
+          g.rows = g.rows.filter(function (r) { return r !== row; });
+        }
+        pintar();
+      };
+    });
+    const btnAnadir = document.getElementById('modal-grupo-anadir');
+    if (btnAnadir) {
+      btnAnadir.onclick = function () {
+        grupos.push({ texto: '', limite: '', tipo: '', rows: [] });
+        pintar();
+        setTimeout(function () {
+          const inputs = custom.querySelectorAll('[data-grupo-texto]');
+          const ultimo = inputs[inputs.length - 1];
+          if (ultimo) ultimo.focus();
+        }, 30);
+      };
+    }
+  }
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    for (let i = 0; i < grupos.length; i++) {
+      if (grupos[i].rows.length > 0 && !grupos[i].texto.trim()) {
+        mostrarToast('Ponle un texto al grupo ' + (i + 1) + ' antes de guardar', true);
+        return;
+      }
+    }
+    const payload = grupos
+      .filter(function (g) { return g.rows.length > 0; })
+      .map(function (g) {
+        return {
+          texto: g.texto.trim(),
+          limite: g.limite ? Number(g.limite) : null,
+          tipo: g.tipo || null,
+          rows: g.rows
+        };
+      });
+    cerrarModal();
+    llamarApi_('establecerGruposLimiteRuta', [PLANTILLA_ESTADO.dia, nombreRuta, payload])
+      .then(function () { mostrarToast('Grupos de palets guardados'); cargarPlantilla_({ silencioso: true }); })
+      .catch(mostrarErrorServidor);
+  };
+
+  pintar();
   document.getElementById('modal-overlay').style.display = 'flex';
 }
 
