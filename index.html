@@ -10903,12 +10903,18 @@ function recogerFilas(tableWrap) {
     // "NO" en el campo normal (para que el backend NO sobrescriba esa
     // celda) y el número escrito va aparte en xxxForzado, tal como espera
     // guardarConteo() en el backend.
+    // "borrado" avisa al backend de que la casilla estaba forzada y se ha
+    // dejado vacía, para que quite el forzado guardado en palets_forzados
+    // (si no, al recargar volvería a aparecer el número). Una casilla que
+    // sigue en "NO" sin forzar NO manda esta marca, así una pantalla
+    // desactualizada no puede borrar un forzado que puso otra persona.
     const getConEscape = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
       if (input.getAttribute('data-forzado') === '1') {
-        return { valor: 'NO', forzado: input.value === '' ? '' : input.value };
+        const vacio = input.value === '';
+        return { valor: 'NO', forzado: vacio ? '' : input.value, borrado: vacio };
       }
-      return { valor: input.value === '' ? '' : input.value, forzado: '' };
+      return { valor: input.value === '' ? '' : input.value, forzado: '', borrado: false };
     };
     const get = function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
@@ -10920,9 +10926,9 @@ function recogerFilas(tableWrap) {
     const cart = getConEscape('cart');
     const fila = {
       row: row,
-      c60: c60.valor, c60Forzado: c60.forzado,
-      pta: pta.valor, ptaForzado: pta.forzado,
-      cart: cart.valor, cartForzado: cart.forzado,
+      c60: c60.valor, c60Forzado: c60.forzado, c60ForzadoBorrado: c60.borrado,
+      pta: pta.valor, ptaForzado: pta.forzado, ptaForzadoBorrado: pta.borrado,
+      cart: cart.valor, cartForzado: cart.forzado, cartForzadoBorrado: cart.borrado,
       total: get('total'), pdte: get('pdte')
     };
     // El campo "peso" solo existe en las tiendas de rutas que lo tengan
