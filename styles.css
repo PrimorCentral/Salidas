@@ -599,6 +599,29 @@
   /* Píldoras de día del modal "Añadir tienda" (mismo lenguaje visual que
      emails-config-dia, pero con el nombre completo del día en vez de una
      sola letra: aquí se eligen días concretos, no un patrón semanal). */
+  /* Selector de tienda existente en "Añadir tienda" (Rutas y tiendas):
+     lista con buscador en vez de un formulario libre, ya que la tienda
+     tiene que existir de antemano en Configuración tiendas. */
+  .modal-plantilla-lista-tiendas {
+    margin-top: 8px; max-height: 220px; overflow-y: auto; border: 1px solid var(--line);
+    border-radius: 8px; display: flex; flex-direction: column; gap: 1px; background: var(--line);
+  }
+  .modal-plantilla-tienda-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #fff; border: none; padding: 8px 10px; font-size: 12.5px; text-align: left; cursor: pointer;
+  }
+  .modal-plantilla-tienda-item:hover:not(.activa) { background: #f6f7fa; }
+  .modal-plantilla-tienda-item.activa { background: var(--navy); color: #fff; }
+  .modal-plantilla-tienda-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+    background: #f4d4d4; color: #8a3a3a; border-radius: 10px; padding: 2px 7px; flex-shrink: 0;
+  }
+  .modal-plantilla-tienda-item.activa .modal-plantilla-tienda-badge { background: rgba(255,255,255,.2); color: #fff; }
+  .modal-plantilla-tienda-vacio { background: #fff; padding: 14px 10px; font-size: 12.5px; color: var(--ink-soft); text-align: center; }
+  .modal-link-btn {
+    background: none; border: none; padding: 0; color: var(--navy); font-weight: 700; font-size: inherit;
+    text-decoration: underline; cursor: pointer;
+  }
   .modal-anadir-tienda-dias { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .modal-anadir-tienda-dia-pill {
     border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
@@ -649,6 +672,11 @@
   }
   .emails-config-renombrar:hover { background: #fdf6ea; }
   .emails-config-campos { display: flex; flex-direction: column; gap: 8px; }
+  /* Fila con dos campos cortos lado a lado (Tránsito + Límite de palets),
+     en vez de uno por debajo del otro a ancho completo como el resto de
+     campos de emails-config-campos. */
+  .emails-config-campo-fila { display: flex; gap: 8px; }
+  .emails-config-campo-fila .emails-config-campo-estrecho { flex: 1 1 0; min-width: 0; }
   .emails-config-campo label {
     display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
     color: var(--ink-soft); margin-bottom: 3px;
@@ -895,6 +923,12 @@
     width: 40px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
+  /* Límite propio de ese día (override), distinto del general que viene de
+     Configuración tiendas -- mismo chip pero marcado en ámbar para que se
+     note a simple vista que no es el valor habitual de la tienda. */
+  .plantilla-tienda .lim.lim-override {
+    background: #fdf6ea; border-color: var(--amber-dark, #b8860b); color: var(--amber-dark, #b8860b); font-weight: 700;
+  }
   .plantilla-tienda .numero {
     width: 46px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
@@ -1110,6 +1144,22 @@
     box-sizing: border-box; color: var(--ink); background: #fff;
   }
   .modal-campo select:focus { border-color: var(--navy-soft); outline: none; }
+  /* Dos .modal-campo lado a lado dentro de un modal (p.ej. Tránsito +
+     Límite de palets al dar de alta una tienda), en vez de uno debajo del
+     otro a ancho completo. */
+  .modal-campo-fila-2 { display: flex; gap: 10px; }
+  .modal-campo-fila-2 .modal-campo { flex: 1 1 0; min-width: 0; margin-bottom: 14px; }
+  /* Elegir entre "usar el límite general" o "uno distinto solo este día",
+     igual de idea que las píldoras de tránsito del gestor de observaciones
+     pero en horizontal y a ancho completo, con texto en vez de icono. */
+  .modal-limite-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal-limite-pill {
+    flex: 1 1 auto; border: 1px solid var(--line); background: #f9fafb; color: var(--ink-soft);
+    border-radius: 8px; padding: 9px 10px; font-size: 12px; font-weight: 700; text-align: center;
+    cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+  }
+  .modal-limite-pill:hover:not(.activa) { background: #f0f2f6; }
+  .modal-limite-pill.activa { background: var(--navy); border-color: var(--navy); color: #fff; }
   .mi-usuario-separador { border: none; border-top: 1px solid #e6e9ee; margin: 18px 0; }
   .mi-usuario-permisos-vacio { font-size: 13px; color: var(--ink-soft); }
   .modal-dia-aviso {
