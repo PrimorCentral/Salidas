@@ -46,31 +46,13 @@ function cambiarVista(vista, seccion) {
   }
 }
 
-/** INICIO: página principal tras entrar en la app. Cabecera compacta con
- *  saludo según la hora + nombre del usuario, y dos tarjetas ("Estado del
- *  conteo de hoy" / "...de mañana") con una tabla ruta × 60/PTA/CART.
- *  donde cada casilla se marca en verde cuando esa columna está completa
- *  para esa ruta, más una columna de estado (Enviada/En progreso/
- *  Pendiente) por ruta. Todo sobre la foto de portada a página completa
- *  (ver body.vista-inicio-activa en styles.css). */
-
-/** Primer nombre de pila, en formato "Jose" (no todo mayúsculas), a partir
- *  de SESSION_NOMBRE (nombre completo tal cual se guarda en la BD). */
-function nombrePilaSesion_() {
-  if (!SESSION_NOMBRE) return '';
-  const primero = String(SESSION_NOMBRE).trim().split(/\s+/)[0] || '';
-  if (!primero) return '';
-  return primero.charAt(0).toUpperCase() + primero.slice(1).toLowerCase();
-}
-
-/** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora local
- *  del navegador (mismo criterio que el reloj de la cabecera). */
-function saludoSegunHora_() {
-  const h = new Date().getHours();
-  if (h < 13) return 'Buenos días';
-  if (h < 20) return 'Buenas tardes';
-  return 'Buenas noches';
-}
+/** INICIO: página principal tras entrar en la app. Dos tarjetas ("Estado
+ *  del conteo de hoy" / "...de mañana"), pegadas arriba del todo, con una
+ *  tabla ruta × 60/PTA/CART. donde cada casilla se marca en verde cuando
+ *  esa columna está completa para esa ruta (naranja si está a medias),
+ *  más una columna de estado (Enviada/En progreso/Pendiente) por ruta.
+ *  Todo sobre la foto de portada a página completa (ver
+ *  body.vista-inicio-activa en styles.css). */
 
 // Las tres casillas de conteo reales (misma nomenclatura que el resto de
 // la app: js/plantilla.js -> etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' }).
@@ -84,14 +66,9 @@ const INICIO_ESTADO_TXT_ = { enviado: 'Enviada', progreso: 'En progreso', pendie
 
 function renderVistaInicio() {
   const main = document.getElementById('main');
-  const nombre = nombrePilaSesion_();
   main.innerHTML =
     htmlBannerInstalacion_() +
-    '<div class="inicio-hero">' +
-      '<div class="inicio-saludo">' + escapeHtml(saludoSegunHora_()) + (nombre ? ', ' + escapeHtml(nombre) : '') + '</div>' +
-      '<div class="inicio-saludo-fecha">' + escapeHtml(formatearFechaLarga(hoyStr())) + '</div>' +
-      '<div class="version-badge">' + (APP_VERSION_ACTUAL ? 'v' + escapeHtml(APP_VERSION_ACTUAL) : '') + '</div>' +
-    '</div>' +
+    '<div class="version-badge">' + (APP_VERSION_ACTUAL ? 'v' + escapeHtml(APP_VERSION_ACTUAL) : '') + '</div>' +
     '<div class="inicio-cols2" id="inicio-cols2">' +
       htmlTarjetaInicioCargando_('Estado del conteo de hoy', 'hoy') +
       htmlTarjetaInicioCargando_('Estado del conteo de mañana', 'manana') +
