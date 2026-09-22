@@ -219,7 +219,7 @@ function construirGrupoImpresionDia_(seccion) {
       ? ' class="hi-fila-grupo-miembro' + (esUltimaDeGrupo ? ' hi-fila-grupo-fin' : '') + '"'
       : '';
     html += '<tr' + claseFila + '>' +
-      '<td class="hi-lim">' + escapeHtml(String(t.limite)) + '</td>' +
+      '<td class="hi-lim">' + escapeHtml(String(textoLimite_(t.limite))) + '</td>' +
       '<td class="hi-nombre">' + escapeHtml(quitarMarcadorNombre(t.nombre)) + escapeHtml(sufijo) + '</td>' +
       celdaImpresionManual_(t.c60) + celdaImpresionManual_(t.pta) + celdaImpresionManual_(t.cart) +
       '<td class="hi-blanco"></td><td class="hi-blanco"></td>' +
