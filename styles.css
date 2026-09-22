@@ -262,9 +262,12 @@
   main.main-sin-padding { padding: 18px 24px 14px; display: flex; flex-direction: column; }
 
   /* Dos tarjetas del mismo ancho, pegadas arriba del todo (sin saludo ni
-     cabecera encima), bien separadas, cada una tan alta como
-     su propio contenido (si una tuviera bastantes más rutas que la
-     otra, no se estiran para igualarse). */
+     cabecera encima), bien separadas, cada una tan alta como su propio
+     contenido (si una tuviera bastantes más rutas que la otra, no se
+     estiran para igualarse) -- pero sin pasar de lo que cabe en la
+     pantalla: si hay muchas agrupaciones, la que hace scroll es la
+     tabla de la tarjeta, nunca la página entera (mismo criterio que
+     .resumen-body en Conteos Diarios). */
   .inicio-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
   @media (max-width: 900px) {
     .inicio-cols2 { grid-template-columns: 1fr; }
@@ -274,6 +277,7 @@
     background: var(--panel); border-radius: var(--radius); border-top: 4px solid var(--amber);
     box-shadow: 0 14px 30px -18px rgba(10,18,32,.5); padding: 10px 16px 8px;
     display: flex; flex-direction: column; overflow: hidden;
+    max-height: calc(100vh - var(--topbar-h) - 46px);
   }
   .inicio-card-manana { border-top-color: var(--prevision); }
   .inicio-card-header {
@@ -286,11 +290,14 @@
 
   /* Tabla ruta x 60/PTA/CART. + estado. Filas con grid para que las tres
      columnas de casillas y la de estado queden perfectamente alineadas
-     entre sí y con la cabecera. */
-  .inicio-tabla-conteo { display: flex; flex-direction: column; }
+     entre sí y con la cabecera. flex:1 + overflow-y:auto: si no caben
+     todas las filas en el alto disponible (.inicio-card la limita con
+     max-height), esta es la parte que hace scroll -- la cabecera de la
+     tabla y la de la tarjeta se quedan siempre fijas arriba. */
+  .inicio-tabla-conteo { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
   .inicio-tc-fila {
     display: grid; grid-template-columns: 1fr repeat(3, 34px) 74px; align-items: center;
-    gap: 3px; padding: 9px 4px; border-bottom: 1px solid var(--line);
+    gap: 3px; padding: 6px 4px; border-bottom: 1px solid var(--line);
   }
   .inicio-tc-fila:last-child { border-bottom: none; }
   /* Cabecera de la tabla (Ruta / 60 / PTA / CART. / Estado) con su propia
@@ -300,6 +307,7 @@
     font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
     color: var(--navy); background: #eef1f7; border: 1px solid #dde3ee;
     padding: 7px 8px; border-radius: 8px; margin-bottom: 6px; flex-shrink: 0;
+    position: sticky; top: 0; z-index: 1;
   }
   .inicio-tc-header .inicio-tc-col,
   .inicio-tc-header .inicio-tc-pill-col { text-align: center; }
