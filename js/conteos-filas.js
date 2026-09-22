@@ -95,9 +95,10 @@ function attachCalculoYValidacion(tr) {
 
   // recalcTotalVisual: solo actualiza lo que VE el usuario en la columna
   // TOTAL (real + PDTE). No toca totalInput (el real), así que no afecta
-  // ni al aviso de límite del camión, ni al contador de cabecera de la
-  // agrupación, ni a lo que se manda a la agencia en previsión/definitivo
-  // — esos siguen leyendo solo el campo "total" real, sin PDTE.
+  // al contador de cabecera de la agrupación ni a lo que se manda a la
+  // agencia en previsión/definitivo — esos siguen leyendo solo el campo
+  // "total" real, sin PDTE. El aviso de límite de esta fila (validar(),
+  // más abajo) sí suma el PDTE.
   function recalcTotalVisual() {
     if (!totalVisualInput) return;
     const real = totalInput.value === '' ? 0 : (parseFloat(totalInput.value) || 0);
@@ -132,7 +133,8 @@ function attachCalculoYValidacion(tr) {
     const total = parseFloat(totalInput.value);
     if (isNaN(total) || !limite) return;
 
-    const exceso = total - limite;
+    const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
+    const exceso = (total + pdte) - limite;
     if (exceso >= 3) {
       tr.classList.add('fila-alerta');
       nota.textContent = '+' + exceso + ' sobre el límite — consultar a informática';
@@ -149,7 +151,7 @@ function attachCalculoYValidacion(tr) {
   cartInput.addEventListener('input', recalcTotal);
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
   if (sobrestockInput) sobrestockInput.addEventListener('input', recalcTotal);
-  if (pdteInput) pdteInput.addEventListener('input', recalcTotalVisual);
+  if (pdteInput) pdteInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   validar();
   recalcTotalVisual();
 }
