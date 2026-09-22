@@ -1,17 +1,23 @@
-/* SALIDAS · js/emails-agencias.js — Configuración: Emails agencias */
+/* SALIDAS · js/emails-agencias.js — Configuración: Configuración agencias */
 
-/* ---------------- CONFIGURACIÓN: "Emails agencias" ----------------
+/* ---------------- CONFIGURACIÓN: "Configuración agencias" ----------------
  * Lista editable de "Config_Agrupaciones" (nombre de la ruta, notas y
  * emails de la agencia de transporte), para gestionarla desde la propia
  * app en vez de tener que abrir la Google Sheet. Cualquier rol puede
- * consultarla; solo "admin" puede editar, borrar o sincronizar (los
+ * consultarla; solo "admin" puede editar, borrar, crear o sincronizar (los
  * campos e iconos correspondientes se muestran/ocultan vía CSS con la
  * clase "es-admin" del <body>, igual que el resto de acciones de solo
  * administrador de la app).
+ *
+ * Esta pantalla es la única fuente de verdad para dar de alta una
+ * agrupación nueva: "Añadir ruta nueva" (en Rutas y tiendas) solo deja
+ * elegir entre las agrupaciones que ya existen aquí, así que una
+ * agrupación completamente nueva se tiene que crear primero con el botón
+ * "Nueva agencia" de abajo (ver abrirModalNuevaAgrupacionConfig_).
  */
 let EMAILS_CONFIG_ESTADO = { datos: [], filtroTexto: '', soloSinUso: false, soloNueva: false, soloSinEmail: false };
 /** Nº de tiendas configuradas por agrupación (clave de ruta), calculado a
- *  partir de Config_Tiendas cada vez que se carga "Email agencias". */
+ *  partir de Config_Tiendas cada vez que se carga "Configuración agencias". */
 let TIENDAS_POR_AGRUPACION_CONFIG_ = {};
 
 // Calcula el alto disponible en pantalla para una lista con scroll propio
@@ -52,8 +58,12 @@ function renderConfigEmails() {
     '<div class="vista-card">' +
       '<div class="emails-config-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Email agencias <span class="tiendas-config-total" id="emails-config-total"></span><span class="tiendas-config-total nueva-toggle" id="emails-config-nueva" title="Mostrar solo las agrupaciones nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="emails-config-sinuso" title="Mostrar solo las agrupaciones sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="emails-config-sinemail" title="Mostrar solo las agrupaciones sin ningún email configurado"></span></h2>' +
+          '<h2>Configuración agencias <span class="tiendas-config-total" id="emails-config-total"></span><span class="tiendas-config-total nueva-toggle" id="emails-config-nueva" title="Mostrar solo las agrupaciones nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="emails-config-sinuso" title="Mostrar solo las agrupaciones sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="emails-config-sinemail" title="Mostrar solo las agrupaciones sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
+            (tienePermiso('agencias') ?
+              '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-nueva-agrupacion-config" title="Da de alta una agencia/agrupación nueva (todavía sin ruta asignada)">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+                'Nueva agencia</button>' : '') +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-pdf-emails" title="Exporta la lista visible (respeta el buscador y los filtros) a PDF">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
               'PDF</button>' +
@@ -83,6 +93,8 @@ function renderConfigEmails() {
   document.getElementById('btn-sincronizar-agrupaciones').onclick = sincronizarAgrupacionesDesdeApp_;
   document.getElementById('btn-exportar-pdf-emails').onclick = exportarAgrupacionesConfigPDF_;
   document.getElementById('btn-exportar-excel-emails').onclick = exportarAgrupacionesConfigExcel_;
+  const btnNuevaAgrupacion = document.getElementById('btn-nueva-agrupacion-config');
+  if (btnNuevaAgrupacion) btnNuevaAgrupacion.onclick = abrirModalNuevaAgrupacionConfig_;
 
   let temporizadorBusquedaEmails = null;
   document.getElementById('emails-config-buscar').addEventListener('input', function (e) {
@@ -99,7 +111,7 @@ function renderConfigEmails() {
   window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 }
 
-/** Actualiza los contadores junto al título de "Email agencias": nº total,
+/** Actualiza los contadores junto al título de "Configuración agencias": nº total,
  *  nº "sin uso", nº "nueva" (falta email) y nº "sin email" (ninguna
  *  agrupación con Definitivo ni Previsión rellenos, para que no se escape
  *  ninguna aunque no esté marcada como "Nueva"). Los tres badges son
@@ -178,7 +190,7 @@ function exportarAgrupacionesConfigPDF_() {
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'l' });
   doc.setFontSize(13);
-  doc.text('Email agencias', 14, 14);
+  doc.text('Configuración agencias', 14, 14);
   doc.setFontSize(9);
   doc.setTextColor(120);
   doc.text(items.length + ' agrupación' + (items.length === 1 ? '' : 'es') + ' — ' + hoyStr(), 14, 20);
@@ -264,7 +276,7 @@ function cargarAgrupacionesConfig_() {
 
 /** Cuenta, para cada agrupación (clave de ruta), cuántas tiendas tienen esa
  *  agrupación entre las suyas (una tienda puede estar en varias agrupaciones
- *  distintas según el día). Se usa en la tarjeta de "Email agencias" para
+ *  distintas según el día). Se usa en la tarjeta de "Configuración agencias" para
  *  mostrar "Tiendas configuradas: X tiendas". */
 function calcularTiendasPorAgrupacion_(tiendas) {
   const mapa = {};
@@ -413,6 +425,77 @@ function eliminarAgrupacionConfig_(agrupacion) {
       cargarAgrupacionesConfig_();
     })
     .catch(mostrarErrorServidor);
+}
+
+/** Modal para dar de alta una agrupación (agencia) nueva en
+ *  Config_Agrupaciones, sin asignarla todavía a ninguna ruta/día -- por
+ *  eso, nada más crearla, aparecerá en la lista como "SIN USO" hasta que
+ *  se use como ruta desde "Rutas y tiendas" (botón "Añadir ruta nueva",
+ *  que a partir de ahora solo deja elegir entre agrupaciones ya dadas de
+ *  alta aquí). El backend (crear_agrupacion_config) normaliza el nombre
+ *  con la misma regla que usa el resto de la app (_clave_agrupacion) y
+ *  rechaza duplicados. */
+function abrirModalNuevaAgrupacionConfig_() {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Nueva agencia';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-nueva-agrupacion-nombre">Nombre de la agrupación</label>' +
+      '<input type="text" id="modal-nueva-agrupacion-nombre" style="text-transform:uppercase;" placeholder="Ej: NIEVES">' +
+      '<span class="modal-campo-ayuda">Usa el mismo nombre que luego elegirás al crear la ruta (sin la parte de ubicación/hora entre paréntesis).</span>' +
+    '</div>' +
+    '<p class="modal-campo-ayuda" style="margin-top:8px;">Esta agrupación quedará dada de alta pero "SIN USO" hasta que la elijas al añadir una ruta nueva desde "Rutas y tiendas".</p>';
+
+  const inputNombre = document.getElementById('modal-nueva-agrupacion-nombre');
+  inputNombre.oninput = function () {
+    const pos = inputNombre.selectionStart;
+    inputNombre.value = inputNombre.value.toUpperCase();
+    inputNombre.setSelectionRange(pos, pos);
+  };
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Crear agencia</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const nombre = inputNombre.value.trim().replace(/\s+/g, ' ');
+    if (!nombre) { inputNombre.focus(); return; }
+
+    const btnConfirmar = document.getElementById('modal-confirm-btn');
+    const avisoPrevio = document.getElementById('modal-nueva-agrupacion-error');
+    if (avisoPrevio) avisoPrevio.remove();
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = 'Creando…';
+
+    llamarApi_('crearAgrupacionConfig', [nombre])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Agencia creada — todavía SIN USO, elígela al añadir una ruta nueva');
+        cargarAgrupacionesConfig_();
+      })
+      .catch(function (err) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = 'Crear agencia';
+        const aviso = document.createElement('div');
+        aviso.id = 'modal-nueva-agrupacion-error';
+        aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
+        aviso.textContent = (err && err.message) ? err.message : 'No se ha podido crear la agencia.';
+        document.getElementById('modal-custom').appendChild(aviso);
+      });
+  };
+  setTimeout(function () { inputNombre.focus(); }, 50);
 }
 
 function sincronizarAgrupacionesDesdeApp_() {

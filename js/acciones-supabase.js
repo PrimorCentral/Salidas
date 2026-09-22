@@ -48,9 +48,12 @@ const SUPABASE_ACCIONES_ = {
   resumenInicio: function () {
     return llamarRpcSupabase_('get_resumen_inicio', {});
   },
-  // -- Supabase: Emails agencias (Config_Agrupaciones) --
+  // -- Supabase: Configuración agencias (Config_Agrupaciones) --
   getAgrupacionesConfig: function () {
     return llamarRpcSupabase_('get_agrupaciones_config', {});
+  },
+  crearAgrupacionConfig: function (args) {
+    return llamarRpcSupabase_('crear_agrupacion_config', { p_nombre: args[0] });
   },
   guardarEmailsAgrupacion: function (args) {
     const agrupacion = args[0], emails = args[1], notas = args[2], emailsPrevision = args[3];

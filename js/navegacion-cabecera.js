@@ -9,7 +9,7 @@
 // añaden a esta lista).
 const CONFIG_SECCIONES = [
   { id: 'plantilla', label: 'Rutas y tiendas', permiso: 'plantilla' },
-  { id: 'emails', label: 'Email agencias', permiso: 'agencias' },
+  { id: 'emails', label: 'Configuración agencias', permiso: 'agencias' },
   { id: 'tiendas', label: 'Configuración tiendas', permiso: 'tiendas' },
   { id: 'config-hora-aviso-tiendas', label: 'Configuración hora aviso tiendas', permiso: 'config_hora_aviso_tiendas' }
   // futuras secciones de Configuración van aquí

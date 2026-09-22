@@ -1782,6 +1782,29 @@ function eliminarRutaPlantilla_(nombreRuta) {
     .catch(mostrarErrorServidor);
 }
 
+/** Misma normalización que la función SQL "_clave_agrupacion" del backend:
+ *  quita cualquier paréntesis "(...)" (ubicación/hora), pasa a mayúsculas,
+ *  recorta y colapsa espacios. Se usa aquí SOLO para comparar contra las
+ *  agrupaciones ya usadas como ruta en el día actual (PLANTILLA_ESTADO.secciones)
+ *  y así no ofrecerlas otra vez en el desplegable -- el backend vuelve a
+ *  aplicar la misma regla (y la exige) al guardar, así que esto es solo
+ *  para que la lista del desplegable ya venga filtrada. */
+function claveAgrupacionJs_(nombre) {
+  let s = String(nombre || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim();
+  s = s.toUpperCase();
+  s = s.replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+/** "Añadir ruta nueva" ya NO deja escribir el nombre de la ruta a mano:
+ *  solo se puede elegir entre las agrupaciones ya dadas de alta en
+ *  "Configuración agencias" (Config_Agrupaciones) que todavía no se estén
+ *  usando como ruta en este día -- igual que renombrar/crear una tienda
+ *  solo se puede hacer desde Configuración tiendas. Si la agrupación que
+ *  hace falta todavía no existe, hay que crearla primero ahí (botón
+ *  "Nueva agencia"); el backend (añadir_ruta_plantilla) también rechaza
+ *  ahora cualquier clave que no exista en Config_Agrupaciones, así que
+ *  esto es defensa en profundidad además de guiar al usuario. */
 function anadirRutaPlantilla_() {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
@@ -1796,46 +1819,87 @@ function anadirRutaPlantilla_() {
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-ruta-nombre">Nombre de la ruta</label>' +
-      '<input type="text" id="modal-ruta-nombre" placeholder="Ej: PRUEBA">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
-      '<input type="text" id="modal-ruta-ubicacion" placeholder="Ej: GAITE">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-ruta-hora">Hora de carga</label>' +
-      '<input type="text" id="modal-ruta-hora" placeholder="Ej: 10:00">' +
-    '</div>';
+    '<div class="loader">Cargando agrupaciones disponibles…</div>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+    '<button class="modal-confirm" id="modal-confirm-btn" disabled>Guardar</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  document.getElementById('modal-confirm-btn').onclick = function () {
-    const inputNombre = document.getElementById('modal-ruta-nombre');
-    const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
-    const inputHora = document.getElementById('modal-ruta-hora');
-    const nombre = inputNombre.value.trim();
-    const ubicacion = inputUbicacion.value.trim();
-    const hora = inputHora.value.trim();
-    if (!nombre) { inputNombre.focus(); return; }
-    if (!ubicacion) { inputUbicacion.focus(); return; }
-    if (!hora) { inputHora.focus(); return; }
 
-    const nombreCompleto = nombre + ' (' + ubicacion + ' ' + hora + ')';
-    cerrarModal();
-    // Inserta un bloque de filas nuevo -- el backend decide dónde queda,
-    // así que hace falta volver a pedir la plantilla; modo "silencioso"
-    // (sin loader ni salto de scroll).
-    llamarApi_('añadirRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreCompleto])
-      .then(function () { mostrarToast('Ruta añadida'); cargarPlantilla_({ silencioso: true }); })
-      .catch(mostrarErrorServidor);
-  };
-  setTimeout(function () { document.getElementById('modal-ruta-nombre').focus(); }, 50);
+  llamarApi_('getAgrupacionesConfig', [])
+    .then(function (todas) {
+      // Puede que el modal se haya cerrado mientras llegaba la respuesta.
+      if (document.getElementById('modal-overlay').style.display === 'none') return;
+
+      const clavesUsadasHoy = {};
+      PLANTILLA_ESTADO.secciones.forEach(function (s) {
+        clavesUsadasHoy[claveAgrupacionJs_(s.nombre)] = true;
+      });
+      const disponibles = (todas || [])
+        .filter(function (it) { return !clavesUsadasHoy[claveAgrupacionJs_(it.agrupacion)]; })
+        .sort(function (a, b) { return a.agrupacion.localeCompare(b.agrupacion, 'es'); });
+
+      if (!disponibles.length) {
+        custom.innerHTML =
+          '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
+          '<p class="modal-campo-ayuda">Todas las agrupaciones ya dadas de alta en Configuración agencias se están usando hoy en ' + escapeHtml(PLANTILLA_ESTADO.dia || 'este día') + ', o todavía no hay ninguna. Crea una agencia nueva desde "Configuración agencias" (botón "Nueva agencia") y luego vuelve aquí para añadirla como ruta.</p>';
+        return;
+      }
+
+      custom.innerHTML =
+        '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
+        '<div class="modal-campo">' +
+          '<label for="modal-ruta-agrupacion">Agrupación</label>' +
+          '<select id="modal-ruta-agrupacion">' +
+            '<option value="">Selecciona…</option>' +
+            disponibles.map(function (it) {
+              return '<option value="' + escapeAttr(it.agrupacion) + '">' + escapeHtml(it.agrupacion) + '</option>';
+            }).join('') +
+          '</select>' +
+          '<span class="modal-campo-ayuda">¿No está en la lista? Créala primero en "Configuración agencias" (botón "Nueva agencia").</span>' +
+        '</div>' +
+        '<div class="modal-campo">' +
+          '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
+          '<input type="text" id="modal-ruta-ubicacion" placeholder="Ej: GAITE">' +
+        '</div>' +
+        '<div class="modal-campo">' +
+          '<label for="modal-ruta-hora">Hora de carga</label>' +
+          '<input type="text" id="modal-ruta-hora" placeholder="Ej: 10:00">' +
+        '</div>';
+
+      const btnConfirmar = document.getElementById('modal-confirm-btn');
+      btnConfirmar.disabled = false;
+      btnConfirmar.onclick = function () {
+        const selectAgrupacion = document.getElementById('modal-ruta-agrupacion');
+        const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
+        const inputHora = document.getElementById('modal-ruta-hora');
+        const nombre = selectAgrupacion.value;
+        const ubicacion = inputUbicacion.value.trim();
+        const hora = inputHora.value.trim();
+        if (!nombre) { selectAgrupacion.focus(); return; }
+        if (!ubicacion) { inputUbicacion.focus(); return; }
+        if (!hora) { inputHora.focus(); return; }
+
+        const nombreCompleto = nombre + ' (' + ubicacion + ' ' + hora + ')';
+        cerrarModal();
+        // Inserta un bloque de filas nuevo -- el backend decide dónde queda,
+        // así que hace falta volver a pedir la plantilla; modo "silencioso"
+        // (sin loader ni salto de scroll).
+        llamarApi_('añadirRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreCompleto])
+          .then(function () { mostrarToast('Ruta añadida'); cargarPlantilla_({ silencioso: true }); })
+          .catch(mostrarErrorServidor);
+      };
+      setTimeout(function () { document.getElementById('modal-ruta-agrupacion').focus(); }, 50);
+    })
+    .catch(function (err) {
+      if (document.getElementById('modal-overlay').style.display === 'none') return;
+      custom.innerHTML =
+        '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
+        '<p class="modal-campo-ayuda">No se ha podido cargar la lista de agrupaciones.</p>';
+      mostrarErrorServidor(err);
+    });
 }
 
 function renderShellPrincipal() {

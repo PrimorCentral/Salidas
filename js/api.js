@@ -13,6 +13,7 @@ const METODOS_REMOTOS_ = {
   guardarObservacion: 'guardarObservacion',
   eliminarObservacion: 'eliminarObservacion',
   getAgrupacionesConfig: 'getAgrupacionesConfig',
+  crearAgrupacionConfig: 'crearAgrupacionConfig',
   guardarEmailsAgrupacion: 'guardarEmailsAgrupacion',
   eliminarAgrupacionConfig: 'eliminarAgrupacionConfig',
   sincronizarAgrupaciones: 'sincronizarAgrupaciones',
