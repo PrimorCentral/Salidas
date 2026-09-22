@@ -272,6 +272,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   let hayCambiosSinGuardar = false;
   let haGuardadoAlMenosUnaVez = sumaInicialPalets > 0;
   let ultimoGuardadoEn = null; // Date del último guardado con éxito (esta sesión)
+  let timerAutoguardadoInactividad_ = null; // ver marcarCambiosSinGuardar_ / RESPALDO POR INACTIVIDAD más abajo
   function refrescarTextoUltimoGuardado_() {
     if (!spanUltimoGuardado || !spanUltimoGuardado.isConnected) return false;
     if (ultimoGuardadoEn) {
@@ -298,10 +299,23 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       btnGuardarConteo.textContent = 'Guardar conteo';
     }
     actualizarBotonesEnvio_();
+    // RESPALDO POR INACTIVIDAD: además de guardar al pulsar "Guardar
+    // conteo" o al salir de la tabla (ver "focusout" más abajo), si el
+    // usuario se queda 3 segundos sin tocar nada (ni escribe, ni hace
+    // clic en otro sitio) se guarda solo, por si se queda a medias sin
+    // hacer ninguna de las dos cosas. Cada pulsación reinicia el
+    // temporizador (debounce), así que mientras se sigue escribiendo no
+    // se dispara ningún guardado de más.
+    clearTimeout(timerAutoguardadoInactividad_);
+    timerAutoguardadoInactividad_ = setTimeout(function () {
+      if (!hayCambiosSinGuardar) return; // ya se guardó por otra vía mientras tanto
+      autoguardarSeccion();
+    }, 3000);
   }
   function marcarTodoGuardado_() {
     hayCambiosSinGuardar = false;
     haGuardadoAlMenosUnaVez = true;
+    clearTimeout(timerAutoguardadoInactividad_); // ya no hace falta el respaldo por inactividad: no queda nada pendiente
     if (btnGuardarConteo) {
       btnGuardarConteo.classList.remove('con-cambios');
       btnGuardarConteo.classList.add('sin-cambios');
