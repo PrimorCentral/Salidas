@@ -1,5 +1,17 @@
 /* SALIDAS · js/conteos-filas.js — Conteos diarios: filas, celdas, cálculo/validación y recogerFilas */
 
+// Evita que la rueda del ratón cambie el número cuando el cursor está
+// encima de una casilla de conteo (comportamiento nativo del navegador en
+// los <input type="number"> enfocados, no deseado aquí). Un único listener
+// delegado en el documento, en captura y sin passive, para poder frenarlo;
+// no afecta al scroll normal de la página en el resto de la pantalla.
+document.addEventListener('wheel', function (e) {
+  const el = e.target;
+  if (el && el.tagName === 'INPUT' && el.type === 'number' && el.classList.contains('celda')) {
+    e.preventDefault();
+  }
+}, { passive: false, capture: true });
+
 /**
  * Celda de 60/PTA/CART. Si el valor es "NO", se muestra en rojo y no
  * editable (con un botón para forzar un número igualmente si hiciera
