@@ -50,7 +50,8 @@ function cambiarVista(vista, seccion) {
  *  del conteo de hoy" / "...de mañana"), pegadas arriba del todo, con una
  *  tabla ruta × 60/PTA/CART. donde cada casilla se marca en verde cuando
  *  esa columna está completa para esa ruta (naranja si está a medias),
- *  más una columna de estado (Enviada/En progreso/Pendiente) por ruta.
+ *  más una columna de estado (Completado/En progreso/Pendiente) por ruta,
+ *  según esos mismos 3 checks -- no según si ya se ha enviado Definitivo.
  *  Todo sobre la foto de portada a página completa (ver
  *  body.vista-inicio-activa en styles.css). */
 
@@ -62,7 +63,12 @@ const INICIO_CAMPOS_ = [
   { clave: 'ptaEstado', etiqueta: 'PTA' },
   { clave: 'cartEstado', etiqueta: 'CART.' }
 ];
-const INICIO_ESTADO_TXT_ = { enviado: 'Enviada', progreso: 'En progreso', pendiente: 'Pendiente' };
+// El estado general de la ruta ya no depende de si se ha enviado
+// Definitivo a la agencia, sino solo de los tres checks (60/PTA/CART.) de
+// arriba: 'completado' cuando los 3 están en verde, 'pendiente' cuando no
+// hay ningún dato escrito todavía y 'progreso' en cualquier caso
+// intermedio (mismo criterio que aplica get_resumen_inicio en el backend).
+const INICIO_ESTADO_TXT_ = { completado: 'Completado', progreso: 'En progreso', pendiente: 'Pendiente' };
 
 function renderVistaInicio() {
   const main = document.getElementById('main');
