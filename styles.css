@@ -584,7 +584,7 @@
     .festivos-filtro-fechas input[type="date"] { max-width: none; flex: 1 1 auto; }
   }
 
-  /* ---------- CONFIGURACIÓN: "Emails agencias" ---------- */
+  /* ---------- CONFIGURACIÓN: "Configuración agencias" ---------- */
   .emails-config-toolbar { display: flex; align-items: center; gap: 10px; margin: 14px 0 12px; flex-wrap: wrap; }
   .emails-config-busqueda {
     display: flex; align-items: center; gap: 6px; background: #f6f7fa; border: 1px solid var(--line);
@@ -750,7 +750,7 @@
     border-radius: 5px;
   }
   /* Estas 4 clases "emails-config-*" son genéricas y se reutilizan en varias
-     secciones de "Diseño" (Email agencias, Configuración tiendas,
+     secciones de "Diseño" (Configuración agencias, Configuración tiendas,
      Configuración hora aviso tiendas, Rutas y tiendas), cada una con su
      propio permiso -- por eso la regla mira cualquiera de los cuatro
      (además de es-admin), en vez de uno solo. No hay conflicto entre
@@ -884,7 +884,7 @@
     overflow-y: auto;
     padding-right: 6px; margin-right: -6px;
   }
-  /* Cabecera fija de "Emails agencias": título, botón sincronizar, descripción
+  /* Cabecera fija de "Configuración agencias": título, botón sincronizar, descripción
      y buscador no se mueven; el que se desplaza es solo #emails-config-lista,
      en su propia caja con scroll interno (no toda la página). */
   .emails-config-fijo { margin-bottom: 12px; }
