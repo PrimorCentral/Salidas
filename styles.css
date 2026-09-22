@@ -342,7 +342,7 @@
     padding: 2.5px 8px; border-radius: 20px; font-size: 9.5px; font-weight: 700;
     white-space: nowrap; width: 100%;
   }
-  .inicio-pill-enviado { background: #e3f3ec; color: var(--ok); }
+  .inicio-pill-completado { background: #e3f3ec; color: var(--ok); }
   .inicio-pill-progreso { background: #fdf1de; color: var(--amber-dark); }
   .inicio-pill-pendiente { background: #eef0f4; color: var(--ink-soft); }
 
