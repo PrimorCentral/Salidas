@@ -478,7 +478,7 @@ function pintarPlantilla_() {
           '</div>' +
           '<span class="plantilla-ruta-nombre-texto">' + escapeHtml(s.nombre) + '</span>' +
           (tienePermiso('plantilla')
-            ? '<button type="button" class="plantilla-ruta-editar" data-editar-ruta="' + escapeAttr(s.nombre) + '" title="Editar nombre, ubicación y hora de carga">' +
+            ? '<button type="button" class="plantilla-ruta-editar" data-editar-ruta="' + escapeAttr(s.nombre) + '" title="Editar ubicación y hora de carga">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
             : '') +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
@@ -1703,10 +1703,21 @@ function dividirNombreRutaPlantilla_(nombreCompleto) {
   return { nombre: nombre, ubicacion: contenido, hora: '' };
 }
 
-/** Lápiz junto al nombre de una agrupación: abre un modal para editar el
- *  nombre, la ubicación de carga y la hora de carga por separado, en vez
- *  de tener que reescribir la línea completa "NOMBRE (UBICACION HORA)" a
- *  mano -- mismo formato que ya usa "Añadir ruta nueva". */
+/** Lápiz junto al nombre de una agrupación: abre un modal para editar SOLO
+ *  la ubicación y la hora de carga, en vez de tener que reescribir la
+ *  línea completa "NOMBRE (UBICACION HORA)" a mano -- mismo formato que ya
+ *  usa "Añadir ruta nueva".
+ *
+ *  El nombre de la agrupación (la parte antes del paréntesis) ya NO se
+ *  puede tocar desde aquí: es la misma identidad que la agrupación tiene
+ *  en Configuración agencias (Config_Agrupaciones), de donde sale su
+ *  clave y sus emails de agencia. El RPC editarNombreRutaPlantilla solo
+ *  actualiza la tabla "rutas" (nombre + clave) y no toca
+ *  config_agrupaciones, así que si se dejara cambiar el nombre aquí la
+ *  ruta podría acabar con una clave que ya no coincide con ninguna
+ *  agrupación configurada (mismo riesgo de desincronización que tenía el
+ *  lápiz de "Editar tienda" con el número/nombre de tienda). Por eso este
+ *  modal siempre reenvía el nombre de agrupación tal cual estaba. */
 function abrirModalEditarRutaPlantilla_(nombreActual) {
   const partes = dividirNombreRutaPlantilla_(nombreActual);
 
@@ -1715,7 +1726,7 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Editar ruta';
+  document.getElementById('modal-title').textContent = 'Ubicación y hora de carga — ' + partes.nombre;
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
@@ -1723,17 +1734,14 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-campo">' +
-      '<label for="modal-ruta-nombre">Nombre de la ruta</label>' +
-      '<input type="text" id="modal-ruta-nombre" value="' + escapeAttr(partes.nombre) + '" placeholder="Ej: PRUEBA">' +
-    '</div>' +
-    '<div class="modal-campo">' +
       '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
       '<input type="text" id="modal-ruta-ubicacion" value="' + escapeAttr(partes.ubicacion) + '" placeholder="Ej: GAITE">' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="modal-ruta-hora">Hora de carga</label>' +
       '<input type="text" id="modal-ruta-hora" value="' + escapeAttr(partes.hora) + '" placeholder="Ej: 10:00 (déjalo en blanco si no aplica)">' +
-    '</div>';
+    '</div>' +
+    '<p class="modal-campo-ayuda">El nombre de la agrupación ("' + escapeHtml(partes.nombre) + '") no se puede cambiar aquí: sale de Configuración agencias.</p>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -1742,19 +1750,17 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
-    const inputNombre = document.getElementById('modal-ruta-nombre');
     const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
     const inputHora = document.getElementById('modal-ruta-hora');
-    const nombre = inputNombre.value.trim();
     const ubicacion = inputUbicacion.value.trim();
     const hora = inputHora.value.trim();
-    if (!nombre) { inputNombre.focus(); return; }
     if (!ubicacion) { inputUbicacion.focus(); return; }
 
     // Mismo formato que "Añadir ruta nueva": "NOMBRE (UBICACION HORA)",
     // o "NOMBRE (UBICACION)" si se deja la hora en blanco (hay rutas
-    // reales sin una hora fija, p.ej. "CBL MALAGA (AMBAS NAVES)").
-    const nombreCompleto = nombre + ' (' + ubicacion + (hora ? ' ' + hora : '') + ')';
+    // reales sin una hora fija, p.ej. "CBL MALAGA (AMBAS NAVES)"). El
+    // nombre de la agrupación se reenvía siempre igual (partes.nombre).
+    const nombreCompleto = partes.nombre + ' (' + ubicacion + (hora ? ' ' + hora : '') + ')';
     cerrarModal();
     const mutar = function () {
       const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreActual; });
@@ -1762,7 +1768,7 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
     };
     guardarPlantillaOptimista_(mutar, 'editarNombreRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreActual, nombreCompleto], 'Ruta actualizada');
   };
-  setTimeout(function () { document.getElementById('modal-ruta-nombre').focus(); }, 50);
+  setTimeout(function () { document.getElementById('modal-ruta-ubicacion').focus(); }, 50);
 }
 
 function confirmarEliminarRutaPlantilla_(nombreRuta) {
