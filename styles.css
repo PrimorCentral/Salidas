@@ -246,16 +246,98 @@
 
   /* ---------- VISTAS "INICIO" Y "CONFIGURACIÓN" ---------- */
   .vista-wrap { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
-  .inicio-hero {
-    position: relative; width: 100%; flex: 1;
+
+  /* Foto de portada (almacén/palets) a página completa, fija detrás de
+     todo el contenido de Inicio -- el topbar y las tarjetas quedan
+     encima, opacos, sobre ella. Solo activa mientras se está en la
+     vista Inicio (ver cambiarVista() en js/navegacion.js). */
+  body.vista-inicio-activa {
     background:
       radial-gradient(circle at 15% 20%, rgba(255,255,255,.05), transparent 40%),
       radial-gradient(circle at 85% 80%, rgba(217,140,43,.14), transparent 45%),
       linear-gradient(160deg, rgba(21,33,54,.86) 0%, rgba(16,26,44,.94) 100%),
-      url('https://burst.shopifycdn.com/photos/boxes-on-warehouse-shelves.jpg?width=1920&format=pjpg&exif=0&iptc=0') center/cover no-repeat;
+      url('https://burst.shopifycdn.com/photos/boxes-on-warehouse-shelves.jpg?width=1920&format=pjpg&exif=0&iptc=0') center/cover no-repeat fixed;
     background-color: var(--navy);
   }
-  main.main-sin-padding { padding: 0; display: flex; flex-direction: column; }
+  main.main-sin-padding { padding: 24px 28px 32px; display: flex; flex-direction: column; }
+
+  /* Cabecera compacta de Inicio: saludo alineado a la izquierda del todo,
+     para que las dos tarjetas de estado empiecen justo debajo, arriba de
+     todo (nada de foto ocupando toda la pantalla vacía). */
+  .inicio-hero { position: relative; padding: 6px 0 22px; }
+  .inicio-saludo {
+    font-family: var(--sans); font-size: 26px; font-weight: 800; color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,.35); letter-spacing: -.01em;
+  }
+  .inicio-saludo-fecha {
+    margin-top: 4px; font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,.75);
+    text-shadow: 0 1px 6px rgba(0,0,0,.3); text-transform: capitalize;
+  }
+
+  /* Dos tarjetas del mismo ancho, bien separadas. */
+  .inicio-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-items: start; }
+  @media (max-width: 900px) {
+    .inicio-cols2 { grid-template-columns: 1fr; }
+  }
+
+  .inicio-card {
+    background: var(--panel); border-radius: var(--radius); border-top: 4px solid var(--amber);
+    box-shadow: 0 14px 30px -18px rgba(10,18,32,.5); padding: 18px 20px 8px; overflow: hidden;
+  }
+  .inicio-card-manana { border-top-color: var(--prevision); }
+  .inicio-card-header {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding-bottom: 12px; margin-bottom: 6px; border-bottom: 1px solid var(--line);
+  }
+  .inicio-card-header h2 { margin: 0; font-size: 16.5px; color: var(--navy); }
+  .inicio-card-fecha { font-size: 12px; font-weight: 600; color: var(--ink-soft); text-transform: capitalize; }
+  .inicio-card-vacio { padding: 18px 4px 22px; color: var(--ink-soft); font-size: 13px; text-align: center; }
+
+  /* Tabla ruta x 60/PTA/CART. + estado. Filas con grid para que las tres
+     columnas de casillas y la de estado queden perfectamente alineadas
+     entre sí y con la cabecera. */
+  .inicio-tabla-conteo { display: flex; flex-direction: column; }
+  .inicio-tc-fila {
+    display: grid; grid-template-columns: 1fr repeat(3, 42px) 92px; align-items: center;
+    gap: 4px; padding: 9px 2px; border-bottom: 1px solid var(--line);
+  }
+  .inicio-tc-fila:last-child { border-bottom: none; }
+  .inicio-tc-header {
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--ink-soft); padding: 0 2px 8px; border-bottom: none;
+  }
+  .inicio-tc-header .inicio-tc-col,
+  .inicio-tc-header .inicio-tc-pill-col { text-align: center; }
+  .inicio-tc-nombre-col {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .inicio-tc-col { display: flex; align-items: center; justify-content: center; }
+  .inicio-tc-pill-col { display: flex; align-items: center; justify-content: center; margin-left: 16px; }
+
+  .inicio-check-circle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; background: #e7e9ee; color: transparent;
+    border: 1.5px solid #d7dae2; flex-shrink: 0;
+  }
+  .inicio-check-circle.completo { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+  .inicio-pill {
+    display: inline-flex; align-items: center; justify-content: center; text-align: center;
+    padding: 4px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700;
+    white-space: nowrap; width: 100%;
+  }
+  .inicio-pill-enviado { background: #e3f3ec; color: var(--ok); }
+  .inicio-pill-progreso { background: #fdf1de; color: var(--amber-dark); }
+  .inicio-pill-pendiente { background: #eef0f4; color: var(--ink-soft); }
+
+  /* La insignia de versión, sobre la foto de portada, queda fija en la
+     esquina de la pantalla (no dentro del flujo del saludo). Va con
+     selector propio para no tocar el .version-badge del login. */
+  .inicio-hero .version-badge {
+    position: fixed; right: 18px; bottom: 14px; left: auto; top: auto;
+  }
+
   .vista-card {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
     padding: 22px;
