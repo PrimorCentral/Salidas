@@ -8,12 +8,28 @@ function irAHoy() {
   cambiarVista('conteos');
 }
 
+/** Desde "Inicio": al pulsar el nombre de una agrupación en la tabla de
+ *  "Estado del conteo de hoy/mañana", lleva directamente a Conteos
+ *  Diarios en la fecha correspondiente y hace scroll hasta esa
+ *  agrupación (mismo "ir a sección" que ya usa el resumen lateral de
+ *  Conteos Diarios, ver irASeccion en conteos-resumen.js). */
+function irAAgrupacionDesdeInicio_(fecha, nombreRuta) {
+  if (!fecha || !nombreRuta) return;
+  ESTADO.fecha = fecha;
+  ESTADO.anioMes = anioMesDe(fecha);
+  ESTADO.colapsadas = new Set();
+  cambiarVista('conteos', nombreRuta);
+}
+
 /** Cambia entre las tres secciones de la app (Inicio / Conteos /
  *  Configuración), marcando la pestaña activa en la cabecera y
  *  renderizando el contenido correspondiente en <main>. Para
- *  "configuracion", `seccion` (opcional) indica qué página del
- *  desplegable se quiere abrir (p.ej. 'emails'); si no se indica, se
- *  mantiene/usa la última sección activa. */
+ *  "configuracion"/"administracion", `seccion` (opcional) indica qué
+ *  página del desplegable se quiere abrir (p.ej. 'emails'); si no se
+ *  indica, se mantiene/usa la última sección activa. Para "conteos",
+ *  `seccion` (opcional) es el nombre de una agrupación a la que hacer
+ *  scroll automáticamente en cuanto termine de cargar el día (ver
+ *  irAAgrupacionDesdeInicio_, que es quien la usa desde "Inicio"). */
 function cambiarVista(vista, seccion) {
   ESTADO.vista = vista;
   document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
@@ -42,7 +58,10 @@ function cambiarVista(vista, seccion) {
     }
     renderShellPrincipal();
     cargarCalendario();
-    cargarConteoDia();
+    const promesaConteo = cargarConteoDia();
+    if (seccion && promesaConteo && typeof promesaConteo.then === 'function') {
+      promesaConteo.then(function () { irASeccion(seccion); });
+    }
   }
 }
 
@@ -88,6 +107,11 @@ function renderVistaInicio() {
       cont.innerHTML =
         htmlTarjetaInicio_('Estado del conteo de hoy', resumen.hoy, 'hoy') +
         htmlTarjetaInicio_('Estado del conteo de mañana', resumen.manana, 'manana');
+      cont.querySelectorAll('[data-ir-agrupacion]').forEach(function (btn) {
+        btn.onclick = function () {
+          irAAgrupacionDesdeInicio_(btn.getAttribute('data-fecha'), btn.getAttribute('data-ruta'));
+        };
+      });
     })
     .catch(function (err) {
       const cont = document.getElementById('inicio-cols2');
@@ -136,7 +160,7 @@ function htmlTarjetaInicio_(titulo, datos, tipo) {
           INICIO_CAMPOS_.map(function (c) { return '<div class="inicio-tc-col">' + c.etiqueta + '</div>'; }).join('') +
           '<div class="inicio-tc-pill-col">Estado</div>' +
         '</div>' +
-        rutas.map(htmlFilaRutaInicio_).join('') +
+        rutas.map(function (ruta) { return htmlFilaRutaInicio_(ruta, datos.fecha); }).join('') +
       '</div>';
   }
   return (
@@ -157,7 +181,7 @@ const INICIO_SVG_UBICACION_ =
   '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 
-function htmlFilaRutaInicio_(ruta) {
+function htmlFilaRutaInicio_(ruta, fecha) {
   const estado = ruta.estado || 'pendiente';
   // El nombre de la ruta trae la ubicación/hora de carga entre
   // paréntesis (p.ej. "NIEVES (GAITE 8:00)"); parsearNombreAgrupacion
@@ -166,12 +190,15 @@ function htmlFilaRutaInicio_(ruta) {
   const badgeUbicacion = partes.ubicacion
     ? '<span class="inicio-badge-ubicacion">' + INICIO_SVG_UBICACION_ + escapeHtml(partes.ubicacion) + '</span>'
     : '';
+  // El nombre es clicable: lleva directamente a esa agrupación en Conteos
+  // Diarios (ver irAAgrupacionDesdeInicio_ e "IR A AGRUPACIÓN..." en
+  // renderVistaInicio, que engancha el onclick tras pintar la tarjeta).
   return (
     '<div class="inicio-tc-fila">' +
-      '<div class="inicio-tc-nombre-col">' +
+      '<button type="button" class="inicio-tc-nombre-col inicio-tc-nombre-col-link" data-ir-agrupacion data-fecha="' + escapeAttr(fecha || '') + '" data-ruta="' + escapeAttr(ruta.nombre || '') + '" title="Ir a esta agrupación en Conteos Diarios">' +
         '<span class="inicio-tc-nombre-txt">' + escapeHtml(partes.titulo) + '</span>' +
         badgeUbicacion +
-      '</div>' +
+      '</button>' +
       INICIO_CAMPOS_.map(function (c) {
         return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(ruta[c.clave]) + '</div>';
       }).join('') +

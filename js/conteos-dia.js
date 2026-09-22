@@ -5,10 +5,15 @@ function cargarConteoDia() {
   const cont = document.getElementById('dia-contenido');
   cont.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando conteo…</div></div>';
   document.getElementById('resumen-body').innerHTML = '<div class="resumen-vacio">Cargando…</div>';
-  llamarApi_('getConteoDia', [ESTADO.fecha])
+  // Se devuelve la promesa para que quien necesite hacer algo justo
+  // después de que el contenido ya esté pintado (p.ej. irAAgrupacionDesdeInicio_,
+  // que hace scroll hasta una agrupación concreta) pueda encadenarse con
+  // .then() en vez de adivinar cuándo ha terminado de cargar.
+  const promesa = llamarApi_('getConteoDia', [ESTADO.fecha])
     .then(renderContenidoDia)
     .catch(mostrarErrorServidor);
   iniciarAutorefrescoConteoDia_();
+  return promesa;
 }
 
 /**
