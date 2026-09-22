@@ -74,10 +74,11 @@ function saludoSegunHora_() {
 
 // Las tres casillas de conteo reales (misma nomenclatura que el resto de
 // la app: js/plantilla.js -> etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' }).
+// Cada una viene de la API como 'vacio' | 'parcial' | 'completo'.
 const INICIO_CAMPOS_ = [
-  { clave: 'c60Completo', etiqueta: '60' },
-  { clave: 'ptaCompleto', etiqueta: 'PTA' },
-  { clave: 'cartCompleto', etiqueta: 'CART.' }
+  { clave: 'c60Estado', etiqueta: '60' },
+  { clave: 'ptaEstado', etiqueta: 'PTA' },
+  { clave: 'cartEstado', etiqueta: 'CART.' }
 ];
 const INICIO_ESTADO_TXT_ = { enviado: 'Enviada', progreso: 'En progreso', pendiente: 'Pendiente' };
 
@@ -172,7 +173,7 @@ function htmlFilaRutaInicio_(ruta) {
     '<div class="inicio-tc-fila">' +
       '<div class="inicio-tc-nombre-col">' + escapeHtml(ruta.nombre || '') + '</div>' +
       INICIO_CAMPOS_.map(function (c) {
-        return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(!!ruta[c.clave]) + '</div>';
+        return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(ruta[c.clave]) + '</div>';
       }).join('') +
       '<div class="inicio-tc-pill-col"><span class="inicio-pill inicio-pill-' + estado + '">' +
         escapeHtml(INICIO_ESTADO_TXT_[estado] || estado) +
@@ -181,11 +182,15 @@ function htmlFilaRutaInicio_(ruta) {
   );
 }
 
-function htmlCheckCircleInicio_(completo) {
+/** estado: 'vacio' (gris, nada rellenado) | 'parcial' (naranja, alguna
+ *  casilla rellenada) | 'completo' (verde, todas rellenadas -- con
+ *  check). */
+function htmlCheckCircleInicio_(estado) {
+  estado = estado || 'vacio';
   return (
-    '<span class="inicio-check-circle' + (completo ? ' completo' : '') + '">' +
-      (completo
-        ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    '<span class="inicio-check-circle inicio-check-circle-' + estado + '">' +
+      (estado === 'completo'
+        ? '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
         : '') +
     '</span>'
   );
