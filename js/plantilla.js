@@ -441,7 +441,7 @@ function pintarPlantilla_() {
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-tienda-mover" data-mover-tienda="' + t.row + '" title="Mover a otra agrupación">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></button>' +
-            '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + t.row + '" title="Editar tienda">' +
+            '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + t.row + '" title="Límite de palets de esta tienda">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-tienda="' + t.row + '" title="Eliminar tienda">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
@@ -716,18 +716,27 @@ function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
 /** Botón de lápiz de una fila de tienda: abre un modal para editar el
  *  límite, el número y el nombre a la vez (en vez de los campos sueltos
  *  que había antes en la propia fila). */
+/** Editar tienda desde "Rutas y tiendas": SOLO el límite de palets de
+ *  este día (o volver a usar el general). El número y el nombre de la
+ *  tienda ya NO se pueden cambiar desde aquí -- renombrar_tienda_config
+ *  (Configuración tiendas) es el único sitio que actualiza a la vez
+ *  Config_Tiendas y TODAS las apariciones en tiendas_ruta, así las dos
+ *  quedan siempre sincronizadas; editar_tienda_plantilla (este RPC) solo
+ *  tocaba tiendas_ruta, así que renombrar desde aquí podía desincronizar
+ *  el nombre/clave con Configuración tiendas (roturas de email, tránsito,
+ *  límite general...). Se sigue mandando el nombre actual sin tocar al
+ *  guardar, para no reventar el contrato del RPC (que lo exige). */
 function abrirModalEditarTiendaPlantilla_(row) {
   row = Number(row);
   const info = buscarTiendaPlantilla_(row);
   if (!info) return;
-  const partes = dividirNombreTiendaPlantilla_(info.tienda.nombre);
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Editar tienda';
+  document.getElementById('modal-title').textContent = 'Límite de palets — ' + info.tienda.nombre;
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
@@ -745,20 +754,7 @@ function abrirModalEditarTiendaPlantilla_(row) {
       '<input type="text" id="modal-editar-tienda-lim" inputmode="numeric" placeholder="Ej: 6" style="margin-top:8px;' + (info.tienda.limiteOverride ? '' : 'display:none;') + '" value="' + escapeAttr(info.tienda.limiteOverride ? info.tienda.limite : '') + '">' +
       '<span class="modal-campo-ayuda">El general se edita desde Configuración tiendas y se aplica a todos los días que no tengan aquí un valor propio.</span>' +
     '</div>' +
-    (partes
-      ? '<div class="modal-campo">' +
-          '<label for="modal-editar-tienda-numero">Número de tienda (3 dígitos)</label>' +
-          '<input type="text" id="modal-editar-tienda-numero" inputmode="numeric" maxlength="3" value="' + escapeAttr(partes.numero) + '">' +
-        '</div>' +
-        '<div class="modal-campo">' +
-          '<label for="modal-editar-tienda-nombre">Nombre de la tienda</label>' +
-          '<input type="text" id="modal-editar-tienda-nombre" style="text-transform:uppercase;" value="' + escapeAttr(partes.resto) + '">' +
-          '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-editar-tienda-preview"></span>".</span>' +
-        '</div>'
-      : '<div class="modal-campo">' +
-          '<label for="modal-editar-tienda-nombre">Nombre de la tienda</label>' +
-          '<input type="text" id="modal-editar-tienda-nombre" value="' + escapeAttr(info.tienda.nombre) + '">' +
-        '</div>');
+    '<p class="modal-campo-ayuda" style="margin-top:2px;">El número y el nombre de la tienda se cambian desde <b>Configuración tiendas</b>: se actualizan solos en todas las rutas donde aparezca.</p>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -768,8 +764,6 @@ function abrirModalEditarTiendaPlantilla_(row) {
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
 
   const inputLim = document.getElementById('modal-editar-tienda-lim');
-  const inputNumero = document.getElementById('modal-editar-tienda-numero');
-  const inputNombre = document.getElementById('modal-editar-tienda-nombre');
 
   let usaLimitePropio = !!info.tienda.limiteOverride;
   custom.querySelectorAll('.modal-limite-pill').forEach(function (btn) {
@@ -781,60 +775,22 @@ function abrirModalEditarTiendaPlantilla_(row) {
     };
   });
 
-  if (inputNumero) {
-    const preview = document.getElementById('modal-editar-tienda-preview');
-    const actualizarPreview_ = function () {
-      const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-      const nom = inputNombre.value.trim().replace(/\s+/g, ' ');
-      preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
-    };
-    inputNumero.oninput = function () {
-      inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-      actualizarPreview_();
-    };
-    inputNombre.oninput = function () {
-      const pos = inputNombre.selectionStart;
-      inputNombre.value = inputNombre.value.toUpperCase();
-      inputNombre.setSelectionRange(pos, pos);
-      actualizarPreview_();
-    };
-    actualizarPreview_();
-  }
-
   document.getElementById('modal-confirm-btn').onclick = function () {
     let limite = '';
     if (usaLimitePropio) {
       limite = inputLim.value.trim();
       if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
     }
-    let nombre;
-    if (inputNumero) {
-      const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-      if (!numero) { inputNumero.focus(); return; }
-      const resto = inputNombre.value.trim().replace(/\s+/g, ' ').toUpperCase();
-      if (!resto) { inputNombre.focus(); return; }
-      nombre = numero.padStart(3, '0') + ' - ' + resto;
-    } else {
-      const libre = inputNombre.value.trim();
-      if (!libre) { inputNombre.focus(); return; }
-      nombre = libre;
-    }
+    const nombre = info.tienda.nombre; // sin cambios: el nombre solo se toca desde Configuración tiendas
     cerrarModal();
     const mutar = function () {
       const infoActual = buscarTiendaPlantilla_(row);
       if (infoActual) {
-        infoActual.tienda.nombre = nombre;
         infoActual.tienda.limiteOverride = usaLimitePropio;
         infoActual.tienda.limite = usaLimitePropio ? Number(limite) : infoActual.tienda.limiteGeneral;
       }
     };
-    guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado',
-      function (resultado) {
-        const propagadas = (resultado && resultado.propagadas) || 0;
-        mostrarToast(propagadas > 0
-          ? 'Guardado (actualizado también en ' + propagadas + ' día(s) más donde aparecía)'
-          : 'Guardado');
-      });
+    guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado');
   };
   setTimeout(function () { (inputNumero || inputNombre).focus(); }, 50);
 }
