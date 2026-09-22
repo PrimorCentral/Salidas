@@ -167,11 +167,28 @@ function htmlTarjetaInicio_(titulo, datos, tipo) {
   );
 }
 
+// Icono de ubicación (mismo pin que .badge-ubicacion en las secciones de
+// Conteos Diarios, ver js/conteos-panel.js) para el badge de
+// ubicación/hora de carga entre paréntesis en el nombre de la ruta.
+const INICIO_SVG_UBICACION_ =
+  '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+
 function htmlFilaRutaInicio_(ruta) {
   const estado = ruta.estado || 'pendiente';
+  // El nombre de la ruta trae la ubicación/hora de carga entre
+  // paréntesis (p.ej. "NIEVES (GAITE 8:00)"); parsearNombreAgrupacion
+  // (js/conteos-panel.js) es el mismo parser que ya usa Conteos Diarios.
+  const partes = parsearNombreAgrupacion(ruta.nombre || '');
+  const badgeUbicacion = partes.ubicacion
+    ? '<span class="inicio-badge-ubicacion">' + INICIO_SVG_UBICACION_ + escapeHtml(partes.ubicacion) + '</span>'
+    : '';
   return (
     '<div class="inicio-tc-fila">' +
-      '<div class="inicio-tc-nombre-col">' + escapeHtml(ruta.nombre || '') + '</div>' +
+      '<div class="inicio-tc-nombre-col">' +
+        '<span class="inicio-tc-nombre-txt">' + escapeHtml(partes.titulo) + '</span>' +
+        badgeUbicacion +
+      '</div>' +
       INICIO_CAMPOS_.map(function (c) {
         return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(ruta[c.clave]) + '</div>';
       }).join('') +
