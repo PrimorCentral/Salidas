@@ -259,13 +259,15 @@
       url('https://burst.shopifycdn.com/photos/boxes-on-warehouse-shelves.jpg?width=1920&format=pjpg&exif=0&iptc=0') center/cover no-repeat fixed;
     background-color: var(--navy);
   }
-  main.main-sin-padding { padding: 14px 24px 14px; display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h)); box-sizing: border-box; }
+  main.main-sin-padding { padding: 14px 24px 14px; display: flex; flex-direction: column; }
 
   /* Cabecera compacta de Inicio: saludo alineado a la izquierda del todo,
      para que las dos tarjetas de estado empiecen justo debajo, arriba de
      todo (nada de foto ocupando toda la pantalla vacía). Todo lo justo
      para que, con muchas agrupaciones, las tarjetas quepan en una sola
-     pantalla sin hacer scroll. */
+     pantalla sin hacer scroll -- pero SIN estirar las tarjetas a la
+     fuerza para llenar el alto de la ventana, que deja un hueco vacío
+     feo cuando hay pocas rutas. */
   .inicio-hero { position: relative; padding: 2px 0 12px; flex-shrink: 0; }
   .inicio-saludo {
     font-family: var(--sans); font-size: 19px; font-weight: 800; color: #fff;
@@ -276,17 +278,18 @@
     text-shadow: 0 1px 6px rgba(0,0,0,.3); text-transform: capitalize;
   }
 
-  /* Dos tarjetas del mismo ancho, bien separadas, ocupando el resto del
-     alto disponible. */
-  .inicio-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: stretch; flex: 1; min-height: 0; }
+  /* Dos tarjetas del mismo ancho, bien separadas, cada una tan alta como
+     su propio contenido (si una tuviera bastantes más rutas que la
+     otra, no se estiran para igualarse). */
+  .inicio-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
   @media (max-width: 900px) {
     .inicio-cols2 { grid-template-columns: 1fr; }
   }
 
   .inicio-card {
     background: var(--panel); border-radius: var(--radius); border-top: 4px solid var(--amber);
-    box-shadow: 0 14px 30px -18px rgba(10,18,32,.5); padding: 10px 16px 6px;
-    display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    box-shadow: 0 14px 30px -18px rgba(10,18,32,.5); padding: 10px 16px 8px;
+    display: flex; flex-direction: column; overflow: hidden;
   }
   .inicio-card-manana { border-top-color: var(--prevision); }
   .inicio-card-header {
@@ -299,10 +302,8 @@
 
   /* Tabla ruta x 60/PTA/CART. + estado. Filas con grid para que las tres
      columnas de casillas y la de estado queden perfectamente alineadas
-     entre sí y con la cabecera. Si aun así no caben todas las
-     agrupaciones, esta tabla (no la tarjeta ni la página) es la que hace
-     scroll. */
-  .inicio-tabla-conteo { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+     entre sí y con la cabecera. */
+  .inicio-tabla-conteo { display: flex; flex-direction: column; }
   .inicio-tc-fila {
     display: grid; grid-template-columns: 1fr repeat(3, 34px) 74px; align-items: center;
     gap: 3px; padding: 4px 2px; border-bottom: 1px solid var(--line);
