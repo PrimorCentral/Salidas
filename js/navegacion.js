@@ -23,6 +23,7 @@ function cambiarVista(vista, seccion) {
   const elRefrescoConteo = document.getElementById('topbar-refresco-conteo');
   if (elRefrescoConteo) elRefrescoConteo.classList.toggle('visible', vista === 'conteos');
   document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
+  document.body.classList.toggle('vista-inicio-activa', vista === 'inicio');
 
   if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
   if (vista === 'administracion' && seccion) ESTADO_ADMIN.seccionActiva = seccion;
@@ -45,16 +46,149 @@ function cambiarVista(vista, seccion) {
   }
 }
 
-/** INICIO: página principal tras entrar en la app. De momento solo una
- *  imagen de portada (almacén/palets, con el mismo tratamiento oscuro que
- *  la pantalla de login); aquí es donde en el futuro irán los mensajes y
- *  avisos generales del equipo. */
+/** INICIO: página principal tras entrar en la app. Cabecera compacta con
+ *  saludo según la hora + nombre del usuario, y dos tarjetas ("Estado del
+ *  conteo de hoy" / "...de mañana") con una tabla ruta × 60/PTA/CART.
+ *  donde cada casilla se marca en verde cuando esa columna está completa
+ *  para esa ruta, más una columna de estado (Enviada/En progreso/
+ *  Pendiente) por ruta. Todo sobre la foto de portada a página completa
+ *  (ver body.vista-inicio-activa en styles.css). */
+
+/** Primer nombre de pila, en formato "Jose" (no todo mayúsculas), a partir
+ *  de SESSION_NOMBRE (nombre completo tal cual se guarda en la BD). */
+function nombrePilaSesion_() {
+  if (!SESSION_NOMBRE) return '';
+  const primero = String(SESSION_NOMBRE).trim().split(/\s+/)[0] || '';
+  if (!primero) return '';
+  return primero.charAt(0).toUpperCase() + primero.slice(1).toLowerCase();
+}
+
+/** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora local
+ *  del navegador (mismo criterio que el reloj de la cabecera). */
+function saludoSegunHora_() {
+  const h = new Date().getHours();
+  if (h < 13) return 'Buenos días';
+  if (h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+// Las tres casillas de conteo reales (misma nomenclatura que el resto de
+// la app: js/plantilla.js -> etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' }).
+const INICIO_CAMPOS_ = [
+  { clave: 'c60Completo', etiqueta: '60' },
+  { clave: 'ptaCompleto', etiqueta: 'PTA' },
+  { clave: 'cartCompleto', etiqueta: 'CART.' }
+];
+const INICIO_ESTADO_TXT_ = { enviado: 'Enviada', progreso: 'En progreso', pendiente: 'Pendiente' };
+
 function renderVistaInicio() {
   const main = document.getElementById('main');
+  const nombre = nombrePilaSesion_();
   main.innerHTML =
     htmlBannerInstalacion_() +
-    '<div class="inicio-hero"><div class="version-badge">' + (APP_VERSION_ACTUAL ? 'v' + escapeHtml(APP_VERSION_ACTUAL) : '') + '</div></div>';
+    '<div class="inicio-hero">' +
+      '<div class="inicio-saludo">' + escapeHtml(saludoSegunHora_()) + (nombre ? ', ' + escapeHtml(nombre) : '') + '</div>' +
+      '<div class="inicio-saludo-fecha">' + escapeHtml(formatearFechaLarga(hoyStr())) + '</div>' +
+      '<div class="version-badge">' + (APP_VERSION_ACTUAL ? 'v' + escapeHtml(APP_VERSION_ACTUAL) : '') + '</div>' +
+    '</div>' +
+    '<div class="inicio-cols2" id="inicio-cols2">' +
+      htmlTarjetaInicioCargando_('Estado del conteo de hoy', 'hoy') +
+      htmlTarjetaInicioCargando_('Estado del conteo de mañana', 'manana') +
+    '</div>';
   vincularBotonInstalar_();
+
+  llamarApi_('resumenInicio', [])
+    .then(function (resumen) {
+      const cont = document.getElementById('inicio-cols2');
+      if (!cont) return; // el usuario ya ha cambiado de vista
+      cont.innerHTML =
+        htmlTarjetaInicio_('Estado del conteo de hoy', resumen.hoy, 'hoy') +
+        htmlTarjetaInicio_('Estado del conteo de mañana', resumen.manana, 'manana');
+    })
+    .catch(function (err) {
+      const cont = document.getElementById('inicio-cols2');
+      if (cont) {
+        cont.innerHTML =
+          htmlTarjetaInicioError_('Estado del conteo de hoy') +
+          htmlTarjetaInicioError_('Estado del conteo de mañana');
+      }
+      mostrarErrorServidor(err);
+    });
+}
+
+function htmlTarjetaInicioCargando_(titulo, tipo) {
+  return (
+    '<div class="inicio-card inicio-card-' + tipo + '">' +
+      '<div class="inicio-card-header"><h2>' + escapeHtml(titulo) + '</h2></div>' +
+      '<div class="inicio-card-vacio">Cargando…</div>' +
+    '</div>'
+  );
+}
+
+function htmlTarjetaInicioError_(titulo) {
+  return (
+    '<div class="inicio-card">' +
+      '<div class="inicio-card-header"><h2>' + escapeHtml(titulo) + '</h2></div>' +
+      '<div class="inicio-card-vacio">No se ha podido cargar. Vuelve a intentarlo más tarde.</div>' +
+    '</div>'
+  );
+}
+
+/** Construye una tarjeta completa a partir de la respuesta de
+ *  get_resumen_inicio para "hoy" o "manana": { fecha, dia, rutas,
+ *  totalRutas, enviadas, enProgreso, pendientes }. */
+function htmlTarjetaInicio_(titulo, datos, tipo) {
+  datos = datos || {};
+  const rutas = datos.rutas || [];
+  const subtitulo = datos.fecha ? formatearFechaLarga(datos.fecha) : '';
+  let cuerpo;
+  if (!rutas.length) {
+    cuerpo = '<div class="inicio-card-vacio">No hay rutas para este día.</div>';
+  } else {
+    cuerpo =
+      '<div class="inicio-tabla-conteo">' +
+        '<div class="inicio-tc-fila inicio-tc-header">' +
+          '<div class="inicio-tc-nombre-col">Ruta</div>' +
+          INICIO_CAMPOS_.map(function (c) { return '<div class="inicio-tc-col">' + c.etiqueta + '</div>'; }).join('') +
+          '<div class="inicio-tc-pill-col">Estado</div>' +
+        '</div>' +
+        rutas.map(htmlFilaRutaInicio_).join('') +
+      '</div>';
+  }
+  return (
+    '<div class="inicio-card inicio-card-' + tipo + '">' +
+      '<div class="inicio-card-header">' +
+        '<h2>' + escapeHtml(titulo) + '</h2>' +
+        (subtitulo ? '<span class="inicio-card-fecha">' + escapeHtml(subtitulo) + '</span>' : '') +
+      '</div>' +
+      cuerpo +
+    '</div>'
+  );
+}
+
+function htmlFilaRutaInicio_(ruta) {
+  const estado = ruta.estado || 'pendiente';
+  return (
+    '<div class="inicio-tc-fila">' +
+      '<div class="inicio-tc-nombre-col">' + escapeHtml(ruta.nombre || '') + '</div>' +
+      INICIO_CAMPOS_.map(function (c) {
+        return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(!!ruta[c.clave]) + '</div>';
+      }).join('') +
+      '<div class="inicio-tc-pill-col"><span class="inicio-pill inicio-pill-' + estado + '">' +
+        escapeHtml(INICIO_ESTADO_TXT_[estado] || estado) +
+      '</span></div>' +
+    '</div>'
+  );
+}
+
+function htmlCheckCircleInicio_(completo) {
+  return (
+    '<span class="inicio-check-circle' + (completo ? ' completo' : '') + '">' +
+      (completo
+        ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '') +
+    '</span>'
+  );
 }
 
 /** CONFIGURACIÓN: ya no tiene submenú lateral dentro de la página (la

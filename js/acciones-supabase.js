@@ -43,6 +43,11 @@ const SUPABASE_ACCIONES_ = {
       p_nombre_agrupacion: nombreAgrupacion
     });
   },
+  // -- Supabase: resumen de la pantalla de Inicio (estado del conteo de
+  // hoy y de mañana) --
+  resumenInicio: function () {
+    return llamarRpcSupabase_('get_resumen_inicio', {});
+  },
   // -- Supabase: Emails agencias (Config_Agrupaciones) --
   getAgrupacionesConfig: function () {
     return llamarRpcSupabase_('get_agrupaciones_config', {});

@@ -4,6 +4,7 @@
 const METODOS_REMOTOS_ = {
   getMesCalendario: 'getMesCalendario',
   getConteoDia: 'getConteoDia',
+  resumenInicio: 'resumenInicio',
   guardarConteo: 'guardarConteo',
   borrarConteoSeccion: 'borrarConteoSeccion',
   deshacerEnvioSeccion: 'deshacerEnvioSeccion',
