@@ -429,6 +429,10 @@ function renderConfigTiendas() {
         '<div class="vista-card-header">' +
           '<h2>Configuración tiendas <span class="tiendas-config-total" id="tiendas-config-total"></span><span class="tiendas-config-total nueva-toggle" id="tiendas-config-nueva" title="Mostrar solo las tiendas nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="tiendas-config-sinuso" title="Mostrar solo las tiendas sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="tiendas-config-sinemail" title="Mostrar solo las tiendas sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
+            (tienePermiso('tiendas') ?
+              '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-nueva-tienda-config" title="Da de alta una tienda nueva (número, nombre, email, tránsito y límite de palets)">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+                'Nueva tienda</button>' : '') +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-pdf-tiendas" title="Exporta la lista visible (respeta el buscador y los filtros) a PDF">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
               'PDF</button>' +
@@ -459,6 +463,8 @@ function renderConfigTiendas() {
       '<div id="tiendas-config-lista"><div class="loader">Cargando…</div></div>' +
     '</div>';
 
+  const btnNuevaTienda = document.getElementById('btn-nueva-tienda-config');
+  if (btnNuevaTienda) btnNuevaTienda.onclick = abrirModalNuevaTiendaConfig_;
   document.getElementById('btn-sincronizar-tiendas').onclick = sincronizarTiendasDesdeApp_;
   document.getElementById('btn-duplicados-tiendas').onclick = buscarDuplicadosTiendas_;
   document.getElementById('btn-exportar-pdf-tiendas').onclick = exportarTiendasConfigPDF_;
@@ -748,13 +754,19 @@ function pintarListaTiendas_() {
             '<label>Notas</label>' +
             '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
           '</div>' +
-          '<div class="emails-config-campo">' +
-            '<label>Tránsito</label>' +
-            '<select class="emails-config-transito" data-transito-tienda="' + escapeAttr(it.tienda) + '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
-              TRANSITO_OPCIONES.map(function (op) {
-                return '<option value="' + op.valor + '"' + (Number(it.transito || 1) === op.valor ? ' selected' : '') + '>' + op.texto + '</option>';
-              }).join('') +
-            '</select>' +
+          '<div class="emails-config-campo-fila">' +
+            '<div class="emails-config-campo emails-config-campo-estrecho">' +
+              '<label>Tránsito</label>' +
+              '<select class="emails-config-transito" data-transito-tienda="' + escapeAttr(it.tienda) + '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
+                TRANSITO_OPCIONES.map(function (op) {
+                  return '<option value="' + op.valor + '"' + (Number(it.transito || 1) === op.valor ? ' selected' : '') + '>' + op.texto + '</option>';
+                }).join('') +
+              '</select>' +
+            '</div>' +
+            '<div class="emails-config-campo emails-config-campo-estrecho">' +
+              '<label>Límite palets</label>' +
+              '<input type="text" inputmode="numeric" id="' + idSeguro + '_limite" value="' + escapeAttr(it.limite != null ? it.limite : '') + '" placeholder="Sin límite" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
+            '</div>' +
           '</div>' +
         '</div>' +
         '<div class="emails-config-pie">' +
@@ -833,16 +845,150 @@ function toggleDiaEntregaTienda_(tienda, dia, btn) {
 function guardarEmailTienda_(tienda, idSeguro, btn) {
   const email = document.getElementById(idSeguro + '_email').value;
   const notas = document.getElementById(idSeguro + '_notas').value;
+  const limiteEl = document.getElementById(idSeguro + '_limite');
+  const limite = limiteEl ? limiteEl.value.trim() : '';
+  if (limite !== '' && isNaN(Number(limite))) {
+    limiteEl.focus();
+    mostrarToast('El límite de palets debe ser un número', true);
+    return;
+  }
   btn.disabled = true;
-  llamarApi_('guardarEmailTienda', [tienda, email, notas])
+  // Email/notas y límite viven en dos columnas de config_tiendas pero se
+  // guardan juntos al pulsar "Guardar", igual que antes se guardaban solo
+  // email/notas -- el límite es un número libre (no un desplegable como el
+  // tránsito), así que tiene más sentido guardarlo al confirmar que en
+  // cada pulsación de tecla.
+  Promise.all([
+    llamarApi_('guardarEmailTienda', [tienda, email, notas]),
+    llamarApi_('guardarLimiteTienda', [tienda, limite])
+  ])
     .then(function () {
-      mostrarToast('Email guardado');
+      mostrarToast('Guardado');
       cargarTiendasConfig_();
     })
     .catch(function (err) {
       btn.disabled = false;
       mostrarErrorServidor(err);
     });
+}
+
+/** Alta de una tienda nueva -- ÚNICO sitio desde donde se puede crear una
+ *  tienda que no existía todavía (antes también se podía crear "al vuelo"
+ *  desde "Añadir tienda" en Rutas y tiendas; ahora esa pantalla solo deja
+ *  asignar tiendas que ya existen aquí, ver abrirModalAnadirTiendaPlantilla_
+ *  en plantilla.js). Crea la ficha en Configuración tiendas (clave, email,
+ *  notas, tránsito, límite de palets) sin asignarla todavía a ninguna
+ *  ruta/día -- por eso, nada más crearla, aparecerá en la lista como "SIN
+ *  USO" hasta que se añada a una ruta desde Rutas y tiendas. */
+function abrirModalNuevaTiendaConfig_() {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Nueva tienda';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-nueva-tienda-numero">Número de tienda (3 dígitos)</label>' +
+      '<input type="text" id="modal-nueva-tienda-numero" inputmode="numeric" maxlength="3" placeholder="Ej: 062">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-nueva-tienda-nombre">Nombre de la tienda</label>' +
+      '<input type="text" id="modal-nueva-tienda-nombre" style="text-transform:uppercase;" placeholder="Ej: ISLAZUL">' +
+      '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-nueva-tienda-preview">000 - …</span>".</span>' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-nueva-tienda-email">Email</label>' +
+      '<input type="email" id="modal-nueva-tienda-email" placeholder="tienda@ejemplo.com">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-nueva-tienda-notas">Notas</label>' +
+      '<input type="text" id="modal-nueva-tienda-notas" placeholder="Notas libres (opcional)">' +
+    '</div>' +
+    '<div class="modal-campo-fila-2">' +
+      '<div class="modal-campo">' +
+        '<label for="modal-nueva-tienda-transito">Tránsito</label>' +
+        '<select id="modal-nueva-tienda-transito">' +
+          TRANSITO_OPCIONES.map(function (op) {
+            return '<option value="' + op.valor + '"' + (op.valor === 1 ? ' selected' : '') + '>' + op.texto + '</option>';
+          }).join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="modal-campo">' +
+        '<label for="modal-nueva-tienda-limite">Límite de palets</label>' +
+        '<input type="text" id="modal-nueva-tienda-limite" inputmode="numeric" placeholder="Ej: 6">' +
+      '</div>' +
+    '</div>' +
+    '<p class="modal-campo-ayuda" style="margin-top:8px;">Esta tienda quedará dada de alta pero "SIN USO" hasta que la añadas a una ruta desde "Rutas y tiendas" (botón "Añadir tienda").</p>';
+
+  const inputNumero = document.getElementById('modal-nueva-tienda-numero');
+  const inputNombre = document.getElementById('modal-nueva-tienda-nombre');
+  const preview = document.getElementById('modal-nueva-tienda-preview');
+  const actualizarPreview_ = function () {
+    const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    const nom = inputNombre.value.trim().replace(/\s+/g, ' ');
+    preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
+  };
+  inputNumero.oninput = function () {
+    inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    actualizarPreview_();
+  };
+  inputNombre.oninput = function () {
+    const pos = inputNombre.selectionStart;
+    inputNombre.value = inputNombre.value.toUpperCase();
+    inputNombre.setSelectionRange(pos, pos);
+    actualizarPreview_();
+  };
+  actualizarPreview_();
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Crear tienda</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    if (!numero) { inputNumero.focus(); return; }
+    const nombreTienda = inputNombre.value.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!nombreTienda) { inputNombre.focus(); return; }
+    const nombre = numero.padStart(3, '0') + ' - ' + nombreTienda;
+    const email = document.getElementById('modal-nueva-tienda-email').value.trim();
+    const notas = document.getElementById('modal-nueva-tienda-notas').value.trim();
+    const transito = Number(document.getElementById('modal-nueva-tienda-transito').value);
+    const limiteEl = document.getElementById('modal-nueva-tienda-limite');
+    const limite = limiteEl.value.trim();
+    if (limite !== '' && isNaN(Number(limite))) { limiteEl.focus(); return; }
+
+    const btnConfirmar = document.getElementById('modal-confirm-btn');
+    const avisoPrevio = document.getElementById('modal-nueva-tienda-error');
+    if (avisoPrevio) avisoPrevio.remove();
+    btnConfirmar.disabled = true;
+    btnConfirmar.textContent = 'Creando…';
+
+    llamarApi_('crearTiendaConfig', [nombre, email, notas, transito, limite])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Tienda creada — todavía SIN USO, añádela a una ruta desde Rutas y tiendas');
+        cargarTiendasConfig_();
+      })
+      .catch(function (err) {
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = 'Crear tienda';
+        const aviso = document.createElement('div');
+        aviso.id = 'modal-nueva-tienda-error';
+        aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
+        aviso.textContent = (err && err.message) ? err.message : 'No se ha podido crear la tienda.';
+        document.getElementById('modal-custom').appendChild(aviso);
+      });
+  };
+  setTimeout(function () { inputNumero.focus(); }, 50);
 }
 
 /** Modal para cambiar el nombre de una tienda desde "Configuración

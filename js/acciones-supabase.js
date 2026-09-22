@@ -79,6 +79,21 @@ const SUPABASE_ACCIONES_ = {
       p_limite: limite
     });
   },
+  // -- Supabase: añadir a una ruta/día una tienda que YA existe en
+  // Configuración tiendas (sustituye a añadirTiendaPlantilla como forma de
+  // "añadir tienda" desde Rutas y tiendas -- las tiendas nuevas de verdad
+  // se dan de alta solo desde Configuración tiendas, ver crearTiendaConfig).
+  // limite es un override opcional solo para esa ruta/día: vacío = usa el
+  // límite general de la tienda.
+  asignarTiendaExistentePlantilla: function (args) {
+    const dia = args[0], nombreSeccion = args[1], clave = args[2], limite = args[3];
+    return llamarRpcSupabase_('asignar_tienda_existente_plantilla', {
+      p_dia: dia,
+      p_nombre_seccion: nombreSeccion,
+      p_clave: clave,
+      p_limite: limite || null
+    });
+  },
   diasRutaMismoNombre: function (args) {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('dias_ruta_mismo_nombre', { p_dia: dia, p_nombre_ruta: nombreRuta });
@@ -146,6 +161,27 @@ const SUPABASE_ACCIONES_ = {
   guardarTransitoTienda: function (args) {
     const tienda = args[0], transito = args[1];
     return llamarRpcSupabase_('guardar_transito_tienda', { p_tienda: tienda, p_transito: transito });
+  },
+  // -- Supabase: límite de palets "general" de la tienda (mismo patrón que
+  // guardarTransitoTienda) -- se guarda en config_tiendas.limite_palets y
+  // se usa en todos los días donde no haya un override propio de ese día.
+  guardarLimiteTienda: function (args) {
+    const tienda = args[0], limite = args[1];
+    return llamarRpcSupabase_('guardar_limite_tienda', { p_tienda: tienda, p_limite: (limite === '' || limite == null) ? null : Number(limite) });
+  },
+  // -- Supabase: alta de una tienda nueva SOLO en Configuración tiendas
+  // (clave + email/notas/tránsito/límite general), sin asignarla todavía a
+  // ninguna ruta/día -- queda "SIN USO" hasta que se añade desde Rutas y
+  // tiendas con asignarTiendaExistentePlantilla.
+  crearTiendaConfig: function (args) {
+    const tienda = args[0], email = args[1], notas = args[2], transito = args[3], limite = args[4];
+    return llamarRpcSupabase_('crear_tienda_config', {
+      p_tienda: tienda,
+      p_email: email || null,
+      p_notas: notas || null,
+      p_transito: transito || 1,
+      p_limite: (limite === '' || limite == null) ? null : Number(limite)
+    });
   },
   eliminarTiendaConfig: function (args) {
     return llamarRpcSupabase_('eliminar_tienda_config', { p_tienda: args[0] });

@@ -429,7 +429,7 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar="' + t.row + '"' + (ti === s.tiendas.length - 1 ? ' disabled' : '') + ' title="Bajar">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
-          '<span class="lim" title="Límite">' + escapeHtml(t.limite) + '</span>' +
+          '<span class="lim' + (t.limiteOverride ? ' lim-override' : '') + '" title="' + (t.limiteOverride ? 'Límite propio de este día (distinto del general de Configuración tiendas: ' + escapeAttr(t.limiteGeneral != null ? t.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(t.limite) + '</span>' +
           camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
@@ -731,12 +731,19 @@ function abrirModalEditarTiendaPlantilla_(row) {
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
+  const limiteGeneralTxt = info.tienda.limiteGeneral != null ? info.tienda.limiteGeneral : 'sin definir';
+
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-campo">' +
-      '<label for="modal-editar-tienda-lim">Límite de palets diarios</label>' +
-      '<input type="text" id="modal-editar-tienda-lim" inputmode="numeric" value="' + escapeAttr(info.tienda.limite) + '">' +
+      '<label>Límite de palets</label>' +
+      '<div class="modal-limite-pills">' +
+        '<button type="button" class="modal-limite-pill' + (info.tienda.limiteOverride ? '' : ' activa') + '" data-opcion="general">Usar el general (' + escapeHtml(limiteGeneralTxt) + ')</button>' +
+        '<button type="button" class="modal-limite-pill' + (info.tienda.limiteOverride ? ' activa' : '') + '" data-opcion="propio">Usar uno distinto solo este día</button>' +
+      '</div>' +
+      '<input type="text" id="modal-editar-tienda-lim" inputmode="numeric" placeholder="Ej: 6" style="margin-top:8px;' + (info.tienda.limiteOverride ? '' : 'display:none;') + '" value="' + escapeAttr(info.tienda.limiteOverride ? info.tienda.limite : '') + '">' +
+      '<span class="modal-campo-ayuda">El general se edita desde Configuración tiendas y se aplica a todos los días que no tengan aquí un valor propio.</span>' +
     '</div>' +
     (partes
       ? '<div class="modal-campo">' +
@@ -764,6 +771,16 @@ function abrirModalEditarTiendaPlantilla_(row) {
   const inputNumero = document.getElementById('modal-editar-tienda-numero');
   const inputNombre = document.getElementById('modal-editar-tienda-nombre');
 
+  let usaLimitePropio = !!info.tienda.limiteOverride;
+  custom.querySelectorAll('.modal-limite-pill').forEach(function (btn) {
+    btn.onclick = function () {
+      usaLimitePropio = (btn.getAttribute('data-opcion') === 'propio');
+      custom.querySelectorAll('.modal-limite-pill').forEach(function (b) { b.classList.toggle('activa', b === btn); });
+      inputLim.style.display = usaLimitePropio ? '' : 'none';
+      if (usaLimitePropio) { inputLim.focus(); }
+    };
+  });
+
   if (inputNumero) {
     const preview = document.getElementById('modal-editar-tienda-preview');
     const actualizarPreview_ = function () {
@@ -785,8 +802,11 @@ function abrirModalEditarTiendaPlantilla_(row) {
   }
 
   document.getElementById('modal-confirm-btn').onclick = function () {
-    const limite = inputLim.value.trim();
-    if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
+    let limite = '';
+    if (usaLimitePropio) {
+      limite = inputLim.value.trim();
+      if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
+    }
     let nombre;
     if (inputNumero) {
       const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
@@ -802,7 +822,11 @@ function abrirModalEditarTiendaPlantilla_(row) {
     cerrarModal();
     const mutar = function () {
       const infoActual = buscarTiendaPlantilla_(row);
-      if (infoActual) { infoActual.tienda.nombre = nombre; infoActual.tienda.limite = Number(limite); }
+      if (infoActual) {
+        infoActual.tienda.nombre = nombre;
+        infoActual.tienda.limiteOverride = usaLimitePropio;
+        infoActual.tienda.limite = usaLimitePropio ? Number(limite) : infoActual.tienda.limiteGeneral;
+      }
     };
     guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado',
       function (resultado) {
@@ -812,7 +836,7 @@ function abrirModalEditarTiendaPlantilla_(row) {
           : 'Guardado');
       });
   };
-  setTimeout(function () { inputLim.focus(); }, 50);
+  setTimeout(function () { (inputNumero || inputNombre).focus(); }, 50);
 }
 
 function confirmarEliminarTiendaPlantilla_(row) {
@@ -1521,44 +1545,64 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
   document.getElementById('modal-overlay').style.display = 'flex';
 }
 
+/** "Añadir tienda" desde Rutas y tiendas ya NO crea tiendas nuevas -- eso
+ *  solo se puede hacer desde Configuración tiendas (abrirModalNuevaTiendaConfig_
+ *  en tiendas.js), para que una tienda tenga siempre una única ficha con
+ *  su email/tránsito/límite general, en vez de poder nacer "al vuelo" con
+ *  datos sueltos como antes. Aquí solo se elige, de entre las tiendas que
+ *  ya existen en Configuración tiendas, cuál asignar a esta ruta/día. */
 function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
   // Antes de pintar el modal, se comprueba si esta misma ruta (misma
   // "agrupación", p.ej. "TXT ANDORRA") existe también otros días, para
-  // poder ofrecer añadir la tienda nueva de golpe en esos días también.
-  llamarApi_('diasRutaMismoNombre', [PLANTILLA_ESTADO.dia, nombreRuta])
-    .then(function (dias) { pintarModalAnadirTiendaPlantilla_(nombreRuta, dias || []); })
-    .catch(function () { pintarModalAnadirTiendaPlantilla_(nombreRuta, []); });
+  // poder ofrecer añadir la tienda de golpe en esos días también, y se
+  // trae la lista de tiendas ya existentes en Configuración tiendas.
+  Promise.all([
+    llamarApi_('diasRutaMismoNombre', [PLANTILLA_ESTADO.dia, nombreRuta]).catch(function () { return []; }),
+    llamarApi_('getTiendasConfig', []).catch(function () { return []; })
+  ]).then(function (resultados) {
+    pintarModalAnadirTiendaPlantilla_(nombreRuta, resultados[0] || [], resultados[1] || []);
+  });
 }
 
-function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
-  document.getElementById('modal-box').classList.remove('ancho');
+function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig) {
   document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.add('ancho');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Añadir tienda';
+  document.getElementById('modal-title').textContent = 'Añadir tienda a "' + nombreRuta + '"';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
+
+  // Solo se ofrecen tiendas que todavía no aparezcan hoy (PLANTILLA_ESTADO.dia)
+  // en ninguna ruta -- el backend vuelve a comprobarlo al guardar (por si
+  // ha cambiado algo entre medias), esto es solo para no ofrecer de
+  // entrada algo que se sabe que va a fallar.
+  const candidatas = tiendasConfig
+    .filter(function (t) { return (t.diasConteo || []).indexOf(PLANTILLA_ESTADO.dia) === -1; })
+    .sort(function (a, b) { return a.tienda.localeCompare(b.tienda); });
+
+  let seleccionada = null;
 
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-campo">' +
-      '<label for="modal-plantilla-lim">Límite de palets diarios</label>' +
-      '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Ej: 6">' +
+      '<label for="modal-plantilla-buscar">Tienda</label>' +
+      '<input type="text" id="modal-plantilla-buscar" placeholder="Buscar por número o nombre…">' +
+      '<div class="modal-plantilla-lista-tiendas" id="modal-plantilla-lista-tiendas"></div>' +
+      '<p class="modal-campo-ayuda" id="modal-plantilla-sin-tienda" style="display:none;">' +
+        '¿No aparece la tienda que buscas? <button type="button" class="modal-link-btn" id="modal-plantilla-ir-config">Créala primero en Configuración tiendas</button>.' +
+      '</p>' +
     '</div>' +
     '<div class="modal-campo">' +
-      '<label for="modal-plantilla-numero">Número de tienda (3 dígitos)</label>' +
-      '<input type="text" id="modal-plantilla-numero" inputmode="numeric" maxlength="3" placeholder="Ej: 062">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-plantilla-nombre-tienda">Nombre de la tienda</label>' +
-      '<input type="text" id="modal-plantilla-nombre-tienda" style="text-transform:uppercase;" placeholder="Ej: ISLAZUL">' +
-      '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-plantilla-preview">000 - …</span>", igual que el resto de tiendas.</span>' +
+      '<label for="modal-plantilla-lim">Límite de palets para este día (opcional)</label>' +
+      '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Vacío = usa el límite general de la tienda">' +
+      '<span class="modal-campo-ayuda" id="modal-plantilla-lim-general"></span>' +
     '</div>' +
     (otrosDias.length
       ? '<div class="modal-campo">' +
-          '<label>"' + escapeHtml(nombreRuta) + '" también existe en estos días. ¿Añadir la tienda ahí también?</label>' +
+          '<label>"' + escapeHtml(nombreRuta) + '" también existe en estos días. ¿Añadirla ahí también?</label>' +
           '<div class="modal-anadir-tienda-dias">' +
             otrosDias.map(function (d) {
               return '<button type="button" class="modal-anadir-tienda-dia-pill" data-dia="' + escapeAttr(d) + '">' +
@@ -1573,29 +1617,48 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
     pill.onclick = function () { pill.classList.toggle('activo'); };
   });
 
-  // El número solo admite dígitos (máx. 3) y el nombre se fuerza a
-  // mayúsculas mientras se escribe -- así el operario no puede dejar el
-  // nombre a medio formatear ni mezclar mayúsculas/minúsculas, que es lo
-  // que hacía que la misma tienda acabase con dos formatos distintos.
-  const inputNumero = document.getElementById('modal-plantilla-numero');
-  const inputNombreTienda = document.getElementById('modal-plantilla-nombre-tienda');
-  const preview = document.getElementById('modal-plantilla-preview');
-  const actualizarPreview_ = function () {
-    const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-    const nom = inputNombreTienda.value.trim().replace(/\s+/g, ' ');
-    preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
+  const listaEl = document.getElementById('modal-plantilla-lista-tiendas');
+  const avisoSinTienda = document.getElementById('modal-plantilla-sin-tienda');
+  const limGeneralHint = document.getElementById('modal-plantilla-lim-general');
+  document.getElementById('modal-plantilla-ir-config').onclick = function () {
+    cerrarModal();
+    cambiarVista('configuracion', 'tiendas');
   };
-  inputNumero.oninput = function () {
-    inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-    actualizarPreview_();
-  };
-  inputNombreTienda.oninput = function () {
-    const pos = inputNombreTienda.selectionStart;
-    inputNombreTienda.value = inputNombreTienda.value.toUpperCase();
-    inputNombreTienda.setSelectionRange(pos, pos);
-    actualizarPreview_();
-  };
-  actualizarPreview_();
+
+  function pintarLista(filtro) {
+    const f = (filtro || '').trim().toLowerCase();
+    const items = f ? candidatas.filter(function (t) { return t.tienda.toLowerCase().indexOf(f) !== -1; }) : candidatas;
+    if (!items.length) {
+      listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio">Ninguna tienda coincide.</div>';
+      avisoSinTienda.style.display = '';
+      return;
+    }
+    avisoSinTienda.style.display = candidatas.length ? 'none' : '';
+    listaEl.innerHTML = items.map(function (t) {
+      const marcada = t.tienda === seleccionada;
+      const esSinUso = /^SIN USO/i.test(t.estado || '');
+      return '<button type="button" class="modal-plantilla-tienda-item' + (marcada ? ' activa' : '') + '" data-clave="' + escapeAttr(t.tienda) + '" data-limite="' + escapeAttr(t.limite != null ? t.limite : '') + '">' +
+        '<span>' + escapeHtml(t.tienda) + '</span>' +
+        (esSinUso ? '<span class="modal-plantilla-tienda-badge">sin uso</span>' : '') +
+      '</button>';
+    }).join('');
+    listaEl.querySelectorAll('[data-clave]').forEach(function (btn) {
+      btn.onclick = function () {
+        seleccionada = btn.getAttribute('data-clave');
+        const limGeneral = btn.getAttribute('data-limite');
+        limGeneralHint.textContent = limGeneral ? ('Límite general de esta tienda: ' + limGeneral) : 'Esta tienda todavía no tiene límite general definido.';
+        listaEl.querySelectorAll('[data-clave]').forEach(function (b) { b.classList.toggle('activa', b === btn); });
+      };
+    });
+  }
+  pintarLista('');
+
+  let temporizadorBusqueda = null;
+  document.getElementById('modal-plantilla-buscar').addEventListener('input', function (e) {
+    clearTimeout(temporizadorBusqueda);
+    const valor = e.target.value;
+    temporizadorBusqueda = setTimeout(function () { pintarLista(valor); }, 150);
+  });
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -1604,18 +1667,10 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
+    if (!seleccionada) { mostrarToast('Elige primero qué tienda añadir', true); return; }
     const inputLim = document.getElementById('modal-plantilla-lim');
     const limite = inputLim.value.trim();
-    if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
-    const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
-    if (!numero) { inputNumero.focus(); return; }
-    const nombreTienda = inputNombreTienda.value.trim().replace(/\s+/g, ' ').toUpperCase();
-    if (!nombreTienda) { inputNombreTienda.focus(); return; }
-    // Número siempre a 3 dígitos (rellena con ceros a la izquierda si se
-    // han escrito solo 1 o 2), y nombre siempre en mayúsculas con un
-    // único espacio de separación -- así el formato final es idéntico
-    // pase lo que pase por lo que se haya escrito.
-    const nombre = numero.padStart(3, '0') + ' - ' + nombreTienda;
+    if (limite !== '' && isNaN(Number(limite))) { inputLim.focus(); return; }
     const diasElegidos = Array.prototype.slice.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill.activo'))
       .map(function (pill) { return pill.getAttribute('data-dia'); });
 
@@ -1630,13 +1685,12 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
     // en cualquier agrupación -- si pasa, se deja el modal ABIERTO con
     // los datos escritos y se muestra el motivo, en vez de cerrarlo y
     // perder lo escrito.
-    llamarApi_('añadirTiendaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, nombre, limite])
+    llamarApi_('asignarTiendaExistentePlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, seleccionada, limite])
       .then(function () {
         cerrarModal();
         cargarPlantilla_({ silencioso: true });
         if (!diasElegidos.length) {
           mostrarToast('Tienda añadida');
-          abrirModalConfigurarTiendaNueva_(nombre);
           return;
         }
         // El día principal ya está añadido; los demás días marcados se
@@ -1645,7 +1699,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
         // cuáles no se han podido añadir y por qué.
         Promise.allSettled(
           diasElegidos.map(function (dia) {
-            return llamarApi_('añadirTiendaPlantilla', [dia, nombreRuta, nombre, limite]);
+            return llamarApi_('asignarTiendaExistentePlantilla', [dia, nombreRuta, seleccionada, limite]);
           })
         ).then(function (resultados) {
           const fallos = resultados
@@ -1660,7 +1714,6 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
           } else {
             mostrarToast('Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)');
           }
-          abrirModalConfigurarTiendaNueva_(nombre);
         });
       })
       .catch(function (err) {
@@ -1673,73 +1726,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias) {
         document.getElementById('modal-custom').appendChild(aviso);
       });
   };
-  setTimeout(function () { inputNumero.focus(); }, 50);
-}
-
-/** Tras crear una tienda nueva, pregunta de una vez email, notas y
- *  tránsito -- los MISMOS datos que se rellenan en "Configuración
- *  tiendas" (guardarEmailTienda + guardarTransitoTienda) -- en vez de
- *  obligar a ir a esa pantalla aparte a buscarla y pulsar "Sincronizar".
- *  Así no hay riesgo de olvidarse y dejar la tienda a medio configurar.
- *  Si no se sabe nada todavía, "No configurar ahora" cierra el modal sin
- *  guardar nada -- se puede rellenar más tarde desde Configuración
- *  tiendas con normalidad (ahí seguirá apareciendo como "Nueva -- falta
- *  añadir email" hasta que se rellene). */
-function abrirModalConfigurarTiendaNueva_(nombreTienda) {
-  document.getElementById('modal-box').classList.remove('ancho');
-  document.getElementById('modal-box').classList.remove('medio');
-  document.getElementById('modal-box').classList.remove('peligro');
-  document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Configurar "' + nombreTienda + '"';
-  document.getElementById('modal-text').style.display = 'none';
-  document.getElementById('modal-textarea').style.display = 'none';
-
-  const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
-  custom.innerHTML =
-    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Mismos datos que en "Configuración tiendas": el email se usa para avisar a la tienda de los palets que va a recibir. Si no los sabes todavía, puedes dejarlo para más tarde.</p>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-config-tienda-email">Email</label>' +
-      '<input type="email" id="modal-config-tienda-email" placeholder="tienda@ejemplo.com">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-config-tienda-notas">Notas</label>' +
-      '<input type="text" id="modal-config-tienda-notas" placeholder="Notas libres (opcional)">' +
-    '</div>' +
-    '<div class="modal-campo">' +
-      '<label for="modal-config-tienda-transito">Tránsito</label>' +
-      '<select id="modal-config-tienda-transito">' +
-        TRANSITO_OPCIONES.map(function (op) {
-          return '<option value="' + op.valor + '"' + (op.valor === 1 ? ' selected' : '') + '>' + op.texto + '</option>';
-        }).join('') +
-      '</select>' +
-    '</div>';
-
-  const actions = document.getElementById('modal-actions');
-  actions.innerHTML =
-    '<button class="modal-cancel" id="modal-no-configurar-btn">No configurar ahora</button>' +
-    '<button class="modal-confirm" id="modal-guardar-config-tienda-btn">Guardar</button>';
-  document.getElementById('modal-overlay').style.display = 'flex';
-  document.getElementById('modal-no-configurar-btn').onclick = cerrarModal;
-  document.getElementById('modal-guardar-config-tienda-btn').onclick = function () {
-    const email = document.getElementById('modal-config-tienda-email').value.trim();
-    const notas = document.getElementById('modal-config-tienda-notas').value.trim();
-    const transito = Number(document.getElementById('modal-config-tienda-transito').value);
-    cerrarModal();
-    // Se guardan siempre los dos (aunque email/notas se hayan dejado en
-    // blanco), para que la fila de config_tiendas quede creada de una vez
-    // -- así, aunque no se sepa el email todavía, la tienda ya no
-    // aparecerá como huérfana en "Configuración tiendas" hasta que
-    // alguien pulse "Sincronizar" a mano.
-    Promise.all([
-      llamarApi_('guardarEmailTienda', [nombreTienda, email, notas]),
-      llamarApi_('guardarTransitoTienda', [nombreTienda, transito])
-    ])
-      .then(function () { mostrarToast('Tienda configurada'); })
-      .catch(mostrarErrorServidor);
-  };
-  setTimeout(function () { document.getElementById('modal-config-tienda-email').focus(); }, 50);
+  setTimeout(function () { document.getElementById('modal-plantilla-buscar').focus(); }, 50);
 }
 
 /** Si el nombre de una agrupación sigue el formato habitual
