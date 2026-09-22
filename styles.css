@@ -259,26 +259,10 @@
       url('https://burst.shopifycdn.com/photos/boxes-on-warehouse-shelves.jpg?width=1920&format=pjpg&exif=0&iptc=0') center/cover no-repeat fixed;
     background-color: var(--navy);
   }
-  main.main-sin-padding { padding: 14px 24px 14px; display: flex; flex-direction: column; }
+  main.main-sin-padding { padding: 18px 24px 14px; display: flex; flex-direction: column; }
 
-  /* Cabecera compacta de Inicio: saludo alineado a la izquierda del todo,
-     para que las dos tarjetas de estado empiecen justo debajo, arriba de
-     todo (nada de foto ocupando toda la pantalla vacía). Todo lo justo
-     para que, con muchas agrupaciones, las tarjetas quepan en una sola
-     pantalla sin hacer scroll -- pero SIN estirar las tarjetas a la
-     fuerza para llenar el alto de la ventana, que deja un hueco vacío
-     feo cuando hay pocas rutas. */
-  .inicio-hero { position: relative; padding: 2px 0 12px; flex-shrink: 0; }
-  .inicio-saludo {
-    font-family: var(--sans); font-size: 19px; font-weight: 800; color: #fff;
-    text-shadow: 0 2px 10px rgba(0,0,0,.35); letter-spacing: -.01em;
-  }
-  .inicio-saludo-fecha {
-    margin-top: 2px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.75);
-    text-shadow: 0 1px 6px rgba(0,0,0,.3); text-transform: capitalize;
-  }
-
-  /* Dos tarjetas del mismo ancho, bien separadas, cada una tan alta como
+  /* Dos tarjetas del mismo ancho, pegadas arriba del todo (sin saludo ni
+     cabecera encima), bien separadas, cada una tan alta como
      su propio contenido (si una tuviera bastantes más rutas que la
      otra, no se estiran para igualarse). */
   .inicio-cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
@@ -355,9 +339,11 @@
   .inicio-pill-pendiente { background: #eef0f4; color: var(--ink-soft); }
 
   /* La insignia de versión, sobre la foto de portada, queda fija en la
-     esquina de la pantalla (no dentro del flujo del saludo). Va con
-     selector propio para no tocar el .version-badge del login. */
-  .inicio-hero .version-badge {
+     esquina de la pantalla en vez de en el flujo normal (que la dejaría
+     pegada bajo la primera tarjeta). Va con selector propio (ligado a
+     main.main-sin-padding, que solo se activa en Inicio) para no tocar
+     el .version-badge del login. */
+  main.main-sin-padding .version-badge {
     position: fixed; right: 18px; bottom: 14px; left: auto; top: auto;
   }
 
