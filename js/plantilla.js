@@ -63,13 +63,18 @@ function desplazarRowsPlantillaDesde_(filaDesde, delta) {
  *  loader, sin pedir nada al servidor); la llamada real al backend va en
  *  segundo plano. Si falla, se revierte el cambio local y se repinta con
  *  los datos de antes (igual que "Gestión festivos" al borrar una nota). */
-function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito, onExito) {
+function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito, onExito, onError) {
   // onExito (opcional): recibe el resultado que devuelva la API cuando
   // llegue, para acciones que necesitan reaccionar a algo que solo se
   // sabe en el backend (p.ej. avisar de que un renombrado se ha
   // propagado también a otros días). El toast optimista de arriba se
   // sigue mostrando al momento como siempre; onExito puede completarlo
   // o sustituirlo cuando responda el servidor.
+  // onError (opcional): recibe el error cuando el backend rechaza la
+  // acción, DESPUÉS de revertir ya el cambio optimista local. Si
+  // devuelve true, se entiende que el error ya se ha gestionado a mano
+  // (p.ej. abriendo un modal para preguntar algo) y no se muestra el
+  // toast de error genérico encima.
   const copia = JSON.parse(JSON.stringify(PLANTILLA_ESTADO.secciones));
   mutarLocal();
   pintarPlantilla_();
@@ -81,6 +86,7 @@ function guardarPlantillaOptimista_(mutarLocal, accionApi, argsApi, mensajeExito
     .catch(function (err) {
       PLANTILLA_ESTADO.secciones = copia;
       pintarPlantilla_();
+      if (onError && onError(err)) return;
       mostrarErrorServidor(err);
     });
 }
@@ -863,7 +869,37 @@ function mostrarModalEliminarTiendaVariosDias_(row, dias) {
   document.getElementById('modal-borrar-todos-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantillaTodosDias_(row); };
 }
 
-function eliminarTiendaPlantilla_(row) {
+/** Modal con 2 opciones cuando la tienda que se va a borrar tiene
+ *  conteos guardados de días anteriores: borrarlos también (se pierden
+ *  para siempre) o conservarlos (la tienda se oculta de la plantilla,
+ *  pero su histórico sigue intacto y consultable en esos días). */
+function mostrarModalEliminarTiendaConHistorico_(row, nConteos) {
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Esta tienda tiene conteos guardados';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta tienda tiene ' + nConteos + ' conteo(s) guardado(s) de días anteriores. ¿Qué quieres hacer con ese histórico?</p>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-conservar-btn">Conservar histórico (ocultar tienda)</button>' +
+    '<button class="modal-confirm danger" id="modal-borrar-hist-btn">Borrar también el histórico</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-conservar-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row, 'conservar_historico'); };
+  document.getElementById('modal-borrar-hist-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row, 'borrar_historico'); };
+}
+
+function eliminarTiendaPlantilla_(row, modo) {
   row = Number(row);
   const mutar = function () {
     const info = buscarTiendaPlantilla_(row);
@@ -871,7 +907,16 @@ function eliminarTiendaPlantilla_(row) {
     info.seccion.tiendas.splice(info.seccion.tiendas.indexOf(info.tienda), 1);
     desplazarRowsPlantillaDesde_(row + 1, -1);
   };
-  guardarPlantillaOptimista_(mutar, 'eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Eliminada');
+  guardarPlantillaOptimista_(mutar, 'eliminarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, modo || null], 'Eliminada', null,
+    function (err) {
+      const m = err && err.message ? err.message : '';
+      const match = /^REQUIERE_ELECCION_HISTORICO:(\d+)/.exec(m);
+      if (match) {
+        mostrarModalEliminarTiendaConHistorico_(row, Number(match[1]));
+        return true; // ya gestionado: no mostrar el toast de error genérico
+      }
+      return false;
+    });
 }
 
 /** Borra esta tienda de golpe en TODOS los días donde aparezca (misma
@@ -882,8 +927,18 @@ function eliminarTiendaPlantillaTodosDias_(row) {
   row = Number(row);
   llamarApi_('eliminarTiendaPlantillaTodosDias', [PLANTILLA_ESTADO.dia, row])
     .then(function (resultado) {
-      const eliminadas = (resultado && resultado.eliminadas) || 1;
-      mostrarToast('Eliminada de ' + eliminadas + ' día(s)');
+      const eliminadas = (resultado && resultado.eliminadas) || 0;
+      const ocultadas = (resultado && resultado.ocultadas) || 0;
+      let mensaje;
+      if (ocultadas > 0) {
+        // Alguna(s) aparición(es) tenía(n) conteos guardados: no se han
+        // borrado, solo se han ocultado (para conservar ese histórico).
+        mensaje = 'Eliminada de ' + eliminadas + ' día(s)' +
+          (ocultadas > 0 ? ', y ocultada (por tener histórico) en ' + ocultadas + ' día(s) más' : '');
+      } else {
+        mensaje = 'Eliminada de ' + eliminadas + ' día(s)';
+      }
+      mostrarToast(mensaje);
       cargarPlantilla_({ silencioso: true });
     })
     .catch(mostrarErrorServidor);

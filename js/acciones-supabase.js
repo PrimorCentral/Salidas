@@ -84,8 +84,8 @@ const SUPABASE_ACCIONES_ = {
     return llamarRpcSupabase_('dias_ruta_mismo_nombre', { p_dia: dia, p_nombre_ruta: nombreRuta });
   },
   eliminarTiendaPlantilla: function (args) {
-    const dia = args[0], row = args[1];
-    return llamarRpcSupabase_('eliminar_tienda_plantilla', { p_dia: dia, p_row: row });
+    const dia = args[0], row = args[1], modo = args[2];
+    return llamarRpcSupabase_('eliminar_tienda_plantilla', { p_dia: dia, p_row: row, p_modo: modo || null });
   },
   eliminarTiendaPlantillaTodosDias: function (args) {
     const dia = args[0], row = args[1];
