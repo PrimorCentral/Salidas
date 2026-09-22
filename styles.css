@@ -311,7 +311,17 @@
   }
   .inicio-tc-header .inicio-tc-col,
   .inicio-tc-header .inicio-tc-pill-col { text-align: center; }
-  .inicio-tc-nombre-col { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .inicio-tc-nombre-col {
+    display: flex; align-items: center; gap: 6px; min-width: 0; width: 100%;
+    background: none; border: none; padding: 0; margin: 0; font: inherit; text-align: left;
+  }
+  /* Fila clicable (el nombre real de la ruta, no la cabecera "Ruta"):
+     lleva a esa agrupación en Conteos Diarios -- ver
+     irAAgrupacionDesdeInicio_ en js/navegacion.js. */
+  .inicio-tc-nombre-col-link { cursor: pointer; border-radius: 6px; }
+  .inicio-tc-nombre-col-link:hover .inicio-tc-nombre-txt { text-decoration: underline; }
+  .inicio-tc-nombre-col-link:hover { background: #f2f4f8; }
+  .inicio-tc-nombre-col-link:focus-visible { outline: 2px solid var(--prevision); outline-offset: 1px; }
   .inicio-tc-nombre-txt {
     font-size: 11.5px; font-weight: 700; color: var(--ink); min-width: 0;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
