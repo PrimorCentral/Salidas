@@ -94,6 +94,7 @@ function appPrompt(titulo, placeholder, onSubmit, mayusculas) {
  */
 function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
   const esDefinitivo = tipo === 'definitivo';
+  const esInformatica = tipo === 'informatica';
   document.getElementById('modal-box').classList.add('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.remove('medio');
@@ -156,7 +157,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
         '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>' +
       '</div>' +
       '<div class="modal-envio-cabecera-texto">' +
-        '<div class="nombre">' + escapeHtml(datos.nombre) + (esDefinitivo ? ' · Definitivo' : ' · Previsión') + '</div>' +
+        '<div class="nombre">' + escapeHtml(datos.nombre) + (esDefinitivo ? ' · Definitivo' : (esInformatica ? ' · Informática' : ' · Previsión')) + '</div>' +
         '<div class="fecha">' + escapeHtml(datos.fechaTexto) + '</div>' +
       '</div>' +
     '</div>' +
@@ -178,19 +179,21 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
     filaAviso +
     filaExcedidas +
     filaPesoFaltante +
-    (esDefinitivo
+    (esInformatica
+      ? '<p class="modal-envio-nota">Se enviará la <strong>previsión de carga</strong> con el resumen actual solo a <strong>transporte@primor.eu</strong> (no a la agencia). El conteo seguirá siendo editable.</p>'
+      : esDefinitivo
       ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y no se podrá editar.</p>'
       : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable hasta que envies el definitivo.</p>');
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-confirm-btn"' + (bloqueadoPorPeso ? ' disabled title="Completa el peso de todas las tiendas antes de enviar"' : '') + '>' + (esDefinitivo ? 'Enviar Definitivo' : 'Enviar Previsión') + '</button>';
+    '<button class="modal-confirm" id="modal-confirm-btn"' + (bloqueadoPorPeso ? ' disabled title="Completa el peso de todas las tiendas antes de enviar"' : '') + '>' + (esDefinitivo ? 'Enviar Definitivo' : (esInformatica ? 'Enviar a informática' : 'Enviar Previsión')) + '</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   if (!bloqueadoPorPeso) {
     document.getElementById('modal-confirm-btn').onclick = function () {
-      mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…');
+      mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : (esInformatica ? 'Enviando la previsión a informática, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…'));
       onConfirmar(function (ok, mensaje) {
         // Si el servidor dice que no hay permiso (p.ej. se lo quitaron con la sesión ya abierta), mismo aviso que al pulsar el botón.
         if (!ok && mensaje === 'Usuario sin permiso') { mostrarModalSinPermiso(); return; }

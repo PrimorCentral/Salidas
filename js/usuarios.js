@@ -36,6 +36,7 @@ const CATALOGO_PERMISOS = [
     items: [
       { clave: 'enviar_prevision', etiqueta: 'Enviar previsión', desc: 'Enviar por email la previsión de una agrupación a la agencia de transporte (el conteo sigue siendo editable).' },
       { clave: 'enviar_definitivo', etiqueta: 'Enviar definitivo', desc: 'Enviar por email el definitivo de una agrupación a la agencia de transporte (queda bloqueada y archivada).' },
+      { clave: 'enviar_informatica', etiqueta: 'Enviar a informática', desc: 'Enviar por email la previsión de carga de una agrupación solo a transporte@primor.eu (el conteo sigue siendo editable).' },
     ],
   },
   {

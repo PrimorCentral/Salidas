@@ -28,6 +28,15 @@ const SUPABASE_ACCIONES_ = {
       p_fecha: fecha
     });
   },
+  // "Enviar a informática": misma previsión, pero solo a transporte@primor.eu.
+  enviarInformaticaAgencia: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
+    return llamarRpcSupabase_('enviar_informatica_agencia', {
+      p_dia: dia,
+      p_nombre_ruta: nombreAgrupacion,
+      p_fecha: fecha
+    });
+  },
   // -- Supabase: getMesCalendario --
   getMesCalendario: function (args) {
     const anioMes = args[0];

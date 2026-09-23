@@ -10,6 +10,7 @@ const METODOS_REMOTOS_ = {
   deshacerEnvioSeccion: 'deshacerEnvioSeccion',
   enviarPrevisionAgencia: 'enviarPrevisionAgencia',
   enviarDefinitivoAgencia: 'enviarDefinitivoAgencia',
+  enviarInformaticaAgencia: 'enviarInformaticaAgencia',
   guardarObservacion: 'guardarObservacion',
   eliminarObservacion: 'eliminarObservacion',
   getAgrupacionesConfig: 'getAgrupacionesConfig',
