@@ -180,7 +180,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
     filaExcedidas +
     filaPesoFaltante +
     (esInformatica
-      ? '<p class="modal-envio-nota">Se enviará la <strong>previsión de carga</strong> con el resumen actual solo a <strong>transporte@primor.eu</strong> (no a la agencia). El conteo seguirá siendo editable.</p>'
+      ? '<p class="modal-envio-nota">Se avisará a <strong>informática</strong> del conteo de esta agrupación, enviándole el resumen actual por email. El conteo seguirá siendo editable.</p>'
       : esDefinitivo
       ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y no se podrá editar.</p>'
       : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable hasta que envies el definitivo.</p>');
@@ -193,7 +193,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   if (!bloqueadoPorPeso) {
     document.getElementById('modal-confirm-btn').onclick = function () {
-      mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : (esInformatica ? 'Enviando la previsión a informática, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…'));
+      mostrarModalCargando(esDefinitivo ? 'Enviando el definitivo a la agencia, espere por favor…' : (esInformatica ? 'Avisando a informática, espere por favor…' : 'Enviando la previsión a la agencia, espere por favor…'));
       onConfirmar(function (ok, mensaje) {
         // Si el servidor dice que no hay permiso (p.ej. se lo quitaron con la sesión ya abierta), mismo aviso que al pulsar el botón.
         if (!ok && mensaje === 'Usuario sin permiso') { mostrarModalSinPermiso(); return; }

@@ -619,7 +619,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           // "Enviar a informática" no cambia nada en el panel (ni badges ni
           // bloqueos): solo manda el email a transporte@primor.eu.
           if (tipo === 'informatica') {
-            if (callback) callback(true, 'Previsión enviada a informática correctamente');
+            if (callback) callback(true, 'Informática avisada correctamente');
             return;
           }
           aplicarResultadoEnvio_(tipo, res);
