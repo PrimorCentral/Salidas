@@ -128,8 +128,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       ? '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
       : '') +
     // "Enviar a informática" es un aviso interno: sigue disponible aunque
-    // ya se haya enviado el Definitivo (solo depende de la fecha).
-    (seccion.editable !== false
+    // ya se haya enviado el Definitivo (solo depende de la fecha, que el
+    // backend manda en seccion.puedeInformatica).
+    ((seccion.puedeInformatica !== undefined ? seccion.puedeInformatica : seccion.editable) !== false
       ? '<button type="button" class="btn-header-informatica" title="Enviar la previsión de carga solo a transporte@primor.eu (no bloquea el conteo, se puede volver a enviar)">Enviar a informática</button>'
       : '') +
     '</div>' +
