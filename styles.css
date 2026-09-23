@@ -1652,6 +1652,13 @@
   }
   .btn-header-definitivo:hover { background: var(--amber-dark); color: #fff; }
   .btn-header-definitivo:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-header-informatica {
+    background: #fff; color: var(--navy); border: 1.5px solid var(--navy); border-radius: 20px;
+    padding: 6px 14px; font-size: 11.5px; font-weight: 700; white-space: nowrap; flex-shrink: 0;
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .btn-header-informatica:hover { background: #eef1f5; }
+  .btn-header-informatica:disabled { opacity: .55; cursor: not-allowed; }
 
   /* Botón "GUARDAR CONTEO": ya NO se autoguarda al escribir (ver
      marcarCambiosSinGuardar_ / autoguardarSeccion en el JS). Este botón
