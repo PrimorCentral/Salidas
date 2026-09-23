@@ -180,7 +180,7 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
     filaExcedidas +
     filaPesoFaltante +
     (esInformatica
-      ? '<p class="modal-envio-nota">Se avisará a <strong>informática</strong> del conteo de esta agrupación, enviándole el resumen actual por email. El conteo seguirá siendo editable.</p>'
+      ? '<p class="modal-envio-nota">Se avisará a <strong>informática</strong> del conteo de esta agrupación, enviándole el resumen actual por email.</p>'
       : esDefinitivo
       ? '<p class="modal-envio-nota">Se enviará el email <strong>definitivo</strong> con el resumen a la agencia de transporte. Después, esta agrupación quedará bloqueada y no se podrá editar.</p>'
       : '<p class="modal-envio-nota">Se enviará un email de <strong>previsión</strong> con el resumen actual a la agencia de transporte. El conteo seguirá siendo editable hasta que envies el definitivo.</p>');

@@ -127,7 +127,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (editable && seccion.estado !== 'enviado'
       ? '<button type="button" class="btn-header-definitivo" title="Enviar definitivo por email (bloquea el conteo, lo archiva y vacía las casillas)">Enviar Definitivo</button>'
       : '') +
-    (editable && seccion.estado !== 'enviado'
+    // "Enviar a informática" es un aviso interno: sigue disponible aunque
+    // ya se haya enviado el Definitivo (solo depende de la fecha).
+    (seccion.editable !== false
       ? '<button type="button" class="btn-header-informatica" title="Enviar la previsión de carga solo a transporte@primor.eu (no bloquea el conteo, se puede volver a enviar)">Enviar a informática</button>'
       : '') +
     '</div>' +
@@ -289,6 +291,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const bloquear = !haGuardadoAlMenosUnaVez || hayCambiosSinGuardar;
     [header.querySelector('.btn-header-prevision'), header.querySelector('.btn-header-definitivo'), header.querySelector('.btn-header-informatica')].forEach(function (btn) {
       if (!btn) return;
+      // Con el Definitivo ya enviado no hay nada que guardar: "Enviar a
+      // informática" se puede pulsar directamente.
+      if (seccion.estado === 'enviado' && btn.classList.contains('btn-header-informatica')) { btn.disabled = false; return; }
       if (!btn.hasAttribute('data-title-original')) btn.setAttribute('data-title-original', btn.title);
       btn.disabled = bloquear;
       btn.title = bloquear ? 'Pulsa antes "Guardar conteo"' : btn.getAttribute('data-title-original');
@@ -593,6 +598,23 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }
 
   function enviarSeccion(tipo, callback) {
+    // "Enviar a informática" con el Definitivo ya enviado: no hay nada que
+    // guardar (el conteo está archivado), se manda directamente.
+    if (tipo === 'informatica' && seccion.estado === 'enviado') {
+      const btnInf = header.querySelector('.btn-header-informatica');
+      if (btnInf) btnInf.disabled = true;
+      google.script.run
+        .withSuccessHandler(function () {
+          if (btnInf) btnInf.disabled = false;
+          if (callback) callback(true, 'Informática avisada correctamente');
+        })
+        .withFailureHandler(function (err) {
+          if (btnInf) btnInf.disabled = false;
+          if (callback) callback(false, (err && err.message) ? err.message : String(err));
+        })
+        .enviarInformaticaAgencia(dia, seccion.nombre, fecha);
+      return;
+    }
     if (!editable) { if (callback) callback(false, 'Esta agrupación ya no se puede modificar.'); return; }
     const btnPrevision = header.querySelector('.btn-header-prevision');
     const btnDefinitivo = header.querySelector('.btn-header-definitivo');
@@ -707,8 +729,8 @@ if (callback) callback(true, mensaje);
     if (btnPrevisionEl) btnPrevisionEl.remove();
     const btnDefinitivoEl = header.querySelector('.btn-header-definitivo');
     if (btnDefinitivoEl) btnDefinitivoEl.remove();
-    const btnInformaticaEl = header.querySelector('.btn-header-informatica');
-    if (btnInformaticaEl) btnInformaticaEl.remove();
+    // "Enviar a informática" NO se quita: sigue disponible tras el definitivo.
+    actualizarBotonesEnvio_();
 
     if (esHoy && !header.querySelector('.btn-deshacer-envio')) {
       const wrapBtn = document.createElement('div');
