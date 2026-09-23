@@ -1009,11 +1009,41 @@ function abrirModalRenombrarTiendaConfig_(claveActual) {
 
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
+  // Igual que en "Nueva tienda": número y nombre por separado. Se parte el
+  // nombre actual ("033 - PLAZA MAYOR") en sus dos piezas para rellenarlos.
+  const partesActual = String(claveActual || '').match(/^\s*(\d+)\s*-\s*(.*)$/);
+  const numeroActual = partesActual ? partesActual[1] : '';
+  const nombreActual = partesActual ? partesActual[2].trim() : String(claveActual || '').trim();
   custom.innerHTML =
     '<div class="modal-campo">' +
-      '<label for="modal-tienda-nombre-nuevo">Nombre nuevo</label>' +
-      '<input type="text" id="modal-tienda-nombre-nuevo" value="' + escapeAttr(claveActual) + '">' +
+      '<label for="modal-tienda-numero-nuevo">Número de tienda (3 dígitos)</label>' +
+      '<input type="text" id="modal-tienda-numero-nuevo" inputmode="numeric" maxlength="3" placeholder="Ej: 062" value="' + escapeAttr(numeroActual) + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-tienda-nombre-nuevo">Nombre de la tienda</label>' +
+      '<input type="text" id="modal-tienda-nombre-nuevo" style="text-transform:uppercase;" placeholder="Ej: ISLAZUL" value="' + escapeAttr(nombreActual) + '">' +
+      '<span class="modal-campo-ayuda">Se guardará como "<span id="modal-tienda-nombre-preview">000 - …</span>".</span>' +
     '</div>';
+
+  const inputNumero = document.getElementById('modal-tienda-numero-nuevo');
+  const inputNombre = document.getElementById('modal-tienda-nombre-nuevo');
+  const preview = document.getElementById('modal-tienda-nombre-preview');
+  const actualizarPreview_ = function () {
+    const num = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    const nom = inputNombre.value.trim().replace(/\s+/g, ' ');
+    preview.textContent = (num ? num.padStart(3, '0') : '000') + ' - ' + (nom || '…');
+  };
+  inputNumero.oninput = function () {
+    inputNumero.value = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    actualizarPreview_();
+  };
+  inputNombre.oninput = function () {
+    const pos = inputNombre.selectionStart;
+    inputNombre.value = inputNombre.value.toUpperCase();
+    inputNombre.setSelectionRange(pos, pos);
+    actualizarPreview_();
+  };
+  actualizarPreview_();
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -1046,9 +1076,12 @@ function abrirModalRenombrarTiendaConfig_(claveActual) {
     });
 
   document.getElementById('modal-confirm-btn').onclick = function () {
-    const input = document.getElementById('modal-tienda-nombre-nuevo');
-    const nombreNuevo = input.value.trim();
-    if (!nombreNuevo) { input.focus(); return; }
+    const numero = inputNumero.value.replace(/\D/g, '').slice(0, 3);
+    if (!numero) { inputNumero.focus(); return; }
+    const nombreTienda = inputNombre.value.trim().replace(/\s+/g, ' ').toUpperCase();
+    if (!nombreTienda) { inputNombre.focus(); return; }
+    const nombreNuevo = numero.padStart(3, '0') + ' - ' + nombreTienda;
+    if (nombreNuevo === claveActual) { cerrarModal(); return; }
     const btn = document.getElementById('modal-confirm-btn');
     btn.disabled = true;
     llamarApi_('renombrarTiendaConfig', [claveActual, nombreNuevo])
@@ -1060,7 +1093,7 @@ function abrirModalRenombrarTiendaConfig_(claveActual) {
       })
       .catch(function (err) { btn.disabled = false; mostrarErrorServidor(err); });
   };
-  setTimeout(function () { document.getElementById('modal-tienda-nombre-nuevo').focus(); document.getElementById('modal-tienda-nombre-nuevo').select(); }, 50);
+  setTimeout(function () { inputNombre.focus(); inputNombre.select(); }, 50);
 }
 
 function confirmarEliminarTiendaConfig_(tienda) {
