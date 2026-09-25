@@ -62,7 +62,7 @@ function mostrarModalAcercaDe() {
       '</div>' +
     '</div>' +
     '<div class="acerca-legal">' +
-      '<p class="acerca-copy">© ' + escapeHtml(d.anio) + ' ' + escapeHtml(d.titularDerechos) + '. Todos los derechos reservados.</p>' +
+      '<p class="acerca-copy">© ' + escapeHtml(d.anio) + ' ' + escapeHtml(d.titularDerechos) + '<span>Todos los derechos reservados.</span></p>' +
       '<p>Este software está protegido por la legislación sobre propiedad intelectual. La licencia de uso concedida es no exclusiva e intransferible y se limita a la actividad interna del licenciatario.</p>' +
       '<p>Queda prohibida su copia, cesión, distribución, modificación o ingeniería inversa, total o parcial, sin autorización previa y por escrito del autor. Cualquier uso no autorizado podrá dar lugar a las acciones legales correspondientes.</p>' +
     '</div>';
