@@ -33,12 +33,17 @@ function cargarConteoDia() {
  *   toca el DOM para no perder el scroll ni el estado colapsado/expandido.
  * - Nunca se mueve el scroll ni se muestra ningún loader/spinner: es un
  *   refresco silencioso, no una recarga.
- * - Se pausa solo cuando la pestaña está en segundo plano o cuando se
- *   sale de la pantalla de conteos, y se reanuda al volver.
+ * - Se pausa solo cuando la ventana está oculta (minimizada, en otra
+ *   pestaña o con otra app a pantalla completa encima) o cuando se sale de
+ *   la pantalla de conteos, para no gastar peticiones ni cuota de logs de
+ *   Supabase. Al volver a la ventana se refresca al momento y se reinicia
+ *   la cuenta atrás, igual que en GIDT.
+ * - Cada sondeo son 3 llamadas a Supabase (conteo, verificaciones y
+ *   cambios tras verificar), por eso el intervalo es de 15 s y no menos.
  */
 let CONTEO_REFRESCO_INTERVALO_ = null;
 let CONTEO_REFRESCO_EN_VUELO_ = false;
-const CONTEO_REFRESCO_MS_ = 5000;
+const CONTEO_REFRESCO_MS_ = 15000;
 
 // Temporizador visual (topbar, junto al reloj): puramente decorativo, no
 // afecta en nada a cuándo se sondea de verdad — solo pinta la cuenta atrás
@@ -63,6 +68,15 @@ function iniciarAutorefrescoConteoDia_() {
   }, CONTEO_REFRESCO_MS_);
   iniciarTicTacRefrescoConteo_();
 }
+
+// Al volver a la ventana tras tenerla oculta, refrescar al momento (para no
+// ver datos de hace rato) y reiniciar el ciclo para que el siguiente sondeo
+// sea dentro de 15 s y no se solape con este.
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden || ESTADO.vista !== 'conteos' || !CONTEO_REFRESCO_INTERVALO_) return;
+  iniciarAutorefrescoConteoDia_();
+  refrescarConteoDiaEnVivo_();
+});
 
 /** Arranca (si no estaba ya en marcha) el repintado cada segundo del
  *  numerito de cuenta atrás del topbar. Se para solo en cuanto se sale de

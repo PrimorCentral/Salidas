@@ -52,6 +52,7 @@ function renderAdminColaEmails() {
       ADMIN_COLA_EMAILS_ESTADO.refrescoAuto = null;
       return;
     }
+    if (document.hidden) return; // ventana oculta: no gastar peticiones de balde
     cargarColaEmailsAdmin_();
   }, 10000);
 }
