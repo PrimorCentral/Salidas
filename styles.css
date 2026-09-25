@@ -2822,7 +2822,7 @@
 .login-logo.abre-acerca-de { transition: transform .15s; }
 .login-logo.abre-acerca-de:hover { transform: scale(1.05); }
 header.topbar .brand.abre-acerca-de:hover { opacity: .85; }
-.modal-box.acerca-de { max-width: 400px; padding: 0; overflow-x: hidden; }
+.modal-box.acerca-de { max-width: 440px; padding: 0; overflow-x: hidden; }
 .modal-box.acerca-de .modal-cerrar-x { color: rgba(255,255,255,.75); }
 .modal-box.acerca-de .modal-cerrar-x:hover { background: rgba(255,255,255,.12); color: #fff; }
 .acerca-cabecera {
@@ -2849,6 +2849,7 @@ header.topbar .brand.abre-acerca-de:hover { opacity: .85; }
 }
 .acerca-activado { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ok); margin-top: 3px; }
 .acerca-legal { border-top: 1px solid var(--line); margin: 0 26px; padding-top: 14px; }
-.modal-box.acerca-de .acerca-legal p { font-size: 11.5px; line-height: 1.5; color: var(--ink-soft); margin: 0 0 8px; white-space: normal; text-align: justify; }
-.modal-box.acerca-de .acerca-legal p.acerca-copy { font-weight: 700; color: var(--ink); text-align: left; }
+.modal-box.acerca-de .acerca-legal p { font-size: 11.5px; line-height: 1.5; color: var(--ink-soft); margin: 0 0 8px; white-space: normal; text-align: left; }
+.modal-box.acerca-de .acerca-legal p.acerca-copy { font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+.acerca-copy span { display: block; font-weight: 600; color: var(--ink-soft); }
 .modal-box.acerca-de .modal-actions { padding: 0 26px 22px; margin-top: 10px; }
