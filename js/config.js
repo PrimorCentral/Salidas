@@ -46,6 +46,12 @@ let SESSION_PERMISOS = {};
 // Nombre completo de la persona que ha entrado (el que devuelve login desde
 // usuarios.nombre_completo), para mostrarlo en la topbar en vez del rol.
 let SESSION_NOMBRE = null;
+// Nave del usuario ('GAITE' | 'PTA' | 'CARTAMA' | null), tal cual la
+// devuelve login desde usuarios.nave. Un operario con nave solo puede
+// rellenar y verificar la columna de su nave (60 / PTA / CART.) -- ver
+// campoNaveSesion_ / puedeEditarCampoConteo_ en js/permisos.js. El
+// backend (guardar_conteo / verificar_conteo) lo vuelve a comprobar.
+let SESSION_NAVE = null;
 // Nombre de usuario con el que se ha entrado (el que devuelve login), por si
 // hace falta mostrarlo o compararlo (p.ej. en la pantalla de Usuarios, para
 // no dejar que alguien se desactive/borre a sí mismo). También en memoria.

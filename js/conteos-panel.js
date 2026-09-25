@@ -109,6 +109,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<span class="name">' + escapeHtml(partes.titulo) + '</span>' + badgeUbicacion +
     '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
     badgeEstado(seccion) +
+    '<span class="verif-pastillas"></span>' +
     '</div></div>' +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
@@ -135,6 +136,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       : '') +
     '</div>' +
     '<div class="seccion-header-extra">' +
+    // VERIFICAR CONTEO: administradores (eligen la nave en un modal) y
+    // operarios con nave (solo la suya). Los operarios sin nave no lo ven.
+    (editable && seccion.estado !== 'enviado' && (esAdmin() || restringidoANave_())
+      ? '<span class="verif-wrap"></span>'
+      : '') +
     (editable && seccion.estado !== 'enviado'
       ? '<button type="button" class="btn-header-guardar sin-cambios" title="Guarda el conteo de esta agrupación. Los botones de envío no se activan hasta pulsar aquí.">Guardar conteo</button>' +
         '<span class="ultimo-guardado"></span>'
@@ -233,7 +239,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
-    '<th class="th-nombre">Tienda</th><th>Límite</th><th>60</th><th>PTA</th><th>CART.</th><th class="th-total">TOTAL</th><th>PDTE</th>' +
+    '<th class="th-nombre">Tienda</th><th>Límite</th>' +
+    NAVES_CONTEO.map(function (n) { return thCampoNave_(n.campo, n.etiqueta); }).join('') +
+    '<th class="th-total">TOTAL</th><th>PDTE</th>' +
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
     (seccion.tieneCExpress ? '<th>C.EXPRESS</th>' : '') +
     (seccion.tieneSobrestock ? '<th>SOBRESTOCK</th>' : '') +
@@ -244,6 +252,20 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     // consultar, pero no modificar nada de esta agrupación.
     tableWrap.querySelectorAll('input.celda, input.celda-total').forEach(function (input) { input.disabled = true; });
     tableWrap.querySelectorAll('.btn-cerrar-tienda, .btn-reabrir, input.celda-no').forEach(function (btn) { btn.disabled = true; });
+  }
+  if (editable && restringidoANave_()) {
+    // Operario con nave: las columnas de las otras naves se ven, pero no
+    // se pueden tocar (tampoco forzar un "NO" de otra nave). El backend
+    // (guardar_conteo) conserva además lo guardado en esas columnas
+    // aunque llegara otra cosa.
+    NAVES_CONTEO.forEach(function (n) {
+      if (puedeEditarCampoConteo_(n.campo)) return;
+      tableWrap.querySelectorAll('tbody input[data-campo="' + n.campo + '"]').forEach(function (input) {
+        input.disabled = true;
+        input.classList.add('celda-bloqueada-nave');
+        input.title = 'Solo lectura: columna de la nave ' + n.nave;
+      });
+    });
   }
   tablaCol.appendChild(tableWrap);
   body.appendChild(tablaCol);
@@ -448,6 +470,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           marcarCambiosSinGuardar_();
           actualizarTotalPalets();
           actualizarEstadoLocalSeccion_();
+          quitarVerificacionLocal_(input.getAttribute('data-campo'));
         });
       });
       const btnCerrar = tr.querySelector('.btn-cerrar-tienda');
@@ -464,6 +487,225 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   });
 
   attachValidacionGrupos(tableWrap);
+
+  /* ---------- VERIFICAR CONTEO (por nave) ---------- */
+  if (!seccion.verificaciones) seccion.verificaciones = {};
+  if (!seccion.cambiosVerif) seccion.cambiosVerif = {};
+
+  /** Tiendas de esta agrupación que tienen VACÍA la columna `campo` (sin
+   *  contar cerradas, las que hoy salen por otra agrupación ni las
+   *  casillas "NO" sin forzar): son las que se pondrán a 0 al verificar. */
+  function vaciasDeCampo_(campo) {
+    const inputs = [];
+    const nombres = [];
+    tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
+      if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-sale-excepcion')) return;
+      const input = tr.querySelector('input[data-campo="' + campo + '"]');
+      if (!input || input.classList.contains('celda-no')) return;
+      if (String(input.value).trim() === '') {
+        inputs.push(input);
+        nombres.push(tr.getAttribute('data-nombre') || '');
+      }
+    });
+    return { inputs: inputs, nombres: nombres };
+  }
+
+  /** Si se cambia a mano un número de una columna ya verificada, la
+   *  verificación deja de valer (el backend la borra al guardar). Aquí se
+   *  quita ya en pantalla, y se marca el panel para que el siguiente
+   *  autorefresco lo repinte con lo que diga el servidor. */
+  function quitarVerificacionLocal_(campo) {
+    if (!campo || !seccion.verificaciones[campo]) return;
+    const ver = seccion.verificaciones[campo];
+    // Hasta que llegue el detalle real del servidor (siguiente
+    // autorefresco), se marca ya como "cambiado tras verificar".
+    if (!seccion.cambiosVerif[campo]) {
+      seccion.cambiosVerif[campo] = { verificadoPor: ver.nombre || ver.usuario || '', verificadoHora: ver.hora || '', modificadoPor: SESSION_USUARIO || '', hora: '', cambios: [] };
+    }
+    delete seccion.verificaciones[campo];
+    panel._firma = '';
+    pintarVerificaciones_();
+  }
+
+  /** Pastillas 60 / PTA / CART. junto al nombre, cabeceras de la tabla y
+   *  botón VERIFICAR CONTEO, según seccion.verificaciones. */
+  function pintarVerificaciones_() {
+    const v = seccion.verificaciones || {};
+    const pastillas = header.querySelector('.verif-pastillas');
+    if (pastillas) {
+      pastillas.innerHTML = NAVES_CONTEO.map(function (n) {
+        const ver = v[n.campo];
+        const cam = !ver && seccion.cambiosVerif[n.campo];
+        if (ver) return '<span class="verif-pastilla ok" title="' + escapeAttr(n.nave + ' verificado por ' + (ver.nombre || ver.usuario || '') + ' a las ' + (ver.hora || '')) + '">' + SVG_CHECK_VERIF_ + escapeHtml(n.etiqueta) + '</span>';
+        if (cam) return '<span class="verif-pastilla modificada" title="' + escapeAttr(textoCambiosVerif_(n, cam)) + '">' + SVG_AVISO_VERIF_ + escapeHtml(n.etiqueta) + ' cambiado tras verificar</span>';
+        return '<span class="verif-pastilla" title="' + escapeAttr(n.nave + ': sin verificar') + '">' + escapeHtml(n.etiqueta) + '</span>';
+      }).join('');
+    }
+    // Recuadro con el detalle de lo cambiado después de verificar.
+    let caja = panel.querySelector('.verif-cambios-caja');
+    const camposCambiados = NAVES_CONTEO.filter(function (n) { return !v[n.campo] && seccion.cambiosVerif[n.campo]; });
+    if (camposCambiados.length) {
+      if (!caja) {
+        caja = document.createElement('div');
+        caja.className = 'verif-cambios-caja';
+        header.insertAdjacentElement('afterend', caja);
+      }
+      caja.innerHTML = camposCambiados.map(function (n) {
+        return '<div class="verif-cambios-linea">' + SVG_AVISO_VERIF_ + '<span>' + escapeHtml(textoCambiosVerif_(n, seccion.cambiosVerif[n.campo])) + '</span></div>';
+      }).join('');
+    } else if (caja) {
+      caja.remove();
+    }
+    tableWrap.querySelectorAll('thead th[data-campo]').forEach(function (th) {
+      th.classList.toggle('th-verificada', !!v[th.getAttribute('data-campo')]);
+    });
+
+    const wrap = header.querySelector('.verif-wrap');
+    if (!wrap) return;
+    if (esAdmin()) {
+      wrap.innerHTML =
+        '<button type="button" class="btn-header-verificar" title="Elegir qué nave verificar">' + SVG_CHECK_VERIF_ +
+        'Verificar conteo' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>';
+      wrap.querySelector('button').onclick = function (e) { e.stopPropagation(); abrirModalVerificarAdmin_(); };
+      return;
+    }
+    const campo = campoNaveSesion_();
+    const n = naveDeCampo_(campo);
+    const ver = v[campo];
+    if (ver) {
+      wrap.innerHTML =
+        '<span class="verif-hecha">' +
+          '<span class="btn-header-verificar verificado">' + SVG_CHECK_VERIF_ + escapeHtml(n.etiqueta) + ' verificado</span>' +
+          '<span class="verif-quien">' + escapeHtml((ver.nombre || ver.usuario || '') + ' · ' + (ver.hora || '')) + '</span>' +
+        '</span>';
+      return;
+    }
+    wrap.innerHTML =
+      '<button type="button" class="btn-header-verificar" title="Verificar la columna ' + escapeAttr(n.etiqueta) + ' (' + escapeAttr(n.nave) + ')">' + SVG_CHECK_VERIF_ +
+      (seccion.cambiosVerif[campo] ? 'Volver a verificar' : 'Verificar conteo') + ' <span class="verif-chip">' + escapeHtml(n.etiqueta) + '</span></button>';
+    wrap.querySelector('button').onclick = function (e) {
+      e.stopPropagation();
+      const vacias = vaciasDeCampo_(campo);
+      mostrarModalConfirmarVerificacion_(seccion, fecha, n, vacias.nombres, function () { ejecutarVerificacion_(campo); });
+    };
+  }
+
+  /** Pone a 0 las tiendas vacías de esa columna, guarda y deja constancia
+   *  de la verificación en el servidor. */
+  function ejecutarVerificacion_(campo) {
+    if (!editable) return;
+    const n = naveDeCampo_(campo);
+    const btn = header.querySelector('.btn-header-verificar');
+    if (btn) btn.disabled = true;
+    vaciasDeCampo_(campo).inputs.forEach(function (input) {
+      input.value = '0';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    autoguardarSeccion(function (ok) {
+      if (!ok) { if (btn) btn.disabled = false; return; }
+      llamarApi_('verificarConteo', [dia, seccion.nombre, fecha, campo])
+        .then(function (res) {
+          seccion.verificaciones[campo] = res || { nombre: SESSION_NOMBRE || SESSION_USUARIO, hora: '' };
+          delete seccion.cambiosVerif[campo];
+          panel._firma = '';
+          pintarVerificaciones_();
+          mostrarToast(n.etiqueta + ' verificado en ' + parsearNombreAgrupacion(seccion.nombre).titulo);
+        })
+        .catch(function (err) {
+          if (btn) btn.disabled = false;
+          mostrarErrorServidor(err);
+        });
+    });
+  }
+
+  function anularVerificacion_(campo) {
+    const n = naveDeCampo_(campo);
+    appConfirm('Anular verificación',
+      'Se quitará la verificación de ' + n.etiqueta + ' (' + n.nave + ') en ' + parsearNombreAgrupacion(seccion.nombre).titulo + '. No se borra ningún número. En Inicio el check de ' + n.etiqueta + ' dejará de estar en verde. ¿Continuar?',
+      function () {
+        llamarApi_('anularVerificacionConteo', [dia, seccion.nombre, fecha, campo])
+          .then(function () {
+            delete seccion.verificaciones[campo];
+            panel._firma = '';
+            pintarVerificaciones_();
+            mostrarToast('Verificación de ' + n.etiqueta + ' anulada');
+          })
+          .catch(mostrarErrorServidor);
+      }, true);
+    // appConfirm con peligro pone "Eliminar" en el botón: aquí se lee mejor "Anular".
+    const btnOk = document.getElementById('modal-confirm-btn');
+    if (btnOk) btnOk.textContent = 'Anular';
+  }
+
+  /** Modal del administrador: elegir qué nave verificar (o anular / volver
+   *  a verificar una ya verificada). */
+  function abrirModalVerificarAdmin_() {
+    const v = seccion.verificaciones || {};
+    let elegido = null;
+    const opciones = NAVES_CONTEO.map(function (n) {
+      const ver = v[n.campo];
+      const vacias = vaciasDeCampo_(n.campo).nombres.length;
+      const cam = !ver && seccion.cambiosVerif[n.campo];
+      const detalle = ver
+        ? 'Verificado por ' + (ver.nombre || ver.usuario || '') + ' a las ' + (ver.hora || '') + ' · elegir para volver a verificar'
+        : (cam ? 'Cambiado después de verificar' + (cam.modificadoPor ? ' (' + cam.modificadoPor + ')' : '') + '. ' : '') +
+          (vacias ? vacias + (vacias === 1 ? ' tienda vacía se pondrá a 0' : ' tiendas vacías se pondrán a 0') : 'Todas las tiendas tienen dato');
+      return '<div class="verif-opcion' + (ver ? ' es-verificada' : '') + '" data-campo="' + n.campo + '" role="button" tabindex="0">' +
+          '<span class="verif-radio"></span>' +
+          '<span class="verif-opcion-textos"><span class="verif-opcion-titulo">' + escapeHtml(n.nave) + ' · columna ' + escapeHtml(n.etiqueta) + '</span>' +
+          '<span class="verif-opcion-detalle' + (!ver && vacias ? ' con-vacias' : '') + '">' + escapeHtml(detalle) + '</span></span>' +
+          (ver
+            ? '<span class="verif-estado ok">' + SVG_CHECK_VERIF_ + 'Verificado</span><button type="button" class="verif-btn-anular" data-anular="' + n.campo + '">Anular</button>'
+            : (cam ? '<span class="verif-estado modificada">' + SVG_AVISO_VERIF_ + 'Cambiado</span>' : '<span class="verif-estado">Pendiente</span>')) +
+        '</div>';
+    }).join('');
+
+    prepararModalCustom_('medio');
+    const custom = document.getElementById('modal-custom');
+    custom.innerHTML =
+      '<div class="verif-modal">' +
+        '<div class="verif-modal-titulo">¿Qué nave quieres verificar?</div>' +
+        '<div class="verif-modal-sub">' + escapeHtml(parsearNombreAgrupacion(seccion.nombre).titulo) + ' · ' + escapeHtml(formatearFechaLarga(fecha)) + '</div>' +
+        '<div class="verif-opciones">' + opciones + '</div>' +
+        '<div class="verif-modal-nota">Queda registrado a tu nombre. Las tiendas vacías de esa columna se ponen a 0 y en Inicio el check de esa nave se pone en verde.</div>' +
+      '</div>';
+    const actions = document.getElementById('modal-actions');
+    actions.innerHTML =
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+      '<button class="modal-confirm verif-confirmar" id="modal-confirm-btn" disabled>Elige una nave</button>';
+    document.getElementById('modal-overlay').style.display = 'flex';
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+    const btnOk = document.getElementById('modal-confirm-btn');
+
+    custom.querySelectorAll('.verif-opcion').forEach(function (op) {
+      const elegir = function () {
+        custom.querySelectorAll('.verif-opcion').forEach(function (o) { o.classList.remove('elegida'); });
+        op.classList.add('elegida');
+        elegido = op.getAttribute('data-campo');
+        const n = naveDeCampo_(elegido);
+        btnOk.disabled = false;
+        btnOk.textContent = (v[elegido] ? 'Volver a verificar ' : 'Verificar ') + n.etiqueta;
+      };
+      op.addEventListener('click', function (e) { if (e.target.closest('.verif-btn-anular')) return; elegir(); });
+      op.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); elegir(); } });
+    });
+    custom.querySelectorAll('.verif-btn-anular').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        cerrarModal();
+        anularVerificacion_(b.getAttribute('data-anular'));
+      };
+    });
+    btnOk.onclick = function () {
+      if (!elegido) return;
+      cerrarModal();
+      ejecutarVerificacion_(elegido);
+    };
+  }
+
+  pintarVerificaciones_();
 
   const btnHeaderPrevision = header.querySelector('.btn-header-prevision');
   if (btnHeaderPrevision) {
@@ -773,4 +1015,76 @@ if (callback) callback(true, mensaje);
   };
 
   return panel;
+}
+
+/* ---------------- VERIFICAR CONTEO: helpers compartidos ---------------- */
+
+const SVG_CHECK_VERIF_ = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const SVG_AVISO_VERIF_ = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
+
+/** Número de conteo para los textos de cambios ("vacío" si no hay). */
+function numCambioVerif_(v) { return (v === null || v === undefined || v === '') ? 'vacío' : String(v); }
+
+/** Texto de un "cambio después de verificar" de una columna:
+ *  "60 verificado por jlopez (10:42). Después cambiado por admin2 (11:18):
+ *  MELILLA 3 → 5 · PARQUE CEUTA 0 → 2". */
+function textoCambiosVerif_(nave, cam) {
+  const lista = (cam.cambios || []).map(function (c) {
+    return quitarCodigoTienda(quitarMarcadorNombre(c.tienda || '')) + ' ' + numCambioVerif_(c.antes) + ' → ' + numCambioVerif_(c.despues);
+  });
+  return nave.etiqueta + ' estaba verificado' + (cam.verificadoPor ? ' por ' + cam.verificadoPor : '') + (cam.verificadoHora ? ' (' + cam.verificadoHora + ')' : '') +
+    '. Después lo cambió ' + (cam.modificadoPor || 'alguien') + (cam.hora ? ' (' + cam.hora + ')' : '') +
+    (lista.length ? ': ' + lista.join(' · ') : '') + '. Hay que volver a verificar.';
+}
+
+const SVG_CANDADO_NAVE_ = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+/** <th> de 60 / PTA / CART.: con candado si el usuario no puede tocar esa
+ *  columna, y resaltado si es la de su nave. */
+function thCampoNave_(campo, etiqueta) {
+  const propia = restringidoANave_() && campo === campoNaveSesion_();
+  const bloqueada = !puedeEditarCampoConteo_(campo);
+  return '<th data-campo="' + campo + '" class="th-campo-nave' + (propia ? ' th-nave-propia' : '') + (bloqueada ? ' th-nave-bloqueada' : '') + '"' +
+    (bloqueada ? ' title="Solo lectura: columna de otra nave"' : '') + '>' +
+    (bloqueada ? SVG_CANDADO_NAVE_ : '') + escapeHtml(etiqueta) + '</th>';
+}
+
+/** Deja el modal genérico (#modal-box) listo para contenido propio en
+ *  #modal-custom, con el tamaño indicado ('medio' | 'ancho' | ''). */
+function prepararModalCustom_(tamano) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('ancho', 'medio', 'usuario-form', 'peligro');
+  if (tamano) box.classList.add(tamano);
+  document.getElementById('modal-title').style.display = 'none';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML = '';
+}
+
+/** Confirmación del operario antes de verificar su columna: dice qué
+ *  tiendas vacías se van a poner a 0. */
+function mostrarModalConfirmarVerificacion_(seccion, fecha, nave, nombresVacias, onConfirmar) {
+  prepararModalCustom_('medio');
+  const custom = document.getElementById('modal-custom');
+  custom.innerHTML =
+    '<div class="verif-modal">' +
+      '<div class="verif-modal-titulo">' + SVG_CHECK_VERIF_ + 'Verificar conteo · ' + escapeHtml(nave.etiqueta) + ' (' + escapeHtml(nave.nave) + ')</div>' +
+      '<div class="verif-modal-sub">' + escapeHtml(parsearNombreAgrupacion(seccion.nombre).titulo) + ' · ' + escapeHtml(formatearFechaLarga(fecha)) + '</div>' +
+      (nombresVacias.length
+        ? '<div class="verif-vacias">' +
+            '<div class="verif-vacias-titulo">' + nombresVacias.length + (nombresVacias.length === 1 ? ' tienda sin dato en ' : ' tiendas sin dato en ') + escapeHtml(nave.etiqueta) + ' se pondrá' + (nombresVacias.length === 1 ? '' : 'n') + ' a 0:</div>' +
+            '<div class="modal-envio-chips">' + nombresVacias.map(function (t) { return '<span class="modal-envio-chip">' + escapeHtml(quitarCodigoTienda(quitarMarcadorNombre(t))) + '</span>'; }).join('') + '</div>' +
+          '</div>'
+        : '<div class="modal-envio-ok">' + SVG_CHECK_VERIF_ + '<span>Todas las tiendas tienen dato en ' + escapeHtml(nave.etiqueta) + '</span></div>') +
+      '<div class="verif-modal-nota">Se guarda el conteo y en Inicio se marcará en verde el check de ' + escapeHtml(nave.etiqueta) + '. Las columnas de las otras naves no se tocan. Si después cambias algún número de ' + escapeHtml(nave.etiqueta) + ', habrá que volver a verificar.</div>' +
+    '</div>';
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm verif-confirmar" id="modal-confirm-btn">Sí, verificar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirmar(); };
 }

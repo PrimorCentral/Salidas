@@ -208,12 +208,13 @@ function pintarTablaUsuarios_() {
     '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' usuario' : ' usuarios') +
       ' · ' + totalAdmin + (totalAdmin === 1 ? ' administrador activo' : ' administradores activos') + '</div>' +
     '<div class="admin-tabla-wrap"><table class="admin-tabla usuarios-tabla">' +
-      '<thead><tr><th>Nombre completo</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Creado</th><th></th></tr></thead>' +
+      '<thead><tr><th>Nombre completo</th><th>Usuario</th><th>Rol</th><th>Nave</th><th>Estado</th><th>Creado</th><th></th></tr></thead>' +
       '<tbody>' + items.map(function (it) {
         return '<tr>' +
           '<td class="usuarios-col-nombre">' + escapeHtml(it.nombreCompleto || '—') + '</td>' +
           '<td>' + escapeHtml(it.usuario) + '</td>' +
           '<td><span class="usuarios-badge-rol ' + it.rol + '">' + (it.rol === 'admin' ? 'Administrador' : 'Operario') + '</span></td>' +
+          '<td>' + (it.nave && it.rol !== 'admin' ? '<span class="usuarios-badge-nave">' + escapeHtml(it.nave) + '</span>' : '<span class="usuarios-sin-nave">—</span>') + '</td>' +
           '<td><span class="usuarios-badge-estado ' + (it.activo ? 'activo' : 'inactivo') + '"><span class="badge-dot"></span>' + (it.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
           '<td>' + escapeHtml(it.creadoEn || '') + '</td>' +
           '<td><div class="usuarios-fila-acciones">' +
@@ -277,6 +278,7 @@ function abrirModalUsuario_(usuarioExistente) {
   const rolInicial = usuarioExistente ? usuarioExistente.rol : 'operario';
   const activoInicial = usuarioExistente ? !!usuarioExistente.activo : true;
   const permisosIniciales = (usuarioExistente && usuarioExistente.permisos) || {};
+  const naveInicial = (usuarioExistente && usuarioExistente.nave) || '';
 
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
@@ -307,6 +309,16 @@ function abrirModalUsuario_(usuarioExistente) {
           '</div>' +
           (!esAdmin() ? '<div class="modal-campo-ayuda">Solo un administrador puede asignar el rol de Administrador.</div>' : '') +
         '</div>' +
+        '<div class="modal-campo" id="modal-usuario-nave-wrap"' + (rolInicial === 'operario' ? '' : ' style="display:none"') + '>' +
+          '<label>Nave</label>' +
+          '<div class="modal-pills" id="modal-usuario-nave-pills">' +
+            '<button type="button" class="modal-pill' + (!naveInicial ? ' activo' : '') + '" data-nave="">Ninguna</button>' +
+            NAVES_CONTEO.map(function (n) {
+              return '<button type="button" class="modal-pill' + (naveInicial === n.nave ? ' activo' : '') + '" data-nave="' + n.nave + '">' + n.nave + ' <small>(' + n.etiqueta + ')</small></button>';
+            }).join('') +
+          '</div>' +
+          '<div class="modal-campo-ayuda">Con nave, solo puede rellenar y verificar la columna de su nave; las demás las ve en solo lectura. Con «Ninguna» puede rellenar las tres columnas, pero no verificar.</div>' +
+        '</div>' +
         '<div class="modal-campo">' +
           '<div class="modal-campo-check">' +
             '<input type="checkbox" id="modal-usuario-activo"' + (activoInicial ? ' checked' : '') + '>' +
@@ -335,6 +347,13 @@ function abrirModalUsuario_(usuarioExistente) {
       const esOperario = pill.getAttribute('data-rol') === 'operario';
       document.getElementById('modal-usuario-permisos-wrap').style.display = esOperario ? '' : 'none';
       document.getElementById('modal-usuario-permisos-admin-nota').style.display = esOperario ? 'none' : '';
+      document.getElementById('modal-usuario-nave-wrap').style.display = esOperario ? '' : 'none';
+    };
+  });
+  custom.querySelectorAll('#modal-usuario-nave-pills .modal-pill').forEach(function (pill) {
+    pill.onclick = function () {
+      custom.querySelectorAll('#modal-usuario-nave-pills .modal-pill').forEach(function (p) { p.classList.remove('activo'); });
+      pill.classList.add('activo');
     };
   });
 
@@ -359,6 +378,10 @@ function abrirModalUsuario_(usuarioExistente) {
     // Los administradores tienen acceso a todo por su rol, así que no se
     // les guarda ningún permiso fino (el backend los deja pasar igual).
     const permisos = rol === 'operario' ? leerPermisosMarcados_(custom) : {};
+    // Los administradores no llevan nave: verifican cualquier columna
+    // desde el selector de VERIFICAR CONTEO.
+    const naveElegida = custom.querySelector('#modal-usuario-nave-pills .modal-pill.activo');
+    const nave = rol === 'operario' && naveElegida ? (naveElegida.getAttribute('data-nave') || null) : null;
 
     if (esNuevo) {
       const inputPassword = document.getElementById('modal-usuario-password');
@@ -367,6 +390,9 @@ function abrirModalUsuario_(usuarioExistente) {
       const btn = document.getElementById('modal-confirm-btn');
       btn.disabled = true;
       llamarApi_('crearUsuario', [usuario, nombreCompleto, password, rol, permisos])
+        .then(function (res) {
+          return (res && res.id) ? llamarApi_('asignarNaveUsuario', [res.id, nave]) : null;
+        })
         .then(function () {
           cerrarModal();
           mostrarToast('Usuario creado');
@@ -377,6 +403,10 @@ function abrirModalUsuario_(usuarioExistente) {
       const btn = document.getElementById('modal-confirm-btn');
       btn.disabled = true;
       llamarApi_('editarUsuario', [usuarioExistente.id, usuario, nombreCompleto, rol, activo, permisos])
+        .then(function () {
+          if ((usuarioExistente.nave || null) === nave) return null;
+          return llamarApi_('asignarNaveUsuario', [usuarioExistente.id, nave]);
+        })
         .then(function () {
           cerrarModal();
           mostrarToast('Usuario actualizado' + (usuario === SESSION_USUARIO ? ' (vuelve a entrar para ver el nombre nuevo arriba)' : ''));
@@ -477,6 +507,12 @@ function abrirModalMiUsuario_() {
       '<label>Rol</label>' +
       '<input type="text" readonly value="' + (esAdministrador ? 'Administrador' : 'Operario') + '">' +
     '</div>' +
+    (!esAdministrador
+      ? '<div class="modal-campo">' +
+          '<label>Nave</label>' +
+          '<input type="text" readonly value="' + escapeAttr(SESSION_NAVE ? (SESSION_NAVE + ' (' + (naveDeCampo_(campoNaveSesion_()) || {}).etiqueta + ')') : 'Ninguna') + '">' +
+        '</div>'
+      : '') +
     '<div class="modal-campo">' +
       '<label>Permisos</label>' +
       permisosHtml +

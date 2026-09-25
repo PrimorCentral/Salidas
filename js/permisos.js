@@ -60,3 +60,37 @@ function aplicarPermisosUI() {
   poblarDropdownConfiguracion();
   poblarDropdownAdministracion();
 }
+
+/* ---------------- NAVES (60 / PTA / CART.) ---------------- */
+
+// Nave -> columna de conteo que le corresponde (misma nomenclatura que el
+// resto de la app: data-campo="c60" | "pta" | "cart").
+const NAVES_CONTEO = [
+  { nave: 'GAITE', campo: 'c60', etiqueta: '60' },
+  { nave: 'PTA', campo: 'pta', etiqueta: 'PTA' },
+  { nave: 'CARTAMA', campo: 'cart', etiqueta: 'CART.' }
+];
+
+function naveDeCampo_(campo) {
+  return NAVES_CONTEO.find(function (n) { return n.campo === campo; }) || null;
+}
+
+/** Columna ('c60' | 'pta' | 'cart') de la nave del usuario conectado, o
+ *  null si no tiene nave. */
+function campoNaveSesion_() {
+  const n = NAVES_CONTEO.find(function (x) { return x.nave === SESSION_NAVE; });
+  return n ? n.campo : null;
+}
+
+/** true si el usuario conectado solo puede tocar la columna de su nave:
+ *  operario CON nave. Los administradores y los operarios sin nave
+ *  pueden rellenar las tres columnas (como hasta ahora). */
+function restringidoANave_() {
+  return !esAdmin() && !!campoNaveSesion_();
+}
+
+/** true si el usuario conectado puede escribir en la columna `campo`. */
+function puedeEditarCampoConteo_(campo) {
+  if (!restringidoANave_()) return true;
+  return campo === campoNaveSesion_();
+}

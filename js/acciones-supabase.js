@@ -9,7 +9,49 @@ const SUPABASE_ACCIONES_ = {
   // -- Supabase: getConteoDia --
   getConteoDia: function (args) {
     const fecha = args[0];
-    return llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha });
+    // Además del conteo, se piden las verificaciones de ese día (quién ha
+    // verificado 60/PTA/CART. en cada agrupación) y se cuelgan de cada
+    // sección como seccion.verificaciones = { c60: {nombre, hora}, ... }.
+    // Así entran en la "firma" del panel y el autorefresco en vivo pinta
+    // también las verificaciones que hagan otros ordenadores. Si esa
+    // segunda llamada fallara, el conteo se muestra igual (sin
+    // verificaciones) para no bloquear el trabajo.
+    // También los "cambios después de verificar" que siguen abiertos
+    // (seccion.cambiosVerif = { c60: {verificadoPor, modificadoPor, hora,
+    // cambios: [...]}, ... }), para la pastilla naranja del panel.
+    return Promise.all([
+      llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha }),
+      llamarRpcSupabase_('get_verificaciones_dia', { p_fecha: fecha }).catch(function () { return {}; }),
+      llamarRpcSupabase_('get_cambios_tras_verificar_dia', { p_fecha: fecha }).catch(function () { return {}; })
+    ]).then(function (res) {
+      const data = res[0];
+      const verifs = res[1] || {};
+      const cambios = res[2] || {};
+      if (data && data.secciones) {
+        data.secciones.forEach(function (s) {
+          s.verificaciones = verifs[s.nombre] || {};
+          s.cambiosVerif = cambios[s.nombre] || {};
+        });
+      }
+      return data;
+    });
+  },
+  // -- Supabase: Verificar conteo por nave (60 / PTA / CART.) --
+  verificarConteo: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], campo = args[3];
+    return llamarRpcSupabase_('verificar_conteo', { p_dia: dia, p_nombre_agrupacion: nombreAgrupacion, p_fecha: fecha, p_campo: campo });
+  },
+  // Avisos "conteo cambiado después de verificar" (campana de los
+  // administradores, ver js/avisos-verificacion.js).
+  getAvisosVerificacion: function () {
+    return llamarRpcSupabase_('get_avisos_verificacion', {});
+  },
+  marcarAvisosVerificacionVistos: function (args) {
+    return llamarRpcSupabase_('marcar_avisos_verificacion_vistos', { p_ids: args[0] || null });
+  },
+  anularVerificacionConteo: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], campo = args[3];
+    return llamarRpcSupabase_('anular_verificacion_conteo', { p_dia: dia, p_nombre_agrupacion: nombreAgrupacion, p_fecha: fecha, p_campo: campo });
   },
   // -- Supabase: enviarPrevisionAgencia / enviarDefinitivoAgencia --
   enviarPrevisionAgencia: function (args) {
@@ -55,7 +97,10 @@ const SUPABASE_ACCIONES_ = {
   // -- Supabase: resumen de la pantalla de Inicio (estado del conteo de
   // hoy y de mañana) --
   resumenInicio: function () {
-    return llamarRpcSupabase_('get_resumen_inicio', {});
+    // v2: el check de cada nave se pone en verde cuando esa nave ha
+    // VERIFICADO su columna (naranja = hay datos sin verificar). La
+    // versión anterior (get_resumen_inicio) se deja intacta en Supabase.
+    return llamarRpcSupabase_('get_resumen_inicio_v2', {});
   },
   // -- Supabase: Configuración agencias (Config_Agrupaciones) --
   getAgrupacionesConfig: function () {
@@ -400,6 +445,13 @@ const SUPABASE_ACCIONES_ = {
       p_activo: activo,
       p_permisos: permisos || {}
     });
+  },
+  // Nave del usuario (GAITE / PTA / CARTAMA / null). Va en una llamada
+  // aparte de crear/editar usuario para no tener que cambiar esas dos
+  // funciones del backend.
+  asignarNaveUsuario: function (args) {
+    const id = args[0], nave = args[1];
+    return llamarRpcSupabase_('asignar_nave_usuario', { p_id: id, p_nave: nave || null });
   },
   cambiarPasswordUsuario: function (args) {
     const id = args[0], passwordNuevo = args[1];
