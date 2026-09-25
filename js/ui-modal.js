@@ -265,6 +265,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.remove('gestor-obs');
   document.getElementById('modal-box').classList.remove('orden-retirada-modal');
+  document.getElementById('modal-box').classList.remove('acerca-de');
   document.getElementById('modal-title').style.display = '';
 }
 document.getElementById('modal-cerrar-x').onclick = cerrarModal;
