@@ -1657,15 +1657,6 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
 
-  function filasOcupadasPorOtros(idx) {
-    const ocupadas = new Set();
-    grupos.forEach(function (g, i) {
-      if (i === idx) return;
-      g.rows.forEach(function (r) { ocupadas.add(r); });
-    });
-    return ocupadas;
-  }
-
   // --- Copiar los grupos a los OTROS días de la misma ruta ---
   // infoDias llega por separado (getGruposRutaDias): qué tiendas y grupos
   // tiene esta ruta los demás días, y la clave de cada fila de hoy. Con eso
@@ -1806,58 +1797,93 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     })
     .catch(function () { infoDias = false; pintarDias(); });
 
-  function pintar() {
-    const listaPrevia = custom.querySelector('.modal-grupos-lista');
-    const scrollPrevio = listaPrevia ? listaPrevia.scrollTop : 0;
-    const tarjetasHtml = grupos.map(function (g, idx) {
-      const ocupadas = filasOcupadasPorOtros(idx);
-      const chipsHtml = seccion.tiendas.map(function (t) {
-        const marcada = g.rows.indexOf(t.row) !== -1;
-        const bloqueada = !marcada && ocupadas.has(t.row);
-        return (
-          '<label class="modal-grupo-chip' + (marcada ? ' marcada' : '') + (bloqueada ? ' bloqueada' : '') + '"' + (bloqueada ? ' title="Ya está en otro grupo de esta ruta"' : '') + '>' +
-            '<input type="checkbox" data-grupo-idx="' + idx + '" data-grupo-row="' + t.row + '"' + (marcada ? ' checked' : '') + (bloqueada ? ' disabled' : '') + '>' +
-            '<span>' + escapeHtml(nombreLimpio(t)) + '</span>' +
-          '</label>'
-        );
-      }).join('');
+  // Grupo "activo": al pulsar una tienda de la columna derecha ("sin
+  // grupo") se añade a este grupo. Se activa pulsando en su tarjeta.
+  let activo = grupos.length ? 0 : -1;
 
+  function marcarActivo(idx) {
+    activo = idx;
+    custom.querySelectorAll('[data-grupo-card]').forEach(function (card) {
+      card.classList.toggle('activo', Number(card.getAttribute('data-grupo-card')) === activo);
+    });
+    const destino = document.getElementById('grupos2-destino');
+    if (destino) {
+      const g = grupos[activo];
+      destino.innerHTML = g
+        ? 'Pulsa una tienda para añadirla a <b>' + escapeHtml(g.texto.trim() || ('Grupo ' + (activo + 1))) + '</b>'
+        : 'Crea o elige un grupo a la izquierda para poder añadirle tiendas';
+    }
+  }
+
+  function pintar() {
+    const enGrupo = new Set();
+    grupos.forEach(function (g) { g.rows.forEach(function (r) { enGrupo.add(r); }); });
+    const sinGrupo = seccion.tiendas.filter(function (t) { return !enGrupo.has(t.row); });
+
+    const tarjetasHtml = grupos.map(function (g, idx) {
+      const miembros = seccion.tiendas.filter(function (t) { return g.rows.indexOf(t.row) !== -1; });
       return (
-        '<div class="modal-grupo-card">' +
-          '<div class="modal-grupo-card-fila">' +
-            '<div class="modal-grupo-campo">' +
-              '<label>Texto</label>' +
-              '<input type="text" data-grupo-texto="' + idx + '" value="' + escapeAttr(g.texto) + '" placeholder="Ej: MAX POR RUTA">' +
-            '</div>' +
-            '<div class="modal-grupo-campo modal-grupo-campo-limite">' +
-              '<label>Límite palets</label>' +
-              '<input type="text" inputmode="numeric" data-grupo-limite="' + idx + '" value="' + escapeAttr(g.limite) + '" placeholder="Sin límite">' +
-            '</div>' +
-            '<label class="modal-grupo-campo modal-grupo-campo-tipo" title="Solo suma y muestra el total, sin avisar aunque se pase">' +
-              '<input type="checkbox" data-grupo-tipo="' + idx + '"' + (g.tipo === 'total' ? ' checked' : '') + '>' +
-              '<span>Solo informativo (sin aviso)</span>' +
+        '<div class="grupos2-card' + (idx === activo ? ' activo' : '') + '" data-grupo-card="' + idx + '">' +
+          '<div class="grupos2-card-cab">' +
+            '<span class="grupos2-radio" title="Grupo al que se añaden las tiendas"></span>' +
+            '<input type="text" class="grupos2-texto" data-grupo-texto="' + idx + '" value="' + escapeAttr(g.texto) + '" placeholder="Texto del grupo (ej: TOTAL LISBOA)">' +
+            '<input type="text" class="grupos2-limite" inputmode="numeric" data-grupo-limite="' + idx + '" value="' + escapeAttr(g.limite) + '" placeholder="Sin límite" title="Límite de palets del grupo">' +
+            '<label class="grupos2-tipo" title="Solo suma y muestra el total, sin avisar aunque se pase">' +
+              '<input type="checkbox" data-grupo-tipo="' + idx + '"' + (g.tipo === 'total' ? ' checked' : '') + '>Solo informativo' +
             '</label>' +
+            '<span class="grupos2-contador">' + miembros.length + '</span>' +
             '<button type="button" class="modal-grupo-eliminar" data-grupo-eliminar="' + idx + '" title="Eliminar este grupo">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
             '</button>' +
           '</div>' +
-          '<div class="modal-grupo-chips">' + chipsHtml + '</div>' +
+          '<div class="grupos2-chips">' +
+            (miembros.length
+              ? miembros.map(function (t) {
+                  return '<button type="button" class="grupos2-chip miembro" data-quitar-row="' + t.row + '" title="Quitar del grupo">' +
+                    escapeHtml(nombreLimpio(t)) + '<span class="x">×</span></button>';
+                }).join('')
+              : '<span class="grupos2-vacio">Sin tiendas: pulsa las de la derecha para añadirlas.</span>') +
+          '</div>' +
         '</div>'
       );
     }).join('');
 
     custom.innerHTML =
-      '<p class="modal-campo-ayuda" style="margin:0 0 12px;">Marca qué tiendas comparten un límite de palets (o simplemente quieres sumarlas juntas). No hace falta que sean consecutivas, pero cada tienda solo puede estar en un grupo a la vez.</p>' +
-      '<div class="modal-grupos-lista">' + (tarjetasHtml || '<div class="festivos-item-vacio">Todavía no hay grupos en esta ruta.</div>') + '</div>' +
-      '<button type="button" class="plantilla-anadir-notacarga" id="modal-grupo-anadir" style="margin-top:12px;">' +
-        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>' +
-      '<div id="modal-grupos-dias"></div>';
+      '<div class="grupos2">' +
+        '<div class="grupos2-col">' +
+          '<div class="modal-orden-col-titulo">Grupos (' + grupos.length + ')</div>' +
+          '<div class="grupos2-lista">' + (tarjetasHtml || '<div class="festivos-item-vacio">Todavía no hay grupos en esta ruta.</div>') + '</div>' +
+          '<button type="button" class="plantilla-anadir-notacarga" id="modal-grupo-anadir" style="margin-top:10px;">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>' +
+        '</div>' +
+        '<div class="grupos2-col">' +
+          '<div class="modal-orden-col-titulo">Tiendas sin grupo <span class="modal-orden-col-contador">(' + sinGrupo.length + ')</span></div>' +
+          '<div class="grupos2-pool">' +
+            (sinGrupo.length ? '<div class="grupos2-destino" id="grupos2-destino"></div>' : '') +
+            '<div class="grupos2-chips">' +
+              (sinGrupo.length
+                ? sinGrupo.map(function (t) {
+                    return '<button type="button" class="grupos2-chip libre" data-anadir-row="' + t.row + '">+ ' + escapeHtml(nombreLimpio(t)) + '</button>';
+                  }).join('')
+                : '<span class="grupos2-vacio">Todas las tiendas de la ruta están en algún grupo.</span>') +
+            '</div>' +
+          '</div>' +
+          '<div id="modal-grupos-dias"></div>' +
+        '</div>' +
+      '</div>';
 
-    const listaNueva = custom.querySelector('.modal-grupos-lista');
-    if (listaNueva) listaNueva.scrollTop = scrollPrevio;
+    marcarActivo(activo);
 
+    custom.querySelectorAll('[data-grupo-card]').forEach(function (card) {
+      card.addEventListener('mousedown', function () { marcarActivo(Number(card.getAttribute('data-grupo-card'))); });
+      card.addEventListener('focusin', function () { marcarActivo(Number(card.getAttribute('data-grupo-card'))); });
+    });
     custom.querySelectorAll('[data-grupo-texto]').forEach(function (inp) {
-      inp.oninput = function () { grupos[Number(inp.getAttribute('data-grupo-texto'))].texto = inp.value; pintarDias(); };
+      inp.oninput = function () {
+        grupos[Number(inp.getAttribute('data-grupo-texto'))].texto = inp.value;
+        marcarActivo(activo);
+        pintarDias();
+      };
     });
     custom.querySelectorAll('[data-grupo-limite]').forEach(function (inp) {
       inp.oninput = function () {
@@ -1870,18 +1896,25 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
       chk.onchange = function () { grupos[Number(chk.getAttribute('data-grupo-tipo'))].tipo = chk.checked ? 'total' : ''; pintarDias(); };
     });
     custom.querySelectorAll('[data-grupo-eliminar]').forEach(function (btn) {
-      btn.onclick = function () { grupos.splice(Number(btn.getAttribute('data-grupo-eliminar')), 1); pintar(); };
+      btn.onclick = function (ev) {
+        ev.stopPropagation();
+        const idx = Number(btn.getAttribute('data-grupo-eliminar'));
+        grupos.splice(idx, 1);
+        if (activo >= grupos.length) activo = grupos.length - 1;
+        pintar();
+      };
     });
-    custom.querySelectorAll('[data-grupo-row]').forEach(function (chk) {
-      chk.onchange = function () {
-        const idx = Number(chk.getAttribute('data-grupo-idx'));
-        const row = Number(chk.getAttribute('data-grupo-row'));
-        const g = grupos[idx];
-        if (chk.checked) {
-          if (g.rows.indexOf(row) === -1) g.rows.push(row);
-        } else {
-          g.rows = g.rows.filter(function (r) { return r !== row; });
-        }
+    custom.querySelectorAll('[data-quitar-row]').forEach(function (btn) {
+      btn.onclick = function () {
+        const row = Number(btn.getAttribute('data-quitar-row'));
+        grupos.forEach(function (g) { g.rows = g.rows.filter(function (r) { return r !== row; }); });
+        pintar();
+      };
+    });
+    custom.querySelectorAll('[data-anadir-row]').forEach(function (btn) {
+      btn.onclick = function () {
+        if (!grupos[activo]) { mostrarToast('Crea o elige primero un grupo', true); return; }
+        grupos[activo].rows.push(Number(btn.getAttribute('data-anadir-row')));
         pintar();
       };
     });
@@ -1889,6 +1922,7 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     if (btnAnadir) {
       btnAnadir.onclick = function () {
         grupos.push({ texto: '', limite: '', tipo: '', rows: [] });
+        activo = grupos.length - 1;
         pintar();
         setTimeout(function () {
           const inputs = custom.querySelectorAll('[data-grupo-texto]');
