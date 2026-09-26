@@ -2888,3 +2888,56 @@ header.topbar .brand.abre-acerca-de:hover { opacity: .85; }
 .modal-box.acerca-de .acerca-legal p.acerca-copy { font-weight: 700; color: var(--ink); margin-bottom: 10px; }
 .acerca-copy span { display: block; font-weight: 600; color: var(--ink-soft); }
 .modal-box.acerca-de .modal-actions { padding: 0 26px 22px; margin-top: 10px; }
+
+/* ---- Rutas y tiendas: arrastrar tiendas (sustituye a las flechas) ---- */
+.plantilla-tienda-asa {
+  width: 22px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  color: #9aa3b0; border-radius: 5px; cursor: grab; touch-action: none; user-select: none;
+}
+.plantilla-tienda-asa:hover { background: #eef1f7; color: var(--navy); }
+.plantilla-tienda-asa-hueco { width: 22px; flex-shrink: 0; }
+.plantilla-tienda.arrastrando {
+  position: relative; z-index: 3; background: #fff; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(28, 43, 69, .25); outline: 2px solid var(--prevision);
+}
+.plantilla-tienda.arrastrando .plantilla-tienda-asa { color: var(--navy); background: #eef1f7; cursor: grabbing; }
+body.plantilla-arrastrando, body.plantilla-arrastrando * { cursor: grabbing !important; user-select: none !important; }
+.plantilla-tienda.recien-movida { background: #eef4fd; }
+body.plantilla-guardando-orden .plantilla-tienda-asa { opacity: .4; cursor: progress; }
+
+/* Modal "Esta tienda aparece en más días" al soltar */
+.plantilla-dias-destino { display: flex; flex-direction: column; gap: 6px; }
+.plantilla-dia-destino {
+  display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font-size: 13px; cursor: pointer;
+}
+.plantilla-dia-destino input { width: 16px; height: 16px; accent-color: var(--ok); flex-shrink: 0; }
+.plantilla-dia-destino b { min-width: 84px; }
+.plantilla-dia-destino .det { color: var(--ink-soft); font-size: 12.5px; }
+.plantilla-dia-destino.deshabilitado { cursor: default; background: #f7f8fa; }
+.plantilla-dia-destino-ok, .plantilla-dia-destino-av { width: 16px; text-align: center; font-weight: 800; flex-shrink: 0; }
+.plantilla-dia-destino-ok { color: var(--ok); }
+.plantilla-dia-destino-av { color: var(--amber-dark); }
+
+/* Grupos de palets: copiar a otros días */
+.plantilla-grupos-dias { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 12px; }
+.plantilla-grupos-dias-titulo { display: block; font-weight: 700; font-size: 13px; color: var(--ink); }
+.modal-anadir-tienda-dia-pill.igual { cursor: default; background: #f1f7f4; color: var(--ok); border-color: #cfe6dc; }
+.plantilla-grupos-cambios {
+  margin-top: 10px; background: #fdf8ef; border: 1px solid #f0dcb8; border-radius: 8px; padding: 9px 12px;
+}
+.plantilla-grupos-cambios-cab { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.plantilla-grupos-cambios-cab span { margin-left: auto; color: var(--amber-dark); font-weight: 700; font-size: 12px; white-space: nowrap; }
+.plantilla-grupos-cambios-lista { margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+.plantilla-grupos-cambios-lista s { color: var(--danger); }
+.plantilla-grupos-cambios-lista ins { color: var(--ok); text-decoration: none; font-weight: 700; }
+
+/* Añadir tienda: límite general + posición y grupo */
+.plantilla-caja-limite {
+  display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #f6f7f9;
+  border-radius: 8px; padding: 9px 12px; font-size: 13px; min-height: 22px;
+}
+.plantilla-caja-limite .num { font-weight: 800; font-size: 18px; color: var(--navy); min-width: 24px; text-align: center; }
+.plantilla-anadir-colocar { display: flex; gap: 12px; flex-wrap: wrap; }
+.plantilla-anadir-colocar .modal-campo { flex: 1 1 200px; min-width: 0; }
+.plantilla-anadir-colocar select { width: 100%; }
