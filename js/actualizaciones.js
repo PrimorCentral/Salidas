@@ -131,6 +131,9 @@ function forzarActualizacion_() {
   const recargar = function () {
     if (recargado) return;
     recargado = true;
+    // Evita el aviso del navegador "¿Quieres volver a cargar la aplicación?"
+    // (lo lanza el beforeunload de sesion.js): esta recarga es intencionada.
+    window.RECARGA_POR_ACTUALIZACION_ = true;
     window.location.reload();
   };
   // Salvaguarda: si algo se queda colgado (red lenta...), se recarga igualmente.

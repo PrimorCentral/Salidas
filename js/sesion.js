@@ -54,6 +54,9 @@ function cerrarSesion() {
  *  sirve) intentar personalizar el texto. */
 window.addEventListener('beforeunload', function (e) {
   if (!SESSION_TOKEN) return;
+  // Recarga provocada por la propia app al actualizar de versión
+  // (ver forzarActualizacion_ en actualizaciones.js): no preguntar.
+  if (window.RECARGA_POR_ACTUALIZACION_) return;
   e.preventDefault();
   e.returnValue = '';
 });
