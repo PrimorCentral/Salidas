@@ -432,6 +432,7 @@ function pintarPlantilla_() {
           '<span class="lim' + (t.limiteOverride ? ' lim-override' : '') + '" title="' + (t.limiteOverride ? 'Límite propio de este día (distinto del general de Configuración tiendas: ' + escapeAttr(t.limiteGeneral != null ? t.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(textoLimite_(t.limite)) + '</span>' +
           camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
+            (s.tieneViernes ? botonViernesTiendaPlantillaHtml_(t) : '') +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
@@ -487,6 +488,7 @@ function pintarPlantilla_() {
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
+            '<button type="button" class="plantilla-ruta-viernes' + (s.tieneViernes ? ' activo' : '') + '" data-toggle-viernes="' + escapeAttr(s.nombre) + '" data-viernes-activo="' + (s.tieneViernes ? '1' : '0') + '" title="' + (s.tieneViernes ? 'Quitar la casilla VIERNES de esta ruta' : 'Activar la casilla VIERNES en el conteo de esta ruta (suma al total de la tienda, no a la carga)') + '">VIERNES</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-orden' + (s.ordenRetirada && s.ordenRetirada.length ? ' activo' : '') + '" data-orden-ruta="' + escapeAttr(s.nombre) + '" title="' + (s.ordenRetirada && s.ordenRetirada.length ? 'Editar el orden de retirada (' + s.ordenRetirada.length + ' tienda(s))' : 'Configurar el orden en que se quitan los palets de esta ruta') + '">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
@@ -589,6 +591,12 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-toggle-sobrestock]').forEach(function (btn) {
     btn.onclick = function () { toggleSobrestockRutaPlantilla_(btn.getAttribute('data-toggle-sobrestock'), btn.getAttribute('data-sobrestock-activo') === '1'); };
   });
+  listaEl.querySelectorAll('[data-toggle-viernes]').forEach(function (btn) {
+    btn.onclick = function () { toggleViernesRutaPlantilla_(btn.getAttribute('data-toggle-viernes'), btn.getAttribute('data-viernes-activo') === '1'); };
+  });
+  listaEl.querySelectorAll('[data-viernes-row]').forEach(function (btn) {
+    btn.onclick = function () { toggleViernesTiendaPlantilla_(btn.getAttribute('data-viernes-row'), btn.getAttribute('data-viernes-incluida') === '1'); };
+  });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
   });
@@ -671,6 +679,61 @@ function toggleSobrestockRutaPlantilla_(nombreRuta, activoActualmente) {
     return;
   }
   guardarPlantillaOptimista_(mutar, 'activarSobrestockRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla SOBRESTOCK activada');
+}
+
+/** Activa/desactiva la casilla VIERNES de una ruta desde "Rutas y tiendas"
+ *  (se configura por día, como SOBRESTOCK: p.ej. solo en la ruta del
+ *  sábado). A diferencia de SOBRESTOCK, VIERNES se suma al TOTAL de la
+ *  tienda y a su aviso de límite, pero NO al total de palets de la carga,
+ *  ni a los grupos de palets, ni al email de la agencia. Al desactivarla se
+ *  pide confirmación porque borra los valores de VIERNES ya guardados. */
+function toggleViernesRutaPlantilla_(nombreRuta, activoActualmente) {
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tieneViernes = !activoActualmente;
+  };
+  if (activoActualmente) {
+    appConfirm(
+      'Quitar la casilla VIERNES',
+      '¿Seguro que quieres quitar la casilla VIERNES de "' + nombreRuta + '"? Se borrarán los valores de VIERNES ya guardados en esta ruta.',
+      function () { guardarPlantillaOptimista_(mutar, 'desactivarViernesRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla VIERNES desactivada'); },
+      true
+    );
+    return;
+  }
+  guardarPlantillaOptimista_(mutar, 'activarViernesRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla VIERNES activada');
+}
+
+/** Botón pequeño "VIE" de cada tienda (solo aparece si la ruta tiene la
+ *  casilla VIERNES activada): en morado = la tienda lleva VIERNES; en
+ *  blanco = excluida (en el conteo sale la casilla gris con una X). */
+function botonViernesTiendaPlantillaHtml_(t) {
+  const incluida = !t.excluidaViernes;
+  const titulo = incluida
+    ? 'Esta tienda lleva VIERNES. Pulsa para excluirla'
+    : 'Esta tienda NO lleva VIERNES. Pulsa para incluirla';
+  return '<button type="button" class="plantilla-tienda-viernes' + (incluida ? ' activo' : '') + '" data-viernes-row="' + t.row + '" data-viernes-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>VIE</button>';
+}
+
+/** Incluye o excluye una tienda concreta de la casilla VIERNES de su ruta.
+ *  Al excluir se pide confirmación, porque borra el valor de VIERNES que
+ *  esa tienda tuviera ya guardado. */
+function toggleViernesTiendaPlantilla_(row, incluidaActualmente) {
+  row = Number(row);
+  const mutar = function () {
+    const info = buscarTiendaPlantilla_(row);
+    if (info) info.tienda.excluidaViernes = incluidaActualmente;
+  };
+  if (!incluidaActualmente) {
+    guardarPlantillaOptimista_(mutar, 'incluirViernesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda incluida en VIERNES');
+    return;
+  }
+  appConfirm(
+    'Excluir del VIERNES',
+    'Esta tienda dejará de llevar la casilla VIERNES (saldrá en gris con una X). Si ya tenía algo escrito en VIERNES, se borrará. ¿Seguro?',
+    function () { guardarPlantillaOptimista_(mutar, 'excluirViernesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda excluida del VIERNES'); },
+    true
+  );
 }
 
 /** Activa/desactiva el "PDF ESPECIAL" de una ruta desde "Rutas y tiendas".

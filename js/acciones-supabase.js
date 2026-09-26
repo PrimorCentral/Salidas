@@ -310,6 +310,24 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('desactivar_sobrestock_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
   },
+  // VIERNES: igual que SOBRESTOCK (por ruta y día), más la opción de
+  // excluir tiendas concretas de esa ruta (tiendas_ruta.excluida_viernes).
+  activarViernesRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_viernes_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarViernesRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_viernes_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  excluirViernesTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('excluir_viernes_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
+  incluirViernesTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('incluir_viernes_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
   activarPdfEspecial: function (args) {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('activar_pdf_especial', { p_dia: dia, p_nombre_ruta: nombreRuta });

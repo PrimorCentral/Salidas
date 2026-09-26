@@ -46,13 +46,13 @@ function badgePrevision(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
-function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress, tieneSobrestock) {
+function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
   const textoIzquierda = esTotal ? t.nota : tiendas;
   const chipInicial = esTotal ? '0 palets' : t.nota;
   return '<tr class="fila-grupo-header' + (esTotal ? ' fila-grupo-header-total' : '') + '" data-nota-grupo-header="' + escapeAttr(t.notaGrupoId) + '" data-nota-grupo-tipo="' + escapeAttr(t.notaGrupoTipo || '') + '">' +
-    '<td colspan="' + (8 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '">' +
+    '<td colspan="' + (8 + (tieneViernes ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '">' +
     '<div class="grupo-header">' +
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span class="grupo-header-tiendas">' + escapeHtml(textoIzquierda) + '</span>' +

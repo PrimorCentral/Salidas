@@ -40,7 +40,21 @@ function celdaConteoHtml(campo, valor, forzado) {
   return '<input class="celda" data-campo="' + campo + '" type="number" value="' + valor + '">';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock) {
+/**
+ * Celda de VIERNES (solo si la agrupación la tiene activada ese día, ver
+ * seccion.tieneViernes). Si la tienda está excluida del viernes (desde
+ * "Rutas y tiendas"), se pinta una casilla gris bloqueada con una X, como
+ * en la hoja de Excel de siempre, y NO lleva data-campo: así recogerFilas
+ * no manda "viernes" para esa tienda y el backend no la toca.
+ */
+function celdaViernesHtml_(t) {
+  if (t.excluidaViernes) {
+    return '<td><div class="celda-viernes-excluida" title="Esta tienda no lleva VIERNES">X</div></td>';
+  }
+  return '<td><input class="celda celda-viernes" data-campo="viernes" type="number" value="' + (t.viernes == null ? '' : t.viernes) + '" title="VIERNES: suma al TOTAL de la tienda, pero no al total de palets de la carga ni al envío a la agencia"></td>';
+}
+
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes) {
   const nombreLimpio = quitarMarcadorNombre(t.nombre);
   const badge = badgeTransitoTienda(t.transito);
   const badgeHtml = badge
@@ -59,7 +73,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
-      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">CERRADA — ' + escapeHtml(t.motivoCierre) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir">Reabrir</button></td>' +
       '</tr>';
   }
@@ -72,7 +86,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
-      '<td colspan="' + (5 + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
       '<td></td>' +
       '</tr>';
   }
@@ -84,12 +98,13 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   return '<tr class="' + (claseGrupo.trim() + claseExcepcionEntrada).trim() + '" data-row="' + t.row + '" data-limite="' + escapeAttr(textoLimite_(t.limite)) + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + tituloEntrada + '>' +
     '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
     '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
+    (tieneViernes ? celdaViernesHtml_(t) : '') +
     '<td>' + celdaConteoHtml('c60', t.c60, !!(t.forzados && t.forzados.c60 !== undefined)) + '</td>' +
     '<td>' + celdaConteoHtml('pta', t.pta, !!(t.forzados && t.forzados.pta !== undefined)) + '</td>' +
     '<td>' + celdaConteoHtml('cart', t.cart, !!(t.forzados && t.forzados.cart !== undefined)) + '</td>' +
     '<td>' +
       '<input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1" style="display:none">' +
-      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
+      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE y el VIERNES. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
       '<div class="diff-nota"></div>' +
     '</td>' +
     '<td><input class="celda" data-campo="pdte" type="number" value="' + t.pdte + '"></td>' +
@@ -116,7 +131,16 @@ function attachCalculoYValidacion(tr) {
   const totalInput = tr.querySelector('input[data-campo="total"]');
   const pdteInput = tr.querySelector('input[data-campo="pdte"]');
   const totalVisualInput = tr.querySelector('input[data-campo="totalVisual"]');
+  const viernesInput = tr.querySelector('input[data-campo="viernes"]');
   const nota = tr.querySelector('.diff-nota');
+
+  // VIERNES: igual que el PDTE, se suma solo a lo que VE el usuario en el
+  // TOTAL de la tienda y al aviso de límite de esta fila, pero NO al campo
+  // "total" real (que es el que suman la cabecera de palets de la
+  // agrupación, los grupos de palets y el envío a la agencia).
+  function valorViernes() {
+    return (viernesInput && viernesInput.value !== '') ? (parseFloat(viernesInput.value) || 0) : 0;
+  }
 
   // recalcTotalVisual: solo actualiza lo que VE el usuario en la columna
   // TOTAL (real + PDTE). No toca totalInput (el real), así que no afecta
@@ -128,10 +152,11 @@ function attachCalculoYValidacion(tr) {
     if (!totalVisualInput) return;
     const real = totalInput.value === '' ? 0 : (parseFloat(totalInput.value) || 0);
     const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
-    if (totalInput.value === '' && pdte === 0) {
+    const vie = valorViernes();
+    if (totalInput.value === '' && pdte === 0 && vie === 0) {
       totalVisualInput.value = '';
     } else {
-      totalVisualInput.value = real + pdte;
+      totalVisualInput.value = real + pdte + vie;
     }
   }
 
@@ -155,11 +180,13 @@ function attachCalculoYValidacion(tr) {
     nota.textContent = '';
     nota.className = 'diff-nota';
 
-    const total = parseFloat(totalInput.value);
-    if (isNaN(total) || !limite) return;
+    const vie = valorViernes();
+    const totalReal = parseFloat(totalInput.value);
+    if ((isNaN(totalReal) && vie === 0) || !limite) return;
+    const total = isNaN(totalReal) ? 0 : totalReal;
 
     const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
-    const exceso = (total + pdte) - limite;
+    const exceso = (total + pdte + vie) - limite;
     if (exceso >= 3) {
       tr.classList.add('fila-alerta');
       nota.textContent = '+' + exceso + ' sobre el límite — consultar a informática';
@@ -177,6 +204,7 @@ function attachCalculoYValidacion(tr) {
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
   if (sobrestockInput) sobrestockInput.addEventListener('input', recalcTotal);
   if (pdteInput) pdteInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
+  if (viernesInput) viernesInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   validar();
   recalcTotalVisual();
 }
@@ -333,6 +361,11 @@ function recogerFilas(tableWrap) {
     // tiene activado (ver seccion.tieneSobrestock).
     const sobrestock = get('sobrestock');
     if (sobrestock !== undefined) fila.sobrestock = sobrestock;
+    // "viernes" solo existe si la agrupación lo tiene activado ese día (ver
+    // seccion.tieneViernes) y la tienda no está excluida. Si no hay
+    // casilla, no se manda nada y el backend deja el valor como estaba.
+    const viernes = get('viernes');
+    if (viernes !== undefined) fila.viernes = viernes;
     filas.push(fila);
   });
   return filas;
