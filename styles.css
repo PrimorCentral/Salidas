@@ -18,6 +18,10 @@
        ejecutarse todavía. */
     --topbar-h: 62px;
     --prevision: #3b74c9;
+    /* Casilla VIERNES (conteos y Rutas y tiendas) */
+    --viernes: #7a4fc9;
+    --viernes-suave: #f1ebfb;
+    --viernes-borde: #d9c9f3;
     --danger: #c94f4f;
     --radius: 10px;
     --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -1102,6 +1106,22 @@
   .plantilla-ruta-pdfespecial:hover { background: #eef1f7; }
   .plantilla-ruta-pdfespecial.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
   .plantilla-ruta-pdfespecial.activo:hover { filter: brightness(1.08); }
+  .plantilla-ruta-viernes {
+    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
+  }
+  .plantilla-ruta-viernes:hover { background: #eef1f7; }
+  .plantilla-ruta-viernes.activo { background: var(--viernes); color: #fff; border-color: var(--viernes); }
+  .plantilla-ruta-viernes.activo:hover { filter: brightness(1.08); }
+  .plantilla-tienda-viernes {
+    background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    font-size: 9.5px; padding: 4px 6px; border-radius: 6px; white-space: nowrap; letter-spacing: .02em;
+    text-decoration: line-through;
+  }
+  .plantilla-tienda-viernes:hover:not(:disabled) { background: #eef1f7; }
+  .plantilla-tienda-viernes:disabled { opacity: .35; cursor: default; }
+  .plantilla-tienda-viernes.activo { background: var(--viernes); color: #fff; border-color: var(--viernes); text-decoration: none; }
+  .plantilla-tienda-viernes.activo:hover:not(:disabled) { filter: brightness(1.08); }
   .plantilla-tienda-bloqueos { display: flex; gap: 3px; flex-shrink: 0; }
   .plantilla-tienda-bloqueo {
     background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
@@ -1854,6 +1874,20 @@
   table.conteo input.celda-forzada {
     border-color: var(--amber-dark); background: #fdf6ea; color: var(--amber-dark); font-weight: 800;
   }
+  /* Casilla VIERNES: suma al TOTAL de la tienda pero no a la carga. */
+  table.conteo th.th-viernes { background: var(--viernes-suave); color: var(--viernes); }
+  table.conteo input.celda-viernes { background: var(--viernes-suave); border-color: var(--viernes-borde); color: var(--viernes); font-weight: 800; }
+  table.conteo input.celda-viernes:focus { border-color: var(--viernes); box-shadow: 0 0 0 3px rgba(122,79,201,.14); }
+  table.conteo .celda-viernes-excluida {
+    width: 52px; margin: 0 auto; padding: 7px 4px; text-align: center; border-radius: 7px; font-weight: 800;
+    font-size: 13px; color: #fff; background: #8b9098; border: 1.5px solid #7a7f87; cursor: not-allowed;
+  }
+  .badge-total-viernes {
+    display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px; background: var(--viernes-suave); color: var(--viernes);
+    border: 1px solid var(--viernes-borde); white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-total-viernes .total-viernes-valor { font-size: 12.5px; }
   .diff-nota { font-size: 10.5px; margin-top: 2px; font-weight: 600; }
   .diff-nota.aviso { color: var(--amber-dark); }
   .diff-nota.alerta { color: var(--danger); }
@@ -2781,6 +2815,7 @@
     .hi-tabla td.hi-nombre { text-align: left; font-weight: 700; white-space: nowrap; }
     .hi-tabla td.hi-blanco { height: 20px; } /* celda vacía para rellenar a mano */
     .hi-tabla td.hi-no { font-weight: 800; line-height: 1; } /* "NO" de origen: se marca con X en vez de dejarla en blanco, sin agrandar la fila */
+    .hi-tabla td.hi-viernes-excluida { background: #c8c8c8; -webkit-print-color-adjust: exact; print-color-adjust: exact; } /* tienda excluida del VIERNES: gris con X, como en el Excel */
 
     /* Fila de cabecera de una agrupación de rutas (p.ej. "INGENIO + INGENIO
        2"): fondo más marcado, borde superior grueso para que se note dónde
