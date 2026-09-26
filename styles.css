@@ -2941,3 +2941,56 @@ body.plantilla-guardando-orden .plantilla-tienda-asa { opacity: .4; cursor: prog
 .plantilla-anadir-colocar { display: flex; gap: 12px; flex-wrap: wrap; }
 .plantilla-anadir-colocar .modal-campo { flex: 1 1 200px; min-width: 0; }
 .plantilla-anadir-colocar select { width: 100%; }
+
+/* Grupos de palets en dos columnas: a la izquierda los grupos (solo con
+   sus tiendas), a la derecha las tiendas sin grupo + copiar a otros días.
+   Así no hay que hacer scroll por una lista de todas las tiendas repetida
+   en cada grupo. */
+.modal-box.orden-retirada-modal:has(.grupos2) { max-width: 1120px; width: calc(100vw - 32px); }
+.grupos2 { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.grupos2-col { display: flex; flex-direction: column; min-width: 0; }
+.grupos2-lista { display: flex; flex-direction: column; gap: 8px; }
+.grupos2-card {
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fbfcfe; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.grupos2-card.activo { border-color: var(--ok); box-shadow: 0 0 0 2px rgba(47, 143, 111, .18); background: #fff; }
+.grupos2-card-cab { display: flex; align-items: center; gap: 6px; }
+.grupos2-radio {
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid #b9c0cb; flex-shrink: 0;
+}
+.grupos2-card.activo .grupos2-radio { border-color: var(--ok); background: radial-gradient(var(--ok) 45%, #fff 50%); }
+.grupos2-card-cab input[type="text"] {
+  border: 1px solid var(--line); border-radius: 7px; padding: 6px 8px; font-size: 13px; background: #fff; min-width: 0;
+}
+.grupos2-card-cab input[type="text"]:focus { border-color: var(--navy-soft); outline: none; }
+.grupos2-texto { flex: 1 1 auto; font-weight: 700; }
+.grupos2-limite { width: 82px; flex: 0 0 82px; }
+.grupos2-tipo { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; cursor: pointer; }
+.grupos2-tipo input { width: 14px; height: 14px; }
+.grupos2-contador {
+  font-size: 11px; font-weight: 800; color: var(--amber-dark); background: #fbf1e2; border-radius: 10px;
+  padding: 2px 7px; flex-shrink: 0;
+}
+.grupos2-card .modal-grupo-eliminar { flex-shrink: 0; }
+.grupos2-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.grupos2-chip {
+  border: 1px solid var(--line); border-radius: 14px; padding: 3px 9px; font-size: 11.5px; background: #fff;
+  color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; line-height: 1.4;
+}
+.grupos2-chip.miembro { background: #fbf1e2; border-color: #e3bf86; }
+.grupos2-chip.miembro .x { color: var(--ink-soft); font-weight: 700; }
+.grupos2-chip.miembro:hover { background: #fceded; border-color: var(--danger); }
+.grupos2-chip.libre:hover { background: #eaf5f0; border-color: var(--ok); color: var(--ok); }
+.grupos2-vacio { font-size: 12px; color: var(--ink-soft); }
+.grupos2-pool { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; }
+.grupos2-pool .grupos2-chips { margin-top: 4px; }
+.grupos2-destino { font-size: 12px; color: var(--ink-soft); }
+.grupos2-destino b { color: var(--ok); }
+.grupos2 .plantilla-grupos-dias { margin-top: 12px; }
+@media (max-width: 760px) {
+  .grupos2 { grid-template-columns: 1fr; }
+  .grupos2-card-cab { flex-wrap: wrap; }
+  .grupos2-texto { flex-basis: calc(100% - 30px); }
+}
+.grupos2 .plantilla-grupos-dias p { font-size: 12px; }
