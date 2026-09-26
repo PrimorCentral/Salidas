@@ -349,6 +349,35 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], row = args[1], direccion = args[2];
     return llamarRpcSupabase_('mover_tienda_plantilla', { p_dia: dia, p_row: row, p_direccion: direccion });
   },
+  // Arrastrar una tienda en "Rutas y tiendas": la coloca justo debajo de
+  // otra tienda de su misma ruta (rowDebajo = null -> la primera), en el
+  // día actual y, si se pide, en otros días de la misma ruta (se empareja
+  // por clave de tienda). dias = null -> todos los días donde exista la
+  // ruta. simular = true -> no cambia nada, solo dice qué pasaría.
+  colocarTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1], rowDebajo = args[2], dias = args[3], simular = args[4];
+    return llamarRpcSupabase_('colocar_tienda_plantilla', {
+      p_dia: dia,
+      p_row: row,
+      p_row_debajo: rowDebajo == null ? null : rowDebajo,
+      p_dias: dias == null ? null : dias,
+      p_simular: !!simular
+    });
+  },
+  // Tras añadir una tienda en uno o varios días: la coloca debajo de la
+  // misma vecina y/o la mete en el mismo grupo de palets en todos ellos.
+  colocarTiendaNuevaDias: function (args) {
+    const o = args[0];
+    return llamarRpcSupabase_('colocar_tienda_nueva_dias', {
+      p_dia: o.dia,
+      p_nombre_ruta: o.nombreRuta,
+      p_clave: o.clave,
+      p_dias: o.dias || [],
+      p_row_debajo: o.rowDebajo == null ? null : o.rowDebajo,
+      p_al_principio: !!o.alPrincipio,
+      p_row_grupo: o.rowGrupo == null ? null : o.rowGrupo
+    });
+  },
   moverRutaPlantilla: function (args) {
     const dia = args[0], nombreRuta = args[1], direccion = args[2];
     return llamarRpcSupabase_('mover_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_direccion: direccion });
@@ -387,6 +416,18 @@ const SUPABASE_ACCIONES_ = {
   establecerGruposLimiteRuta: function (args) {
     const dia = args[0], nombreRuta = args[1], grupos = args[2];
     return llamarRpcSupabase_('set_grupos_limite_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta, p_grupos: grupos });
+  },
+  // Grupos de palets de la misma ruta en los OTROS días (para enseñar en
+  // el modal qué cambiaría al copiarlos) + clave de cada fila de hoy.
+  getGruposRutaDias: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('get_grupos_ruta_dias', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  // Copia los grupos de palets YA GUARDADOS de la ruta (día dia) a la
+  // misma ruta en los días indicados (sustituye los grupos de esos días).
+  copiarGruposRutaDias: function (args) {
+    const dia = args[0], nombreRuta = args[1], dias = args[2];
+    return llamarRpcSupabase_('copiar_grupos_ruta_dias', { p_dia: dia, p_nombre_ruta: nombreRuta, p_dias: dias });
   },
   // "Quitar en este orden" a nivel de ruta: reemplaza al viejo campo de
   // texto libre por tienda. p_filas es el array de "row" (en el orden en

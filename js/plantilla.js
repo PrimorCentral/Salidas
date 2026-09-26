@@ -198,6 +198,7 @@ function cargarPlantilla_(opts) {
       if (silencioso) window.scrollTo(0, scrollY);
     })
     .catch(function (err) {
+      document.body.classList.remove('plantilla-guardando-orden');
       listaEl.innerHTML = '<div class="festivos-vacio">No se ha podido cargar la plantilla de este día.</div>';
       mostrarErrorServidor(err);
     });
@@ -392,6 +393,7 @@ function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
 
 function pintarPlantilla_() {
   const listaEl = document.getElementById('plantilla-lista');
+  document.body.classList.remove('plantilla-guardando-orden');
   if (!listaEl) return;
 
   if (!PLANTILLA_ESTADO.secciones.length) {
@@ -423,12 +425,13 @@ function pintarPlantilla_() {
 
       piezasTiendas.push(
         '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + '" data-tienda-row="' + t.row + '">' +
-          '<div class="plantilla-tienda-flechas">' +
-            '<button type="button" data-subir="' + t.row + '"' + (ti === 0 ? ' disabled' : '') + ' title="Subir">' +
-              '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></button>' +
-            '<button type="button" data-bajar="' + t.row + '"' + (ti === s.tiendas.length - 1 ? ' disabled' : '') + ' title="Bajar">' +
-              '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
-          '</div>' +
+          // Asa para arrastrar la tienda dentro de su ruta (sustituye a las
+          // antiguas flechas subir/bajar). Solo con permiso de plantilla.
+          (tienePermiso('plantilla') && s.tiendas.length > 1
+            ? '<span class="plantilla-tienda-asa" data-asa-row="' + t.row + '" title="Arrastrar para cambiar de posición">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>' +
+              '</span>'
+            : '<span class="plantilla-tienda-asa-hueco"></span>') +
           '<span class="lim' + (t.limiteOverride ? ' lim-override' : '') + '" title="' + (t.limiteOverride ? 'Límite propio de este día (distinto del general de Configuración tiendas: ' + escapeAttr(t.limiteGeneral != null ? t.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(textoLimite_(t.limite)) + '</span>' +
           camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
@@ -560,12 +563,7 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-mover-tienda]').forEach(function (btn) {
     btn.onclick = function () { confirmarMoverTiendaPlantilla_(btn.getAttribute('data-mover-tienda')); };
   });
-  listaEl.querySelectorAll('[data-subir]').forEach(function (btn) {
-    btn.onclick = function () { moverTiendaPlantilla_(btn.getAttribute('data-subir'), 'arriba'); };
-  });
-  listaEl.querySelectorAll('[data-bajar]').forEach(function (btn) {
-    btn.onclick = function () { moverTiendaPlantilla_(btn.getAttribute('data-bajar'), 'abajo'); };
-  });
+  activarArrastreTiendasPlantilla_(listaEl);
   listaEl.querySelectorAll('[data-subir-ruta]').forEach(function (btn) {
     btn.onclick = function () { moverRutaPlantilla_(btn.getAttribute('data-subir-ruta'), 'arriba'); };
   });
@@ -843,6 +841,11 @@ function abrirModalEditarTiendaPlantilla_(row) {
     if (usaLimitePropio) {
       limite = inputLim.value.trim();
       if (limite === '' || isNaN(Number(limite))) { inputLim.focus(); return; }
+      // Igual que el general -> se guarda como "usa el general" (sin ámbar).
+      if (info.tienda.limiteGeneral != null && Number(limite) === Number(info.tienda.limiteGeneral)) {
+        limite = '';
+        usaLimitePropio = false;
+      }
     }
     const nombre = info.tienda.nombre; // sin cambios: el nombre solo se toca desde Configuración tiendas
     cerrarModal();
@@ -855,7 +858,7 @@ function abrirModalEditarTiendaPlantilla_(row) {
     };
     guardarPlantillaOptimista_(mutar, 'editarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, nombre, limite], 'Guardado');
   };
-  setTimeout(function () { (inputNumero || inputNombre).focus(); }, 50);
+  setTimeout(function () { if (usaLimitePropio) inputLim.focus(); }, 50);
 }
 
 function confirmarEliminarTiendaPlantilla_(row) {
@@ -1136,6 +1139,223 @@ function moverTiendaPlantilla_(row, direccion) {
   llamarApi_('moverTiendaPlantilla', [PLANTILLA_ESTADO.dia, Number(row), direccion])
     .then(function () { cargarPlantilla_({ silencioso: true }); })
     .catch(mostrarErrorServidor);
+}
+
+/* ---------------- ARRASTRAR TIENDAS DENTRO DE SU RUTA ----------------
+ * Cada fila tiene un asa (icono de puntitos). Se arrastra con ratón o con
+ * el dedo (pointer events) y solo se puede mover dentro de la misma ruta.
+ * Si mientras se arrastra el puntero se acerca al borde de arriba/abajo de
+ * la pantalla, la página se desplaza sola (rutas largas de 30+ tiendas).
+ * Al soltar se mira si esa tienda está en la misma ruta otros días y, si
+ * es así, se pregunta si colocarla igual (debajo de la misma vecina) en
+ * esos días también -- ver alSoltarTiendaPlantilla_. */
+
+/** Elemento que hace scroll vertical y contiene a `el` (o window). */
+function contenedorScrollPlantilla_(el) {
+  let n = el && el.parentElement;
+  while (n && n !== document.body && n !== document.documentElement) {
+    const oy = getComputedStyle(n).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return n;
+    n = n.parentElement;
+  }
+  return window;
+}
+
+function activarArrastreTiendasPlantilla_(listaEl) {
+  listaEl.querySelectorAll('[data-asa-row]').forEach(function (asa) {
+    asa.onpointerdown = function (ev) {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      // Mientras se guarda un movimiento anterior (hasta que se repinta la
+      // plantilla) no se deja arrastrar otra: los "row" estarían desfasados.
+      if (document.body.classList.contains('plantilla-guardando-orden')) return;
+      const fila = asa.closest('.plantilla-tienda');
+      const cont = fila && fila.parentElement;
+      if (!fila || !cont) return;
+      ev.preventDefault();
+
+      const filasDe = function () { return Array.prototype.filter.call(cont.children, function (el) { return el.classList.contains('plantilla-tienda'); }); };
+      const ordenInicial = filasDe().map(function (el) { return el.getAttribute('data-tienda-row'); }).join(',');
+      const scroller = contenedorScrollPlantilla_(cont);
+      let ultimoY = ev.clientY;
+      let rafId = null;
+
+      fila.classList.add('arrastrando');
+      document.body.classList.add('plantilla-arrastrando');
+
+      function recolocar(y) {
+        const hermanas = filasDe().filter(function (el) { return el !== fila; });
+        let siguiente = null;
+        for (let i = 0; i < hermanas.length; i++) {
+          const r = hermanas[i].getBoundingClientRect();
+          if (y < r.top + r.height / 2) { siguiente = hermanas[i]; break; }
+        }
+        if (siguiente) {
+          if (fila.nextSibling !== siguiente) cont.insertBefore(fila, siguiente);
+        } else {
+          const ultima = hermanas[hermanas.length - 1];
+          if (ultima && ultima.nextSibling !== fila) cont.insertBefore(fila, ultima.nextSibling);
+        }
+        // La primera fila lleva la clase "primera" (sin borde superior).
+        filasDe().forEach(function (el, i) { el.classList.toggle('primera', i === 0); });
+      }
+
+      function autoScroll() {
+        const alto = scroller === window ? window.innerHeight : scroller.getBoundingClientRect().bottom;
+        const arriba = scroller === window ? 0 : scroller.getBoundingClientRect().top;
+        const margen = 70;
+        let v = 0;
+        if (ultimoY < arriba + margen) v = -Math.ceil((arriba + margen - ultimoY) / 4);
+        else if (ultimoY > alto - margen) v = Math.ceil((ultimoY - (alto - margen)) / 4);
+        if (v) {
+          if (scroller === window) window.scrollBy(0, v); else scroller.scrollTop += v;
+          recolocar(ultimoY);
+        }
+        rafId = requestAnimationFrame(autoScroll);
+      }
+      rafId = requestAnimationFrame(autoScroll);
+
+      function onMove(ev2) {
+        ev2.preventDefault();
+        ultimoY = ev2.clientY;
+        recolocar(ultimoY);
+      }
+      function onUp() {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
+        cancelAnimationFrame(rafId);
+        fila.classList.remove('arrastrando');
+        document.body.classList.remove('plantilla-arrastrando');
+
+        const ordenFinal = filasDe().map(function (el) { return el.getAttribute('data-tienda-row'); }).join(',');
+        if (ordenFinal === ordenInicial) return;
+
+        let anterior = fila.previousElementSibling;
+        while (anterior && !anterior.classList.contains('plantilla-tienda')) anterior = anterior.previousElementSibling;
+        const row = Number(fila.getAttribute('data-tienda-row'));
+        const rowDebajo = anterior ? Number(anterior.getAttribute('data-tienda-row')) : null;
+        fila.classList.add('recien-movida');
+        document.body.classList.add('plantilla-guardando-orden');
+        alSoltarTiendaPlantilla_(row, rowDebajo);
+      }
+      document.addEventListener('pointermove', onMove, { passive: false });
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    };
+  });
+}
+
+/** Tras soltar una tienda en su nueva posición: se simula el cambio en
+ *  todos los días donde existe la misma ruta. Si la tienda no está en
+ *  ningún otro día (o ya está bien colocada en todos), se guarda solo el
+ *  día actual sin preguntar; si no, se abre el modal de "otros días". */
+function alSoltarTiendaPlantilla_(row, rowDebajo) {
+  const dia = PLANTILLA_ESTADO.dia;
+  llamarApi_('colocarTiendaPlantilla', [dia, row, rowDebajo, null, true])
+    .then(function (sim) {
+      const otros = (sim && sim.dias ? sim.dias : []).filter(function (d) {
+        return d.dia !== dia && (d.estado === 'ok' || d.estado === 'igual' || d.estado === 'sin_vecina');
+      });
+      const hayQueCambiar = otros.some(function (d) { return d.estado === 'ok'; });
+      if (!hayQueCambiar) {
+        guardarColocacionTiendaPlantilla_(row, rowDebajo, []);
+        return;
+      }
+      mostrarModalColocarOtrosDias_(row, rowDebajo, sim, otros);
+    })
+    .catch(function (err) {
+      mostrarErrorServidor(err);
+      cargarPlantilla_({ silencioso: true });
+    });
+}
+
+function guardarColocacionTiendaPlantilla_(row, rowDebajo, diasExtra) {
+  llamarApi_('colocarTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, rowDebajo, diasExtra, false])
+    .then(function (res) {
+      const aplicados = (res && res.dias ? res.dias : []).filter(function (d) { return d.dia !== PLANTILLA_ESTADO.dia && d.estado === 'ok'; });
+      mostrarToast(aplicados.length ? ('Tienda movida (también en ' + aplicados.length + ' día' + (aplicados.length === 1 ? '' : 's') + ' más)') : 'Tienda movida');
+      cargarPlantilla_({ silencioso: true });
+    })
+    .catch(function (err) {
+      mostrarErrorServidor(err);
+      cargarPlantilla_({ silencioso: true });
+    });
+}
+
+function mostrarModalColocarOtrosDias_(row, rowDebajo, sim, otros) {
+  const dia = PLANTILLA_ESTADO.dia;
+  const tienda = sim.tienda || '';
+  const vecina = sim.vecina || '';
+  const marcados = new Set(otros.filter(function (d) { return d.estado === 'ok'; }).map(function (d) { return d.dia; }));
+
+  const xBtn = document.getElementById('modal-cerrar-x');
+  function restaurarX() { xBtn.onclick = cerrarModal; }
+  // Si se cierra con la X sin elegir, la fila ya se ha movido en pantalla
+  // pero no se ha guardado nada: se recarga para volver a como estaba.
+  xBtn.onclick = function () { restaurarX(); cerrarModal(); cargarPlantilla_({ silencioso: true }); };
+
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.add('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Esta tienda aparece en más días';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const destinoTxt = vecina ? ('justo debajo de <b>' + escapeHtml(vecina) + '</b>') : 'la <b>primera</b> de la ruta';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  function pintar() {
+    custom.innerHTML =
+      '<p class="modal-campo-ayuda" style="margin:0 0 10px;font-size:13.5px;">Has puesto <b>' + escapeHtml(tienda) + '</b> ' + destinoTxt + ' en ' + escapeHtml(dia) + '. ¿La coloco igual en los demás días?</p>' +
+      '<div class="plantilla-dias-destino">' +
+        otros.map(function (d) {
+          if (d.estado === 'ok') {
+            return '<label class="plantilla-dia-destino">' +
+              '<input type="checkbox" data-dia-colocar="' + escapeAttr(d.dia) + '"' + (marcados.has(d.dia) ? ' checked' : '') + '>' +
+              '<b>' + escapeHtml(d.dia) + '</b>' +
+              '<span class="det">ahora ' + d.posAntes + 'ª de ' + d.total + ' → pasa a ' + d.posDespues + 'ª</span>' +
+            '</label>';
+          }
+          if (d.estado === 'igual') {
+            return '<div class="plantilla-dia-destino deshabilitado"><span class="plantilla-dia-destino-ok">✓</span><b>' + escapeHtml(d.dia) + '</b><span class="det">ya está en ese sitio</span></div>';
+          }
+          return '<div class="plantilla-dia-destino deshabilitado"><span class="plantilla-dia-destino-av">!</span><b>' + escapeHtml(d.dia) + '</b><span class="det">' + escapeHtml(vecina) + ' no está ese día en esta ruta: no se toca</span></div>';
+        }).join('') +
+      '</div>';
+    custom.querySelectorAll('[data-dia-colocar]').forEach(function (chk) {
+      chk.onchange = function () {
+        const d = chk.getAttribute('data-dia-colocar');
+        if (chk.checked) marcados.add(d); else marcados.delete(d);
+        pintarBotones();
+      };
+    });
+  }
+
+  const actions = document.getElementById('modal-actions');
+  function pintarBotones() {
+    const n = marcados.size;
+    actions.innerHTML =
+      '<button class="modal-cancel" id="modal-colocar-solo-btn">Solo ' + escapeHtml(dia) + '</button>' +
+      (n ? '<button class="modal-confirm" id="modal-colocar-todos-btn">Aplicar en ' + escapeHtml(dia) + ' + ' + n + ' día' + (n === 1 ? '' : 's') + '</button>' : '');
+    document.getElementById('modal-colocar-solo-btn').onclick = function () {
+      restaurarX(); cerrarModal();
+      guardarColocacionTiendaPlantilla_(row, rowDebajo, []);
+    };
+    const btnTodos = document.getElementById('modal-colocar-todos-btn');
+    if (btnTodos) {
+      btnTodos.onclick = function () {
+        restaurarX(); cerrarModal();
+        guardarColocacionTiendaPlantilla_(row, rowDebajo, Array.from(marcados));
+      };
+    }
+  }
+
+  pintar();
+  pintarBotones();
+  document.getElementById('modal-overlay').style.display = 'flex';
 }
 
 function moverRutaPlantilla_(nombreRuta, direccion) {
@@ -1446,7 +1666,149 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     return ocupadas;
   }
 
+  // --- Copiar los grupos a los OTROS días de la misma ruta ---
+  // infoDias llega por separado (getGruposRutaDias): qué tiendas y grupos
+  // tiene esta ruta los demás días, y la clave de cada fila de hoy. Con eso
+  // se calcula, en vivo según se edita, qué cambiaría en cada día.
+  let infoDias = null;          // null = cargando; false = no disponible
+  let claveDeRow = {};
+  const diasMarcados = new Set();
+  let diasIniciados = false;
+
+  function gruposOrigenNormalizados() {
+    return grupos
+      .filter(function (g) { return g.rows.length > 0 && g.texto.trim(); })
+      .map(function (g) {
+        return {
+          texto: g.texto.trim(),
+          limite: g.limite ? Number(g.limite) : null,
+          tipo: g.tipo || null,
+          claves: g.rows.map(function (r) { return claveDeRow[r]; }).filter(Boolean)
+        };
+      });
+  }
+
+  /** Lista de cambios (html) que supondría copiar los grupos a un día. */
+  function cambiosParaDia(d) {
+    const presentes = new Set(d.tiendas || []);
+    const destino = (d.grupos || []).map(function (g) {
+      return { texto: g.texto, limite: g.limite == null ? null : Number(g.limite), tipo: g.tipo || null, claves: g.claves || [], usado: false };
+    });
+    const cambios = [];
+    gruposOrigenNormalizados().forEach(function (g) {
+      const miembros = g.claves.filter(function (c) { return presentes.has(c); });
+      if (!miembros.length) return; // ninguna de sus tiendas va ese día: no se crea
+      let mejor = null, mejorN = 0;
+      destino.forEach(function (dg) {
+        if (dg.usado) return;
+        const n = dg.claves.filter(function (c) { return miembros.indexOf(c) !== -1; }).length;
+        if (n > mejorN || (n > 0 && n === mejorN && dg.texto === g.texto)) { mejor = dg; mejorN = n; }
+      });
+      if (!mejor) mejor = destino.find(function (dg) { return !dg.usado && dg.texto === g.texto; }) || null;
+      if (!mejor) {
+        cambios.push('Se crea el grupo <b>' + escapeHtml(g.texto) + '</b> (' + miembros.length + ' tienda' + (miembros.length === 1 ? '' : 's') + ')');
+        return;
+      }
+      mejor.usado = true;
+      if (mejor.texto !== g.texto) cambios.push('Nombre: <s>' + escapeHtml(mejor.texto) + '</s> → <ins>' + escapeHtml(g.texto) + '</ins>');
+      if (mejor.limite !== g.limite) cambios.push('Límite de <b>' + escapeHtml(g.texto) + '</b>: <s>' + (mejor.limite == null ? 'sin límite' : mejor.limite) + '</s> → <ins>' + (g.limite == null ? 'sin límite' : g.limite) + '</ins>');
+      if (mejor.tipo !== g.tipo) cambios.push('<b>' + escapeHtml(g.texto) + '</b> pasa a ser ' + (g.tipo === 'total' ? 'solo informativo (sin aviso)' : 'con aviso de límite'));
+      miembros.filter(function (c) { return mejor.claves.indexOf(c) === -1; }).forEach(function (c) {
+        cambios.push('+ ' + escapeHtml(c) + ' entra en <b>' + escapeHtml(g.texto) + '</b>');
+      });
+      mejor.claves.filter(function (c) { return miembros.indexOf(c) === -1; }).forEach(function (c) {
+        cambios.push('− ' + escapeHtml(c) + ' sale de <b>' + escapeHtml(g.texto) + '</b>');
+      });
+    });
+    destino.filter(function (dg) { return !dg.usado; }).forEach(function (dg) {
+      cambios.push('Se quita el grupo <s>' + escapeHtml(dg.texto) + '</s>');
+    });
+    return cambios;
+  }
+
+  function pintarDias() {
+    const cont = document.getElementById('modal-grupos-dias');
+    if (!cont) return;
+    if (infoDias === false || (infoDias && !infoDias.length)) { cont.innerHTML = ''; return; }
+    if (infoDias === null) {
+      cont.innerHTML = '<div class="plantilla-grupos-dias"><span class="modal-campo-ayuda">Comprobando los otros días de esta ruta…</span></div>';
+      return;
+    }
+    const porDia = infoDias.map(function (d) { return { dia: d.dia, cambios: cambiosParaDia(d) }; });
+    if (!diasIniciados) {
+      porDia.forEach(function (x) { if (x.cambios.length) diasMarcados.add(x.dia); });
+      diasIniciados = true;
+    }
+    // Días marcados con cambios, agrupados si los cambios son idénticos.
+    const cajas = [];
+    porDia.forEach(function (x) {
+      if (!diasMarcados.has(x.dia) || !x.cambios.length) return;
+      const k = x.cambios.join('\n');
+      const caja = cajas.find(function (c) { return c.k === k; });
+      if (caja) caja.dias.push(x.dia); else cajas.push({ k: k, dias: [x.dia], cambios: x.cambios });
+    });
+    function unirDias(ds) { return ds.length === 1 ? ds[0] : ds.slice(0, -1).join(', ') + ' y ' + ds[ds.length - 1]; }
+
+    cont.innerHTML =
+      '<div class="plantilla-grupos-dias">' +
+        '<label class="plantilla-grupos-dias-titulo">También aplicar estos grupos en:</label>' +
+        '<div class="modal-anadir-tienda-dias">' +
+          porDia.map(function (x) {
+            if (!x.cambios.length) {
+              return '<span class="modal-anadir-tienda-dia-pill igual" title="Ese día los grupos ya son iguales">' + escapeHtml(x.dia) + ' ✓</span>';
+            }
+            return '<button type="button" class="modal-anadir-tienda-dia-pill' + (diasMarcados.has(x.dia) ? ' activo' : '') + '" data-dia-grupos="' + escapeAttr(x.dia) + '">' + escapeHtml(x.dia) + '</button>';
+          }).join('') +
+        '</div>' +
+        cajas.map(function (c) {
+          return '<div class="plantilla-grupos-cambios">' +
+            '<div class="plantilla-grupos-cambios-cab"><b>Qué cambiará en ' + escapeHtml(unirDias(c.dias)) + '</b>' +
+              '<span>' + c.cambios.length + ' cambio' + (c.cambios.length === 1 ? '' : 's') + '</span></div>' +
+            '<div class="plantilla-grupos-cambios-lista">' + c.cambios.map(function (h) { return '<div>' + h + '</div>'; }).join('') + '</div>' +
+          '</div>';
+        }).join('') +
+        (porDia.every(function (x) { return !x.cambios.length; })
+          ? '<p class="modal-campo-ayuda" style="margin:6px 0 0;">Los demás días ya tienen estos mismos grupos.</p>'
+          : '<p class="modal-campo-ayuda" style="margin:6px 0 0;">Las tiendas se emparejan por número. Los días que desmarques no se tocan.</p>') +
+      '</div>';
+    cont.querySelectorAll('[data-dia-grupos]').forEach(function (btn) {
+      btn.onclick = function () {
+        const d = btn.getAttribute('data-dia-grupos');
+        if (diasMarcados.has(d)) diasMarcados.delete(d); else diasMarcados.add(d);
+        pintarDias();
+        pintarBotonGuardar();
+      };
+    });
+    pintarBotonGuardar();
+  }
+
+  /** Días marcados que de verdad tienen algo que cambiar. */
+  function diasACopiar() {
+    if (!infoDias) return [];
+    return infoDias
+      .filter(function (d) { return diasMarcados.has(d.dia) && cambiosParaDia(d).length; })
+      .map(function (d) { return d.dia; });
+  }
+
+  function pintarBotonGuardar() {
+    const btn = document.getElementById('modal-confirm-btn');
+    if (!btn) return;
+    const n = diasACopiar().length;
+    btn.textContent = n ? ('Guardar (' + PLANTILLA_ESTADO.dia + ' + ' + n + ' día' + (n === 1 ? '' : 's') + ')') : 'Guardar';
+  }
+
+  llamarApi_('getGruposRutaDias', [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function (res) {
+      claveDeRow = {};
+      ((res && res.origen) || []).forEach(function (o) { claveDeRow[o.row] = o.clave; });
+      infoDias = (res && res.dias) || [];
+      pintarDias();
+    })
+    .catch(function () { infoDias = false; pintarDias(); });
+
   function pintar() {
+    const listaPrevia = custom.querySelector('.modal-grupos-lista');
+    const scrollPrevio = listaPrevia ? listaPrevia.scrollTop : 0;
     const tarjetasHtml = grupos.map(function (g, idx) {
       const ocupadas = filasOcupadasPorOtros(idx);
       const chipsHtml = seccion.tiendas.map(function (t) {
@@ -1488,19 +1850,24 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
       '<p class="modal-campo-ayuda" style="margin:0 0 12px;">Marca qué tiendas comparten un límite de palets (o simplemente quieres sumarlas juntas). No hace falta que sean consecutivas, pero cada tienda solo puede estar en un grupo a la vez.</p>' +
       '<div class="modal-grupos-lista">' + (tarjetasHtml || '<div class="festivos-item-vacio">Todavía no hay grupos en esta ruta.</div>') + '</div>' +
       '<button type="button" class="plantilla-anadir-notacarga" id="modal-grupo-anadir" style="margin-top:12px;">' +
-        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>';
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>' +
+      '<div id="modal-grupos-dias"></div>';
+
+    const listaNueva = custom.querySelector('.modal-grupos-lista');
+    if (listaNueva) listaNueva.scrollTop = scrollPrevio;
 
     custom.querySelectorAll('[data-grupo-texto]').forEach(function (inp) {
-      inp.oninput = function () { grupos[Number(inp.getAttribute('data-grupo-texto'))].texto = inp.value; };
+      inp.oninput = function () { grupos[Number(inp.getAttribute('data-grupo-texto'))].texto = inp.value; pintarDias(); };
     });
     custom.querySelectorAll('[data-grupo-limite]').forEach(function (inp) {
       inp.oninput = function () {
         inp.value = inp.value.replace(/\D/g, '').slice(0, 3);
         grupos[Number(inp.getAttribute('data-grupo-limite'))].limite = inp.value;
+        pintarDias();
       };
     });
     custom.querySelectorAll('[data-grupo-tipo]').forEach(function (chk) {
-      chk.onchange = function () { grupos[Number(chk.getAttribute('data-grupo-tipo'))].tipo = chk.checked ? 'total' : ''; };
+      chk.onchange = function () { grupos[Number(chk.getAttribute('data-grupo-tipo'))].tipo = chk.checked ? 'total' : ''; pintarDias(); };
     });
     custom.querySelectorAll('[data-grupo-eliminar]').forEach(function (btn) {
       btn.onclick = function () { grupos.splice(Number(btn.getAttribute('data-grupo-eliminar')), 1); pintar(); };
@@ -1530,6 +1897,7 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
         }, 30);
       };
     }
+    pintarDias();
   }
 
   const actions = document.getElementById('modal-actions');
@@ -1554,9 +1922,27 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
           rows: g.rows
         };
       });
+    const dias = diasACopiar();
+    const diaActual = PLANTILLA_ESTADO.dia;
     cerrarModal();
-    llamarApi_('establecerGruposLimiteRuta', [PLANTILLA_ESTADO.dia, nombreRuta, payload])
-      .then(function () { mostrarToast('Grupos de palets guardados'); cargarPlantilla_({ silencioso: true }); })
+    llamarApi_('establecerGruposLimiteRuta', [diaActual, nombreRuta, payload])
+      .then(function () {
+        if (!dias.length) return null;
+        // Se copia lo que ACABA de guardarse en este día (el backend lo lee
+        // de la base de datos), así que es exactamente lo que se ve aquí.
+        return llamarApi_('copiarGruposRutaDias', [diaActual, nombreRuta, dias])
+          .catch(function (err) {
+            mostrarToast('Guardado en ' + diaActual + ', pero no se pudo copiar a los otros días: ' + ((err && err.message) || 'error'), true);
+            return 'error';
+          });
+      })
+      .then(function (copiados) {
+        if (copiados !== 'error') {
+          const n = Array.isArray(copiados) ? copiados.length : 0;
+          mostrarToast(n ? ('Grupos de palets guardados (también en ' + n + ' día' + (n === 1 ? '' : 's') + ' más)') : 'Grupos de palets guardados');
+        }
+        cargarPlantilla_({ silencioso: true });
+      })
       .catch(mostrarErrorServidor);
   };
 
@@ -1603,6 +1989,22 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
 
   let seleccionada = null;
 
+  // Tiendas y grupos de palets que tiene hoy esta ruta (para los
+  // desplegables de "Posición" y "Grupo de palets").
+  const seccionActual = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; }) || null;
+  const gruposActuales = [];
+  if (seccionActual) {
+    const vistos = {};
+    seccionActual.tiendas.forEach(function (t) {
+      if (!t.notaGrupoId) return;
+      if (!vistos[t.notaGrupoId]) {
+        vistos[t.notaGrupoId] = { row: t.row, texto: t.nota || 'Grupo', n: 0 };
+        gruposActuales.push(vistos[t.notaGrupoId]);
+      }
+      vistos[t.notaGrupoId].n++;
+    });
+  }
+
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
@@ -1614,10 +2016,14 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
         '¿No aparece la tienda que buscas? <button type="button" class="modal-link-btn" id="modal-plantilla-ir-config">Créala primero en Configuración tiendas</button>.' +
       '</p>' +
     '</div>' +
+    // Límite: por defecto SIEMPRE el general de la tienda (en todos los
+    // días). Solo si se pulsa el enlace aparece el campo para poner uno
+    // distinto, y ese vale solo para el día que se está viendo.
     '<div class="modal-campo">' +
-      '<label for="modal-plantilla-lim">Límite de palets para este día (opcional)</label>' +
-      '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Vacío = usa el límite general de la tienda">' +
-      '<span class="modal-campo-ayuda" id="modal-plantilla-lim-general"></span>' +
+      '<label>Límite de palets</label>' +
+      '<div class="plantilla-caja-limite" id="modal-plantilla-lim-general"><span class="modal-campo-ayuda" style="margin:0">Elige primero la tienda.</span></div>' +
+      '<button type="button" class="modal-link-btn" id="modal-plantilla-lim-toggle" style="margin-top:6px;font-size:12.5px;">Poner un límite distinto solo para ' + escapeHtml(PLANTILLA_ESTADO.dia) + '…</button>' +
+      '<input type="text" id="modal-plantilla-lim" inputmode="numeric" placeholder="Límite solo para ' + escapeAttr(PLANTILLA_ESTADO.dia) + '" style="display:none;margin-top:6px;">' +
     '</div>' +
     (otrosDias.length
       ? '<div class="modal-campo">' +
@@ -1630,11 +2036,49 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
             }).join('') +
           '</div>' +
         '</div>'
+      : '') +
+    // Posición y grupo de palets: se aplican en este día y en todos los
+    // días marcados arriba (en cada día se busca la misma tienda vecina y
+    // el grupo que tenga esas mismas tiendas).
+    (seccionActual && seccionActual.tiendas.length
+      ? '<div class="plantilla-anadir-colocar">' +
+          '<div class="modal-campo">' +
+            '<label for="modal-plantilla-pos">Posición en la ruta</label>' +
+            '<select id="modal-plantilla-pos">' +
+              '<option value="">Al final</option>' +
+              '<option value="inicio">Al principio</option>' +
+              seccionActual.tiendas.map(function (t) {
+                return '<option value="' + t.row + '">Debajo de ' + escapeHtml(t.nombre) + '</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+          '<div class="modal-campo">' +
+            '<label for="modal-plantilla-grupo">Grupo de palets</label>' +
+            '<select id="modal-plantilla-grupo">' +
+              '<option value="">Sin grupo</option>' +
+              gruposActuales.map(function (g) {
+                return '<option value="' + g.row + '">' + escapeHtml(g.texto) + ' (' + g.n + ' tiendas)</option>';
+              }).join('') +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+        (otrosDias.length ? '<p class="modal-campo-ayuda" style="margin:0;">La posición y el grupo se aplican también en los días marcados arriba.</p>' : '')
       : '');
 
   Array.prototype.forEach.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill'), function (pill) {
     pill.onclick = function () { pill.classList.toggle('activo'); };
   });
+
+  let limGeneralSeleccionada = '';
+  let limPropio = false;
+  const inputLimPropio = document.getElementById('modal-plantilla-lim');
+  const toggleLim = document.getElementById('modal-plantilla-lim-toggle');
+  toggleLim.onclick = function () {
+    limPropio = !limPropio;
+    inputLimPropio.style.display = limPropio ? '' : 'none';
+    toggleLim.textContent = limPropio ? 'Usar el límite general' : ('Poner un límite distinto solo para ' + PLANTILLA_ESTADO.dia + '…');
+    if (limPropio) inputLimPropio.focus(); else inputLimPropio.value = '';
+  };
 
   const listaEl = document.getElementById('modal-plantilla-lista-tiendas');
   const avisoSinTienda = document.getElementById('modal-plantilla-sin-tienda');
@@ -1665,7 +2109,10 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
       btn.onclick = function () {
         seleccionada = btn.getAttribute('data-clave');
         const limGeneral = btn.getAttribute('data-limite');
-        limGeneralHint.textContent = limGeneral ? ('Límite general de esta tienda: ' + limGeneral) : 'Esta tienda todavía no tiene límite general definido.';
+        limGeneralSeleccionada = limGeneral || '';
+        limGeneralHint.innerHTML = limGeneral
+          ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (Configuración tiendas).<br><span class="modal-campo-ayuda" style="margin:0">Se usará en todos los días donde la añadas.</span></span>'
+          : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda todavía no tiene límite general. Puedes ponérselo en Configuración tiendas.</span>';
         listaEl.querySelectorAll('[data-clave]').forEach(function (b) { b.classList.toggle('activa', b === btn); });
       };
     });
@@ -1688,8 +2135,15 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   document.getElementById('modal-confirm-btn').onclick = function () {
     if (!seleccionada) { mostrarToast('Elige primero qué tienda añadir', true); return; }
     const inputLim = document.getElementById('modal-plantilla-lim');
-    const limite = inputLim.value.trim();
-    if (limite !== '' && isNaN(Number(limite))) { inputLim.focus(); return; }
+    let limite = limPropio ? inputLim.value.trim() : '';
+    if (limPropio && (limite === '' || isNaN(Number(limite)))) { inputLim.focus(); return; }
+    // Si el "distinto" coincide con el general, se guarda como "usa el
+    // general" (si no, saldría marcado en ámbar sin serlo de verdad).
+    if (limite !== '' && limGeneralSeleccionada !== '' && Number(limite) === Number(limGeneralSeleccionada)) limite = '';
+    const selPos = document.getElementById('modal-plantilla-pos');
+    const selGrupo = document.getElementById('modal-plantilla-grupo');
+    const posValor = selPos ? selPos.value : '';
+    const grupoValor = selGrupo ? selGrupo.value : '';
     const diasElegidos = Array.prototype.slice.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill.activo'))
       .map(function (pill) { return pill.getAttribute('data-dia'); });
 
@@ -1707,32 +2161,54 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     llamarApi_('asignarTiendaExistentePlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, seleccionada, limite])
       .then(function () {
         cerrarModal();
-        cargarPlantilla_({ silencioso: true });
-        if (!diasElegidos.length) {
-          mostrarToast('Tienda añadida');
-          return;
-        }
+        const diaActual = PLANTILLA_ESTADO.dia;
         // El día principal ya está añadido; los demás días marcados se
         // intentan aparte -- si alguno falla (p.ej. porque ya existiera
         // ahí), no se deshace lo del día principal, solo se avisa de
-        // cuáles no se han podido añadir y por qué.
-        Promise.allSettled(
+        // cuáles no se han podido añadir y por qué. El límite "distinto"
+        // es solo para el día actual: en los demás días se usa el general.
+        return Promise.allSettled(
           diasElegidos.map(function (dia) {
-            return llamarApi_('asignarTiendaExistentePlantilla', [dia, nombreRuta, seleccionada, limite]);
+            return llamarApi_('asignarTiendaExistentePlantilla', [dia, nombreRuta, seleccionada, '']);
           })
         ).then(function (resultados) {
-          const fallos = resultados
-            .map(function (r, i) {
-              return r.status === 'rejected'
-                ? diasElegidos[i] + ' (' + (r.reason && r.reason.message ? r.reason.message : 'error') + ')'
-                : null;
-            })
-            .filter(Boolean);
-          if (fallos.length) {
-            mostrarToast('Tienda añadida. No se pudo añadir en: ' + fallos.join('; '), true);
-          } else {
-            mostrarToast('Tienda añadida (también en ' + diasElegidos.length + ' día(s) más)');
-          }
+          const fallos = [];
+          const okDias = [];
+          resultados.forEach(function (r, i) {
+            if (r.status === 'rejected') fallos.push(diasElegidos[i] + ' (' + (r.reason && r.reason.message ? r.reason.message : 'error') + ')');
+            else okDias.push(diasElegidos[i]);
+          });
+          // Posición y grupo, en el día actual y en los que se ha añadido bien.
+          const hayColocar = posValor !== '' || grupoValor !== '';
+          const colocar = hayColocar
+            ? llamarApi_('colocarTiendaNuevaDias', [{
+                dia: diaActual,
+                nombreRuta: nombreRuta,
+                clave: seleccionada,
+                dias: okDias,
+                rowDebajo: (posValor !== '' && posValor !== 'inicio') ? Number(posValor) : null,
+                alPrincipio: posValor === 'inicio',
+                rowGrupo: grupoValor !== '' ? Number(grupoValor) : null
+              }]).catch(function (err) {
+                fallos.push('posición/grupo (' + ((err && err.message) || 'error') + ')');
+                return [];
+              })
+            : Promise.resolve([]);
+          return colocar.then(function (res) {
+            const avisos = [];
+            (res || []).forEach(function (d) {
+              if (d.posicion === 'sin_vecina') avisos.push(d.dia + ': no está la tienda vecina, queda al final');
+              if (d.grupo === 'sin_grupo') avisos.push(d.dia + ': no tiene ese grupo, queda sin grupo');
+            });
+            cargarPlantilla_({ silencioso: true });
+            if (fallos.length) {
+              mostrarToast('Tienda añadida. No se pudo en: ' + fallos.join('; '), true);
+            } else if (avisos.length) {
+              mostrarToast('Tienda añadida. Ojo: ' + avisos.join('; '), true);
+            } else {
+              mostrarToast(okDias.length ? ('Tienda añadida (también en ' + okDias.length + ' día' + (okDias.length === 1 ? '' : 's') + ' más)') : 'Tienda añadida');
+            }
+          });
         });
       })
       .catch(function (err) {
