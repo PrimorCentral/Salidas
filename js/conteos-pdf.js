@@ -1,5 +1,13 @@
 /* SALIDAS · js/conteos-pdf.js — Conteos diarios: PDF de agrupación y PDF especial */
 
+/** Texto de una tienda con el conteo bloqueado (antes "tienda cerrada"):
+ *  solo la observación que se escribió al bloquear, sin añadir "CERRADA". */
+function textoBloqueoFila_(tr) {
+  const motivo = tr.querySelector('.motivo-cierre');
+  const texto = motivo ? motivo.textContent.trim() : '';
+  return texto || 'CONTEO BLOQUEADO';
+}
+
 /**
  * Genera y descarga un PDF con el conteo completo de una agrupación: todas
  * sus tiendas y casillas (Límite, 60, PTA, CART., TOTAL, PDTE), tal cual
@@ -47,7 +55,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : ''
       ].concat(conViernes ? [''] : []).concat([
-        'CERRADA', '', '', '', ''
+        textoBloqueoFila_(tr), '', '', '', ''
       ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
       return;
     }
@@ -341,7 +349,7 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
         const limiteCelda = tr.querySelector('td.limite');
         celdasPropias = [
           limiteCelda ? limiteCelda.textContent.trim() : '', nombre,
-          { content: 'CERRADA', colSpan: 4, styles: { fontStyle: 'bold', textColor: [201, 79, 79] } }
+          { content: textoBloqueoFila_(tr), colSpan: 4, styles: { fontStyle: 'bold', textColor: [201, 79, 79] } }
         ];
       } else if (tr.classList.contains('fila-sale-excepcion')) {
         const limiteCelda = tr.querySelector('td.limite');

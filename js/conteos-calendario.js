@@ -85,7 +85,7 @@ function renderCalendario(dias) {
       '<span><span class="sw" style="background:var(--amber)"></span>Parcial</span>' +
       '<span><span class="sw" style="background:var(--ok)"></span>Enviado</span>' +
       '<span><span class="dot dot-nota" style="width:8px;height:8px;"></span>Con notas</span>' +
-      '<span><span class="dot dot-cierre" style="width:8px;height:8px;"></span>Con cierres</span>' +
+      '<span><span class="dot dot-cierre" style="width:8px;height:8px;"></span>Con bloqueos</span>' +
       '<span><span class="dot dot-cambio" style="width:8px;height:8px;"></span>Con cambios</span>' +
     '</div>';
 

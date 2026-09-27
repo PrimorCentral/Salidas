@@ -74,7 +74,7 @@ function crearFormularioGestorObs_() {
           'Nota de agrupación</button>' +
         '<button type="button" class="gestor-tipo-pill" data-tipo="cierre">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>' +
-          'Cerrar tienda</button>' +
+          'Bloquear conteo</button>' +
         '<button type="button" class="gestor-tipo-pill" data-tipo="cambio">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' +
           'Cambio puntual</button>' +
@@ -88,8 +88,13 @@ function crearFormularioGestorObs_() {
         '<button type="button" class="gestor-busqueda-clear" id="gestor-busqueda-clear" title="Limpiar búsqueda">×</button>' +
         '<div class="gestor-busqueda-resultados" id="gestor-busqueda-resultados" style="display:none;"></div>' +
       '</div>' +
-      '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un cierre para cada una.</div>' +
+      '<div class="gestor-campo-ayuda" id="gestor-busqueda-ayuda" style="display:none;">Puedes marcar varias tiendas: se guardará un bloqueo para cada una.</div>' +
       '<div id="gestor-seleccion-actual" style="margin-top:10px;"></div>' +
+    '</div>' +
+    '<div class="gestor-campo" id="gestor-destino-campo" style="display:none;">' +
+      '<label>Agrupación destino</label>' +
+      '<select id="gestor-destino-select"></select>' +
+      '<div class="gestor-campo-ayuda" id="gestor-destino-ayuda"></div>' +
     '</div>' +
     '<div class="gestor-campo" id="gestor-modo-campo" style="display:none;">' +
       '<label>¿Por dónde sale ese día?</label>' +
@@ -135,7 +140,7 @@ function crearFormularioGestorObs_() {
     if (!e.target.value) return;
     GESTOR_OBS.fecha = e.target.value;
     GESTOR_OBS.datosDia = null;
-    GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : null;
+    GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
     document.getElementById('gestor-busqueda').value = '';
     const btnLimpiar = document.getElementById('gestor-busqueda-clear');
     if (btnLimpiar) btnLimpiar.classList.remove('visible');
@@ -194,7 +199,7 @@ function crearFormularioGestorObs_() {
       btn.classList.add('activa');
       const sel = GESTOR_OBS.seleccion || {};
       if (btn.getAttribute('data-opcion') === 'nuevo') {
-        sel.transitoOverride = Number(selectTransito.value) || (sel.origen && sel.origen.transito) || 1;
+        sel.transitoOverride = Number(selectTransito.value) || (sel.origenes && sel.origenes[0] && sel.origenes[0].transito) || 1;
         selectTransito.value = String(sel.transitoOverride);
         selectTransito.style.display = '';
       } else {
@@ -229,9 +234,21 @@ function crearFormularioGestorObs_() {
     };
   });
 
+  wrap.querySelector('#gestor-destino-select').addEventListener('change', function (e) {
+    const sel = GESTOR_OBS.seleccion || nuevaSeleccionCambioGestorObs_();
+    sel.destino = e.target.value || null;
+    GESTOR_OBS.seleccion = sel;
+    actualizarSeccionTransitoGestorObs_();
+  });
+
   const inputBusqueda = wrap.querySelector('#gestor-busqueda');
   const btnLimpiarBusqueda = wrap.querySelector('#gestor-busqueda-clear');
   inputBusqueda.addEventListener('input', function () {
+    // Todo en MAYÚSCULAS, también lo que se escribe para buscar (la
+    // búsqueda no distingue mayúsculas, así que no cambia los resultados).
+    const ini = inputBusqueda.selectionStart, fin = inputBusqueda.selectionEnd;
+    inputBusqueda.value = inputBusqueda.value.toUpperCase();
+    inputBusqueda.setSelectionRange(ini, fin);
     // En "Cerrar tienda" se puede elegir varias tiendas: escribir para buscar
     // la siguiente no debe borrar las que ya se marcaron. En "Nota de
     // agrupación" solo hay una elegida a la vez, así que escribir sí la
@@ -284,28 +301,63 @@ function actualizarFormularioSegunTipo_() {
   } else if (GESTOR_OBS.tipo === 'cambio') {
     campoBusqueda.style.display = 'block';
     ayuda.style.display = 'block';
-    const sel = GESTOR_OBS.seleccion || {};
-    if (!sel.origen) {
-      label.textContent = 'Tienda que cambia';
-      inputBusqueda.placeholder = 'Busca la tienda que sale por otra agrupación…';
-      ayuda.textContent = 'Elige la tienda que, solo este día, sale por otra agrupación (o por dos a la vez).';
-    } else {
-      label.textContent = 'Agrupación destino';
-      inputBusqueda.placeholder = 'Busca la agrupación por la que sale…';
-      ayuda.textContent = 'Elige la agrupación (activa ese mismo día) por la que sale ' + sel.origen.tienda + '.';
-    }
+    label.textContent = 'Tiendas que cambian';
+    inputBusqueda.placeholder = 'Busca y añade una o varias tiendas…';
+    ayuda.textContent = 'Puedes marcar varias tiendas: todas saldrán ese día por la misma agrupación destino.';
     if (campoTexto) campoTexto.style.display = 'none';
-    actualizarSeccionTransitoGestorObs_();
   } else {
     campoBusqueda.style.display = 'block';
     ayuda.style.display = 'block';
     label.textContent = 'Tiendas';
     inputBusqueda.placeholder = 'Busca y añade una o varias tiendas…';
-    textoLabel.textContent = 'Motivo del cierre';
-    textoArea.placeholder = 'Ej. "Tienda cerrada, no se da a agencia"…';
+    textoLabel.textContent = 'Observación (es lo que saldrá en el conteo)';
+    textoArea.placeholder = 'EJ. "TIENDA CERRADA POR INVENTARIO, NO SE DA A AGENCIA"…';
   }
   document.getElementById('gestor-busqueda-resultados').style.display = 'none';
   actualizarSeleccionGestorObs_();
+  actualizarSeccionDestinoGestorObs_();
+}
+
+/** Nombres de las agrupaciones de las tiendas ya marcadas en "Cambio puntual". */
+function agrupacionesOrigenGestorObs_(sel) {
+  const nombres = [];
+  (sel.origenes || []).forEach(function (o) { if (nombres.indexOf(o.agrupacion) === -1) nombres.push(o.agrupacion); });
+  return nombres;
+}
+
+/** Desplegable "Agrupación destino" de "Cambio puntual": visible en cuanto
+ *  hay al menos una tienda marcada. Ofrece las agrupaciones de ese día
+ *  menos las de las tiendas elegidas (una tienda no puede "cambiar" a su
+ *  propia agrupación). Si la que estaba elegida deja de valer al marcar
+ *  otra tienda, se quita. */
+function actualizarSeccionDestinoGestorObs_() {
+  const campo = document.getElementById('gestor-destino-campo');
+  const selectEl = document.getElementById('gestor-destino-select');
+  if (!campo || !selectEl) return;
+  const sel = GESTOR_OBS.seleccion || {};
+  if (GESTOR_OBS.tipo !== 'cambio' || !(sel.origenes && sel.origenes.length)) {
+    campo.style.display = 'none';
+    actualizarSeccionTransitoGestorObs_();
+    return;
+  }
+  campo.style.display = 'block';
+  const excluidas = agrupacionesOrigenGestorObs_(sel);
+  const opciones = ((GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.secciones) || [])
+    .map(function (s) { return s.nombre; })
+    .filter(function (n) { return excluidas.indexOf(n) === -1; })
+    .sort(function (a, b) { return a.localeCompare(b, 'es'); });
+  if (sel.destino && opciones.indexOf(sel.destino) === -1) sel.destino = null;
+  selectEl.innerHTML = '<option value="">' + (opciones.length ? 'Elige la agrupación por la que salen…' : 'No hay otras agrupaciones ese día') + '</option>' +
+    opciones.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === sel.destino ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+  const ayuda = document.getElementById('gestor-destino-ayuda');
+  if (ayuda) {
+    ayuda.textContent = excluidas.length === 1
+      ? 'No aparece ' + parsearNombreAgrupacion(excluidas[0]).titulo + ' porque es la agrupación de siempre de la tienda.'
+      : 'No aparecen las agrupaciones de siempre de las tiendas elegidas.';
+  }
+  actualizarSeccionTransitoGestorObs_();
 }
 
 /** Muestra/oculta y rellena el paso 3 de "Cambio puntual" (plazo de
@@ -317,16 +369,21 @@ function actualizarSeccionTransitoGestorObs_() {
   const campo = document.getElementById('gestor-transito-campo');
   if (!campo) return;
   const sel = GESTOR_OBS.seleccion || {};
-  if (GESTOR_OBS.tipo !== 'cambio' || !sel.origen || !sel.destino) {
+  if (GESTOR_OBS.tipo !== 'cambio' || !(sel.origenes && sel.origenes.length) || !sel.destino) {
     campo.style.display = 'none';
     return;
   }
   campo.style.display = 'block';
 
-  const badgeActual = badgeTransitoTienda(sel.origen.transito);
-  const textoActual = badgeActual ? badgeActual.texto : '24H';
   const pillActual = campo.querySelector('.gestor-transito-pill[data-opcion="actual"]');
-  if (pillActual) pillActual.textContent = 'Mantener el plazo actual de la tienda (' + textoActual + ')';
+  if (pillActual) {
+    if (sel.origenes.length === 1) {
+      const badgeActual = badgeTransitoTienda(sel.origenes[0].transito);
+      pillActual.textContent = 'Mantener el plazo actual de la tienda (' + (badgeActual ? badgeActual.texto : '24H') + ')';
+    } else {
+      pillActual.textContent = 'Mantener el plazo actual de cada tienda';
+    }
+  }
 
   const usaNuevo = sel.transitoOverride != null;
   campo.querySelectorAll('.gestor-transito-pill').forEach(function (b) {
@@ -343,7 +400,7 @@ function actualizarSeccionTransitoGestorObs_() {
  *  la agrupación destino) o 'doble' (sale por las dos); campos: columnas
  *  de nave (c60/pta/cart) que rellena la agrupación destino si es doble. */
 function nuevaSeleccionCambioGestorObs_() {
-  return { origen: null, destino: null, transitoOverride: null, modo: 'mover', campos: [] };
+  return { origenes: [], destino: null, transitoOverride: null, modo: 'mover', campos: [] };
 }
 
 const ETIQUETAS_CAMPOS_DOBLE_ = { c60: '60', pta: 'PTA', cart: 'CARTAMA' };
@@ -356,7 +413,7 @@ function actualizarSeccionModoGestorObs_() {
   const campo = document.getElementById('gestor-modo-campo');
   if (!campo) return;
   const sel = GESTOR_OBS.seleccion || {};
-  if (GESTOR_OBS.tipo !== 'cambio' || !sel.origen || !sel.destino) {
+  if (GESTOR_OBS.tipo !== 'cambio' || !(sel.origenes && sel.origenes.length) || !sel.destino) {
     campo.style.display = 'none';
     return;
   }
@@ -377,7 +434,9 @@ function actualizarSeccionModoGestorObs_() {
   });
 
   const destinoCorto = parsearNombreAgrupacion(sel.destino).titulo;
-  const origenCorto = parsearNombreAgrupacion(sel.origen.agrupacion).titulo;
+  const agrOrigen = agrupacionesOrigenGestorObs_(sel);
+  const origenCorto = agrOrigen.length === 1 ? parsearNombreAgrupacion(agrOrigen[0]).titulo : 'su agrupación de siempre';
+  const quien = sel.origenes.length === 1 ? sel.origenes[0].tienda : 'Las ' + sel.origenes.length + ' tiendas';
   const label = document.getElementById('gestor-doble-label');
   if (label) label.textContent = 'Columnas que rellena ' + destinoCorto;
 
@@ -389,7 +448,7 @@ function actualizarSeccionModoGestorObs_() {
   if (ayuda) {
     ayuda.textContent = !enDestino.length
       ? 'Marca al menos una columna.'
-      : sel.origen.tienda + ' saldrá en ' + destinoCorto + ' con ' + enDestino.join(', ') +
+      : quien + (sel.origenes.length === 1 ? ' saldrá en ' : ' saldrán en ') + destinoCorto + ' con ' + enDestino.join(', ') +
         ' y en ' + origenCorto + ' con ' + (enOrigen.length ? enOrigen.join(', ') : 'ninguna nave') +
         '. PDTE, peso y el resto se quedan en ' + origenCorto + '.';
   }
@@ -399,8 +458,25 @@ function actualizarSeccionModoGestorObs_() {
 function actualizarBotonGuardarGestor_() {
   const btn = document.getElementById('modal-confirm-btn');
   if (!btn) return;
-  const n = GESTOR_OBS.tipo === 'cierre' && GESTOR_OBS.seleccion ? GESTOR_OBS.seleccion.length : 0;
-  btn.textContent = n > 1 ? 'Guardar ' + n + ' cierres' : 'Guardar';
+  const sel = GESTOR_OBS.seleccion;
+  if (GESTOR_OBS.tipo === 'cambio') {
+    const nc = sel && sel.origenes ? sel.origenes.length : 0;
+    btn.textContent = nc > 1 ? 'Guardar ' + nc + ' cambios' : 'Guardar';
+    return;
+  }
+  const n = GESTOR_OBS.tipo === 'cierre' && sel ? sel.length : 0;
+  btn.textContent = n > 1 ? 'Guardar ' + n + ' bloqueos' : 'Guardar';
+}
+
+/** Tiendas marcadas en el buscador (lista modificable): en "Bloquear
+ *  conteo" es la propia selección; en "Cambio puntual", sus origenes. */
+function listaTiendasMarcadasGestorObs_() {
+  if (GESTOR_OBS.tipo === 'cambio') {
+    if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = nuevaSeleccionCambioGestorObs_();
+    return GESTOR_OBS.seleccion.origenes;
+  }
+  if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
+  return GESTOR_OBS.seleccion;
 }
 
 /** Muestra el/los chip(s) de lo ya elegido (una agrupación, o varias tiendas si es un cierre), con opción de quitar cada uno. */
@@ -409,9 +485,13 @@ function actualizarSeleccionGestorObs_() {
   if (!cont) return;
   actualizarBotonGuardarGestor_();
 
-  if (GESTOR_OBS.tipo === 'cierre') {
-    const seleccion = GESTOR_OBS.seleccion || [];
-    if (!seleccion.length) { cont.innerHTML = ''; return; }
+  if (GESTOR_OBS.tipo === 'cierre' || GESTOR_OBS.tipo === 'cambio') {
+    const seleccion = listaTiendasMarcadasGestorObs_();
+    if (!seleccion.length) {
+      cont.innerHTML = '';
+      if (GESTOR_OBS.tipo === 'cambio') actualizarSeccionDestinoGestorObs_();
+      return;
+    }
     const contador = seleccion.length === 1 ? '1 tienda seleccionada' : seleccion.length + ' tiendas seleccionadas';
     cont.innerHTML =
       '<div class="gestor-seleccion-contador">' + contador + '</div>' +
@@ -423,48 +503,12 @@ function actualizarSeleccionGestorObs_() {
       '</div>';
     cont.querySelectorAll('button[data-quitar]').forEach(function (btn) {
       btn.onclick = function () {
-        GESTOR_OBS.seleccion.splice(Number(btn.getAttribute('data-quitar')), 1);
+        listaTiendasMarcadasGestorObs_().splice(Number(btn.getAttribute('data-quitar')), 1);
         actualizarSeleccionGestorObs_();
         renderResultadosBusquedaGestorObs_(document.getElementById('gestor-busqueda').value);
       };
     });
-    return;
-  }
-
-  if (GESTOR_OBS.tipo === 'cambio') {
-    const sel = GESTOR_OBS.seleccion || {};
-    if (!sel.origen) { cont.innerHTML = ''; return; }
-    let html = '<div class="gestor-seleccion-chips"><span class="gestor-seleccion-chip">' +
-      escapeHtml(sel.origen.tienda + ' (' + sel.origen.agrupacion + ')') +
-      '<button type="button" id="gestor-quitar-origen">×</button></span>';
-    if (sel.destino) {
-      html += '<span class="gestor-seleccion-chip">→ ' + escapeHtml(sel.destino) +
-        '<button type="button" id="gestor-quitar-destino">×</button></span>';
-    }
-    html += '</div>';
-    cont.innerHTML = html;
-    document.getElementById('gestor-quitar-origen').onclick = function () {
-      GESTOR_OBS.seleccion = nuevaSeleccionCambioGestorObs_();
-      document.getElementById('gestor-busqueda').value = '';
-      actualizarFormularioSegunTipo_();
-      const inputBusq = document.getElementById('gestor-busqueda');
-      if (inputBusq) inputBusq.focus();
-      renderResultadosBusquedaGestorObs_('');
-    };
-    const btnQuitarDestino = document.getElementById('gestor-quitar-destino');
-    if (btnQuitarDestino) {
-      btnQuitarDestino.onclick = function () {
-        sel.destino = null;
-        sel.transitoOverride = null;
-        document.getElementById('gestor-busqueda').value = '';
-        actualizarSeleccionGestorObs_();
-        actualizarSeccionTransitoGestorObs_();
-        const inputBusq = document.getElementById('gestor-busqueda');
-        if (inputBusq) inputBusq.focus();
-        renderResultadosBusquedaGestorObs_('');
-      };
-    }
-    actualizarSeccionTransitoGestorObs_();
+    if (GESTOR_OBS.tipo === 'cambio') actualizarSeccionDestinoGestorObs_();
     return;
   }
 
@@ -710,95 +754,12 @@ function renderResultadosBusquedaGestorObs_(query) {
     return;
   }
 
-  if (GESTOR_OBS.tipo === 'cambio') {
-    const sel = GESTOR_OBS.seleccion || { origen: null, destino: null };
+  if (GESTOR_OBS.tipo !== 'cierre' && GESTOR_OBS.tipo !== 'cambio') return;
 
-    if (!sel.origen) {
-      // ---- Paso 1: elegir la tienda que cambia (agrupado por agrupación/ruta, selección única) ----
-      const grupos = [];
-      secciones.forEach(function (s) {
-        const tiendas = (s.tiendas || []).filter(function (t) {
-          if (t.entraPorExcepcion) return false; // ya está aquí por otro cambio puntual: no se puede volver a mover
-          return !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
-        });
-        if (tiendas.length) grupos.push({ agrupacion: s.nombre, tiendas: tiendas });
-      });
-
-      if (!grupos.length) {
-        cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay tiendas disponibles') + '</div>';
-        cont.style.display = 'block';
-        return;
-      }
-
-      const planas = [];
-      let html = '';
-      grupos.forEach(function (g) {
-        html += '<div class="gestor-busqueda-grupo"><span>' + escapeHtml(g.agrupacion) + ' · ' + g.tiendas.length + '</span></div>';
-        g.tiendas.forEach(function (t) {
-          const idx = planas.length;
-          planas.push({ agrupacion: g.agrupacion, tienda: t.nombre, transito: t.transito });
-          html += '<div class="gestor-busqueda-item" data-idx="' + idx + '">' +
-            '<span class="gestor-busqueda-item-texto">' + resaltarCoincidenciaGestorObs_(t.nombre, q) + '</span></div>';
-        });
-      });
-      cont.innerHTML = html;
-      cont.style.display = 'block';
-      cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
-        el.onclick = function () {
-          const it = planas[Number(el.getAttribute('data-idx'))];
-          GESTOR_OBS.seleccion = nuevaSeleccionCambioGestorObs_();
-          GESTOR_OBS.seleccion.origen = { agrupacion: it.agrupacion, tienda: it.tienda, transito: it.transito };
-          document.getElementById('gestor-busqueda').value = '';
-          cont.style.display = 'none';
-          actualizarFormularioSegunTipo_();
-          // Pasamos al paso 2: abrimos ya la lista de agrupaciones destino en
-          // vez de esperar a que el buscador reciba el evento "focus" (si ya
-          // lo tenía, el navegador no lo vuelve a disparar y el desplegable
-          // se quedaba cerrado sin más).
-          const inputBusq = document.getElementById('gestor-busqueda');
-          if (inputBusq) inputBusq.focus();
-          renderResultadosBusquedaGestorObs_('');
-        };
-      });
-      return;
-    }
-
-    // ---- Paso 2: elegir la agrupación destino (activa ese mismo día, distinta de la de origen) ----
-    const items = secciones
-      .map(function (s) { return { label: s.nombre }; })
-      .filter(function (it) { return it.label !== sel.origen.agrupacion; })
-      .filter(function (it) { return !q || it.label.toLowerCase().indexOf(q) !== -1; })
-      .sort(function (a, b) { return a.label.localeCompare(b.label, 'es'); });
-
-    if (!items.length) {
-      cont.innerHTML = '<div class="gestor-busqueda-vacio">' + (q ? 'Sin resultados para «' + escapeHtml(query.trim()) + '»' : 'No hay otras agrupaciones ese día') + '</div>';
-      cont.style.display = 'block';
-      return;
-    }
-
-    cont.innerHTML = items.map(function (it, i) {
-      return '<div class="gestor-busqueda-item" data-idx="' + i + '"><span class="gestor-busqueda-item-texto">' +
-        resaltarCoincidenciaGestorObs_(it.label, q) + '</span></div>';
-    }).join('');
-    cont.style.display = 'block';
-    cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
-      el.onclick = function () {
-        const it = items[Number(el.getAttribute('data-idx'))];
-        sel.destino = it.label;
-        GESTOR_OBS.seleccion = sel;
-        document.getElementById('gestor-busqueda').value = it.label;
-        cont.style.display = 'none';
-        actualizarSeleccionGestorObs_();
-        actualizarSeccionTransitoGestorObs_();
-      };
-    });
-    return;
-  }
-
-  if (GESTOR_OBS.tipo !== 'cierre') return;
-
-  // ---- Modo "cierre": agrupado por agrupación/ruta ----
-  const seleccionActual = GESTOR_OBS.seleccion || [];
+  // ---- Modos "Bloquear conteo" y "Cambio puntual": agrupado por
+  // agrupación/ruta, con varias tiendas a la vez ----
+  const esCambio = GESTOR_OBS.tipo === 'cambio';
+  const seleccionActual = listaTiendasMarcadasGestorObs_();
   const estaMarcada = function (agrupacion, tienda) {
     return seleccionActual.some(function (s) { return s.tienda === tienda && s.agrupacion === agrupacion; });
   };
@@ -807,7 +768,9 @@ function renderResultadosBusquedaGestorObs_(query) {
   let totalCoincidencias = 0;
   secciones.forEach(function (s) {
     const tiendas = (s.tiendas || []).filter(function (t) {
-      if (t.cerrada) return false; // ya cerrada: no tiene sentido volver a cerrarla
+      // Bloquear: una ya bloqueada no se vuelve a bloquear. Cambio: una que
+      // ya entra aquí por otro cambio puntual no se puede volver a mover.
+      if (esCambio ? t.entraPorExcepcion : t.cerrada) return false;
       return !q || t.nombre.toLowerCase().indexOf(q) !== -1 || s.nombre.toLowerCase().indexOf(q) !== -1;
     });
     if (tiendas.length) {
@@ -833,7 +796,7 @@ function renderResultadosBusquedaGestorObs_(query) {
     if (mostradas >= GESTOR_OBS_LIMITE_VISIBLE_) { truncado = true; return; }
     const idsGrupo = g.tiendas.map(function (t) {
       const idx = planas.length;
-      planas.push({ agrupacion: g.agrupacion, tienda: t.nombre });
+      planas.push({ agrupacion: g.agrupacion, tienda: t.nombre, transito: t.transito });
       return idx;
     });
     mostradas += idsGrupo.length;
@@ -864,10 +827,10 @@ function renderResultadosBusquedaGestorObs_(query) {
   cont.querySelectorAll('.gestor-busqueda-item[data-idx]').forEach(function (el) {
     el.onclick = function () {
       const it = planas[Number(el.getAttribute('data-idx'))];
-      if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
-      const idx = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
-      if (idx === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
-      else GESTOR_OBS.seleccion.splice(idx, 1);
+      const lista = listaTiendasMarcadasGestorObs_();
+      const idx = lista.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+      if (idx === -1) lista.push({ agrupacion: it.agrupacion, tienda: it.tienda, transito: it.transito });
+      else lista.splice(idx, 1);
       actualizarSeleccionGestorObs_();
       renderResultadosBusquedaGestorObs_(query);
     };
@@ -877,13 +840,13 @@ function renderResultadosBusquedaGestorObs_(query) {
     btn.onclick = function (e) {
       e.stopPropagation();
       const ids = btn.getAttribute('data-ids').split(',').map(Number);
-      if (!GESTOR_OBS.seleccion) GESTOR_OBS.seleccion = [];
+      const lista = listaTiendasMarcadasGestorObs_();
       const todoMarcado = ids.every(function (idx) { return estaMarcada(planas[idx].agrupacion, planas[idx].tienda); });
       ids.forEach(function (idx) {
         const it = planas[idx];
-        const pos = GESTOR_OBS.seleccion.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
-        if (todoMarcado) { if (pos !== -1) GESTOR_OBS.seleccion.splice(pos, 1); }
-        else if (pos === -1) GESTOR_OBS.seleccion.push({ agrupacion: it.agrupacion, tienda: it.tienda });
+        const pos = lista.findIndex(function (s) { return s.tienda === it.tienda && s.agrupacion === it.agrupacion; });
+        if (todoMarcado) { if (pos !== -1) lista.splice(pos, 1); }
+        else if (pos === -1) lista.push({ agrupacion: it.agrupacion, tienda: it.tienda, transito: it.transito });
       });
       actualizarSeleccionGestorObs_();
       renderResultadosBusquedaGestorObs_(query);
@@ -921,7 +884,7 @@ function guardarDesdeGestorObs_() {
   } else if (GESTOR_OBS.tipo === 'cierre') {
     const seleccion = GESTOR_OBS.seleccion || [];
     if (!seleccion.length) { mostrarToast('Busca y selecciona al menos una tienda', true); return; }
-    // Una tienda por cada cierre: mismo motivo para todas las marcadas.
+    // Un bloqueo por tienda: misma observación para todas las marcadas.
     observaciones = seleccion.map(function (s) {
       return Object.assign({}, base, { agrupacion: s.agrupacion, tienda: s.tienda, tipo: 'cierre' });
     });
@@ -949,7 +912,7 @@ function guardarDesdeGestorObs_() {
   cadena
     .then(function () {
       cerrarModal();
-      mostrarToast(observaciones.length > 1 ? observaciones.length + ' cierres guardados' : 'Guardado');
+      mostrarToast(observaciones.length > 1 ? observaciones.length + ' bloqueos guardados' : 'Guardado');
       if (document.getElementById('calendar-body')) cargarCalendario();
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
       if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
@@ -962,14 +925,16 @@ function guardarDesdeGestorObs_() {
     });
 }
 
-/** Valida y guarda un "cambio puntual" (una tienda sale, solo esa fecha, por
- *  una agrupación distinta a la suya), llamando a guardarExcepcionTienda. */
+/** Valida y guarda uno o varios "cambios puntuales" (cada tienda marcada
+ *  sale, solo esa fecha, por la agrupación destino — o por las dos si es
+ *  doble salida), llamando a guardarExcepcionTienda una vez por tienda. */
 function guardarCambioPuntualDesdeGestor_() {
   const fecha = GESTOR_OBS.fecha;
   const dia = (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.dia) || '';
   const sel = GESTOR_OBS.seleccion || {};
-  if (!sel.origen) { mostrarToast('Busca y elige la tienda que cambia', true); return; }
-  if (!sel.destino) { mostrarToast('Busca y elige la agrupación de destino', true); return; }
+  const origenes = sel.origenes || [];
+  if (!origenes.length) { mostrarToast('Busca y marca al menos una tienda', true); return; }
+  if (!sel.destino) { mostrarToast('Elige la agrupación destino', true); return; }
   const esDoble = sel.modo === 'doble';
   const camposDestino = ['c60', 'pta', 'cart'].filter(function (c) { return (sel.campos || []).indexOf(c) !== -1; });
   if (esDoble && !camposDestino.length) {
@@ -980,27 +945,52 @@ function guardarCambioPuntualDesdeGestor_() {
   const btnGuardar = document.getElementById('modal-confirm-btn');
   if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
 
-  llamarApi_('guardarExcepcionTienda', [{
-    fecha: fecha,
-    dia: dia,
-    agrupacionOrigen: sel.origen.agrupacion,
-    tienda: sel.origen.tienda,
-    agrupacionDestino: sel.destino,
-    transito: (sel.transitoOverride != null ? sel.transitoOverride : null),
-    modo: esDoble ? 'doble' : 'mover',
-    camposDestino: esDoble ? camposDestino : null
-  }])
+  // Uno por tienda, en serie (no en paralelo), igual que los bloqueos.
+  // Si falla uno a mitad, los anteriores ya quedan guardados: se avisa y se
+  // recarga igualmente para que se vea lo que sí entró.
+  let guardadosOk = 0;
+  let cadena = Promise.resolve();
+  origenes.forEach(function (o) {
+    cadena = cadena.then(function () {
+      return llamarApi_('guardarExcepcionTienda', [{
+        fecha: fecha,
+        dia: dia,
+        agrupacionOrigen: o.agrupacion,
+        tienda: o.tienda,
+        agrupacionDestino: sel.destino,
+        transito: (sel.transitoOverride != null ? sel.transitoOverride : null),
+        modo: esDoble ? 'doble' : 'mover',
+        camposDestino: esDoble ? camposDestino : null
+      }]).then(function () { guardadosOk++; });
+    });
+  });
+
+  function refrescar() {
+    if (document.getElementById('calendar-body')) cargarCalendario();
+    if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+    if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
+      cargarFestivos();
+    }
+  }
+
+  cadena
     .then(function () {
       cerrarModal();
-      mostrarToast(esDoble ? 'Doble salida guardada' : 'Cambio puntual guardado');
-      if (document.getElementById('calendar-body')) cargarCalendario();
-      if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
-      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') {
-        cargarFestivos();
-      }
+      const n = origenes.length;
+      mostrarToast(esDoble
+        ? (n > 1 ? n + ' dobles salidas guardadas' : 'Doble salida guardada')
+        : (n > 1 ? n + ' cambios puntuales guardados' : 'Cambio puntual guardado'));
+      refrescar();
     })
     .catch(function (err) {
-      if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar'; }
+      if (btnGuardar) { btnGuardar.disabled = false; actualizarBotonGuardarGestor_(); }
+      if (guardadosOk > 0) {
+        // Quita de la selección las que ya se guardaron, para poder
+        // reintentar solo las que faltan.
+        origenes.splice(0, guardadosOk);
+        actualizarSeleccionGestorObs_();
+        refrescar();
+      }
       mostrarErrorServidor(err);
     });
 }

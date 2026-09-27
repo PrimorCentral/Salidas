@@ -446,7 +446,9 @@ const SUPABASE_ACCIONES_ = {
       p_agrupacion: obs.agrupacion,
       p_tienda: obs.tienda,
       p_tipo: obs.tipo,
-      p_texto: obs.texto
+      // Las observaciones (notas y bloqueos de conteo) se guardan siempre
+      // en MAYÚSCULAS, se escriban como se escriban.
+      p_texto: String(obs.texto == null ? '' : obs.texto).toUpperCase()
     });
   },
   eliminarObservacion: function (args) {

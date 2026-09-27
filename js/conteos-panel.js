@@ -470,7 +470,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         btnReabrir.onclick = function () {
           if (!editable) return;
           const cierreId = tr.getAttribute('data-cierre-id');
-          appConfirm('Reabrir tienda', '¿Quieres reabrir esta tienda para el conteo de hoy?', function () {
+          appConfirm('Desbloquear conteo', '¿Quieres desbloquear el conteo de esta tienda para hoy?', function () {
             eliminarObservacionYRecargar(cierreId);
           });
         };
@@ -491,7 +491,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         btnCerrar.onclick = function () {
           if (!editable) return;
           const nombreTienda = tr.getAttribute('data-nombre');
-          appPrompt('Cerrar tienda', 'Motivo (ej. "Tienda cerrada, no se da a agencia")…', function (texto) {
+          appPrompt('Bloquear conteo', 'Observación que saldrá en el conteo (ej. "TIENDA CERRADA POR INVENTARIO")…', function (texto) {
             guardarObservacionYRecargar({ fecha: fecha, dia: dia, agrupacion: seccion.nombre, tienda: nombreTienda, tipo: 'cierre', texto: texto });
           });
         };

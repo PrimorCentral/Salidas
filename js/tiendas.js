@@ -233,7 +233,7 @@ function htmlSimulacionAvisoTiendasCard_() {
   return (
     '<div class="vista-card" id="barrido-tiendas-card" style="margin-bottom:16px;">' +
       '<div class="vista-card-header"><h2>Simulación envío tiendas</h2></div>' +
-      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, no cerradas y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado en Configuración tiendas. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos, ver Configuración hora aviso tiendas) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Cola de avisos a tiendas).</p>' +
+      '<p>Envía a cada tienda un correo (texto simple) con los palets que va a recibir, calculando la fecha de entrega según su plazo (24H / 48H / 72H, detectado por el nombre de la tienda). Solo se avisa a las tiendas con palets asignados, sin el conteo bloqueado y con el conteo ya puesto (algún dato guardado en su fila, se haya enviado o no la previsión/definitivo a la agencia), con email configurado en Configuración tiendas. La vista previa de abajo se calcula sola al entrar aquí (y al cambiar de fecha), sin necesidad de pulsar nada. Los envíos reales (manuales o automáticos, ver Configuración hora aviso tiendas) no se mandan al instante: se encolan y se van enviando solos a un ritmo máximo de 30/min (ver Cola de avisos a tiendas).</p>' +
       '<div class="admin-filtros">' +
         '<div class="admin-filtro-campo"><label>Fecha del conteo</label><input type="date" id="barrido-fecha" value="' + BARRIDO_TIENDAS_ESTADO.fecha + '"></div>' +
         '<button type="button" class="btn-admin-buscar" id="btn-barrido-preview">Vista previa</button>' +
@@ -337,7 +337,7 @@ function pintarResultadoBarridoTiendas_() {
         '<div class="barrido-chip">' + (r.pendientesDeOtrasRutas ? r.pendientesDeOtrasRutas.length : 0) + ' sin conteo guardado</div>' +
         '<div class="barrido-chip">' + r.sinEmail.length + ' sin email</div>' +
         '<div class="barrido-chip">' + r.sinPalets.length + ' sin palets</div>' +
-        '<div class="barrido-chip">' + r.cerradas.length + ' cerradas</div>' +
+        '<div class="barrido-chip">' + r.cerradas.length + ' bloqueadas</div>' +
         (r.errores.length ? '<div class="barrido-chip error">' + r.errores.length + ' con error</div>' : '') +
       '</div>' +
       listaColapsable(BARRIDO_TIENDAS_ESTADO.simulado ? 'Se enviarían' : 'Encolados (se enviarán a 30/min)', r.enviados, function (it) {
@@ -349,7 +349,7 @@ function pintarResultadoBarridoTiendas_() {
       listaColapsable('Sin conteo guardado', r.pendientesDeOtrasRutas || [], function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Sin email configurado', r.sinEmail, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Sin palets ese día', r.sinPalets, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
-      listaColapsable('Cerradas ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
+      listaColapsable('Con el conteo bloqueado ese día', r.cerradas, function (t) { return '<li>' + escapeHtml(t) + '</li>'; }) +
       listaColapsable('Errores de envío', r.errores, function (it) { return '<li>' + escapeHtml(it.tienda) + ' — ' + escapeHtml(it.error) + '</li>'; });
 
     ajustarAlturaListaScrollable_('barrido-resultado');

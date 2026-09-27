@@ -27,8 +27,8 @@ const CATALOGO_PERMISOS = [
     grupo: 'Gestión general',
     items: [
       { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
-      { clave: 'cierres', etiqueta: 'Cerrar y reabrir tiendas', desc: 'Marcar tiendas como cerradas o reabrirlas en la cuadrícula de conteos.' },
-      { clave: 'ver_cuadrante_completo', etiqueta: 'Ver cuadrante completo', desc: 'Ver los conteos de fechas lejanas (más allá de hoy + 1 día) con todos los datos, igual que un administrador, en vez de la versión reducida (solo tiendas y cierres, sin límites, celdas de conteo ni plazos de entrega).' },
+      { clave: 'cierres', etiqueta: 'Bloquear y desbloquear conteos', desc: 'Bloquear el conteo de una tienda (con una observación) o desbloquearlo en la cuadrícula de conteos.' },
+      { clave: 'ver_cuadrante_completo', etiqueta: 'Ver cuadrante completo', desc: 'Ver los conteos de fechas lejanas (más allá de hoy + 1 día) con todos los datos, igual que un administrador, en vez de la versión reducida (solo tiendas y bloqueos, sin límites, celdas de conteo ni plazos de entrega).' },
     ],
   },
   {
@@ -52,7 +52,7 @@ const CATALOGO_PERMISOS = [
     grupo: 'Administración',
     items: [
       { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
-      { clave: 'festivos', etiqueta: 'Cierres y cambios', desc: 'Cierres, notas y cambios puntuales de agrupación a nivel de día completo (no de una tienda o ruta concreta).' },
+      { clave: 'festivos', etiqueta: 'Bloqueos y cambios', desc: 'Bloqueos de conteo, notas y cambios puntuales de agrupación a nivel de día completo (no de una tienda o ruta concreta).' },
       { clave: 'palets_forzados', etiqueta: 'Palets forzados', desc: 'Ver el histórico de palets forzados manualmente.' },
       { clave: 'cola_emails', etiqueta: 'Cola de avisos a tiendas', desc: 'Ver la cola de envíos a tiendas y reintentar los que hayan fallado.' },
       { clave: 'aviso_tiendas', etiqueta: 'Simulación envío tiendas', desc: 'Lanzar la vista previa del barrido del día y el envío manual real de avisos a tiendas.' },

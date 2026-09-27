@@ -81,7 +81,7 @@ function renderAdminFestivos() {
     '<div class="vista-card">' +
       '<div class="festivos-fijo">' +
         '<div class="vista-card-header">' +
-          '<h2>Cierres y cambios</h2>' +
+          '<h2>Bloqueos y cambios</h2>' +
           '<div class="vista-card-header-acciones">' +
             '<button type="button" class="btn-festivos-filtro' + (FESTIVOS_ESTADO.filtrosAbiertos ? ' abierto' : '') + '" id="btn-festivos-filtro-toggle" title="Filtrar">' +
               '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>' +
@@ -89,10 +89,10 @@ function renderAdminFestivos() {
             '</button>' +
             '<button type="button" class="btn-anadir-obs" id="btn-festivos-anadir">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
-              'Añadir cierre / observación</button>' +
+              'Añadir bloqueo / observación</button>' +
           '</div>' +
         '</div>' +
-        '<p>Resumen de todas las notas y cierres de tienda guardados, tanto pasados como futuros.</p>' +
+        '<p>Resumen de todas las notas, bloqueos de conteo y cambios puntuales guardados, tanto pasados como futuros.</p>' +
         '<div class="festivos-stats" id="festivos-stats"></div>' +
         '<div class="festivos-toolbar">' +
           '<button type="button" class="nav" id="festivos-prev" aria-label="Semana anterior">' +
@@ -114,7 +114,7 @@ function renderAdminFestivos() {
               '<div class="festivos-filtros-fila">' +
                 '<div class="festivos-filtro-tipo" id="festivos-filtro-tipo">' +
                   '<button type="button" class="activo" data-tipo="todos">Todos</button>' +
-                  '<button type="button" data-tipo="cierre">Cierres</button>' +
+                  '<button type="button" data-tipo="cierre">Bloqueos</button>' +
                   '<button type="button" data-tipo="nota">Observaciones</button>' +
                   '<button type="button" data-tipo="cambio">Cambios</button>' +
                 '</div>' +
@@ -279,7 +279,7 @@ function aplanarDatosFestivos_(datosDias) {
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id });
       });
       (seccion.tiendas || []).forEach(function (t) {
-        if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'Tienda cerrada', id: t.cierreId });
+        if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'CONTEO BLOQUEADO', id: t.cierreId });
       });
       (seccion.excepcionesSalida || []).forEach(function (e) {
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', texto: e.texto, id: e.id });
@@ -348,7 +348,7 @@ function renderStatsFestivos_(statsEl, grupos) {
     '</div>' +
     '<div class="festivos-stat cierre">' +
       '<span class="icono">' + ICONO_CIERRE_ + '</span>' +
-      '<span class="txt"><span class="valor">' + totalCierres + '</span><span class="etiqueta">cierre' + (totalCierres === 1 ? '' : 's') + '</span></span>' +
+      '<span class="txt"><span class="valor">' + totalCierres + '</span><span class="etiqueta">bloqueo' + (totalCierres === 1 ? '' : 's') + '</span></span>' +
     '</div>' +
     '<div class="festivos-stat nota">' +
       '<span class="icono">' + ICONO_NOTA_ + '</span>' +
@@ -369,7 +369,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
         '</div>'
       : '<div class="festivos-vacio">' +
           '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
-          '<span>Sin cierres ni anotaciones guardados en este rango.</span>' +
+          '<span>Sin bloqueos ni anotaciones guardados en este rango.</span>' +
         '</div>';
     return;
   }
@@ -401,7 +401,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
       : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
     col.innerHTML =
       '<div class="festivos-dia-col-header">' +
-        '<button type="button" class="festivos-dia-col-add" data-fecha="' + g.fecha + '" title="Añadir cierre / observación para este día">' +
+        '<button type="button" class="festivos-dia-col-add" data-fecha="' + g.fecha + '" title="Añadir bloqueo / observación para este día">' +
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
         '</button>' +
         '<div class="festivos-dia-col-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +

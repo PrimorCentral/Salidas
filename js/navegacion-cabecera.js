@@ -23,7 +23,7 @@ let ESTADO_CONFIG = { seccionActiva: 'emails' };
 // aunque se le marquen permisos (caso de "Servidores": monitorización de
 // las cuentas puente, nada que un operario necesite consultar).
 const ADMIN_SECCIONES = [
-  { id: 'festivos', label: 'Cierres y cambios', permiso: 'festivos' },
+  { id: 'festivos', label: 'Bloqueos y cambios', permiso: 'festivos' },
   { id: 'palets-forzados', label: 'Palets forzados', permiso: 'palets_forzados' },
   { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
   { id: 'servidores', label: 'Servidores', permiso: null },
