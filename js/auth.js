@@ -50,7 +50,7 @@ function abrirModalCambioPasswordObligatorio_(datos, passActual) {
   texto.style.display = '';
   texto.textContent = 'Hola' + (datos.nombre_completo ? ' ' + datos.nombre_completo : '') +
     '. Por seguridad, antes de entrar tienes que poner una contraseña nueva. ' +
-    'Debe tener al menos 4 caracteres, no puede ser igual que tu usuario ni que la contraseña actual.';
+    'Debe tener al menos 4 caracteres y no puede ser igual que tu usuario. Si tu contraseña actual ya cumple esto, puedes volver a escribirla.';
   document.getElementById('modal-textarea').style.display = 'none';
 
   const custom = document.getElementById('modal-custom');
@@ -96,7 +96,6 @@ function abrirModalCambioPasswordObligatorio_(datos, passActual) {
     if (nueva.trim().toLowerCase() === String(datos.usuario || '').trim().toLowerCase()) {
       mostrarError('La contraseña no puede ser igual que el usuario.', inputNueva); return;
     }
-    if (nueva === passActual) { mostrarError('La contraseña nueva tiene que ser distinta de la actual.', inputNueva); return; }
     if (inputRepetir.value !== nueva) { mostrarError('Las dos contraseñas no coinciden.', inputRepetir); return; }
 
     const btn = document.getElementById('modal-confirm-btn');
