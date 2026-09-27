@@ -514,7 +514,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
       if (tr.classList.contains('fila-grupo-header') || tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-sale-excepcion')) return;
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
-      if (!input || input.classList.contains('celda-no')) return;
+      // "NO" sin forzar y columnas que hoy rellena otra agrupación (doble
+      // salida): no se tocan al verificar.
+      if (!input || input.classList.contains('celda-no') || input.classList.contains('celda-otra-agencia')) return;
       if (String(input.value).trim() === '') {
         inputs.push(input);
         nombres.push(tr.getAttribute('data-nombre') || '');
@@ -838,7 +840,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       if (seccion.tienePeso && !isNaN(valor) && valor > 0) {
         const pesoInput = tr.querySelector('input[data-campo="peso"]');
         const peso = pesoInput ? parseFloat(pesoInput.value) : NaN;
-        if (isNaN(peso) || peso <= 0) pesoFaltante.push(tr.getAttribute('data-nombre') || '');
+        // Doble salida: el PESO lo pone la agrupación de origen, no esta.
+        const pesoDeOtra = pesoInput && pesoInput.classList.contains('celda-otra-agencia');
+        if (!pesoDeOtra && (isNaN(peso) || peso <= 0)) pesoFaltante.push(tr.getAttribute('data-nombre') || '');
       }
     });
     let totalPalets = 0;

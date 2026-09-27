@@ -461,7 +461,11 @@ const SUPABASE_ACCIONES_ = {
       p_agrupacion_origen: c.agrupacionOrigen,
       p_tienda: c.tienda,
       p_agrupacion_destino: c.agrupacionDestino,
-      p_transito: (c.transito != null ? c.transito : null)
+      p_transito: (c.transito != null ? c.transito : null),
+      // Doble salida: la tienda sale ese día por las dos agrupaciones y la
+      // de destino rellena solo las columnas de p_campos_destino.
+      p_modo: c.modo === 'doble' ? 'doble' : 'mover',
+      p_campos_destino: c.modo === 'doble' ? (c.camposDestino || []) : null
     });
   },
   eliminarExcepcionTienda: function (args) {
