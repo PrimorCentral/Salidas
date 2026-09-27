@@ -150,18 +150,43 @@ function pintarPanelAvisosVerificacion_() {
                 : '') +
               '<button type="button" class="avisos-verif-ir" data-id="' + escapeAttr(a.id) + '">Ir a la agrupación →</button>' +
             '</div>' +
+            '<button type="button" class="avisos-verif-borrar" data-id="' + escapeAttr(a.id) + '" title="Borrar este aviso">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+            '</button>' +
           '</div>';
         }).join('') + '</div>'
       : '<div class="avisos-verif-vacio">No hay cambios después de verificar en los últimos 3 días.</div>');
 
   const btnTodo = panel.querySelector('.avisos-verif-todo-visto');
   if (btnTodo) btnTodo.onclick = function (e) { e.stopPropagation(); marcarAvisosVistos_(null); };
+  panel.querySelectorAll('.avisos-verif-borrar').forEach(function (b) {
+    b.onclick = function (e) {
+      e.stopPropagation();
+      borrarAvisoVerificacion_(b.getAttribute('data-id'));
+    };
+  });
   panel.querySelectorAll('.avisos-verif-ir').forEach(function (b) {
     b.onclick = function (e) {
       e.stopPropagation();
       const aviso = AVISOS_VERIF_.lista.find(function (x) { return x.id === b.getAttribute('data-id'); });
       if (aviso) irAAvisoVerificacion_(aviso);
     };
+  });
+}
+
+/** Papelera de un aviso: lo quita de la lista al momento (solo para este
+ *  usuario; los demás administradores lo siguen viendo). Si esa columna
+ *  vuelve a cambiar después, el aviso reaparece. */
+function borrarAvisoVerificacion_(id) {
+  const copia = AVISOS_VERIF_.lista.slice();
+  AVISOS_VERIF_.lista = AVISOS_VERIF_.lista.filter(function (a) { return a.id !== id; });
+  pintarContadorAvisosVerificacion_();
+  pintarPanelAvisosVerificacion_();
+  llamarApi_('borrarAvisoVerificacion', [id]).catch(function (err) {
+    AVISOS_VERIF_.lista = copia;
+    pintarContadorAvisosVerificacion_();
+    pintarPanelAvisosVerificacion_();
+    mostrarErrorServidor(err);
   });
 }
 

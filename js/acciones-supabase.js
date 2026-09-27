@@ -46,6 +46,9 @@ const SUPABASE_ACCIONES_ = {
   getAvisosVerificacion: function () {
     return llamarRpcSupabase_('get_avisos_verificacion', {});
   },
+  borrarAvisoVerificacion: function (args) {
+    return llamarRpcSupabase_('borrar_aviso_verificacion', { p_id: args[0] });
+  },
   marcarAvisosVerificacionVistos: function (args) {
     return llamarRpcSupabase_('marcar_avisos_verificacion_vistos', { p_ids: args[0] || null });
   },
