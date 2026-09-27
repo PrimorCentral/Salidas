@@ -573,6 +573,11 @@
     border-radius: 5px;
   }
   .festivos-del:hover { color: var(--danger); background: #fff; }
+  .festivos-edit {
+    background: none; border: none; color: var(--ink-soft); flex-shrink: 0; padding: 2px; margin-top: 1px;
+    border-radius: 5px;
+  }
+  .festivos-edit:hover { color: var(--navy); background: #fff; }
   .festivos-vacio {
     color: var(--ink-soft); font-size: 13px; text-align: center; padding: 36px 6px;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -2557,6 +2562,7 @@
   .nota-chip .del,
   .btn-cerrar-tienda,
   .btn-reabrir,
+  .festivos-edit,
   .festivos-del {
     display: none !important;
   }
@@ -2569,6 +2575,7 @@
   body.perm-festivos .nota-chip .del { display: inline-block !important; }
   body.es-admin .btn-cerrar-tienda, body.perm-cierres .btn-cerrar-tienda { display: inline-flex !important; }
   body.es-admin .festivos-del, body.perm-festivos .festivos-del { display: inline-flex !important; }
+  body.es-admin .festivos-edit, body.perm-festivos .festivos-edit { display: inline-flex !important; }
   body.es-admin .btn-reabrir, body.perm-cierres .btn-reabrir { display: inline-block !important; }
 
   /* ---------- ADMINISTRACIÓN (admin, u operario con algún permiso de ese menú) ----------
