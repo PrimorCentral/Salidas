@@ -2297,6 +2297,13 @@
   .gestor-tipo-pill:hover:not(.activa):not(:disabled) { background: #f0f2f6; }
   .gestor-tipo-pill.activa { background: var(--navy); border-color: var(--navy); color: #fff; }
   .gestor-tipo-pill:disabled { opacity: .4; cursor: not-allowed; }
+  /* Desplegables del gestor (agrupación destino y plazo del cambio puntual). */
+  .gestor-campo select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-family: inherit; color: var(--ink); background: #fff;
+  }
+  .gestor-campo select:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.1); }
+  .modal-box.gestor-obs .gestor-campo select { font-size: 15px; padding: 11px 13px; }
   /* Píldoras del paso "¿Por dónde sale?" y de columnas de la doble salida. */
   .gestor-tipo-pills.gestor-pills-2 { grid-template-columns: repeat(2, 1fr) !important; }
   .gestor-tipo-pills.gestor-pills-3 { grid-template-columns: repeat(3, 1fr) !important; }
