@@ -1905,6 +1905,21 @@
      toda la fila en amarillo suave para que resalte entre las de siempre. */
   table.conteo tr.fila-entra-excepcion { background: #fff8de !important; }
   table.conteo tr.fila-entra-excepcion td.nombre { color: #7a5417; }
+  /* "Doble salida" (cambio puntual por las dos agrupaciones): la fila de
+     origen en azul muy suave, un aviso bajo el nombre y, en las dos filas,
+     las columnas que rellena la otra agrupación en gris azulado y sin
+     poder escribir en ellas. */
+  table.conteo tr.fila-doble-salida { background: #f3f7fd !important; }
+  table.conteo td.nombre .aviso-doble-salida {
+    font-weight: 600; font-size: 11px; color: #1f4e8c; margin-top: 2px;
+    background: #e3ecf9; border-radius: 5px; padding: 2px 6px; display: inline-block;
+  }
+  table.conteo input.celda.celda-otra-agencia,
+  table.conteo input.celda.celda-otra-agencia:disabled {
+    background: #eaf0f8; border: 1px dashed #a9bddb; color: #6f93c4; cursor: not-allowed;
+  }
+  table.conteo input.celda.celda-otra-agencia::placeholder { color: #8fa9cf; font-weight: 800; }
+  table.conteo input.celda.celda-otra-agencia:focus { box-shadow: none; border-color: #a9bddb; }
 
   .btn-cerrar-tienda {
     background: none; border: none; color: var(--ink-soft); padding: 5px; border-radius: 6px; display: inline-flex;
@@ -2282,7 +2297,13 @@
   .gestor-tipo-pill:hover:not(.activa):not(:disabled) { background: #f0f2f6; }
   .gestor-tipo-pill.activa { background: var(--navy); border-color: var(--navy); color: #fff; }
   .gestor-tipo-pill:disabled { opacity: .4; cursor: not-allowed; }
+  /* Píldoras del paso "¿Por dónde sale?" y de columnas de la doble salida. */
+  .gestor-tipo-pills.gestor-pills-2 { grid-template-columns: repeat(2, 1fr) !important; }
+  .gestor-tipo-pills.gestor-pills-3 { grid-template-columns: repeat(3, 1fr) !important; }
+  .modal-box.gestor-obs .gestor-tipo-pills.gestor-pills-2 .gestor-tipo-pill,
+  .modal-box.gestor-obs .gestor-tipo-pills.gestor-pills-3 .gestor-tipo-pill { padding: 11px 8px; font-size: 13px; }
   @media (max-width: 480px) {
+    .gestor-tipo-pills.gestor-pills-2 { grid-template-columns: 1fr !important; }
     .gestor-tipo-pills { grid-template-columns: 1fr; }
     .gestor-tipo-pill { flex-direction: row; justify-content: flex-start; padding: 9px 12px; }
   }
