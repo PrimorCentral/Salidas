@@ -2528,6 +2528,11 @@
   .avisos-verif-resuelto { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; color: var(--ok); }
   .avisos-verif-ir { align-self: flex-start; background: none; border: none; padding: 0; color: var(--prevision); font-size: 12px; font-weight: 700; cursor: pointer; }
   .avisos-verif-ir:hover { text-decoration: underline; }
+  .avisos-verif-borrar {
+    align-self: flex-start; flex-shrink: 0; background: none; border: none; padding: 4px; border-radius: 6px;
+    color: var(--ink-soft); cursor: pointer; display: inline-flex;
+  }
+  .avisos-verif-borrar:hover { color: var(--danger); background: #fceded; }
   .avisos-verif-vacio { padding: 22px 16px; text-align: center; color: var(--ink-soft); font-size: 13px; }
   .avisos-verif-toast {
     position: fixed; left: 20px; bottom: 20px; width: 400px; max-width: calc(100vw - 40px); z-index: 320;
