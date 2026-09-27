@@ -2214,6 +2214,21 @@
     gap: 14px; text-align: center; padding: 50px 20px; color: var(--ink-soft); font-size: 14px;
   }
   .loader .spinner-navy { display: block; }
+  /* Spinner pequeño para los "Cargando…" en línea (tarjetas de inicio,
+     resumen, acceso rápido, buscador del gestor). */
+  .spinner-mini {
+    display: inline-block; width: 13px; height: 13px; border-radius: 50%; vertical-align: -2px;
+    border: 2px solid #e3e7ee; border-top-color: var(--navy); animation: girar .7s linear infinite;
+    margin-right: 7px; flex-shrink: 0;
+  }
+  .cargando-linea { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+  /* Aviso si una carga pasa de 15 s (ver revisarCargasLentas_ en utilidades.js). */
+  .carga-lenta { flex-basis: 100%; font-size: 12px; color: var(--amber-dark); margin-top: 8px; text-align: center; }
+  .carga-lenta-btn {
+    background: none; border: 1px solid currentColor; color: inherit; border-radius: 6px;
+    padding: 2px 8px; font-size: 12px; font-weight: 700; cursor: pointer; margin-left: 2px;
+  }
+  .carga-lenta-btn:hover { background: #fdf3e6; }
 
   /* ---------- Modal "Añadir observación" (algo más ancho que el estándar,
      para que quepan bien las píldoras de tipo y los chips de selección) ---- */
