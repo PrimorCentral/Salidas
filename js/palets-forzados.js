@@ -104,7 +104,7 @@ function cargarPaletsForzadosAdmin_(esRefrescoManual) {
   const resultadoEl = document.getElementById('admin-palets-resultado');
   const btnRefrescar = document.getElementById('btn-admin-palets-refrescar');
   if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
-  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
 
   llamarApi_('getPaletsForzadosAdmin', [ADMIN_PALETS_ESTADO.fechaIni, ADMIN_PALETS_ESTADO.fechaFin])
     .then(function (datos) {

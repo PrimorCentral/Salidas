@@ -105,7 +105,7 @@ function renderConfigPlantilla() {
         'Solo lectura: entra con la contraseña de administrador para poder editar.' +
       '</div>' +
       '<div class="plantilla-dias-fila" id="plantilla-dias-fila"></div>' +
-      '<div id="plantilla-lista"><div class="loader">Cargando…</div></div>' +
+      '<div id="plantilla-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   llamarApi_('getDiasPlantilla', [])
@@ -189,7 +189,7 @@ function cargarPlantilla_(opts) {
   // la respuesta, y se restaura la posición de scroll al terminar.
   const silencioso = opts && opts.silencioso;
   const scrollY = window.scrollY;
-  if (!silencioso) listaEl.innerHTML = '<div class="loader">Cargando…</div>';
+  if (!silencioso) listaEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
   llamarApi_('getPlantillaDia', [PLANTILLA_ESTADO.dia])
     .then(function (resultado) {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
@@ -2398,7 +2398,7 @@ function anadirRutaPlantilla_() {
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-dia-aviso">Se creará en <strong>' + escapeHtml(PLANTILLA_ESTADO.dia || '') + '</strong></div>' +
-    '<div class="loader">Cargando agrupaciones disponibles…</div>';
+    '<div class="loader"><span class="spinner-navy"></span><div>Cargando agrupaciones disponibles…</div></div>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -2498,7 +2498,7 @@ function renderShellPrincipal() {
             '</div>' +
           '</div>' +
           '<div class="calendar-body" id="calendar-body">' +
-            '<div class="loader">Cargando calendario…</div>' +
+            '<div class="loader"><span class="spinner-navy"></span><div>Cargando calendario…</div></div>' +
           '</div>' +
         '</div>' +
         '<div class="menu-rapido-panel">' +
@@ -2507,11 +2507,11 @@ function renderShellPrincipal() {
             '<span class="emoji">🔍</span>' +
             '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…">' +
           '</div>' +
-          '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio">Cargando…</div></div>' +
+          '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
         '</div>' +
       '</aside>' +
       '<div class="col-contenido">' +
-        '<div id="dia-contenido"><div class="loader">Cargando conteo…</div></div>' +
+        '<div id="dia-contenido"><div class="loader"><span class="spinner-navy"></span><div>Cargando conteo…</div></div></div>' +
       '</div>' +
       '<aside class="col-sidebar col-resumen">' +
         '<div class="resumen-panel" id="resumen-panel">' +
@@ -2525,7 +2525,7 @@ function renderShellPrincipal() {
               'Añadir</button>' +
             '</div>' +
           '</div>' +
-          '<div class="resumen-body" id="resumen-body"><div class="resumen-vacio">Cargando…</div></div>' +
+          '<div class="resumen-body" id="resumen-body"><div class="resumen-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
         '</div>' +
       '</aside>' +
     '</div>';

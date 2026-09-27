@@ -131,7 +131,7 @@ function renderAdminFestivos() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<div id="festivos-lista"><div class="loader">Cargando…</div></div>' +
+      '<div id="festivos-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   document.getElementById('btn-festivos-anadir').onclick = abrirGestorObservaciones;
@@ -226,7 +226,7 @@ function cargarFestivos() {
   });
 
   const idSolicitud = ++FESTIVOS_ESTADO.idSolicitud;
-  listaEl.innerHTML = '<div class="loader">Cargando…</div>';
+  listaEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
   const statsElCarga = document.getElementById('festivos-stats');
   if (statsElCarga) statsElCarga.innerHTML = '';
 

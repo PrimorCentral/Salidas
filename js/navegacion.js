@@ -128,7 +128,7 @@ function htmlTarjetaInicioCargando_(titulo, tipo) {
   return (
     '<div class="inicio-card inicio-card-' + tipo + '">' +
       '<div class="inicio-card-header"><h2>' + escapeHtml(titulo) + '</h2></div>' +
-      '<div class="inicio-card-vacio">Cargando…</div>' +
+      '<div class="inicio-card-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div>' +
     '</div>'
   );
 }

@@ -27,7 +27,7 @@ function renderAdminServidores() {
         '</div>' +
       '</div>' +
       '<p>Cuenta principal y cuentas puente que envían los avisos de palets a tiendas, con su cuota de email restante y cuándo dieron señales de vida por última vez.</p>' +
-      '<div id="admin-servidores-resultado"><div class="loader">Cargando…</div></div>' +
+      '<div id="admin-servidores-resultado"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   document.getElementById('btn-admin-servidores-refrescar').onclick = function () { cargarServidoresAdmin_(true); };
@@ -44,7 +44,7 @@ function cargarServidoresAdmin_(esRefrescoManual) {
   const resultadoEl = document.getElementById('admin-servidores-resultado');
   const btnRefrescar = document.getElementById('btn-admin-servidores-refrescar');
   if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
-  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
 
   llamarApi_('getEstadoServidores', [])
     .then(function (datos) {

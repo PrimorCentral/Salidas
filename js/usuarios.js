@@ -122,7 +122,7 @@ function renderAdminUsuarios() {
           '<input type="text" id="admin-usuarios-buscar" placeholder="Buscar por usuario o nombre…">' +
         '</div>' +
       '</div>' +
-      '<div id="admin-usuarios-resultado"><div class="loader">Cargando…</div></div>' +
+      '<div id="admin-usuarios-resultado"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   document.getElementById('btn-admin-usuarios-refrescar').onclick = function () { cargarUsuariosAdmin_(true); };
@@ -150,7 +150,7 @@ function cargarUsuariosAdmin_(esRefrescoManual) {
   const resultadoEl = document.getElementById('admin-usuarios-resultado');
   const btnRefrescar = document.getElementById('btn-admin-usuarios-refrescar');
   if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
-  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+  if (!esRefrescoManual && resultadoEl) resultadoEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
 
   llamarApi_('getUsuarios', [])
     .then(function (datos) {

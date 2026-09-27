@@ -33,7 +33,7 @@ function renderAdminColaEmails() {
         '<div class="admin-filtro-campo"><label>Fecha (vacío = todas)</label><input type="date" id="cola-emails-fecha" value="' + escapeAttr(ADMIN_COLA_EMAILS_ESTADO.fecha) + '"></div>' +
         '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-cola-emails-reintentar-todos">Reintentar todos los errores</button>' +
       '</div>' +
-      '<div id="cola-emails-resultado"><div class="loader">Cargando…</div></div>' +
+      '<div id="cola-emails-resultado"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   document.getElementById('btn-cola-emails-refrescar').onclick = function () { cargarColaEmailsAdmin_(true); };
@@ -62,7 +62,7 @@ function cargarColaEmailsAdmin_(esRefrescoManual) {
   const resultadoEl = document.getElementById('cola-emails-resultado');
   const btnRefrescar = document.getElementById('btn-cola-emails-refrescar');
   if (esRefrescoManual && btnRefrescar) { btnRefrescar.classList.add('girando'); btnRefrescar.disabled = true; }
-  if (!esRefrescoManual && !ADMIN_COLA_EMAILS_ESTADO.datos && resultadoEl) resultadoEl.innerHTML = '<div class="loader">Cargando…</div>';
+  if (!esRefrescoManual && !ADMIN_COLA_EMAILS_ESTADO.datos && resultadoEl) resultadoEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
 
   llamarApi_('getColaEmailsTiendas', [ADMIN_COLA_EMAILS_ESTADO.fecha || null])
     .then(function (datos) {

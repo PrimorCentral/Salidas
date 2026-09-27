@@ -713,7 +713,7 @@ function renderResultadosBusquedaGestorObs_(query) {
   posicionarResultadosGestorObs_();
 
   if (!GESTOR_OBS.datosDia) {
-    cont.innerHTML = '<div class="gestor-busqueda-vacio">Cargando…</div>';
+    cont.innerHTML = '<div class="gestor-busqueda-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div>';
     cont.style.display = 'block';
     return;
   }

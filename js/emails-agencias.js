@@ -87,7 +87,7 @@ function renderConfigEmails() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<div id="emails-config-lista"><div class="loader">Cargando…</div></div>' +
+      '<div id="emails-config-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   document.getElementById('btn-sincronizar-agrupaciones').onclick = sincronizarAgrupacionesDesdeApp_;

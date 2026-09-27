@@ -460,7 +460,7 @@ function renderConfigTiendas() {
           '</div>' +
         '</div>' +
       '</div>' +
-      '<div id="tiendas-config-lista"><div class="loader">Cargando…</div></div>' +
+      '<div id="tiendas-config-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
   const btnNuevaTienda = document.getElementById('btn-nueva-tienda-config');
