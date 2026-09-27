@@ -451,6 +451,12 @@ const SUPABASE_ACCIONES_ = {
       p_texto: String(obs.texto == null ? '' : obs.texto).toUpperCase()
     });
   },
+  editarObservacion: function (args) {
+    return llamarRpcSupabase_('editar_observacion', {
+      p_id: args[0],
+      p_texto: String(args[1] == null ? '' : args[1]).toUpperCase()
+    });
+  },
   eliminarObservacion: function (args) {
     return llamarRpcSupabase_('eliminar_observacion', { p_id: args[0] });
   },

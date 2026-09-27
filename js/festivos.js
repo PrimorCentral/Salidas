@@ -391,12 +391,18 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
             ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '" title="Eliminar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
+          // Lápiz para editar el texto: solo notas y bloqueos (los cambios
+          // puntuales se editan volviendo a crearlos, su texto es automático).
+          const editBtn = (it.id && it.tipo !== 'cambio')
+            ? '<button type="button" class="festivos-edit" data-id="' + escapeAttr(it.id) + '" title="Editar texto">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
+            : '';
           return '<div class="' + clase + '">' +
             '<span class="festivos-item-icon">' + icono + '</span>' +
             '<div class="festivos-item-body">' +
               '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
               '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
-            '</div>' + delBtn + '</div>';
+            '</div>' + editBtn + delBtn + '</div>';
         }).join('')
       : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
     col.innerHTML =
@@ -420,6 +426,14 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     btn.onclick = function (e) {
       e.stopPropagation();
       abrirGestorObservaciones(btn.getAttribute('data-fecha'));
+    };
+  });
+
+  listaEl.querySelectorAll('.festivos-edit').forEach(function (btn) {
+    btn.onclick = function () {
+      const cont = btn.closest('.festivos-item');
+      const actual = cont ? cont.querySelector('.festivos-item-texto').textContent : '';
+      editarObservacionDesdeFestivos_(btn.getAttribute('data-id'), actual);
     };
   });
 
@@ -459,6 +473,41 @@ function quitarDeCacheFestivos_(id) {
       if (seccion.excepcionesSalida) {
         seccion.excepcionesSalida = seccion.excepcionesSalida.filter(function (e) { return e.id !== id; });
       }
+    });
+  });
+}
+
+/** Lápiz de una nota o bloqueo: abre el mismo cuadro de texto de siempre
+ *  (en MAYÚSCULAS) con el texto actual, lo guarda con editarObservacion y
+ *  lo cambia al momento en el caché, sin recargar todo el rango. */
+function editarObservacionDesdeFestivos_(id, textoActual) {
+  appPrompt('Editar observación', 'Escribe el nuevo texto…', function (texto) {
+    const nuevo = String(texto).trim().toUpperCase();
+    if (!nuevo || nuevo === textoActual) return;
+    llamarApi_('editarObservacion', [id, nuevo])
+      .then(function () {
+        cambiarTextoEnCacheFestivos_(id, nuevo);
+        aplicarFiltrosFestivos_();
+        mostrarToast('Observación actualizada');
+        if (document.getElementById('calendar-body')) cargarCalendario();
+      })
+      .catch(mostrarErrorServidor);
+  });
+  const area = document.getElementById('modal-textarea');
+  if (area) {
+    area.value = textoActual || '';
+    setTimeout(function () { area.focus(); area.setSelectionRange(area.value.length, area.value.length); }, 60);
+  }
+}
+
+/** Cambia en el caché local el texto de la nota/bloqueo con ese id. */
+function cambiarTextoEnCacheFestivos_(id, texto) {
+  (FESTIVOS_ESTADO.datosCache || []).forEach(function (data) {
+    if (!data) return;
+    (data.notasGenerales || []).forEach(function (n) { if (n.id === id) n.texto = texto; });
+    (data.secciones || []).forEach(function (seccion) {
+      (seccion.notas || []).forEach(function (n) { if (n.id === id) n.texto = texto; });
+      (seccion.tiendas || []).forEach(function (t) { if (t.cierreId === id) t.motivoCierre = texto; });
     });
   });
 }
