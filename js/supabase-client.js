@@ -49,3 +49,18 @@ function loginSupabase_(usuario, pass) {
       return resp.data;
     });
 }
+
+/** Cambio OBLIGATORIO de contraseña (administradores que aún no la han
+ *  cambiado). Usa el token temporal que devuelve login -- que no sirve
+ *  para nada más -- y, si todo va bien, devuelve una sesión normal con el
+ *  mismo formato que loginSupabase_. */
+function cambiarPasswordObligatorioSupabase_(tokenCambio, passNueva) {
+  if (!supabaseClient) {
+    return Promise.reject(new Error('Supabase no está configurado todavía.'));
+  }
+  return supabaseClient.rpc('cambiar_password_obligatorio', { p_token_cambio: tokenCambio, p_password_nuevo: passNueva })
+    .then(function (resp) {
+      if (resp.error) throw resp.error;
+      return resp.data;
+    });
+}
