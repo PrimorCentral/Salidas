@@ -1994,6 +1994,10 @@
   /* ---------- Modal de confirmación "peligro" (borrado) ---------- */
   /* Modal "Sin permiso": icono arriba, título en rojo y un solo botón "Aceptar". */
   .modal-box.sin-permiso .modal-cerrar-x { display: none; }
+  /* Modal de cambio OBLIGATORIO de contraseña: no se puede cerrar con la X. */
+  .modal-box.cambio-obligatorio .modal-cerrar-x { display: none; }
+  .modal-box.cambio-obligatorio h3 { padding-right: 0; }
+  .cambio-obligatorio-error { display: none; margin: 4px 0 0; color: var(--danger); font-size: 13px; font-weight: 600; }
   .modal-box.sin-permiso h3 { color: var(--danger); padding-right: 0; }
   .modal-box.sin-permiso h3::before { content: '\26D4'; display: block; font-size: 24px; line-height: 1; margin-bottom: 8px; }
   .modal-box.peligro { border-top: 5px solid var(--danger); }
