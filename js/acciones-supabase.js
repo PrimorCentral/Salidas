@@ -507,7 +507,10 @@ const SUPABASE_ACCIONES_ = {
       // Doble salida: la tienda sale ese día por las dos agrupaciones y la
       // de destino rellena solo las columnas de p_campos_destino.
       p_modo: c.modo === 'doble' ? 'doble' : 'mover',
-      p_campos_destino: c.modo === 'doble' ? (c.camposDestino || []) : null
+      p_campos_destino: c.modo === 'doble' ? (c.camposDestino || []) : null,
+      // Naves de p_campos_destino que TAMBIÉN rellena la agrupación de
+      // origen (casilla en las dos agencias, cada una con su número).
+      p_campos_compartidos: c.modo === 'doble' ? (c.camposCompartidos || []) : null
     });
   },
   eliminarExcepcionTienda: function (args) {

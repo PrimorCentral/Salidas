@@ -55,12 +55,14 @@ function celdaOtraAgrupacionHtml_(campo, otraAgrupacion) {
 }
 
 /** Columnas (60/PTA/CARTAMA) que le tocan a ESTA agrupación en una doble
- *  salida, como texto para el aviso de la fila: "60, CARTAMA". */
-function camposPropiosDobleTexto_(camposFuera) {
+ *  salida, como texto para el aviso de la fila: "60, CARTAMA". Las que
+ *  salen por las dos agrupaciones (casilla compartida, cada una con su
+ *  número) llevan "(en las dos)". */
+function camposPropiosDobleTexto_(camposFuera, camposCompartidos) {
   const etiquetas = { c60: '60', pta: 'PTA', cart: 'CARTAMA' };
   return ['c60', 'pta', 'cart']
     .filter(function (c) { return (camposFuera || []).indexOf(c) === -1; })
-    .map(function (c) { return etiquetas[c]; })
+    .map(function (c) { return etiquetas[c] + ((camposCompartidos || []).indexOf(c) !== -1 ? ' (en las dos)' : ''); })
     .join(', ');
 }
 
@@ -144,7 +146,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     ? '<div class="aviso-doble-salida">' +
         (t.entraPorExcepcion ? 'Doble salida con ' : 'También sale por ') +
         escapeHtml(parsearNombreAgrupacion(otra).titulo) +
-        ' · aquí: ' + escapeHtml(camposPropiosDobleTexto_(fuera) || 'solo PDTE') +
+        ' · aquí: ' + escapeHtml(camposPropiosDobleTexto_(fuera, t.camposCompartidos) || 'solo PDTE') +
       '</div>'
     : '';
   const tituloEntrada = t.entraPorExcepcion

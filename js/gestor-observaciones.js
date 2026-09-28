@@ -34,6 +34,7 @@ function abrirGestorObservaciones(fechaInicial) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('gestor-ancho');
   document.getElementById('modal-box').classList.add('gestor-obs');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Añadir observación';
@@ -58,14 +59,19 @@ function abrirGestorObservaciones(fechaInicial) {
 function crearFormularioGestorObs_() {
   const wrap = document.createElement('div');
   wrap.className = 'gestor-form';
+  // En "Cambio puntual" el modal se ensancha y se reparte en dos columnas
+  // (izquierda: fecha, tipo, tiendas y destino; derecha: por dónde sale,
+  // naves de cada agrupación y plazo) para que no crezca tanto en altura.
+  // En el resto de tipos las columnas no se notan (display: contents).
   wrap.innerHTML =
+    '<div class="gestor-col gestor-col-izq">' +
     '<div class="gestor-campo">' +
       '<label>Fecha</label>' +
       '<input type="date" id="gestor-fecha" value="' + GESTOR_OBS.fecha + '">' +
     '</div>' +
     '<div class="gestor-campo">' +
       '<label>Tipo</label>' +
-      '<div class="gestor-tipo-pills">' +
+      '<div class="gestor-tipo-pills gestor-tipo-principal">' +
         '<button type="button" class="gestor-tipo-pill activa" data-tipo="general">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>' +
           'Nota del día</button>' +
@@ -96,19 +102,40 @@ function crearFormularioGestorObs_() {
       '<select id="gestor-destino-select"></select>' +
       '<div class="gestor-campo-ayuda" id="gestor-destino-ayuda"></div>' +
     '</div>' +
+    '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
+      '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
+        '<span id="gestor-aviso-error-texto"></span>' +
+        '<button type="button" id="gestor-reintentar">Reintentar</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="gestor-campo">' +
+      '<label id="gestor-texto-label">Nota</label>' +
+      '<textarea id="gestor-texto" placeholder="Escribe la nota general del día…"></textarea>' +
+    '</div>' +
+    '</div>' +
+    '<div class="gestor-col gestor-col-der">' +
+    '<div class="gestor-der-vacio" id="gestor-der-vacio" style="display:none;">Marca la tienda y elige la agrupación destino para decidir por dónde sale.</div>' +
     '<div class="gestor-campo" id="gestor-modo-campo" style="display:none;">' +
       '<label>¿Por dónde sale ese día?</label>' +
       '<div class="gestor-tipo-pills gestor-pills-2">' +
         '<button type="button" class="gestor-tipo-pill gestor-modo-pill activa" data-modo="mover">Solo por la agrupación destino</button>' +
         '<button type="button" class="gestor-tipo-pill gestor-modo-pill" data-modo="doble">Por las dos agrupaciones (doble salida)</button>' +
       '</div>' +
-      '<div id="gestor-doble-campos" style="display:none;margin-top:14px;">' +
-        '<label id="gestor-doble-label">Columnas que rellena la agrupación destino</label>' +
+      '<div id="gestor-doble-campos" style="display:none;margin-top:16px;">' +
+        '<label id="gestor-doble-label">Naves en la agrupación destino</label>' +
         '<div class="gestor-tipo-pills gestor-pills-3">' +
-          '<button type="button" class="gestor-tipo-pill gestor-campo-pill" data-campo="c60">60</button>' +
+          '<button type="button" class="gestor-tipo-pill gestor-campo-pill" data-campo="c60">60 · GAITE</button>' +
           '<button type="button" class="gestor-tipo-pill gestor-campo-pill" data-campo="pta">PTA</button>' +
           '<button type="button" class="gestor-tipo-pill gestor-campo-pill" data-campo="cart">CARTAMA</button>' +
         '</div>' +
+        '<label id="gestor-doble-label-origen" style="margin-top:14px;">Naves en la agrupación de siempre</label>' +
+        '<div class="gestor-tipo-pills gestor-pills-3">' +
+          '<button type="button" class="gestor-tipo-pill gestor-origen-pill" data-campo="c60">60 · GAITE</button>' +
+          '<button type="button" class="gestor-tipo-pill gestor-origen-pill" data-campo="pta">PTA</button>' +
+          '<button type="button" class="gestor-tipo-pill gestor-origen-pill" data-campo="cart">CARTAMA</button>' +
+        '</div>' +
+        '<div class="gestor-campo-ayuda" id="gestor-doble-ayuda-origen"></div>' +
+        '<div class="gestor-doble-resumen" id="gestor-doble-resumen"></div>' +
         '<div class="gestor-campo-ayuda" id="gestor-doble-ayuda"></div>' +
       '</div>' +
     '</div>' +
@@ -121,15 +148,6 @@ function crearFormularioGestorObs_() {
       '<select id="gestor-transito-select" style="display:none;margin-top:8px;"></select>' +
       '<div class="gestor-campo-ayuda">Por si la agencia por la que sale hoy no sirve en el mismo plazo que la habitual. No cambia el plazo normal de la tienda, solo el de este envío puntual.</div>' +
     '</div>' +
-    '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
-      '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
-        '<span id="gestor-aviso-error-texto"></span>' +
-        '<button type="button" id="gestor-reintentar">Reintentar</button>' +
-      '</div>' +
-    '</div>' +
-    '<div class="gestor-campo">' +
-      '<label id="gestor-texto-label">Nota</label>' +
-      '<textarea id="gestor-texto" placeholder="Escribe la nota general del día…"></textarea>' +
     '</div>' +
     '<div class="gestor-loading-overlay" id="gestor-loading-overlay">' +
       '<div class="gestor-spinner"></div>' +
@@ -228,7 +246,28 @@ function crearFormularioGestorObs_() {
       sel.campos = sel.campos || [];
       const pos = sel.campos.indexOf(campo);
       if (pos === -1) sel.campos.push(campo);
-      else sel.campos.splice(pos, 1);
+      else {
+        sel.campos.splice(pos, 1);
+        // Si deja de salir por la destino, ya no puede estar "en las dos".
+        sel.compartidos = (sel.compartidos || []).filter(function (c) { return c !== campo; });
+      }
+      GESTOR_OBS.seleccion = sel;
+      actualizarSeccionModoGestorObs_();
+    };
+  });
+  // Fila de la agrupación de siempre: las naves que no van por la destino
+  // salen siempre por aquí (fijas); las que sí van por la destino se pueden
+  // marcar también aquí para que salgan por las dos (casilla compartida:
+  // cada agencia pone su propio número de palets de esa nave).
+  wrap.querySelectorAll('.gestor-origen-pill').forEach(function (btn) {
+    btn.onclick = function () {
+      const sel = GESTOR_OBS.seleccion || nuevaSeleccionCambioGestorObs_();
+      const campo = btn.getAttribute('data-campo');
+      if ((sel.campos || []).indexOf(campo) === -1) return; // fija: siempre sale por la de siempre
+      sel.compartidos = sel.compartidos || [];
+      const pos = sel.compartidos.indexOf(campo);
+      if (pos === -1) sel.compartidos.push(campo);
+      else sel.compartidos.splice(pos, 1);
       GESTOR_OBS.seleccion = sel;
       actualizarSeccionModoGestorObs_();
     };
@@ -285,6 +324,15 @@ function actualizarFormularioSegunTipo_() {
 
   const campoTexto = textoArea.closest('.gestor-campo');
   if (campoTexto) campoTexto.style.display = '';
+
+  // Modal ancho en dos columnas solo en "Cambio puntual".
+  const esCambio = GESTOR_OBS.tipo === 'cambio';
+  const caja = document.getElementById('modal-box');
+  if (caja) caja.classList.toggle('gestor-ancho', esCambio);
+  const form = campoBusqueda.closest('.gestor-form');
+  if (form) form.classList.toggle('gestor-form-cambio', esCambio);
+  const vacioDer = document.getElementById('gestor-der-vacio');
+  if (vacioDer) vacioDer.style.display = 'none';
 
   if (GESTOR_OBS.tipo === 'general') {
     campoBusqueda.style.display = 'none';
@@ -398,9 +446,11 @@ function actualizarSeccionTransitoGestorObs_() {
 
 /** Selección vacía de un "Cambio puntual". modo: 'mover' (sale solo por
  *  la agrupación destino) o 'doble' (sale por las dos); campos: columnas
- *  de nave (c60/pta/cart) que rellena la agrupación destino si es doble. */
+ *  de nave (c60/pta/cart) que rellena la agrupación destino si es doble;
+ *  compartidos: de esas, las que TAMBIÉN rellena la agrupación de siempre
+ *  (la misma nave sale por las dos, cada una con su número). */
 function nuevaSeleccionCambioGestorObs_() {
-  return { origenes: [], destino: null, transitoOverride: null, modo: 'mover', campos: [] };
+  return { origenes: [], destino: null, transitoOverride: null, modo: 'mover', campos: [], compartidos: [] };
 }
 
 const ETIQUETAS_CAMPOS_DOBLE_ = { c60: '60', pta: 'PTA', cart: 'CARTAMA' };
@@ -413,7 +463,10 @@ function actualizarSeccionModoGestorObs_() {
   const campo = document.getElementById('gestor-modo-campo');
   if (!campo) return;
   const sel = GESTOR_OBS.seleccion || {};
-  if (GESTOR_OBS.tipo !== 'cambio' || !(sel.origenes && sel.origenes.length) || !sel.destino) {
+  const listo = GESTOR_OBS.tipo === 'cambio' && sel.origenes && sel.origenes.length && sel.destino;
+  const vacio = document.getElementById('gestor-der-vacio');
+  if (vacio) vacio.style.display = (GESTOR_OBS.tipo === 'cambio' && !listo) ? '' : 'none';
+  if (!listo) {
     campo.style.display = 'none';
     return;
   }
@@ -429,8 +482,20 @@ function actualizarSeccionModoGestorObs_() {
   if (modo !== 'doble') return;
 
   const campos = sel.campos || [];
+  // Solo pueden ser compartidas las que también van por la destino.
+  sel.compartidos = (sel.compartidos || []).filter(function (c) { return campos.indexOf(c) !== -1; });
+  const compartidos = sel.compartidos;
   campo.querySelectorAll('.gestor-campo-pill').forEach(function (b) {
     b.classList.toggle('activa', campos.indexOf(b.getAttribute('data-campo')) !== -1);
+  });
+  campo.querySelectorAll('.gestor-origen-pill').forEach(function (b) {
+    const c = b.getAttribute('data-campo');
+    const fija = campos.indexOf(c) === -1; // no va por la destino: sale aquí sí o sí
+    b.classList.toggle('activa', fija || compartidos.indexOf(c) !== -1);
+    b.classList.toggle('fija', fija);
+    b.title = fija
+      ? 'Esta nave no sale por la agrupación destino, así que sale siempre por aquí'
+      : 'Márcala para que esta nave salga también por aquí (cada agencia con su número de palets)';
   });
 
   const destinoCorto = parsearNombreAgrupacion(sel.destino).titulo;
@@ -438,19 +503,40 @@ function actualizarSeccionModoGestorObs_() {
   const origenCorto = agrOrigen.length === 1 ? parsearNombreAgrupacion(agrOrigen[0]).titulo : 'su agrupación de siempre';
   const quien = sel.origenes.length === 1 ? sel.origenes[0].tienda : 'Las ' + sel.origenes.length + ' tiendas';
   const label = document.getElementById('gestor-doble-label');
-  if (label) label.textContent = 'Columnas que rellena ' + destinoCorto;
+  if (label) label.textContent = 'Naves en ' + destinoCorto;
+  const labelOrigen = document.getElementById('gestor-doble-label-origen');
+  if (labelOrigen) labelOrigen.textContent = 'Naves en ' + origenCorto;
+  const ayudaOrigen = document.getElementById('gestor-doble-ayuda-origen');
+  if (ayudaOrigen) {
+    ayudaOrigen.textContent = campos.length
+      ? 'Marca aquí también una nave de ' + destinoCorto + ' si sale por las dos agencias (cada una pone sus palets).'
+      : '';
+  }
 
-  const enDestino = ['c60', 'pta', 'cart'].filter(function (c) { return campos.indexOf(c) !== -1; })
-    .map(function (c) { return ETIQUETAS_CAMPOS_DOBLE_[c]; });
-  const enOrigen = ['c60', 'pta', 'cart'].filter(function (c) { return campos.indexOf(c) === -1; })
-    .map(function (c) { return ETIQUETAS_CAMPOS_DOBLE_[c]; });
+  const etiqueta = function (c) {
+    return ETIQUETAS_CAMPOS_DOBLE_[c] + (compartidos.indexOf(c) !== -1 ? ' (en las dos)' : '');
+  };
+  const enDestino = ['c60', 'pta', 'cart'].filter(function (c) { return campos.indexOf(c) !== -1; }).map(etiqueta);
+  const enOrigen = ['c60', 'pta', 'cart']
+    .filter(function (c) { return campos.indexOf(c) === -1 || compartidos.indexOf(c) !== -1; }).map(etiqueta);
+  const resumen = document.getElementById('gestor-doble-resumen');
+  if (resumen) {
+    resumen.style.display = enDestino.length ? '' : 'none';
+    resumen.innerHTML = enDestino.length
+      ? (sel.origenes.length > 1
+          ? '<div class="gestor-doble-resumen-nota" style="margin:0 0 4px;">' + escapeHtml(quien) + ', todas igual:</div>'
+          : '') +
+        '<div><b>' + escapeHtml(destinoCorto) + ':</b> ' + escapeHtml(enDestino.join(', ')) + '</div>' +
+        '<div><b>' + escapeHtml(origenCorto) + ':</b> ' + escapeHtml(enOrigen.length ? enOrigen.join(', ') : 'ninguna nave') + '</div>' +
+        '<div class="gestor-doble-resumen-nota">PDTE, peso y el resto se quedan en ' + escapeHtml(origenCorto) + '.' +
+        (compartidos.length ? ' En las naves "en las dos", cada agencia pone su número y el total de la tienda es la suma.' : '') +
+        '</div>'
+      : '';
+  }
   const ayuda = document.getElementById('gestor-doble-ayuda');
   if (ayuda) {
-    ayuda.textContent = !enDestino.length
-      ? 'Marca al menos una columna.'
-      : quien + (sel.origenes.length === 1 ? ' saldrá en ' : ' saldrán en ') + destinoCorto + ' con ' + enDestino.join(', ') +
-        ' y en ' + origenCorto + ' con ' + (enOrigen.length ? enOrigen.join(', ') : 'ninguna nave') +
-        '. PDTE, peso y el resto se quedan en ' + origenCorto + '.';
+    ayuda.textContent = enDestino.length ? '' : 'Marca al menos una nave para ' + destinoCorto + '.';
+    ayuda.style.display = enDestino.length ? 'none' : '';
   }
 }
 
@@ -937,8 +1023,9 @@ function guardarCambioPuntualDesdeGestor_() {
   if (!sel.destino) { mostrarToast('Elige la agrupación destino', true); return; }
   const esDoble = sel.modo === 'doble';
   const camposDestino = ['c60', 'pta', 'cart'].filter(function (c) { return (sel.campos || []).indexOf(c) !== -1; });
+  const camposCompartidos = camposDestino.filter(function (c) { return (sel.compartidos || []).indexOf(c) !== -1; });
   if (esDoble && !camposDestino.length) {
-    mostrarToast('Marca qué columnas (60, PTA o CARTAMA) rellena ' + parsearNombreAgrupacion(sel.destino).titulo, true);
+    mostrarToast('Marca qué naves (60, PTA o CARTAMA) salen por ' + parsearNombreAgrupacion(sel.destino).titulo, true);
     return;
   }
 
@@ -960,7 +1047,8 @@ function guardarCambioPuntualDesdeGestor_() {
         agrupacionDestino: sel.destino,
         transito: (sel.transitoOverride != null ? sel.transitoOverride : null),
         modo: esDoble ? 'doble' : 'mover',
-        camposDestino: esDoble ? camposDestino : null
+        camposDestino: esDoble ? camposDestino : null,
+        camposCompartidos: esDoble ? camposCompartidos : null
       }]).then(function () { guardadosOk++; });
     });
   });
