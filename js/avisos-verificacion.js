@@ -11,7 +11,7 @@
  *    verificó, quién cambió y qué números) y "Ir a la agrupación".
  * Se consulta cada AVISOS_VERIF_MS_ mientras la sesión sea de admin.
  */
-const AVISOS_VERIF_MS_ = 15000;
+const AVISOS_VERIF_MS_ = 30000;
 let AVISOS_VERIF_ = { lista: [], intervalo: null, enVuelo: false, yaMostrados: {}, primeraCarga: true };
 
 /** Arranca (o para) la campana según el rol de la sesión. Se llama tras el
