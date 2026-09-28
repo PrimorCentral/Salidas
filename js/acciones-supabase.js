@@ -19,14 +19,15 @@ const SUPABASE_ACCIONES_ = {
     // También los "cambios después de verificar" que siguen abiertos
     // (seccion.cambiosVerif = { c60: {verificadoPor, modificadoPor, hora,
     // cambios: [...]}, ... }), para la pastilla naranja del panel.
-    return Promise.all([
-      llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha }),
-      llamarRpcSupabase_('get_verificaciones_dia', { p_fecha: fecha }).catch(function () { return {}; }),
-      llamarRpcSupabase_('get_cambios_tras_verificar_dia', { p_fecha: fecha }).catch(function () { return {}; })
-    ]).then(function (res) {
-      const data = res[0];
-      const verifs = res[1] || {};
-      const cambios = res[2] || {};
+    //
+    // Todo va en UNA sola petición (get_conteo_dia_completo) en vez de tres,
+    // para reducir peticiones y Log Ingestion de Supabase: esta acción la
+    // lanza el autorefresco de los conteos cada pocos segundos. Si esa
+    // función no existiera en la base de datos (PGRST202), se vuelve a las
+    // tres llamadas de siempre para no romper nada.
+    function unir_(data, verifs, cambios) {
+      verifs = verifs || {};
+      cambios = cambios || {};
       if (data && data.secciones) {
         data.secciones.forEach(function (s) {
           s.verificaciones = verifs[s.nombre] || {};
@@ -34,7 +35,19 @@ const SUPABASE_ACCIONES_ = {
         });
       }
       return data;
-    });
+    }
+    return llamarRpcSupabase_('get_conteo_dia_completo', { p_fecha: fecha })
+      .then(function (res) {
+        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios);
+      })
+      .catch(function (err) {
+        if (!err || err.code !== 'PGRST202') throw err;
+        return Promise.all([
+          llamarRpcSupabase_('get_conteo_dia', { p_fecha: fecha }),
+          llamarRpcSupabase_('get_verificaciones_dia', { p_fecha: fecha }).catch(function () { return {}; }),
+          llamarRpcSupabase_('get_cambios_tras_verificar_dia', { p_fecha: fecha }).catch(function () { return {}; })
+        ]).then(function (r) { return unir_(r[0], r[1], r[2]); });
+      });
   },
   // -- Supabase: Verificar conteo por nave (60 / PTA / CART.) --
   verificarConteo: function (args) {
