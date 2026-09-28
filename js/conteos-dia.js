@@ -43,7 +43,7 @@ function cargarConteoDia() {
  */
 let CONTEO_REFRESCO_INTERVALO_ = null;
 let CONTEO_REFRESCO_EN_VUELO_ = false;
-const CONTEO_REFRESCO_MS_ = 15000;
+const CONTEO_REFRESCO_MS_ = 30000;
 
 // Temporizador visual (topbar, junto al reloj): puramente decorativo, no
 // afecta en nada a cuándo se sondea de verdad — solo pinta la cuenta atrás
