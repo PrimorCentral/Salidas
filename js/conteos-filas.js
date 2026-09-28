@@ -142,12 +142,14 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   const esFuera = function (campo) { return fuera.indexOf(campo) !== -1; };
   const otra = t.dobleOtraAgrupacion || '';
   const claseDoble = (esDoble && !t.entraPorExcepcion) ? ' fila-doble-salida' : '';
+  // Etiqueta corta "⇄ DOBLE" al lado del nombre (para no estrechar la fila);
+  // el detalle (con qué agrupación y qué casillas) sale al pasar el ratón.
   const avisoDobleHtml = esDoble
-    ? '<div class="aviso-doble-salida">' +
+    ? '<span class="aviso-doble-salida" title="' + escapeAttr(
         (t.entraPorExcepcion ? 'Doble salida con ' : 'También sale por ') +
-        escapeHtml(parsearNombreAgrupacion(otra).titulo) +
-        ' · aquí: ' + escapeHtml(camposPropiosDobleTexto_(fuera, t.camposCompartidos) || 'solo PDTE') +
-      '</div>'
+        parsearNombreAgrupacion(otra).titulo +
+        ' · aquí: ' + (camposPropiosDobleTexto_(fuera, t.camposCompartidos) || 'solo PDTE')
+      ) + '">&#8644; DOBLE</span>'
     : '';
   const tituloEntrada = t.entraPorExcepcion
     ? (esDoble
