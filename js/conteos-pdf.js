@@ -29,21 +29,23 @@ function textoBloqueoFila_(tr) {
 const PDF_ANCHO_MM_ = 297; // ancho fijo tipo A4 apaisado
 const PDF_ALTO_A4_MM_ = 210; // alto estándar de un A4 apaisado
 
-/** Columna VIERNES en el PDF (solo si la agrupación la tiene activada ese
- *  día): va justo después de "Límite", igual que en pantalla, así que
- *  desplaza una posición el resto de columnas (TOTAL pasa del índice 5 al 6). */
+/** Columnas VIERNES y DOMINGO en el PDF (solo si la agrupación las tiene
+ *  activadas ese día): van justo después de "Límite", igual que en
+ *  pantalla, así que cada una desplaza una posición el resto de columnas
+ *  (TOTAL pasa del índice 5 al 6, o al 7 si están las dos). */
 function indiceTotalPdf_(seccion) {
-  return seccion.tieneViernes ? 6 : 5;
+  return 5 + (seccion.tieneViernes ? 1 : 0) + (seccion.tieneCasillaDomingo ? 1 : 0);
 }
 
 /** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
- *  sin guardar) las filas [tienda, límite, (VIERNES), 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBRESTOCK)].
- *  Con VIERNES, el TOTAL de cada tienda lo incluye (como en pantalla) y el
- *  total de la carga sin viernes se guarda aparte en fila._carga, para la
- *  fila de TOTAL GENERAL. */
+ *  sin guardar) las filas [tienda, límite, (VIERNES), (DOMINGO), 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBRESTOCK)].
+ *  Con VIERNES / DOMINGO, el TOTAL de cada tienda los incluye (como en
+ *  pantalla) y el total de la carga sin ellos se guarda aparte en
+ *  fila._carga, para la fila de TOTAL GENERAL. */
 function leerFilasPdfSeccion_(tableWrap, seccion) {
   const filas = [];
   const conViernes = !!seccion.tieneViernes;
+  const conDomingo = !!seccion.tieneCasillaDomingo;
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-grupo-header')) return;
 
@@ -54,7 +56,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       filas.push([
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : ''
-      ].concat(conViernes ? [''] : []).concat([
+      ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
         textoBloqueoFila_(tr), '', '', '', ''
       ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
       return;
@@ -66,7 +68,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       filas.push([
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : ''
-      ].concat(conViernes ? [''] : []).concat([
+      ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
         motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', '', '', ''
       ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
       return;
@@ -89,11 +91,22 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       }
       celdaViernes = [vieTxt];
     }
+    // DOMINGO: igual que VIERNES.
+    let celdaDomingo = [];
+    if (conDomingo) {
+      const excluidaD = tr.querySelector('.celda-domingo-excluida');
+      const domTxt = excluidaD ? 'X' : valorCampo('casillaDomingo');
+      const dom = parseFloat(domTxt);
+      if (!isNaN(dom) && dom !== 0) {
+        totalTienda = String((parseFloat(totalTienda) || 0) + dom);
+      }
+      celdaDomingo = [domTxt];
+    }
 
     const fila = [
       nombre,
       tr.getAttribute('data-limite') || ''
-    ].concat(celdaViernes).concat([
+    ].concat(celdaViernes).concat(celdaDomingo).concat([
       valorCampo('c60'),
       valorCampo('pta'),
       valorCampo('cart'),
@@ -165,16 +178,21 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
     const v = parseFloat(fila._carga !== undefined ? fila._carga : fila[idxTotal]);
     return acc + (isNaN(v) ? 0 : v);
   }, 0);
-  let filaTotal;
-  if (seccion.tieneViernes) {
-    const totalViernes = filas.reduce(function (acc, fila) {
-      const v = parseFloat(fila[2]); // índice 2 = VIERNES
+  // DOMINGO funciona igual que VIERNES (su suma, en su propia columna).
+  const sumaColumnaPdf = function (idx) {
+    return filas.reduce(function (acc, fila) {
+      const v = parseFloat(fila[idx]);
       return acc + (isNaN(v) ? 0 : v);
     }, 0);
-    filaTotal = ['TOTAL CARGA (sin viernes)', '', String(totalViernes), '', '', '', String(totalGeneral), ''];
-  } else {
-    filaTotal = ['TOTAL GENERAL', '', '', '', '', String(totalGeneral), ''];
-  }
+  };
+  const extrasFuera = [];
+  if (seccion.tieneViernes) extrasFuera.push('viernes');
+  if (seccion.tieneCasillaDomingo) extrasFuera.push('domingo');
+  let filaTotal = [extrasFuera.length ? 'TOTAL CARGA (sin ' + extrasFuera.join(' ni ') + ')' : 'TOTAL GENERAL', ''];
+  let idxCol = 2;
+  if (seccion.tieneViernes) { filaTotal.push(String(sumaColumnaPdf(idxCol))); idxCol++; }
+  if (seccion.tieneCasillaDomingo) { filaTotal.push(String(sumaColumnaPdf(idxCol))); idxCol++; }
+  filaTotal = filaTotal.concat(['', '', '', String(totalGeneral), '']);
   filaTotal = filaTotal
     .concat(seccion.tienePeso ? [''] : [])
     .concat(seccion.tieneCExpress ? [''] : [])
@@ -184,7 +202,7 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBRESTOCK'] : [])],
+    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : []).concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBRESTOCK'] : [])],
     body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },

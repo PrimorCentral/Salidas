@@ -331,6 +331,24 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], row = args[1];
     return llamarRpcSupabase_('incluir_viernes_tienda_plantilla', { p_dia: dia, p_row: row });
   },
+  // DOMINGO: exactamente igual que VIERNES (rutas.tiene_casilla_domingo y
+  // tiendas_ruta.excluida_domingo).
+  activarDomingoRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('activar_domingo_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  desactivarDomingoRuta: function (args) {
+    const dia = args[0], nombreRuta = args[1];
+    return llamarRpcSupabase_('desactivar_domingo_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
+  },
+  excluirDomingoTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('excluir_domingo_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
+  incluirDomingoTiendaPlantilla: function (args) {
+    const dia = args[0], row = args[1];
+    return llamarRpcSupabase_('incluir_domingo_tienda_plantilla', { p_dia: dia, p_row: row });
+  },
   activarPdfEspecial: function (args) {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('activar_pdf_especial', { p_dia: dia, p_nombre_ruta: nombreRuta });

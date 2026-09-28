@@ -112,6 +112,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<span class="verif-pastillas"></span>' +
     '</div></div>' +
     (seccion.tieneViernes ? '<span class="badge-total-viernes" title="Palets de VIERNES: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Viernes:&nbsp;<span class="total-viernes-valor">0</span></span>' : '') +
+    (seccion.tieneCasillaDomingo ? '<span class="badge-total-domingo" title="Palets de DOMINGO: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Domingo:&nbsp;<span class="total-domingo-valor">0</span></span>' : '') +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
@@ -235,13 +236,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const siguiente = seccion.tiendas[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
-    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes) : '';
-    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes);
+    const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes, seccion.tieneCasillaDomingo) : '';
+    return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes, seccion.tieneCasillaDomingo);
   }).join('');
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
     '<th class="th-nombre">Tienda</th><th>Límite</th>' +
     (seccion.tieneViernes ? '<th class="th-viernes">VIERNES</th>' : '') +
+    (seccion.tieneCasillaDomingo ? '<th class="th-domingo">DOMINGO</th>' : '') +
     NAVES_CONTEO.map(function (n) { return thCampoNave_(n.campo, n.etiqueta); }).join('') +
     '<th class="th-total">TOTAL</th><th>PDTE</th>' +
     (seccion.tienePeso ? '<th>PESO</th>' : '') +
@@ -277,7 +279,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   // Total de palets de la agrupación: suma en vivo del TOTAL de cada tienda
   // (no cuenta las tiendas cerradas, que no tienen input de TOTAL). El
   // VIERNES NO entra aquí (no va en la carga): se suma aparte en su propia
-  // etiqueta "Viernes: N" de la cabecera.
+  // etiqueta "Viernes: N" de la cabecera. Lo mismo con DOMINGO.
   function actualizarTotalPalets() {
     let suma = 0;
     tableWrap.querySelectorAll('input.celda-total').forEach(function (inp) {
@@ -294,6 +296,15 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         if (!isNaN(v)) sumaV += v;
       });
       elV.textContent = sumaV;
+    }
+    const elD = header.querySelector('.total-domingo-valor');
+    if (elD) {
+      let sumaD = 0;
+      tableWrap.querySelectorAll('input[data-campo="casillaDomingo"]').forEach(function (inp) {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v)) sumaD += v;
+      });
+      elD.textContent = sumaD;
     }
     return suma;
   }
@@ -828,7 +839,10 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       // de la fila), aunque no vaya en la carga.
       const viernesInput = tr.querySelector('input[data-campo="viernes"]');
       const vie = viernesInput && viernesInput.value !== '' ? (parseFloat(viernesInput.value) || 0) : 0;
-      const valorConViernes = (isNaN(valor) ? 0 : valor) + vie;
+      // Y lo mismo con el DOMINGO.
+      const domingoInput = tr.querySelector('input[data-campo="casillaDomingo"]');
+      const dom = domingoInput && domingoInput.value !== '' ? (parseFloat(domingoInput.value) || 0) : 0;
+      const valorConViernes = (isNaN(valor) ? 0 : valor) + vie + dom;
       if (valorConViernes > 0 && !isNaN(limite) && limite > 0 && valorConViernes > limite) {
         excedidas.push({
           nombre: tr.getAttribute('data-nombre') || '',

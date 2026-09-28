@@ -78,7 +78,20 @@ function celdaViernesHtml_(t) {
   return '<td><input class="celda celda-viernes" data-campo="viernes" type="number" value="' + (t.viernes == null ? '' : t.viernes) + '" title="VIERNES: suma al TOTAL de la tienda, pero no al total de palets de la carga ni al envío a la agencia"></td>';
 }
 
-function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes) {
+/**
+ * Celda de DOMINGO: exactamente igual que la de VIERNES (ver
+ * celdaViernesHtml_), pero con su propia columna en la base de datos
+ * (conteos.casilla_domingo) y su propio interruptor por ruta
+ * (seccion.tieneCasillaDomingo) y por tienda (t.excluidaDomingo).
+ */
+function celdaDomingoHtml_(t) {
+  if (t.excluidaDomingo) {
+    return '<td><div class="celda-domingo-excluida" title="Esta tienda no lleva DOMINGO">X</div></td>';
+  }
+  return '<td><input class="celda celda-domingo" data-campo="casillaDomingo" type="number" value="' + (t.casillaDomingo == null ? '' : t.casillaDomingo) + '" title="DOMINGO: suma al TOTAL de la tienda, pero no al total de palets de la carga ni al envío a la agencia"></td>';
+}
+
+function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes, tieneDomingo) {
   const nombreLimpio = quitarMarcadorNombre(t.nombre);
   const badge = badgeTransitoTienda(t.transito);
   const badgeHtml = badge
@@ -97,7 +110,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
-      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir" title="Desbloquear el conteo de esta tienda">Desbloquear</button></td>' +
       '</tr>';
   }
@@ -110,7 +123,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
-      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
       '<td></td>' +
       '</tr>';
   }
@@ -120,7 +133,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   const claseExcepcionEntrada = t.entraPorExcepcion ? ' fila-entra-excepcion' : '';
   // "Doble salida": la tienda sale hoy por esta agrupación Y por otra; cada
   // una rellena solo sus columnas (t.camposFuera = las que NO son de aquí;
-  // 'extras' = PDTE, PESO, C.EXPRESS, SOBRESTOCK y VIERNES, que se quedan
+  // 'extras' = PDTE, PESO, C.EXPRESS, SOBRESTOCK, VIERNES y DOMINGO, que se quedan
   // siempre en la agrupación de origen).
   const esDoble = !!t.dobleSalida;
   const fuera = esDoble ? (t.camposFuera || []) : [];
@@ -151,12 +164,13 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + avisoDobleHtml + '</td>' +
     '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
     (tieneViernes ? (esFuera('extras') && !t.excluidaViernes ? '<td>' + celdaOtraAgrupacionHtml_('viernes', otra) + '</td>' : celdaViernesHtml_(t)) : '') +
+    (tieneDomingo ? (esFuera('extras') && !t.excluidaDomingo ? '<td>' + celdaOtraAgrupacionHtml_('casillaDomingo', otra) + '</td>' : celdaDomingoHtml_(t)) : '') +
     '<td>' + celdaNave('c60') + '</td>' +
     '<td>' + celdaNave('pta') + '</td>' +
     '<td>' + celdaNave('cart') + '</td>' +
     '<td>' +
       '<input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1" style="display:none">' +
-      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE y el VIERNES. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
+      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE, el VIERNES y el DOMINGO. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
       '<div class="diff-nota"></div>' +
     '</td>' +
     '<td>' + celdaExtra('pdte', t.pdte) + '</td>' +
@@ -184,6 +198,7 @@ function attachCalculoYValidacion(tr) {
   const pdteInput = tr.querySelector('input[data-campo="pdte"]');
   const totalVisualInput = tr.querySelector('input[data-campo="totalVisual"]');
   const viernesInput = tr.querySelector('input[data-campo="viernes"]');
+  const domingoInput = tr.querySelector('input[data-campo="casillaDomingo"]');
   const nota = tr.querySelector('.diff-nota');
 
   // VIERNES: igual que el PDTE, se suma solo a lo que VE el usuario en el
@@ -192,6 +207,10 @@ function attachCalculoYValidacion(tr) {
   // agrupación, los grupos de palets y el envío a la agencia).
   function valorViernes() {
     return (viernesInput && viernesInput.value !== '') ? (parseFloat(viernesInput.value) || 0) : 0;
+  }
+  // DOMINGO: exactamente igual que VIERNES.
+  function valorDomingo() {
+    return (domingoInput && domingoInput.value !== '') ? (parseFloat(domingoInput.value) || 0) : 0;
   }
 
   // recalcTotalVisual: solo actualiza lo que VE el usuario en la columna
@@ -205,10 +224,11 @@ function attachCalculoYValidacion(tr) {
     const real = totalInput.value === '' ? 0 : (parseFloat(totalInput.value) || 0);
     const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
     const vie = valorViernes();
-    if (totalInput.value === '' && pdte === 0 && vie === 0) {
+    const dom = valorDomingo();
+    if (totalInput.value === '' && pdte === 0 && vie === 0 && dom === 0) {
       totalVisualInput.value = '';
     } else {
-      totalVisualInput.value = real + pdte + vie;
+      totalVisualInput.value = real + pdte + vie + dom;
     }
   }
 
@@ -233,12 +253,13 @@ function attachCalculoYValidacion(tr) {
     nota.className = 'diff-nota';
 
     const vie = valorViernes();
+    const dom = valorDomingo();
     const totalReal = parseFloat(totalInput.value);
-    if ((isNaN(totalReal) && vie === 0) || !limite) return;
+    if ((isNaN(totalReal) && vie === 0 && dom === 0) || !limite) return;
     const total = isNaN(totalReal) ? 0 : totalReal;
 
     const pdte = (pdteInput && pdteInput.value !== '') ? (parseFloat(pdteInput.value) || 0) : 0;
-    const exceso = (total + pdte + vie) - limite;
+    const exceso = (total + pdte + vie + dom) - limite;
     if (exceso >= 3) {
       tr.classList.add('fila-alerta');
       nota.textContent = '+' + exceso + ' sobre el límite — consultar a informática';
@@ -257,6 +278,7 @@ function attachCalculoYValidacion(tr) {
   if (sobrestockInput) sobrestockInput.addEventListener('input', recalcTotal);
   if (pdteInput) pdteInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   if (viernesInput) viernesInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
+  if (domingoInput) domingoInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   validar();
   recalcTotalVisual();
 }
@@ -418,6 +440,10 @@ function recogerFilas(tableWrap) {
     // casilla, no se manda nada y el backend deja el valor como estaba.
     const viernes = get('viernes');
     if (viernes !== undefined) fila.viernes = viernes;
+    // "casillaDomingo": igual que "viernes" (solo si la agrupación tiene la
+    // casilla DOMINGO activada y la tienda no está excluida).
+    const casillaDomingo = get('casillaDomingo');
+    if (casillaDomingo !== undefined) fila.casillaDomingo = casillaDomingo;
     filas.push(fila);
   });
   return filas;

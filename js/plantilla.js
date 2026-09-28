@@ -436,6 +436,7 @@ function pintarPlantilla_() {
           camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
             (s.tieneViernes ? botonViernesTiendaPlantillaHtml_(t) : '') +
+            (s.tieneCasillaDomingo ? botonDomingoTiendaPlantillaHtml_(t) : '') +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
@@ -492,6 +493,7 @@ function pintarPlantilla_() {
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
             '<button type="button" class="plantilla-ruta-viernes' + (s.tieneViernes ? ' activo' : '') + '" data-toggle-viernes="' + escapeAttr(s.nombre) + '" data-viernes-activo="' + (s.tieneViernes ? '1' : '0') + '" title="' + (s.tieneViernes ? 'Quitar la casilla VIERNES de esta ruta' : 'Activar la casilla VIERNES en el conteo de esta ruta (suma al total de la tienda, no a la carga)') + '">VIERNES</button>' +
+            '<button type="button" class="plantilla-ruta-domingo' + (s.tieneCasillaDomingo ? ' activo' : '') + '" data-toggle-domingo="' + escapeAttr(s.nombre) + '" data-domingo-activo="' + (s.tieneCasillaDomingo ? '1' : '0') + '" title="' + (s.tieneCasillaDomingo ? 'Quitar la casilla DOMINGO de esta ruta' : 'Activar la casilla DOMINGO en el conteo de esta ruta (suma al total de la tienda, no a la carga)') + '">DOMINGO</button>' +
             '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
             '<button type="button" class="plantilla-ruta-orden' + (s.ordenRetirada && s.ordenRetirada.length ? ' activo' : '') + '" data-orden-ruta="' + escapeAttr(s.nombre) + '" title="' + (s.ordenRetirada && s.ordenRetirada.length ? 'Editar el orden de retirada (' + s.ordenRetirada.length + ' tienda(s))' : 'Configurar el orden en que se quitan los palets de esta ruta') + '">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
@@ -594,6 +596,12 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-viernes-row]').forEach(function (btn) {
     btn.onclick = function () { toggleViernesTiendaPlantilla_(btn.getAttribute('data-viernes-row'), btn.getAttribute('data-viernes-incluida') === '1'); };
+  });
+  listaEl.querySelectorAll('[data-toggle-domingo]').forEach(function (btn) {
+    btn.onclick = function () { toggleDomingoRutaPlantilla_(btn.getAttribute('data-toggle-domingo'), btn.getAttribute('data-domingo-activo') === '1'); };
+  });
+  listaEl.querySelectorAll('[data-domingo-row]').forEach(function (btn) {
+    btn.onclick = function () { toggleDomingoTiendaPlantilla_(btn.getAttribute('data-domingo-row'), btn.getAttribute('data-domingo-incluida') === '1'); };
   });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
@@ -730,6 +738,60 @@ function toggleViernesTiendaPlantilla_(row, incluidaActualmente) {
     'Excluir del VIERNES',
     'Esta tienda dejará de llevar la casilla VIERNES (saldrá en gris con una X). Si ya tenía algo escrito en VIERNES, se borrará. ¿Seguro?',
     function () { guardarPlantillaOptimista_(mutar, 'excluirViernesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda excluida del VIERNES'); },
+    true
+  );
+}
+
+/** Activa/desactiva la casilla DOMINGO de una ruta desde "Rutas y tiendas".
+ *  Funciona exactamente igual que VIERNES (ver toggleViernesRutaPlantilla_):
+ *  suma al TOTAL de la tienda y a su aviso de límite, pero NO a la carga, ni
+ *  a los grupos de palets, ni al email de la agencia. Al desactivarla se
+ *  pide confirmación porque borra los valores de DOMINGO ya guardados. */
+function toggleDomingoRutaPlantilla_(nombreRuta, activoActualmente) {
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tieneCasillaDomingo = !activoActualmente;
+  };
+  if (activoActualmente) {
+    appConfirm(
+      'Quitar la casilla DOMINGO',
+      '¿Seguro que quieres quitar la casilla DOMINGO de "' + nombreRuta + '"? Se borrarán los valores de DOMINGO ya guardados en esta ruta.',
+      function () { guardarPlantillaOptimista_(mutar, 'desactivarDomingoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla DOMINGO desactivada'); },
+      true
+    );
+    return;
+  }
+  guardarPlantillaOptimista_(mutar, 'activarDomingoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla DOMINGO activada');
+}
+
+/** Botón pequeño "DOM" de cada tienda (solo aparece si la ruta tiene la
+ *  casilla DOMINGO activada): en color = la tienda lleva DOMINGO; en
+ *  blanco = excluida (en el conteo sale la casilla gris con una X). */
+function botonDomingoTiendaPlantillaHtml_(t) {
+  const incluida = !t.excluidaDomingo;
+  const titulo = incluida
+    ? 'Esta tienda lleva DOMINGO. Pulsa para excluirla'
+    : 'Esta tienda NO lleva DOMINGO. Pulsa para incluirla';
+  return '<button type="button" class="plantilla-tienda-domingo' + (incluida ? ' activo' : '') + '" data-domingo-row="' + t.row + '" data-domingo-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>DOM</button>';
+}
+
+/** Incluye o excluye una tienda concreta de la casilla DOMINGO de su ruta.
+ *  Al excluir se pide confirmación, porque borra el valor de DOMINGO que
+ *  esa tienda tuviera ya guardado. */
+function toggleDomingoTiendaPlantilla_(row, incluidaActualmente) {
+  row = Number(row);
+  const mutar = function () {
+    const info = buscarTiendaPlantilla_(row);
+    if (info) info.tienda.excluidaDomingo = incluidaActualmente;
+  };
+  if (!incluidaActualmente) {
+    guardarPlantillaOptimista_(mutar, 'incluirDomingoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda incluida en DOMINGO');
+    return;
+  }
+  appConfirm(
+    'Excluir del DOMINGO',
+    'Esta tienda dejará de llevar la casilla DOMINGO (saldrá en gris con una X). Si ya tenía algo escrito en DOMINGO, se borrará. ¿Seguro?',
+    function () { guardarPlantillaOptimista_(mutar, 'excluirDomingoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda excluida del DOMINGO'); },
     true
   );
 }
