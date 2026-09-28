@@ -453,7 +453,9 @@ function quitarDeCacheFestivos_(id) {
   (FESTIVOS_ESTADO.datosCache || []).forEach(function (data) {
     if (!data) return;
     if (data.notasGenerales) {
-      data.notasGenerales = data.notasGenerales.filter(function (n) { return n.id !== id; });
+      // También la nota automática del día ligada a un cambio puntual: en el
+      // servidor se borra junto con el cambio, así que aquí también.
+      data.notasGenerales = data.notasGenerales.filter(function (n) { return n.id !== id && n.excepcionId !== id; });
     }
     (data.secciones || []).forEach(function (seccion) {
       if (seccion.notas) {
