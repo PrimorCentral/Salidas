@@ -114,6 +114,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (seccion.tieneViernes ? '<span class="badge-total-viernes" title="Palets de VIERNES: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Viernes:&nbsp;<span class="total-viernes-valor">0</span></span>' : '') +
     (seccion.tieneCasillaDomingo ? '<span class="badge-total-domingo" title="Palets de DOMINGO: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Domingo:&nbsp;<span class="total-domingo-valor">0</span></span>' : '') +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
+    htmlBotonListaCarga_(seccion) +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
     '</div>' +
@@ -179,6 +180,41 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (panel.classList.contains('colapsada')) ESTADO.colapsadas.add(seccion.nombre);
     else ESTADO.colapsadas.delete(seccion.nombre);
   });
+
+  // Camioncito junto a los palets: abre la lista de carga guardada con el
+  // último envío (ver htmlBotonListaCarga_ / mostrarModalListaCarga).
+  function bindBotonListaCarga_() {
+    const btn = header.querySelector('.btn-lista-carga');
+    if (!btn) return;
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (info) {
+          btn.disabled = false;
+          if (!info) { mostrarToast('Todavía no hay ningún envío para esta agrupación', true); return; }
+          mostrarModalListaCarga(info, parsearNombreAgrupacion(seccion.nombre).titulo, formatearFechaLarga(fecha));
+        })
+        .withFailureHandler(function (err) {
+          btn.disabled = false;
+          mostrarErrorServidor(err);
+        })
+        .getListaCarga(dia, seccion.nombre, fecha);
+    };
+  }
+  // Tras un envío (previsión o definitivo) el camioncito aparece o cambia
+  // de color sin recargar la página.
+  function actualizarBotonListaCarga_() {
+    const viejo = header.querySelector('.btn-lista-carga');
+    if (viejo) viejo.remove();
+    const wrapTmp = document.createElement('div');
+    wrapTmp.innerHTML = htmlBotonListaCarga_(seccion);
+    const nuevo = wrapTmp.firstElementChild;
+    const badge = header.querySelector('.badge-total-palets');
+    if (nuevo && badge) badge.insertAdjacentElement('afterend', nuevo);
+    bindBotonListaCarga_();
+  }
+  bindBotonListaCarga_();
 
   // Notas/instrucciones de carga escritas en la propia hoja de Excel
   // (ej. "1 CAMIÓN 33 P. + ... TODOS LOS LUNES"). De solo lectura.
@@ -740,9 +776,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       // El botón se ve siempre, pero enviar requiere el permiso "Enviar previsión"
       // (el backend lo vuelve a comprobar en enviar_prevision_agencia).
       if (!tienePermiso('enviar_prevision')) { mostrarModalSinPermiso(); return; }
-      mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
-        enviarSeccion('prevision', callback);
-      }, 'prevision');
+      abrirEnvioConLimite_('prevision');
     };
   }
 
@@ -753,10 +787,46 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       // Igual que la previsión: requiere el permiso "Enviar definitivo"
       // (el backend lo vuelve a comprobar en enviar_definitivo_agencia).
       if (!tienePermiso('enviar_definitivo')) { mostrarModalSinPermiso(); return; }
-      mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
-        enviarSeccion('definitivo', callback);
-      }, 'definitivo');
+      abrirEnvioConLimite_('definitivo');
     };
+  }
+
+  /**
+   * Previsión / Definitivo: si alguna tienda (con datos en el TOTAL) está por
+   * encima de su límite, primero se pide confirmar cuántos palets se cargan
+   * en el camión (mostrarModalConfirmarPalets); esos números sustituyen al
+   * TOTAL de esas tiendas en el email. Si no hay ninguna pasada, se va
+   * directo al resumen de siempre.
+   */
+  function abrirEnvioConLimite_(tipo) {
+    const resumen = calcularResumenEnvio();
+    const aConfirmar = resumen.excedidas.filter(function (e) { return e.carga > 0; });
+    const seguir = function (ajustes) {
+      if (ajustes) {
+        resumen.excedidas.forEach(function (e) {
+          if (Object.prototype.hasOwnProperty.call(ajustes, e.nombre)) {
+            resumen.totalPalets += ajustes[e.nombre] - e.carga;
+          }
+        });
+        // En el resumen solo siguen como "por encima del límite" las que
+        // se hayan confirmado aun así por encima.
+        resumen.excedidas = resumen.excedidas.filter(function (e) {
+          const cargar = Object.prototype.hasOwnProperty.call(ajustes, e.nombre) ? ajustes[e.nombre] : e.carga;
+          return cargar + e.otros > e.limite;
+        }).map(function (e) {
+          const cargar = Object.prototype.hasOwnProperty.call(ajustes, e.nombre) ? ajustes[e.nombre] : e.carga;
+          return Object.assign({}, e, { total: cargar + e.otros });
+        });
+      }
+      mostrarModalEnviarAgencia(resumen, function (callback) {
+        enviarSeccion(tipo, callback, ajustes);
+      }, tipo);
+    };
+    if (aConfirmar.length) {
+      mostrarModalConfirmarPalets(resumen, aConfirmar, tipo, seguir);
+    } else {
+      seguir(null);
+    }
   }
 
   const btnHeaderInformatica = header.querySelector('.btn-header-informatica');
@@ -844,11 +914,20 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const dom = domingoInput && domingoInput.value !== '' ? (parseFloat(domingoInput.value) || 0) : 0;
       const valorConViernes = (isNaN(valor) ? 0 : valor) + vie + dom;
       if (valorConViernes > 0 && !isNaN(limite) && limite > 0 && valorConViernes > limite) {
+        const carga = isNaN(valor) ? 0 : valor;
+        const otros = vie + dom;
         excedidas.push({
           nombre: tr.getAttribute('data-nombre') || '',
           total: valorConViernes,
           limite: limite,
-          exceso: valorConViernes - limite
+          exceso: valorConViernes - limite,
+          // Para el modal "Confirma el número de palets a cargar": carga es
+          // el TOTAL que va en el email; VIERNES + DOMINGO cuentan para el
+          // límite pero no van en el email, así que se descuentan del valor
+          // propuesto.
+          carga: carga,
+          otros: otros,
+          sugerido: Math.max(0, Math.min(carga, limite - otros))
         });
       }
       if (seccion.tienePeso && !isNaN(valor) && valor > 0) {
@@ -876,7 +955,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     };
   }
 
-  function enviarSeccion(tipo, callback) {
+  // ajustes (opcional): { 'NOMBRE TIENDA': palets } confirmados en el modal
+  // de límite; sustituyen al TOTAL de esas tiendas en el email.
+  function enviarSeccion(tipo, callback, ajustes) {
     // "Enviar a informática" con el Definitivo ya enviado: no hay nada que
     // guardar (el conteo está archivado), se manda directamente.
     if (tipo === 'informatica' && seccion.estado === 'enviado') {
@@ -941,7 +1022,7 @@ if (callback) callback(true, mensaje);
           if (btnInformatica) btnInformatica.disabled = false;
           if (callback) callback(false, (err && err.message) ? err.message : String(err));
         })
-        [metodo](dia, seccion.nombre, fecha);
+        [metodo](dia, seccion.nombre, fecha, (tipo === 'informatica') ? null : (ajustes || null));
     });
   }
 
@@ -976,6 +1057,7 @@ if (callback) callback(true, mensaje);
       const btnPrevisionEl = header.querySelector('.btn-header-prevision');
       if (btnPrevisionEl) btnPrevisionEl.remove();
       actualizarMenuRapidoItem_(seccion);
+      actualizarBotonListaCarga_();
       return;
     }
 
@@ -1010,6 +1092,7 @@ if (callback) callback(true, mensaje);
     if (btnDefinitivoEl) btnDefinitivoEl.remove();
     // "Enviar a informática" NO se quita: sigue disponible tras el definitivo.
     actualizarBotonesEnvio_();
+    actualizarBotonListaCarga_();
 
     if (esHoy && !header.querySelector('.btn-deshacer-envio')) {
       const wrapBtn = document.createElement('div');

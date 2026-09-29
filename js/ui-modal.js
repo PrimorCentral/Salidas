@@ -313,6 +313,133 @@ function mostrarModalConfirmarPalets(datos, excedidas, tipo, onConfirmar) {
   setTimeout(function () { if (inputs[0]) inputs[0].select(); }, 50);
 }
 
+/**
+ * Camioncito junto al total de palets de la cabecera: solo aparece si la
+ * agrupación ya tiene Previsión o Definitivo enviado. Ámbar tras la
+ * previsión, verde tras el definitivo.
+ */
+function htmlBotonListaCarga_(seccion) {
+  if (!seccion.previsionEnviada && seccion.estado !== 'enviado') return '';
+  const esDef = seccion.estado === 'enviado';
+  return '<button type="button" class="btn-lista-carga' + (esDef ? ' definitivo' : '') + '" title="Lista de carga (' + (esDef ? 'definitivo' : 'previsión') + ')" aria-label="Lista de carga">' +
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>' +
+    '</button>';
+}
+
+/**
+ * Modal "Lista de carga": TIENDA, TOTAL (lo que se mandó a la agencia) y
+ * SOBRANTE (lo que se queda en nave) de cada tienda, tal como se guardó con
+ * el último envío (ver get_lista_carga en Supabase).
+ *
+ * info: { tipo: 'prevision'|'definitivo', hora, enviadoPor, lista: [{tienda, contados, cargar, cerrada}] }
+ */
+function mostrarModalListaCarga(info, titulo, fechaTexto) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('usuario-form', 'medio', 'peligro');
+  box.classList.add('ancho');
+  document.getElementById('modal-title').style.display = 'none';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  const esDef = info && info.tipo === 'definitivo';
+  const lista = (info && Array.isArray(info.lista)) ? info.lista : null;
+
+  let totContados = 0, totCargar = 0, totSobra = 0;
+  const filas = (lista || []).map(function (t) {
+    if (t.cerrada) {
+      return { html: '<tr class="cerrada"><td class="tienda">' + escapeHtml(t.tienda) + '</td><td class="num" colspan="2">CERRADA</td></tr>', tienda: t.tienda, cerrada: true };
+    }
+    const contados = Number(t.contados) || 0;
+    const cargar = Number(t.cargar) || 0;
+    const sobra = Math.max(0, contados - cargar);
+    totContados += contados; totCargar += cargar; totSobra += sobra;
+    return {
+      html: '<tr><td class="tienda">' + escapeHtml(t.tienda) + '</td>' +
+        '<td class="num cargar">' + cargar + '</td>' +
+        '<td class="num sobra' + (sobra ? '' : ' cero') + '">' + (sobra || '—') + '</td></tr>',
+      tienda: t.tienda, cargar: cargar, sobra: sobra
+    };
+  });
+
+  const estado = '<div class="modal-lista-estado' + (esDef ? '' : ' prevision') + '">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' +
+    (esDef ? 'Definitivo enviado' : 'Previsión enviada') +
+    (info && info.hora ? ' a las ' + escapeHtml(info.hora) + ' h' : '') +
+    (info && info.enviadoPor ? ' por ' + escapeHtml(info.enviadoPor) : '') +
+    '</div>';
+
+  const cuerpo = lista
+    ? '<div class="modal-envio-stats">' +
+        '<div class="modal-envio-stat"><span class="lbl">Contados</span><span class="val">' + totContados + '</span></div>' +
+        '<div class="modal-envio-stat completo"><span class="lbl">A cargar</span><span class="val">' + totCargar + '</span></div>' +
+        '<div class="modal-envio-stat' + (totSobra ? ' acento' : '') + '"><span class="lbl">Sobrante</span><span class="val">' + totSobra + '</span></div>' +
+      '</div>' +
+      '<table class="modal-lista-tabla">' +
+        '<thead><tr><th>Tienda</th><th class="num">Total</th><th class="num">Sobrante</th></tr></thead>' +
+        '<tbody>' + filas.map(function (f) { return f.html; }).join('') + '</tbody>' +
+        '<tfoot><tr><td>Total palets</td><td class="num">' + totCargar + '</td><td class="num">' + totSobra + '</td></tr></tfoot>' +
+      '</table>'
+    : '<p class="modal-envio-nota">Este envío se hizo antes de que la app guardase la lista de carga, así que no hay lista para él. Aparecerá en los próximos envíos.</p>';
+
+  custom.innerHTML =
+    '<div class="modal-envio-cabecera">' +
+      '<div class="modal-envio-cabecera-icono">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>' +
+      '</div>' +
+      '<div class="modal-envio-cabecera-texto">' +
+        '<div class="nombre">Lista de carga · ' + escapeHtml(titulo) + '</div>' +
+        '<div class="fecha">' + escapeHtml(fechaTexto) + '</div>' +
+      '</div>' +
+    '</div>' + estado + cuerpo;
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>' +
+    (lista ? '<button class="modal-confirm" id="modal-confirm-btn">Imprimir</button>' : '');
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  if (lista) {
+    document.getElementById('modal-confirm-btn').onclick = function () {
+      imprimirListaCarga_(titulo, fechaTexto, (esDef ? 'Definitivo' : 'Previsión'), filas, totCargar, totSobra);
+    };
+  }
+}
+
+/** Imprime la lista de carga en una hoja limpia (iframe oculto), sin tocar
+ *  la hoja de impresión del día ni el resto de la pantalla. */
+function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra) {
+  const celda = 'padding:6px 12px;border:1px solid #999;';
+  const html =
+    '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Lista de carga</title>' +
+    '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 16px;color:#444;font-size:13px}' +
+    'table{border-collapse:collapse;width:100%;font-size:15px}th{background:#eee;text-align:left}td.n,th.n{text-align:center;width:110px}</style></head><body>' +
+    '<h1>Lista de carga · ' + escapeHtml(titulo) + '</h1>' +
+    '<p>' + escapeHtml(fechaTexto) + ' · ' + tipoTexto + '</p>' +
+    '<table><tr><th style="' + celda + '">TIENDA</th><th class="n" style="' + celda + '">TOTAL</th><th class="n" style="' + celda + '">SOBRANTE</th></tr>' +
+    filas.map(function (f) {
+      return f.cerrada
+        ? '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" colspan="2" style="' + celda + 'font-weight:bold;">CERRADA</td></tr>'
+        : '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" style="' + celda + 'font-weight:bold;">' + f.cargar + '</td><td class="n" style="' + celda + '">' + (f.sobra || '') + '</td></tr>';
+    }).join('') +
+    '<tr><td style="' + celda + 'font-weight:bold;background:#eee;">TOTAL PALETS</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totCargar + '</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totSobra + '</td></tr>' +
+    '</table></body></html>';
+
+  const viejo = document.getElementById('iframe-lista-carga');
+  if (viejo) viejo.remove();
+  const iframe = document.createElement('iframe');
+  iframe.id = 'iframe-lista-carga';
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(function () {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }, 150);
+}
+
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
 function mostrarModalCargando(texto) {
   document.getElementById('modal-title').textContent = '';
