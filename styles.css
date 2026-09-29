@@ -1627,6 +1627,18 @@
     white-space: nowrap; flex-shrink: 0;
   }
   .badge-total-palets .total-palets-valor { font-size: 12.5px; }
+  /* Camioncito "Lista de carga" junto al total de palets (solo tras enviar
+     Previsión/Definitivo): ámbar tras la previsión, verde tras el definitivo. */
+  .btn-lista-carga {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 34px; height: 28px; border-radius: 14px; padding: 0; cursor: pointer;
+    border: 1px solid #f3dfb3; background: #fdf6ea; color: var(--amber-dark);
+    transition: filter .15s, transform .05s;
+  }
+  .btn-lista-carga:hover { filter: brightness(.97); }
+  .btn-lista-carga:active { transform: scale(.95); }
+  .btn-lista-carga:disabled { opacity: .6; cursor: wait; }
+  .btn-lista-carga.definitivo { background: #eaf7ef; border-color: #bfe3cf; color: #1f7a45; }
 
   .badge {
     display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
@@ -2168,6 +2180,29 @@
     .modal-palets-tabla th, .modal-palets-tabla td { padding-left: 4px; padding-right: 4px; }
     .modal-palets-ctrl { gap: 4px; }
     .modal-palets-ctrl input { width: 44px; }
+  }
+
+  /* ---------- Modal "Lista de carga" (camioncito de la cabecera) ---------- */
+  .modal-lista-estado {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    border-radius: 20px; padding: 3px 10px; background: #eaf7ef; color: #1f7a45; margin-bottom: 14px;
+  }
+  .modal-lista-estado.prevision { background: #fdf6ea; color: var(--amber-dark); }
+  .modal-lista-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .modal-lista-tabla th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--ink-soft); padding: 0 10px 8px; border-bottom: 1px solid var(--line);
+  }
+  .modal-lista-tabla th.num, .modal-lista-tabla td.num { text-align: center; width: 110px; }
+  .modal-lista-tabla td { padding: 10px; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .modal-lista-tabla td.tienda { font-weight: 700; }
+  .modal-lista-tabla td.cargar { font-weight: 800; font-size: 16px; color: var(--navy); }
+  .modal-lista-tabla td.sobra { font-weight: 800; color: var(--amber-dark); }
+  .modal-lista-tabla td.sobra.cero { color: #b3b8c2; font-weight: 600; }
+  .modal-lista-tabla tr.cerrada td { color: var(--danger); font-weight: 700; }
+  .modal-lista-tabla tfoot td { background: #f6f7f9; font-weight: 800; border-bottom: none; border-top: 2px solid var(--ink); }
+  @media (max-width: 560px) {
+    .modal-lista-tabla th.num, .modal-lista-tabla td.num { width: 72px; }
   }
 
   .modal-cargando {
