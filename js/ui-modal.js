@@ -203,6 +203,116 @@ function mostrarModalEnviarAgencia(datos, onConfirmar, tipo) {
   }
 }
 
+/**
+ * Modal "Confirma el número de palets a cargar en el camión": sale ANTES del
+ * resumen de "Enviar Previsión" / "Enviar Definitivo" solo si alguna tienda
+ * está por encima de su límite. Por cada tienda pasada se pide cuántos
+ * palets van realmente en el camión; ese número es el que sale en la
+ * columna TOTAL del email a la agencia (el conteo guardado no se toca).
+ *
+ * excedidas: [{ nombre, carga, otros, limite, sugerido }]
+ *   carga    = TOTAL real de la fila (lo que iría en el email)
+ *   otros    = VIERNES + DOMINGO (cuentan para el límite, no van en el email)
+ *   sugerido = valor propuesto por defecto (límite - otros, sin pasar de carga)
+ * onConfirmar: function(ajustes) con ajustes = { 'NOMBRE TIENDA': palets }
+ */
+function mostrarModalConfirmarPalets(datos, excedidas, tipo, onConfirmar) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('usuario-form', 'medio', 'peligro');
+  box.classList.add('ancho');
+  document.getElementById('modal-title').style.display = 'none';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  const titulo = excedidas.length === 1
+    ? '1 tienda por encima de su límite'
+    : excedidas.length + ' tiendas por encima de su límite';
+  const etiquetaTipo = tipo === 'definitivo' ? 'Definitivo' : 'Previsión';
+
+  const filas = excedidas.map(function (e, i) {
+    return '<tr>' +
+      '<td class="tienda">' + escapeHtml(quitarCodigoTienda(e.nombre)) + '</td>' +
+      '<td class="num total">' + e.carga + (e.otros ? '<div class="modal-palets-otros">+' + e.otros + ' vie/dom</div>' : '') + '</td>' +
+      '<td class="num">' + e.limite + '</td>' +
+      '<td class="num"><div class="modal-palets-ctrl">' +
+        '<button type="button" data-i="' + i + '" data-d="-1" aria-label="Restar">−</button>' +
+        '<input type="number" min="0" step="1" inputmode="numeric" data-i="' + i + '" value="' + e.sugerido + '">' +
+        '<button type="button" data-i="' + i + '" data-d="1" aria-label="Sumar">+</button>' +
+      '</div><div class="modal-palets-quedan" data-q="' + i + '"></div></td>' +
+    '</tr>';
+  }).join('');
+
+  custom.innerHTML =
+    '<div class="modal-envio-cabecera">' +
+      '<div class="modal-envio-cabecera-icono modal-palets-icono">' +
+        '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>' +
+      '</div>' +
+      '<div class="modal-envio-cabecera-texto">' +
+        '<div class="nombre">Confirma el número de palets a cargar en el camión</div>' +
+        '<div class="fecha">' + escapeHtml(datos.nombre) + ' · ' + etiquetaTipo + ' · ' + escapeHtml(datos.fechaTexto) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' +
+      '<span>' + titulo + '</span></div></div>' +
+    '<p class="modal-palets-intro">Indica cuántos palets van realmente en el camión. Es el número que saldrá en el email a la agencia. Por defecto se propone el límite de cada tienda.</p>' +
+    '<table class="modal-palets-tabla"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th></tr></thead>' +
+    '<tbody>' + filas + '</tbody></table>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Confirmar y continuar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+
+  const inputs = custom.querySelectorAll('.modal-palets-ctrl input');
+
+  function valor(inp) {
+    const v = parseInt(inp.value, 10);
+    return isNaN(v) || v < 0 ? 0 : v;
+  }
+  function refrescar() {
+    inputs.forEach(function (inp) {
+      const e = excedidas[inp.getAttribute('data-i')];
+      const q = custom.querySelector('[data-q="' + inp.getAttribute('data-i') + '"]');
+      const v = valor(inp);
+      const pasado = v + e.otros > e.limite;
+      const vacio = inp.value === '';
+      inp.classList.toggle('pasado', pasado || vacio);
+      q.classList.toggle('pasado', pasado || vacio);
+      if (vacio) q.textContent = 'Indica un número';
+      else if (pasado) q.textContent = '+' + (v + e.otros - e.limite) + ' sobre el límite';
+      else q.textContent = (e.carga - v > 0) ? 'Quedan ' + (e.carga - v) + ' en nave' : '';
+    });
+  }
+
+  custom.querySelectorAll('.modal-palets-ctrl button').forEach(function (b) {
+    b.onclick = function () {
+      const inp = custom.querySelector('input[data-i="' + b.getAttribute('data-i') + '"]');
+      inp.value = Math.max(0, valor(inp) + Number(b.getAttribute('data-d')));
+      refrescar();
+    };
+  });
+  inputs.forEach(function (inp) { inp.oninput = refrescar; });
+  refrescar();
+
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const ajustes = {};
+    let falta = null;
+    inputs.forEach(function (inp) {
+      if (inp.value === '' && !falta) falta = inp;
+      ajustes[excedidas[inp.getAttribute('data-i')].nombre] = valor(inp);
+    });
+    if (falta) { falta.focus(); return; }
+    onConfirmar(ajustes);
+  };
+  setTimeout(function () { if (inputs[0]) inputs[0].select(); }, 50);
+}
+
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
 function mostrarModalCargando(texto) {
   document.getElementById('modal-title').textContent = '';

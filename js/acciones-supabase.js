@@ -71,20 +71,22 @@ const SUPABASE_ACCIONES_ = {
   },
   // -- Supabase: enviarPrevisionAgencia / enviarDefinitivoAgencia --
   enviarPrevisionAgencia: function (args) {
-    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
-    return llamarRpcSupabase_('enviar_prevision_agencia', {
-      p_dia: dia,
-      p_nombre_ruta: nombreAgrupacion,
-      p_fecha: fecha
-    });
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], ajustes = args[3];
+    const params = { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha };
+    // Palets confirmados en el modal de límite ({ 'NOMBRE TIENDA': n }):
+    // solo se manda si hay alguno, así la llamada es igual que antes cuando
+    // ninguna tienda va pasada.
+    if (ajustes && Object.keys(ajustes).length) params.p_ajustes = ajustes;
+    return llamarRpcSupabase_('enviar_prevision_agencia', params);
   },
   enviarDefinitivoAgencia: function (args) {
-    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
-    return llamarRpcSupabase_('enviar_definitivo_agencia', {
-      p_dia: dia,
-      p_nombre_ruta: nombreAgrupacion,
-      p_fecha: fecha
-    });
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], ajustes = args[3];
+    const params = { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha };
+    // Palets confirmados en el modal de límite ({ 'NOMBRE TIENDA': n }):
+    // solo se manda si hay alguno, así la llamada es igual que antes cuando
+    // ninguna tienda va pasada.
+    if (ajustes && Object.keys(ajustes).length) params.p_ajustes = ajustes;
+    return llamarRpcSupabase_('enviar_definitivo_agencia', params);
   },
   // "Enviar a informática": misma previsión, pero solo a transporte@primor.eu.
   enviarInformaticaAgencia: function (args) {
