@@ -2133,6 +2133,43 @@
     background: #f9fafb; border-radius: 10px; padding: 11px 13px;
   }
 
+  /* ---------- Modal "Confirma el número de palets a cargar en el camión" ----------
+     Sale antes del resumen de Previsión/Definitivo si alguna tienda pasa de
+     su límite (ver mostrarModalConfirmarPalets en js/ui-modal.js). */
+  .modal-palets-icono { background: var(--amber); }
+  .modal-palets-intro { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 14px !important; line-height: 1.5; }
+  .modal-palets-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 4px; }
+  .modal-palets-tabla th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+    color: var(--ink-soft); padding: 0 8px 8px; border-bottom: 1px solid var(--line);
+  }
+  .modal-palets-tabla th.num, .modal-palets-tabla td.num { text-align: center; }
+  .modal-palets-tabla td { padding: 10px 8px; border-bottom: 1px solid var(--line); color: var(--ink); vertical-align: middle; }
+  .modal-palets-tabla td.tienda { font-weight: 700; }
+  .modal-palets-tabla td.total { color: var(--danger); font-weight: 800; }
+  .modal-palets-otros { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
+  .modal-palets-ctrl { display: inline-flex; align-items: center; gap: 6px; }
+  .modal-palets-ctrl button {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: #f6f7f9;
+    color: var(--navy); font-size: 17px; font-weight: 700; cursor: pointer; line-height: 1; padding: 0;
+  }
+  .modal-palets-ctrl button:hover { background: #eef1f7; }
+  .modal-palets-ctrl input {
+    width: 54px; height: 32px; text-align: center; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 15px; font-weight: 800; color: var(--navy); -moz-appearance: textfield;
+  }
+  .modal-palets-ctrl input::-webkit-outer-spin-button,
+  .modal-palets-ctrl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .modal-palets-ctrl input:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.12); }
+  .modal-palets-ctrl input.pasado { border-color: var(--danger); color: var(--danger); background: #fceded; }
+  .modal-palets-quedan { font-size: 11.5px; color: var(--amber-dark); font-weight: 600; margin-top: 4px; min-height: 14px; }
+  .modal-palets-quedan.pasado { color: var(--danger); }
+  @media (max-width: 560px) {
+    .modal-palets-tabla th, .modal-palets-tabla td { padding-left: 4px; padding-right: 4px; }
+    .modal-palets-ctrl { gap: 4px; }
+    .modal-palets-ctrl input { width: 44px; }
+  }
+
   .modal-cargando {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; padding: 18px 0 6px; text-align: center;
