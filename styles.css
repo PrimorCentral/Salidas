@@ -2310,6 +2310,61 @@
     .instalar-banner-texto span { font-size: 12px; }
   }
 
+  /* ---------- Modal de instalación obligatoria (PWA, igual que en GIDT) ---------- */
+  .instalar-overlay {
+    position: fixed; inset: 0; z-index: 10000; /* por encima de todo, incluido el login */
+    background: rgba(14,20,30,.72);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; overflow-y: auto; overscroll-behavior: contain;
+  }
+  .instalar-overlay.show { display: flex; }
+  .instalar-modal-box {
+    width: 100%; max-width: 420px; margin: auto;
+    background: var(--panel); border-radius: 16px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,.45);
+    padding: 34px 30px 28px; text-align: center;
+  }
+  .instalar-modal-icono {
+    position: relative; width: 72px; height: 72px; margin: 0 auto 18px;
+  }
+  .instalar-modal-icono img { width: 72px; height: 72px; border-radius: 16px; display: block; }
+  .instalar-modal-icono::after {
+    content: '⬇';
+    position: absolute; right: -8px; bottom: -8px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--amber); color: #fff;
+    font-size: 12px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--panel);
+  }
+  .instalar-modal-titulo { margin: 0 0 8px; font-size: 19px; font-weight: 700; color: var(--navy); }
+  .instalar-modal-mensaje { margin: 0 0 18px; font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+  .instalar-modal-pasos {
+    text-align: left; background: var(--bg); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 16px; font-size: 13px; color: var(--ink);
+  }
+  .instalar-modal-pasos b { display: block; margin-bottom: 8px; font-size: 13px; }
+  .instalar-modal-pasos ol { margin: 0; padding-left: 18px; }
+  .instalar-modal-pasos li { margin-bottom: 6px; color: var(--ink-soft); line-height: 1.45; }
+  .instalar-modal-pasos li:last-child { margin-bottom: 0; }
+  .instalar-modal-pasos li b { display: inline; color: var(--ink); }
+  .instalar-modal-ayuda {
+    display: none; text-align: left; background: #fdf3e4; color: var(--amber-dark);
+    border-radius: var(--radius); padding: 11px 13px; margin: 0 0 18px; font-size: 12.5px; line-height: 1.5;
+  }
+  .instalar-modal-botones { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .instalar-btn {
+    width: 100%; padding: 13px; border-radius: 10px; border: 1px solid transparent;
+    font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
+  }
+  .instalar-btn-principal { background: var(--amber); border-color: var(--amber); color: #fff; }
+  .instalar-btn-principal:hover { background: var(--amber-dark); border-color: var(--amber-dark); }
+  .instalar-btn-principal:disabled { opacity: .7; cursor: default; }
+  .instalar-btn-secundario { background: var(--bg); border-color: var(--line); color: var(--ink-soft); font-size: 12px; }
+  .instalar-btn-secundario:hover { background: var(--line); }
+  @media print { .instalar-overlay { display: none !important; } }
+
   /* Toast */
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);

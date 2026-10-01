@@ -18,6 +18,33 @@
 </head>
 <body>
 
+  <!-- INSTALACIÓN OBLIGATORIA (PWA): igual que en GIDT. Tapa la app desde el
+       primer instante (class "show" por defecto) y NO se cierra con click
+       fuera ni con Escape. js/instalar-app.js lo oculta solo si detecta que
+       la app se está ejecutando ya instalada (modo standalone). -->
+  <div class="instalar-overlay show" id="instalarAppModalOverlay">
+    <div class="instalar-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="instalarModalTitulo">
+      <div class="instalar-modal-icono"><img src="icon-192.png" alt=""></div>
+      <h3 class="instalar-modal-titulo" id="instalarModalTitulo">Instala la app para continuar</h3>
+      <p class="instalar-modal-mensaje">Esta aplicación debe usarse instalada en el dispositivo (no desde el navegador) para que todo funcione correctamente.</p>
+      <div class="instalar-modal-pasos">
+        <b>Cómo instalarla:</b>
+        <ol>
+          <li>Toca el botón <b>"Instalar App"</b> de abajo.</li>
+          <li>Confirma pulsando <b>"Instalar"</b> en el aviso que aparecerá.</li>
+          <li>Abre la app desde el icono nuevo en tu pantalla de inicio.</li>
+        </ol>
+      </div>
+      <p class="instalar-modal-ayuda" id="instalarAppAyuda">
+        Tu navegador no permite instalar la app automáticamente desde aquí. En Chrome o Edge, abre el menú (⋮ arriba a la derecha) y elige <b>"Instalar aplicación"</b> (o el icono ⊕ en la barra de direcciones). En iPhone/iPad (Safari), toca el icono de compartir y luego <b>"Añadir a pantalla de inicio"</b>.
+      </p>
+      <div class="instalar-modal-botones">
+        <button type="button" class="instalar-btn instalar-btn-principal" id="btnInstalarApp"><span id="btnInstalarAppTexto">⬇️ Instalar App</span></button>
+        <button type="button" class="instalar-btn instalar-btn-secundario" id="btnYaInstalada">Ya la tengo instalada · Recargar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- LOGIN -->
   <div id="login-screen">
     <div class="login-card">
