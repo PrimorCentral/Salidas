@@ -1,93 +1,101 @@
-/* SALIDAS · js/instalar-app.js — Instalación de la PWA (banner y evento beforeinstallprompt) */
+/* SALIDAS · js/instalar-app.js — Instalación obligatoria de la PWA (modal igual que en GIDT) */
 
-/* ---------------- INSTALAR APP (PWA) ---------------- */
-// Chrome/Edge/Android disparan "beforeinstallprompt" cuando la PWA cumple
-// los requisitos (manifest + service worker + HTTPS); lo capturamos aquí
-// para poder lanzar el diálogo nativo de instalación nosotros mismos, al
-// pulsar el botón del banner, en vez de esperar al mini-icono que el
-// navegador mete en la barra de direcciones (fácil de no ver). iOS Safari
-// no dispara este evento (Apple no lo soporta): ahí se muestran
-// instrucciones manuales en su lugar ("Compartir" > "Añadir a inicio").
-let INSTALL_PROMPT_EVENT = null;
+// ---------------------------------------------------------------
+// Modal obligatorio: exige tener SALIDAS instalada como app (PWA) antes
+// de poder usarla, tanto en ordenador (Chrome/Edge) como en móvil.
+// No se puede cerrar haciendo click fuera ni con Escape: el HTML lo
+// muestra por defecto (class "show") y este script solo lo oculta si
+// detecta que la app ya se está ejecutando instalada.
+// ---------------------------------------------------------------
+(function () {
+  const overlay          = document.getElementById('instalarAppModalOverlay');
+  const btnInstalar      = document.getElementById('btnInstalarApp');
+  const btnInstalarTexto = document.getElementById('btnInstalarAppTexto');
+  const btnYaInstalada   = document.getElementById('btnYaInstalada');
+  const textoAyuda       = document.getElementById('instalarAppAyuda');
 
-window.addEventListener('beforeinstallprompt', function (e) {
-  e.preventDefault();
-  INSTALL_PROMPT_EVENT = e;
-  actualizarBannerInstalacion();
-});
+  if (!overlay || !btnInstalar || !btnYaInstalada) return;
 
-window.addEventListener('appinstalled', function () {
-  INSTALL_PROMPT_EVENT = null;
-  actualizarBannerInstalacion();
-});
+  // Chrome/Edge (escritorio o Android) disparan este evento cuando la app
+  // cumple los requisitos para instalarse (manifest + service worker +
+  // HTTPS). Se guarda para lanzarlo al pulsar el botón (solo se puede
+  // lanzar una vez y a partir de un click del usuario).
+  let promptDiferido = null;
 
-/** true si la app YA se está ejecutando instalada/standalone (abierta
- *  desde el icono, sin barra de navegador): cubre Android/Chrome/Edge
- *  (display-mode: standalone) y iOS Safari (navigator.standalone). */
-function appYaInstalada_() {
-  if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
-  if (window.navigator.standalone === true) return true;
-  return false;
-}
-
-function esIOS_() {
-  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-}
-
-/** HTML del banner de "Inicio": vacío/oculto si ya está instalada; botón
- *  de instalación nativo si el navegador soporta beforeinstallprompt;
- *  instrucciones manuales en iOS; nada en el resto (navegadores sin
- *  soporte de instalación detectable, p.ej. Firefox). */
-function htmlBannerInstalacion_() {
-  if (appYaInstalada_()) return '<div id="instalar-banner" style="display:none;"></div>';
-
-  if (INSTALL_PROMPT_EVENT) {
-    return (
-      '<div class="instalar-banner" id="instalar-banner">' +
-        '<img src="icon-192.png" alt="" class="instalar-banner-icon">' +
-        '<div class="instalar-banner-texto">' +
-          '<strong>Instala la app en tu dispositivo</strong>' +
-          '<span>Acceso directo desde tu pantalla de inicio, a pantalla completa.</span>' +
-        '</div>' +
-        '<button type="button" class="btn-instalar-app" id="btn-instalar-app">Instalar</button>' +
-      '</div>'
-    );
+  function estaInstalada() {
+    // Chrome/Edge/Android: la ventana se abrió en modo standalone
+    // (icono propio, sin barra de navegador).
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+    // Alguna variante de Windows (WebView2 / Edge) usa "window-controls-overlay".
+    if (window.matchMedia && window.matchMedia('(display-mode: window-controls-overlay)').matches) return true;
+    // Safari en iOS/iPadOS no dispara beforeinstallprompt ni el
+    // display-mode anterior; expone esta propiedad en su lugar.
+    if (window.navigator.standalone === true) return true;
+    return false;
   }
 
-  if (esIOS_()) {
-    return (
-      '<div class="instalar-banner" id="instalar-banner">' +
-        '<img src="icon-192.png" alt="" class="instalar-banner-icon">' +
-        '<div class="instalar-banner-texto">' +
-          '<strong>Instala la app en tu iPhone/iPad</strong>' +
-          '<span>Toca <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 2v13M8 6l4-4 4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg> (Compartir) y luego "Añadir a pantalla de inicio".</span>' +
-        '</div>' +
-      '</div>'
-    );
+  function ocultarModal() { overlay.classList.remove('show'); }
+  function mostrarModal() { overlay.classList.add('show'); }
+
+  function comprobarEstado() {
+    if (estaInstalada()) ocultarModal();
+    else mostrarModal();
   }
 
-  return '<div id="instalar-banner" style="display:none;"></div>';
-}
-
-/** Vuelve a pintar el banner si "Inicio" está visible ahora mismo (p.ej.
- *  cuando "beforeinstallprompt" llega DESPUÉS de haber renderizado ya la
- *  vista). Si "Inicio" no está en pantalla, no hace nada. */
-function actualizarBannerInstalacion() {
-  const cont = document.getElementById('instalar-banner');
-  if (!cont) return;
-  cont.outerHTML = htmlBannerInstalacion_();
-  vincularBotonInstalar_();
-}
-
-function vincularBotonInstalar_() {
-  const btn = document.getElementById('btn-instalar-app');
-  if (!btn) return;
-  btn.addEventListener('click', function () {
-    if (!INSTALL_PROMPT_EVENT) return;
-    INSTALL_PROMPT_EVENT.prompt();
-    INSTALL_PROMPT_EVENT.userChoice.finally(function () {
-      INSTALL_PROMPT_EVENT = null;
-      actualizarBannerInstalacion();
-    });
+  window.addEventListener('beforeinstallprompt', function (evento) {
+    evento.preventDefault();
+    promptDiferido = evento;
+    if (textoAyuda) textoAyuda.style.display = 'none';
   });
-}
+
+  // Se dispara en cuanto el usuario completa la instalación (desde
+  // nuestro botón o desde el icono nativo del navegador).
+  window.addEventListener('appinstalled', function () {
+    promptDiferido = null;
+    ocultarModal();
+  });
+
+  btnInstalar.addEventListener('click', async function () {
+    if (promptDiferido) {
+      btnInstalar.disabled = true;
+      if (btnInstalarTexto) btnInstalarTexto.textContent = 'Instalando…';
+      try {
+        promptDiferido.prompt();
+        await promptDiferido.userChoice;
+      } catch (err) {
+        console.error('Error al lanzar la instalación:', err);
+      }
+      promptDiferido = null;
+      btnInstalar.disabled = false;
+      if (btnInstalarTexto) btnInstalarTexto.textContent = '⬇️ Instalar App';
+      // Si se instaló, "appinstalled" ya habrá cerrado el modal; por si el
+      // navegador no lo dispara a tiempo, se comprueba también aquí.
+      comprobarEstado();
+    } else {
+      // El navegador no ha ofrecido el evento nativo: no es compatible
+      // (Safari, Firefox) o ya se descartó antes en esta sesión. Se
+      // muestran instrucciones manuales.
+      if (textoAyuda) textoAyuda.style.display = 'block';
+    }
+  });
+
+  btnYaInstalada.addEventListener('click', function () {
+    // Evita el aviso "¿Quieres volver a cargar?" del beforeunload de sesion.js.
+    window.RECARGA_POR_ACTUALIZACION_ = true;
+    location.reload();
+  });
+
+  // Comprobación inicial y cada vez que la pestaña vuelve a primer plano
+  // (por si se instaló desde otra pestaña u otro navegador).
+  comprobarEstado();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') comprobarEstado();
+  });
+  window.addEventListener('focus', comprobarEstado);
+})();
+
+// El antiguo banner de "Inicio" queda sustituido por el modal obligatorio.
+// Se mantienen estas dos funciones vacías porque js/navegacion.js las llama
+// al pintar la vista de Inicio.
+function htmlBannerInstalacion_() { return ''; }
+function vincularBotonInstalar_() {}
