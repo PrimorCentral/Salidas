@@ -156,6 +156,12 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<path d="M15 2v6h6" fill="#ffffff" opacity="0.32"/>' +
     '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" font-weight="800" fill="#ffffff">PDF</text>' +
     '</svg></button>' +
+    '<button type="button" class="btn-excel-seccion" title="Exportar a Excel esta agrupación">' +
+    '<svg width="16" height="18" viewBox="0 0 24 26">' +
+    '<path d="M4 2h11l6 6v15a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="#1d6f42"/>' +
+    '<path d="M15 2v6h6" fill="#ffffff" opacity="0.32"/>' +
+    '<text x="12" y="19" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="7.5" font-weight="800" fill="#ffffff">XLS</text>' +
+    '</svg></button>' +
     (seccion.tienePdfEspecial
       ? '<button type="button" class="btn-pdf-especial-seccion" title="Generar PDF especial (formato de reparto en camión) de esta agrupación">' +
         '<svg width="16" height="18" viewBox="0 0 24 26">' +
@@ -1095,6 +1101,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     btnPdf.onclick = function (e) {
       e.stopPropagation();
       generarPdfSeccion(seccion, dia, fecha, tableWrap);
+    };
+  }
+
+  const btnExcel = header.querySelector('.btn-excel-seccion');
+  if (btnExcel) {
+    btnExcel.onclick = function (e) {
+      e.stopPropagation();
+      generarExcelSeccion(seccion, dia, fecha, tableWrap, btnExcel);
     };
   }
 
