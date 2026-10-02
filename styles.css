@@ -1702,6 +1702,12 @@
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .btn-pdf-seccion:hover { background: #e1e5eb; }
+  .btn-excel-seccion {
+    background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .btn-excel-seccion:hover { background: #e1e5eb; }
+  .btn-excel-seccion:disabled { opacity: .55; cursor: wait; }
   .btn-pdf-especial-seccion {
     background: #eef1f5; border: none; border-radius: 7px; width: 30px; height: 30px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
