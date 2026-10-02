@@ -25,20 +25,27 @@ const SUPABASE_ACCIONES_ = {
     // lanza el autorefresco de los conteos cada pocos segundos. Si esa
     // función no existiera en la base de datos (PGRST202), se vuelve a las
     // tres llamadas de siempre para no romper nada.
-    function unir_(data, verifs, cambios) {
+    //
+    // Y la carga del camión de cada agrupación (seccion.carga = { origen:
+    // 'ajuste'|'prevision'|'definitivo', hora, por, lista } o null si no
+    // hay ninguna). Si el servidor todavía no la manda (versión antigua de
+    // get_conteo_dia_completo), seccion.carga se queda sin definir y el
+    // camioncito funciona como antes (ver htmlBotonListaCarga_).
+    function unir_(data, verifs, cambios, cargas) {
       verifs = verifs || {};
       cambios = cambios || {};
       if (data && data.secciones) {
         data.secciones.forEach(function (s) {
           s.verificaciones = verifs[s.nombre] || {};
           s.cambiosVerif = cambios[s.nombre] || {};
+          if (cargas) s.carga = cargas[s.nombre] || null;
         });
       }
       return data;
     }
     return llamarRpcSupabase_('get_conteo_dia_completo', { p_fecha: fecha })
       .then(function (res) {
-        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios);
+        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas);
       })
       .catch(function (err) {
         if (!err || err.code !== 'PGRST202') throw err;
@@ -94,6 +101,13 @@ const SUPABASE_ACCIONES_ = {
   getListaCarga: function (args) {
     const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
     return llamarRpcSupabase_('get_lista_carga', { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha });
+  },
+  // Carga del camión ajustada a mano sin enviar nada (camioncito de la
+  // cabecera). cargas = { 'NOMBRE TIENDA': palets }. Requiere el permiso
+  // "ajustar_carga" (el backend lo comprueba). Devuelve la carga vigente.
+  guardarCargaAjustada: function (args) {
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], cargas = args[3];
+    return llamarRpcSupabase_('guardar_carga_ajustada', { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha, p_cargas: cargas || {} });
   },
   // "Enviar a informática": misma previsión, pero solo a transporte@primor.eu.
   enviarInformaticaAgencia: function (args) {

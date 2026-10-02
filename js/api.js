@@ -11,6 +11,7 @@ const METODOS_REMOTOS_ = {
   enviarPrevisionAgencia: 'enviarPrevisionAgencia',
   enviarDefinitivoAgencia: 'enviarDefinitivoAgencia',
   getListaCarga: 'getListaCarga',
+  guardarCargaAjustada: 'guardarCargaAjustada',
   enviarInformaticaAgencia: 'enviarInformaticaAgencia',
   guardarObservacion: 'guardarObservacion',
   editarObservacion: 'editarObservacion',
