@@ -1639,6 +1639,20 @@
   .btn-lista-carga:active { transform: scale(.95); }
   .btn-lista-carga:disabled { opacity: .6; cursor: wait; }
   .btn-lista-carga.definitivo { background: #eaf7ef; border-color: #bfe3cf; color: #1f7a45; }
+  /* Carga del camión ajustable sin enviar (ver htmlBotonListaCarga_):
+     gris tenue = sin configurar, azul = ajustada sin enviar,
+     rojo con "!" = el conteo cambió después de ajustar (hay que verificar). */
+  .btn-lista-carga { position: relative; }
+  .btn-lista-carga.sin-configurar { background: #f6f7f9; border: 1px dashed #d3d7de; color: #b3b8c2; }
+  .btn-lista-carga.sin-configurar:hover { color: var(--ink-soft); border-color: #b3b8c2; filter: none; }
+  .btn-lista-carga.ajustada { background: #eef1f7; border-color: #cdd5e3; color: var(--navy); }
+  .btn-lista-carga.revisar { background: #fceded; border-color: #f3c6c6; color: var(--danger); }
+  .btn-lista-carga.revisar::after {
+    content: '!'; position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; line-height: 16px; text-align: center;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .badge-carga-revisar { background: #fceded; color: var(--danger); }
 
   .badge {
     display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700;
@@ -2188,6 +2202,35 @@
     border-radius: 20px; padding: 3px 10px; background: #eaf7ef; color: #1f7a45; margin-bottom: 14px;
   }
   .modal-lista-estado.prevision { background: #fdf6ea; color: var(--amber-dark); }
+  .modal-lista-estado.ajuste { background: #eef1f7; color: var(--navy); }
+  .modal-lista-tabla td.cargar.revisar { color: var(--danger); }
+  .modal-lista-tabla tr.revisar td, .modal-palets-tabla tr.revisar td { background: #fff8f8; }
+  .modal-lista-tabla tr.ajustada td.tienda::after {
+    content: 'Ajustada'; margin-left: 8px; font-size: 9.5px; font-weight: 800; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--navy); background: #eef1f7; border-radius: 20px; padding: 2px 7px; vertical-align: 1px;
+  }
+  .modal-carga-cambio {
+    display: inline-flex; align-items: center; margin-top: 4px; font-size: 11px; font-weight: 700;
+    color: var(--danger); background: #fceded; border-radius: 20px; padding: 2px 8px;
+  }
+  .modal-carga-solo-lectura {
+    display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+    background: #eef1f5; border-radius: 10px; padding: 10px 13px; margin-bottom: 14px;
+  }
+  .modal-carga-solo-lectura svg { flex-shrink: 0; }
+  .modal-envio-aviso.modal-carga-info { background: #eef1f7; color: var(--navy); }
+  .modal-envio-cabecera-icono.ambar { background: var(--amber); }
+  .modal-envio-cabecera-icono.rojo { background: var(--danger); }
+  .modal-palets-tabla td.contados { font-weight: 800; }
+  .modal-palets-tabla td.contados.pasado { color: var(--danger); }
+  .modal-tabla-scroll { overflow-x: auto; }
+  .modal-actions .izq { margin-right: auto; }
+  .modal-actions .modal-secundario { background: #fff; color: var(--navy); box-shadow: inset 0 0 0 1.5px #cdd5e3; }
+  .modal-actions .modal-enlace {
+    background: none; color: var(--ink-soft); text-decoration: underline; text-underline-offset: 3px;
+    padding-left: 4px; padding-right: 4px;
+  }
+  .modal-actions .modal-enlace:hover { color: var(--ink); filter: none; }
   .modal-lista-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
   .modal-lista-tabla th {
     text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
