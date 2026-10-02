@@ -2230,6 +2230,30 @@
   .modal-palets-tabla td.contados { font-weight: 800; }
   .modal-palets-tabla td.contados.pasado { color: var(--danger); }
   .modal-tabla-scroll { overflow-x: auto; }
+  /* Modales de carga del camión con muchas tiendas: la cabecera, los
+     totales y los botones se quedan quietos y solo se desplaza la tabla,
+     con la fila de títulos (y la de totales) siempre a la vista. */
+  .modal-box:has(> #modal-custom > .modal-tabla-scroll) { display: flex; flex-direction: column; overflow: hidden; }
+  .modal-box:has(> #modal-custom > .modal-tabla-scroll) > #modal-custom { flex: 1 1 auto; min-height: 0; }
+  .modal-box:has(> #modal-custom > .modal-tabla-scroll) > .modal-actions { flex-shrink: 0; }
+  #modal-custom > .modal-tabla-scroll {
+    flex: 1 1 auto; min-height: 140px; overflow: auto;
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  #modal-custom > :not(.modal-tabla-scroll) { flex-shrink: 0; }
+  .modal-tabla-scroll thead th { position: sticky; top: 0; z-index: 1; background: #fff; padding-top: 9px; box-shadow: inset 0 -1px 0 var(--line); }
+  .modal-tabla-scroll tfoot td { position: sticky; bottom: 0; z-index: 1; }
+  .modal-tabla-scroll .modal-lista-tabla tr:last-child td, .modal-tabla-scroll .modal-palets-tabla tr:last-child td { border-bottom: none; }
+  /* Filas compactas en "Ajustar carga" (una fila de altura por tienda). */
+  .modal-carga-ajuste td { padding: 5px 8px; }
+  .modal-carga-ajuste td.tienda { white-space: normal; }
+  .modal-carga-ajuste .modal-palets-ctrl button { width: 28px; height: 28px; }
+  .modal-carga-ajuste .modal-palets-ctrl input { height: 30px; }
+  .modal-carga-ajuste .modal-palets-otros { display: inline; margin: 0; }
+  .modal-carga-ajuste td.nave { width: 84px; font-weight: 800; font-size: 13px; color: var(--amber-dark); white-space: nowrap; }
+  .modal-carga-ajuste td.nave.cero { color: #b3b8c2; font-weight: 600; }
+  .modal-carga-ajuste td.nave.pasado { color: var(--danger); font-size: 12px; }
+  .modal-carga-cambio { margin-top: 0; margin-left: 6px; vertical-align: 1px; }
   .modal-actions .izq { margin-right: auto; }
   .modal-actions .modal-secundario { background: #fff; color: var(--navy); box-shadow: inset 0 0 0 1.5px #cdd5e3; }
   .modal-actions .modal-enlace {
