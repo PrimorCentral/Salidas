@@ -436,7 +436,6 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas) {
   return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra };
 }
 
-const BANDA_SOLO_LECTURA_CARGA_ = '<div class="modal-carga-solo-lectura">' + ICONO_CANDADO_15_ + '<span>Solo lectura. Para cambiar la carga hace falta el permiso «Ajustar carga».</span></div>';
 
 /**
  * Modal "Lista de carga" (camioncito): TIENDA, TOTAL a cargar y SOBRANTE.
@@ -474,7 +473,6 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
 
   custom.innerHTML =
     cabeceraModalCarga_(info ? 'Lista de carga · ' + titulo : 'Carga del camión · ' + titulo, fechaTexto, hayRevisar ? 'rojo' : '') +
-    (extra.soloLectura ? BANDA_SOLO_LECTURA_CARGA_ : '') +
     cuerpo;
 
   const actions = document.getElementById('modal-actions');
