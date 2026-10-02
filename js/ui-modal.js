@@ -362,7 +362,11 @@ function prepararModalCarga_() {
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
   const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
+  // En columna: cabecera, totales y botones quietos; solo se desplaza la
+  // tabla (ver .modal-tabla-scroll en styles.css). Los demás modales vuelven
+  // a poner display:block al abrirse.
+  custom.style.display = 'flex';
+  custom.style.flexDirection = 'column';
   return custom;
 }
 
@@ -398,7 +402,7 @@ function statsCargaHtml_(totContados, totCargar, totSobra) {
 
 /** Etiqueta roja "Conteo cambiado: 7 → 9" para las tiendas a revisar. */
 function etiquetaCambioConteo_(cambio) {
-  return '<div><span class="modal-carga-cambio">Conteo cambiado: ' + cambio.antes + ' → ' + cambio.ahora + '</span></div>';
+  return ' <span class="modal-carga-cambio">Conteo cambiado: ' + cambio.antes + ' → ' + cambio.ahora + '</span>';
 }
 
 /**
@@ -512,18 +516,19 @@ function mostrarModalAjustarCarga(datos) {
   const etiquetaTipo = datos.tipoEnvio === 'definitivo' ? 'Definitivo' : 'Previsión';
 
   const filas = filasDatos.map(function (f, i) {
-    if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="3">CERRADA</td></tr>';
+    if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="4">CERRADA</td></tr>';
     const hayLimite = !isNaN(f.limite) && f.limite > 0;
     return '<tr class="' + (f.cambio ? 'revisar' : '') + '" data-fila="' + i + '">' +
       '<td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + (f.cambio ? etiquetaCambioConteo_(f.cambio) : '') + '</td>' +
       '<td class="num contados' + (hayLimite && f.contados + f.otros > f.limite ? ' pasado' : '') + '">' + f.contados +
-        (f.otros ? '<div class="modal-palets-otros">+' + f.otros + ' vie/dom</div>' : '') + '</td>' +
+        (f.otros ? ' <span class="modal-palets-otros">+' + f.otros + ' vie/dom</span>' : '') + '</td>' +
       '<td class="num">' + (hayLimite ? f.limite : '—') + '</td>' +
       '<td class="num"><div class="modal-palets-ctrl">' +
         '<button type="button" data-i="' + i + '" data-d="-1" aria-label="Restar">−</button>' +
         '<input type="number" min="0" step="1" inputmode="numeric" id="carga-tienda-' + i + '" data-i="' + i + '" value="' + f.cargar + '">' +
         '<button type="button" data-i="' + i + '" data-d="1" aria-label="Sumar">+</button>' +
-      '</div><div class="modal-palets-quedan" data-q="' + i + '"></div></td>' +
+      '</div></td>' +
+      '<td class="num nave" data-q="' + i + '"></td>' +
     '</tr>';
   }).join('');
 
@@ -541,9 +546,9 @@ function mostrarModalAjustarCarga(datos) {
           '. La carga no se ha tocado: revísala y pulsa «' + (enEnvio ? 'Verificar y continuar' : 'Verificar carga') + '».</span></div></div>'
       : '') +
     '<div class="modal-carga-pasadas"></div>' +
-    '<p class="modal-palets-intro">Indica cuántos palets van en el camión por tienda. Es lo que saldrá en el email a la agencia. ' +
-      (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada; se puede cambiar hasta que se mande el definitivo.') + '</p>' +
-    '<div class="modal-tabla-scroll"><table class="modal-palets-tabla"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th></tr></thead>' +
+    '<p class="modal-palets-intro">Palets que van en el camión por tienda: es lo que saldrá en el email a la agencia. ' +
+      (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada.') + '</p>' +
+    '<div class="modal-tabla-scroll"><table class="modal-palets-tabla modal-carga-ajuste"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th><th class="num">En nave</th></tr></thead>' +
     '<tbody>' + filas + '</tbody></table></div>';
 
   const actions = document.getElementById('modal-actions');
@@ -574,11 +579,16 @@ function mostrarModalAjustarCarga(datos) {
       if (vacio) vacias++;
       inp.classList.toggle('pasado', pasado || vacio);
       q.classList.toggle('pasado', pasado || vacio);
-      if (vacio) q.textContent = 'Indica un número';
-      else if (pasado) q.textContent = '+' + (v + f.otros - f.limite) + ' sobre el límite';
-      else if (f.contados - v > 0) q.textContent = 'Quedan ' + (f.contados - v) + ' en nave';
-      else if (v > f.contados) q.textContent = '+' + (v - f.contados) + ' sobre lo contado';
-      else q.textContent = '';
+      q.classList.toggle('cero', !vacio && !pasado && v === f.contados);
+      if (vacio) q.textContent = 'Falta';
+      else if (pasado) q.textContent = '+' + (v + f.otros - f.limite) + ' límite';
+      else if (f.contados - v > 0) q.textContent = f.contados - v;
+      else if (v > f.contados) q.textContent = '+' + (v - f.contados) + ' contado';
+      else q.textContent = '—';
+      q.title = vacio ? 'Indica un número'
+        : pasado ? (v + f.otros - f.limite) + ' palet(s) por encima del límite'
+        : f.contados - v > 0 ? 'Quedan ' + (f.contados - v) + ' en nave'
+        : v > f.contados ? (v - f.contados) + ' más de lo contado' : 'No queda nada en nave';
     });
     custom.querySelector('.modal-carga-stats').innerHTML = statsCargaHtml_(totContados, totCargar, Math.max(0, totContados - totCargar));
     custom.querySelector('.modal-carga-pasadas').innerHTML = pasadas
