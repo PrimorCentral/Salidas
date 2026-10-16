@@ -12,6 +12,10 @@ document.addEventListener('wheel', function (e) {
   }
 }, { passive: false, capture: true });
 
+/** Kilos por palet de cada nave, para el PESO automático (ver
+ *  attachCalculoYValidacion): 60 = GAITE, pta = PTA, cart = CARTAMA. */
+const PESO_PALET_KG = { c60: 200, pta: 300, cart: 250 };
+
 /** Texto de la columna LÍMITE: el número si la tienda tiene uno
  *  configurado (en Configuración tiendas o, si lo tiene, el propio de
  *  ese día en Plantilla), o "NO" si no tiene límite. Se usa tanto para
@@ -273,6 +277,31 @@ function attachCalculoYValidacion(tr) {
       nota.textContent = '+' + exceso + ' sobre el límite — ceñirse al límite';
       nota.classList.add('aviso');
     }
+  }
+
+  // PESO automático (solo si la ruta tiene la casilla PESO activada y la
+  // casilla es de esta agrupación, no de la otra en una doble salida):
+  // cada palet pesa según su nave -> 60 (GAITE) 200 kg, PTA 300 kg,
+  // CART. (CARTAMA) 250 kg. Se recalcula cada vez que cambian 60/PTA/CART.
+  // La casilla sigue siendo editable por si hubiera que corregirla a mano,
+  // pero el siguiente cambio en 60/PTA/CART la vuelve a calcular.
+  const pesoInput = tr.querySelector('input[data-campo="peso"]');
+  const pesoAuto = pesoInput && !pesoInput.classList.contains('celda-otra-agencia');
+  function recalcPeso() {
+    if (!pesoAuto) return;
+    // "NO" sin forzar o casilla vacía cuentan como 0.
+    const n = function (input) { return input ? (parseFloat(input.value) || 0) : 0; };
+    const vacias = c60Input.value === '' && ptaInput.value === '' && cartInput.value === '';
+    const kg = n(c60Input) * PESO_PALET_KG.c60 + n(ptaInput) * PESO_PALET_KG.pta + n(cartInput) * PESO_PALET_KG.cart;
+    pesoInput.value = (vacias || kg === 0) ? '' : kg;
+  }
+  if (pesoAuto) {
+    pesoInput.title = 'Calculado automáticamente: 60 × 200 kg + PTA × 300 kg + CART. × 250 kg';
+    c60Input.addEventListener('input', recalcPeso);
+    ptaInput.addEventListener('input', recalcPeso);
+    cartInput.addEventListener('input', recalcPeso);
+    // Al abrir el conteo, si aún no hay peso guardado pero sí palets, se rellena.
+    if (pesoInput.value === '') recalcPeso();
   }
 
   c60Input.addEventListener('input', recalcTotal);
