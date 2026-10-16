@@ -747,6 +747,7 @@
   }
   .modal-plantilla-tienda-item.activa .modal-plantilla-tienda-check { border-color: #fff; background: #fff; color: var(--navy); }
   .modal-plantilla-tienda-item > .modal-plantilla-tienda-check + span { flex: 1 1 auto; }
+  .modal-plantilla-marcar { display: flex; gap: 14px; margin-top: 8px; font-size: 12.5px; }
   .modal-plantilla-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
   .modal-plantilla-sel-num { font-size: 12px; font-weight: 700; color: var(--navy); margin-right: 2px; }
   .modal-plantilla-sel-chip {
