@@ -56,6 +56,7 @@ function renderCalendario(dias) {
     if (info.esHoy) clases.push('hoy');
     if (info.fecha === ESTADO.fecha) clases.push('seleccionado');
     if (info.bloqueada) clases.push('bloqueada-futuro');
+    if (info.diaEspecial) clases.push('dia-especial');
 
     let dots = '';
     if (info.tieneNotas) dots += '<span class="dot dot-nota"></span>';
@@ -63,7 +64,7 @@ function renderCalendario(dias) {
     if (info.tieneExcepciones) dots += '<span class="dot dot-cambio"></span>';
 
     const diaNum = Number(info.fecha.slice(8, 10));
-    const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y mañana"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : '');
+    const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y mañana' + (info.diaEspecial ? ' (conteo especial)' : '') + '"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : (info.diaEspecial ? ' title="Conteo especial"' : ''));
     celdas += '<button type="button" class="' + clases.join(' ') + '" data-fecha="' + info.fecha + '"' + atrBloqueo + '>' +
       '<span>' + diaNum + '</span>' +
       '<span class="dots">' + dots + '</span>' +

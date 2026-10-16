@@ -167,6 +167,18 @@ const SUPABASE_ACCIONES_ = {
   getDiasPlantilla: function () {
     return llamarRpcSupabase_('get_dias_plantilla', {});
   },
+  // -- Días especiales: plantilla propia para una fecha concreta --
+  getDiasEspeciales: function () {
+    return llamarRpcSupabase_('get_dias_especiales', {});
+  },
+  crearDiaEspecial: function (args) {
+    const fecha = args[0], diaBase = args[1];
+    return llamarRpcSupabase_('crear_dia_especial', { p_fecha: fecha, p_dia_base: diaBase });
+  },
+  eliminarDiaEspecial: function (args) {
+    const nombre = args[0];
+    return llamarRpcSupabase_('eliminar_dia_especial', { p_nombre: nombre });
+  },
   getPlantillaDia: function (args) {
     const dia = args[0];
     return llamarRpcSupabase_('get_plantilla_dia', { p_dia: dia });

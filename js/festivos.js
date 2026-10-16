@@ -23,7 +23,8 @@ let FESTIVOS_ESTADO = {
   filtroTipo: 'todos',   // 'todos' | 'cierre' | 'nota'
   filtroDesde: null,     // 'YYYY-MM-DD' -- si desde+hasta están definidos, sustituye la navegación semanal
   filtroHasta: null,
-  filtrosAbiertos: false  // si el panel de filtros (oculto tras un icono) está desplegado
+  filtrosAbiertos: false, // si el panel de filtros (oculto tras un icono) está desplegado
+  fechasEspeciales: {}    // { 'YYYY-MM-DD': true } de las fechas con conteo especial
 };
 
 /** Suma (o resta) días a una fecha 'YYYY-MM-DD' y devuelve otra fecha en el mismo formato. */
@@ -241,6 +242,12 @@ function cargarFestivos() {
       resultadosMeses.forEach(function (dias) {
         (dias || []).forEach(function (info) { infoPorFecha[info.fecha] = info; });
       });
+      // Fechas con conteo especial: en su columna sale "Conteo especial"
+      // en vez del nombre del día de la semana.
+      FESTIVOS_ESTADO.fechasEspeciales = {};
+      Object.keys(infoPorFecha).forEach(function (f) {
+        if (infoPorFecha[f].diaEspecial) FESTIVOS_ESTADO.fechasEspeciales[f] = true;
+      });
       const diasRango = diasDeRango_(inicio, fin);
       const fechasConContenido = diasRango.filter(function (fecha) {
         const info = infoPorFecha[fecha];
@@ -380,6 +387,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
 
   grupos.forEach(function (g) {
     const esHoy = g.fecha === hoy;
+    const esEspecial = !!(FESTIVOS_ESTADO.fechasEspeciales && FESTIVOS_ESTADO.fechasEspeciales[g.fecha]);
     const d = new Date(g.fecha + 'T12:00:00');
     const col = document.createElement('div');
     col.className = 'festivos-dia-col' + (esHoy ? ' es-hoy' : '') + (g.items.length ? '' : ' vacio');
@@ -411,7 +419,8 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
           '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
         '</button>' +
         '<div class="festivos-dia-col-badge"><span class="dia">' + d.getDate() + '</span><span class="mes">' + MESES_ES[d.getMonth()].slice(0, 3) + '</span></div>' +
-        '<div class="festivos-dia-col-nombre">' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) +
+        '<div class="festivos-dia-col-nombre' + (esEspecial ? ' especial' : '') + '"' + (esEspecial ? ' title="Este día usa una plantilla especial (Rutas y tiendas)"' : '') + '>' +
+          escapeHtml(esEspecial ? 'Conteo especial' : DIAS_SEMANA_ES[d.getDay()]) +
           (esHoy ? '<span class="festivos-chip-hoy">Hoy</span>' : '') +
         '</div>' +
       '</div>' +

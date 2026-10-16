@@ -15,7 +15,7 @@
  * cambian al insertar/borrar/mover, así que no se puede hacer una
  * actualización optimista local como en "Gestión festivos").
  */
-let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [] };
+let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [], especiales: [], verEspecialesPasados: false };
 
 
 /** Busca en el caché local (PLANTILLA_ESTADO.secciones) la tienda con ese
@@ -108,15 +108,22 @@ function renderConfigPlantilla() {
       '<div id="plantilla-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
 
-  llamarApi_('getDiasPlantilla', [])
-    .then(function (dias) {
-      PLANTILLA_ESTADO.dias = dias || [];
+  // Los días especiales (conteo especial de una fecha concreta) se piden
+  // aparte; si fallan (p.ej. el backend aún no los tiene) se sigue igual
+  // que siempre, solo con LUNES..DOMINGO.
+  Promise.all([
+    llamarApi_('getDiasPlantilla', []),
+    llamarApi_('getDiasEspeciales', []).catch(function () { return []; })
+  ])
+    .then(function (res) {
+      PLANTILLA_ESTADO.dias = res[0] || [];
+      PLANTILLA_ESTADO.especiales = res[1] || [];
       // Si el día que tenía seleccionado de una visita anterior ya no
       // existe (p.ej. se ocultó esa hoja), se olvida. Si NO tenía ninguno
       // seleccionado (primera vez que se entra en esta sección), se deja
       // así -- ya no se carga automáticamente el primer día (antes
       // siempre caía en LUNES): hay que pulsar un día para que cargue.
-      if (PLANTILLA_ESTADO.dia && PLANTILLA_ESTADO.dias.indexOf(PLANTILLA_ESTADO.dia) === -1) {
+      if (PLANTILLA_ESTADO.dia && PLANTILLA_ESTADO.dias.indexOf(PLANTILLA_ESTADO.dia) === -1 && !especialPlantilla_(PLANTILLA_ESTADO.dia)) {
         PLANTILLA_ESTADO.dia = null;
       }
       pintarDiasPlantilla_();
@@ -136,11 +143,35 @@ function pintarDiasPlantilla_() {
   const botonesDias = PLANTILLA_ESTADO.dias.map(function (d) {
     return '<button type="button" class="' + (d === PLANTILLA_ESTADO.dia ? 'activo' : '') + '" data-dia="' + escapeAttr(d) + '">' + escapeHtml(d) + '</button>';
   }).join('');
+  // Días especiales: los de hoy en adelante siempre se ven; los pasados,
+  // solo al pulsar "Pasados" (o si es el que está seleccionado).
+  const especiales = PLANTILLA_ESTADO.especiales || [];
+  const pasados = especiales.filter(function (e) { return e.pasado; });
+  const visibles = especiales.filter(function (e) {
+    return !e.pasado || PLANTILLA_ESTADO.verEspecialesPasados || e.nombre === PLANTILLA_ESTADO.dia;
+  });
+  const botonesEspeciales = visibles.map(function (e) {
+    return '<button type="button" class="dia-especial' + (e.pasado ? ' pasado' : '') + (e.nombre === PLANTILLA_ESTADO.dia ? ' activo' : '') + '" data-dia="' + escapeAttr(e.nombre) + '" title="Conteo especial del ' + escapeAttr(formatearFechaLarga(e.fecha)) + '">' +
+      'ESP. ' + escapeHtml(fechaCortaEspecial_(e.fecha)) + '</button>';
+  }).join('');
+  const botonPasados = pasados.length
+    ? '<button type="button" class="dia-especial-pasados" id="btn-plantilla-especiales-pasados">' +
+        (PLANTILLA_ESTADO.verEspecialesPasados ? 'Ocultar pasados' : 'Pasados (' + pasados.length + ')') + '</button>'
+    : '';
+  const botonNuevoEspecial = tienePermiso('plantilla')
+    ? '<button type="button" class="dia-especial-nuevo" id="btn-plantilla-nuevo-especial" title="Crear una plantilla especial para una fecha concreta">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
+        'Conteo especial</button>'
+    : '';
   cont.innerHTML =
-    '<div class="plantilla-dias">' + botonesDias + '</div>' +
+    '<div class="plantilla-dias">' + botonesDias +
+      (botonesEspeciales || botonNuevoEspecial || botonPasados ? '<span class="plantilla-dias-sep"></span>' : '') +
+      botonesEspeciales + botonPasados + botonNuevoEspecial +
+    '</div>' +
     (PLANTILLA_ESTADO.dia ? buscadoresPlantillaHtml_() : '') +
-    (tienePermiso('plantilla') && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '');
-  cont.querySelectorAll('.plantilla-dias button').forEach(function (btn) {
+    (tienePermiso('plantilla') && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '') +
+    avisoDiaEspecialPlantillaHtml_();
+  cont.querySelectorAll('.plantilla-dias button[data-dia]').forEach(function (btn) {
     btn.onclick = function () {
       if (btn.getAttribute('data-dia') === PLANTILLA_ESTADO.dia) return;
       PLANTILLA_ESTADO.dia = btn.getAttribute('data-dia');
@@ -148,9 +179,164 @@ function pintarDiasPlantilla_() {
       cargarPlantilla_();
     };
   });
+  const btnPasados = document.getElementById('btn-plantilla-especiales-pasados');
+  if (btnPasados) btnPasados.onclick = function () {
+    PLANTILLA_ESTADO.verEspecialesPasados = !PLANTILLA_ESTADO.verEspecialesPasados;
+    pintarDiasPlantilla_();
+  };
+  const btnNuevo = document.getElementById('btn-plantilla-nuevo-especial');
+  if (btnNuevo) btnNuevo.onclick = abrirModalNuevoDiaEspecial_;
+  const btnEliminarEsp = document.getElementById('btn-plantilla-eliminar-especial');
+  if (btnEliminarEsp) btnEliminarEsp.onclick = function () { confirmarEliminarDiaEspecial_(PLANTILLA_ESTADO.dia); };
   const btnAnadirRuta = document.getElementById('btn-plantilla-anadir-ruta');
   if (btnAnadirRuta) btnAnadirRuta.onclick = anadirRutaPlantilla_;
   if (PLANTILLA_ESTADO.dia) inicializarBuscadoresPlantilla_();
+}
+
+/* ---------------- DÍAS ESPECIALES ----------------
+ * Un "conteo especial" es una plantilla de rutas y tiendas propia para UNA
+ * fecha concreta (p.ej. el 02/11): ese día, Conteos usa esta plantilla en
+ * vez de la del día de la semana. Se crea copiando un día (por defecto el
+ * que le toca) y luego se edita aquí como cualquier otro. Lo que se cambia
+ * en un día especial no toca los días normales, ni al revés.
+ */
+
+/** Datos del día especial con ese nombre (o null si es un día normal). */
+function especialPlantilla_(nombre) {
+  return (PLANTILLA_ESTADO.especiales || []).find(function (e) { return e.nombre === nombre; }) || null;
+}
+
+/** '2026-11-02' -> '02/11' (para la pestaña). */
+function fechaCortaEspecial_(fecha) {
+  const p = String(fecha || '').split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] : String(fecha || '');
+}
+
+/** Franja informativa bajo la fila de días cuando el seleccionado es especial. */
+function avisoDiaEspecialPlantillaHtml_() {
+  const e = especialPlantilla_(PLANTILLA_ESTADO.dia);
+  if (!e) return '';
+  return '<div class="plantilla-aviso-especial">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>' +
+    '<span><b>Conteo especial</b> del ' + escapeHtml(formatearFechaLarga(e.fecha)) +
+      (e.diaBase ? ' · copiado de ' + escapeHtml(e.diaBase) : '') +
+      '. Lo que cambies aquí solo afecta a ese día.</span>' +
+    (tienePermiso('plantilla') && !e.pasado
+      ? '<button type="button" class="plantilla-aviso-especial-eliminar" id="btn-plantilla-eliminar-especial">Eliminar conteo especial</button>'
+      : '') +
+  '</div>';
+}
+
+/** Nombre de día normal (LUNES..DOMINGO) que le toca a una fecha 'YYYY-MM-DD'. */
+function diaNormalDeFecha_(fecha) {
+  const nombres = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+  return nombres[new Date(fecha + 'T12:00:00').getDay()];
+}
+
+function abrirModalNuevoDiaEspecial_() {
+  const manana = sumarDias_(hoyStr(), 1);
+  const opcionesBase = PLANTILLA_ESTADO.dias.map(function (d) {
+    return '<option value="' + escapeAttr(d) + '">' + escapeHtml(d) + '</option>';
+  }).join('');
+
+  document.getElementById('modal-box').classList.remove('ancho', 'medio', 'peligro', 'usuario-form');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Nuevo conteo especial';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label>Fecha del conteo especial</label>' +
+      '<input type="date" id="modal-especial-fecha" min="' + manana + '">' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label>Copiar la configuración de</label>' +
+      '<select id="modal-especial-base">' + opcionesBase + '</select>' +
+      '<span class="modal-campo-ayuda">Se copian todas sus rutas, tiendas, límites, grupos, notas de carga y casillas. Después lo cambias aquí como quieras, sin tocar el día normal.</span>' +
+    '</div>' +
+    '<div class="modal-campo-ayuda" id="modal-especial-error" style="display:none;color:var(--danger);"></div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Crear</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  const inputFecha = document.getElementById('modal-especial-fecha');
+  const selectBase = document.getElementById('modal-especial-base');
+  const errorEl = document.getElementById('modal-especial-error');
+  // Mientras no se elija el día a mano, se propone el que le toca a la fecha.
+  let baseElegidaAMano = false;
+  selectBase.onchange = function () { baseElegidaAMano = true; };
+  inputFecha.onchange = function () {
+    errorEl.style.display = 'none';
+    if (!baseElegidaAMano && inputFecha.value) {
+      const d = diaNormalDeFecha_(inputFecha.value);
+      if (PLANTILLA_ESTADO.dias.indexOf(d) !== -1) selectBase.value = d;
+    }
+  };
+
+  function mostrarError(texto) {
+    errorEl.textContent = texto;
+    errorEl.style.display = 'block';
+  }
+
+  const btnCrear = document.getElementById('modal-confirm-btn');
+  btnCrear.onclick = function () {
+    const fecha = inputFecha.value;
+    if (!fecha) { mostrarError('Elige la fecha del conteo especial.'); inputFecha.focus(); return; }
+    if (fecha < manana) { mostrarError('El conteo especial tiene que ser para una fecha a partir de mañana.'); return; }
+    if ((PLANTILLA_ESTADO.especiales || []).some(function (e) { return e.fecha === fecha; })) {
+      mostrarError('Ya hay un conteo especial para esa fecha.');
+      return;
+    }
+    btnCrear.disabled = true;
+    btnCrear.textContent = 'Creando…';
+    llamarApi_('crearDiaEspecial', [fecha, selectBase.value])
+      .then(function (res) {
+        cerrarModal();
+        mostrarToast('Conteo especial creado');
+        PLANTILLA_ESTADO.dia = res && res.nombre ? res.nombre : PLANTILLA_ESTADO.dia;
+        return llamarApi_('getDiasEspeciales', []).then(function (lista) {
+          PLANTILLA_ESTADO.especiales = lista || [];
+          pintarDiasPlantilla_();
+          cargarPlantilla_();
+        });
+      })
+      .catch(function (err) {
+        btnCrear.disabled = false;
+        btnCrear.textContent = 'Crear';
+        mostrarError((err && err.message) ? err.message : 'No se ha podido crear el conteo especial.');
+      });
+  };
+  setTimeout(function () { inputFecha.focus(); }, 50);
+}
+
+function confirmarEliminarDiaEspecial_(nombre) {
+  const e = especialPlantilla_(nombre);
+  if (!e) return;
+  appConfirm(
+    'Eliminar conteo especial',
+    '¿Seguro que quieres eliminar el conteo especial del ' + formatearFechaLarga(e.fecha) + '? Ese día volverá a usar la plantilla normal de ' + diaNormalDeFecha_(e.fecha) + '.',
+    function () {
+      llamarApi_('eliminarDiaEspecial', [nombre])
+        .then(function () {
+          mostrarToast('Conteo especial eliminado');
+          PLANTILLA_ESTADO.especiales = (PLANTILLA_ESTADO.especiales || []).filter(function (x) { return x.nombre !== nombre; });
+          PLANTILLA_ESTADO.dia = null;
+          PLANTILLA_ESTADO.secciones = [];
+          pintarDiasPlantilla_();
+          const listaEl = document.getElementById('plantilla-lista');
+          if (listaEl) listaEl.innerHTML = '<div class="festivos-vacio">Elige un día arriba para ver y editar sus rutas.</div>';
+        })
+        .catch(mostrarErrorServidor);
+    },
+    true
+  );
 }
 
 /** HTML de los dos buscadores de "Rutas y tiendas" (agrupación y tienda):

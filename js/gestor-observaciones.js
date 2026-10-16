@@ -691,8 +691,11 @@ function cargarDatosDiaGestorObs_(fecha) {
 
   // 2º intento (solo si la fecha está bloqueada por la ventana de futuro):
   // plantilla del día de la semana, sin restricción de fecha.
-  function pedirPlantilla() {
-    const dia = diaDesdeFechaJs_(fecha);
+  // diaServidor: el día que ha devuelto getConteoDia para esa fecha. Si la
+  // fecha tiene un conteo especial, es ese ("ESPECIAL 02/11/2026") y no el
+  // día de la semana, así que se usa siempre que venga.
+  function pedirPlantilla(diaServidor) {
+    const dia = diaServidor || diaDesdeFechaJs_(fecha);
     llamarApi_('getPlantillaDia', [dia])
       .then(function (data) {
         clearTimeout(timeoutId);
@@ -715,7 +718,7 @@ function cargarDatosDiaGestorObs_(fecha) {
       if (data && data.bloqueada) {
         // Fuera de la ventana normal: reintentamos con la plantilla, que sí
         // sabe leer ese día de la semana sin mirar la fecha en absoluto.
-        pedirPlantilla();
+        pedirPlantilla(data.dia);
         return;
       }
       clearTimeout(timeoutId);

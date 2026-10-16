@@ -180,6 +180,17 @@ function renderContenidoDia(data) {
     return;
   }
 
+  // Conteo especial: esa fecha usa una plantilla propia de "Rutas y tiendas"
+  // en vez de la del día de la semana.
+  if (data.diaEspecial) {
+    const avisoEsp = document.createElement('div');
+    avisoEsp.className = 'aviso-conteo-especial';
+    avisoEsp.innerHTML =
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>' +
+      '<span><b>Conteo especial.</b> Este día no usa la plantilla normal del ' + escapeHtml(DIAS_SEMANA_ES[new Date(data.fecha + 'T12:00:00').getDay()]) + ': las rutas y tiendas son las configuradas para esta fecha.</span>';
+    wrap.appendChild(avisoEsp);
+  }
+
   if (!data.dia) {
     const msg = document.createElement('div');
     msg.className = 'sin-conteo-msg';
