@@ -89,5 +89,9 @@ var TRANSITO_BADGES = {
   5: { texto: '120H', clase: 'badge-120h' }
 };
 function badgeTransitoTienda(transito) {
-  return TRANSITO_BADGES[Number(transito)] || null;
+  const d = Number(transito);
+  if (TRANSITO_BADGES[d]) return TRANSITO_BADGES[d];
+  // Más de 5 días (p.ej. MADEIRA o AZORES, 144H desde GIDT): mismo estilo que 120H.
+  if (d > 5) return { texto: (d * 24) + 'H', clase: 'badge-120h' };
+  return null;
 }

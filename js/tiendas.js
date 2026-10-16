@@ -429,10 +429,6 @@ function renderConfigTiendas() {
         '<div class="vista-card-header">' +
           '<h2>Configuración tiendas <span class="tiendas-config-total" id="tiendas-config-total"></span><span class="tiendas-config-total nueva-toggle" id="tiendas-config-nueva" title="Mostrar solo las tiendas nuevas (falta email)"></span><span class="tiendas-config-total sinuso-toggle" id="tiendas-config-sinuso" title="Mostrar solo las tiendas sin uso"></span><span class="tiendas-config-total sinemail-toggle" id="tiendas-config-sinemail" title="Mostrar solo las tiendas sin ningún email configurado"></span></h2>' +
           '<div class="vista-card-header-acciones">' +
-            (tienePermiso('tiendas') ?
-              '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-nueva-tienda-config" title="Da de alta una tienda nueva (número, nombre, email, tránsito y límite de palets)">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
-                'Nueva tienda</button>' : '') +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-pdf-tiendas" title="Exporta la lista visible (respeta el buscador y los filtros) a PDF">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
               'PDF</button>' +
@@ -448,6 +444,12 @@ function renderConfigTiendas() {
           '</div>' +
         '</div>' +
         '<p>Email de cada tienda, usado para avisarle por correo de los palets que va a recibir cuando se hace el barrido del día. Marca con L M X J V S D los días de la semana en que cada tienda recibe entrega, para que la fecha prevista del aviso sea correcta.</p>' +
+        // Número, nombre, límite y tránsito llegan solos desde GIDT (ver
+        // gidt_aplicar_tienda en el backend): aquí solo se ven.
+        '<div class="tiendas-aviso-gidt">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
+          '<span>El <b>nombre</b>, el <b>límite de palets</b> y el <b>tránsito</b> de cada tienda vienen de <b>GIDT</b> y se actualizan solos: cámbialos allí. Las altas y bajas de tiendas también se hacen en GIDT. Aquí se editan el email, las notas y los días de entrega.</span>' +
+        '</div>' +
         (tienePermiso('tiendas') ? '' :
           '<div class="emails-config-solo-lectura">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
@@ -653,8 +655,8 @@ function obtenerTiendasConfigFiltradas_() {
 /** Texto legible ("48h (2d)") para el valor numérico (1-5) de tránsito,
  *  reutilizando las mismas etiquetas que el desplegable de la lista. */
 function transitoTextoTienda_(valor) {
-  const op = TRANSITO_OPCIONES.filter(function (o) { return o.valor === Number(valor || 1); })[0];
-  return op ? op.texto : TRANSITO_OPCIONES[0].texto;
+  const d = Number(valor || 1);
+  return (d * 24) + 'h (' + d + 'd)';
 }
 
 function pintarListaTiendas_() {
@@ -732,10 +734,6 @@ function pintarListaTiendas_() {
         '<div class="emails-config-cabecera">' +
           '<span class="emails-config-nombre-wrap">' +
             '<span class="emails-config-nombre">' + escapeHtml(it.tienda) + '</span>' +
-            (tienePermiso('tiendas') ?
-              '<button type="button" class="emails-config-renombrar" title="Cambiar el nombre de esta tienda" data-renombrar="' + escapeAttr(it.tienda) + '">' +
-                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
-              '</button>' : '') +
           '</span>' +
           '<span class="emails-config-acciones-derecha">' +
             badge +
@@ -757,15 +755,11 @@ function pintarListaTiendas_() {
           '<div class="emails-config-campo-fila">' +
             '<div class="emails-config-campo emails-config-campo-estrecho">' +
               '<label>Tránsito</label>' +
-              '<select class="emails-config-transito" data-transito-tienda="' + escapeAttr(it.tienda) + '" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
-                TRANSITO_OPCIONES.map(function (op) {
-                  return '<option value="' + op.valor + '"' + (Number(it.transito || 1) === op.valor ? ' selected' : '') + '>' + op.texto + '</option>';
-                }).join('') +
-              '</select>' +
+              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(transitoTextoTienda_(it.transito)) + '" readonly tabindex="-1" title="Viene de GIDT">' +
             '</div>' +
             '<div class="emails-config-campo emails-config-campo-estrecho">' +
               '<label>Límite palets</label>' +
-              '<input type="text" inputmode="numeric" id="' + idSeguro + '_limite" value="' + escapeAttr(it.limite != null ? it.limite : '') + '" placeholder="Sin límite" ' + (tienePermiso('tiendas') ? '' : 'disabled') + '>' +
+              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(it.limite != null ? String(Number(it.limite)) : 'Sin límite') + '" readonly tabindex="-1" title="Viene de GIDT">' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -810,7 +804,9 @@ var TRANSITO_OPCIONES = [
   { valor: 2, texto: '48h (2d)' },
   { valor: 3, texto: '72h (3d)' },
   { valor: 4, texto: '96h (4d)' },
-  { valor: 5, texto: '120h (5d)' }
+  { valor: 5, texto: '120h (5d)' },
+  { valor: 6, texto: '144h (6d)' },
+  { valor: 7, texto: '168h (7d)' }
 ];
 
 function guardarTransitoTienda_(tienda, sel) {
@@ -845,23 +841,14 @@ function toggleDiaEntregaTienda_(tienda, dia, btn) {
 function guardarEmailTienda_(tienda, idSeguro, btn) {
   const email = document.getElementById(idSeguro + '_email').value;
   const notas = document.getElementById(idSeguro + '_notas').value;
-  const limiteEl = document.getElementById(idSeguro + '_limite');
-  const limite = limiteEl ? limiteEl.value.trim() : '';
-  if (limite !== '' && isNaN(Number(limite))) {
-    limiteEl.focus();
-    mostrarToast('El límite de palets debe ser un número', true);
-    return;
-  }
   btn.disabled = true;
   // Email/notas y límite viven en dos columnas de config_tiendas pero se
   // guardan juntos al pulsar "Guardar", igual que antes se guardaban solo
   // email/notas -- el límite es un número libre (no un desplegable como el
   // tránsito), así que tiene más sentido guardarlo al confirmar que en
   // cada pulsación de tecla.
-  Promise.all([
-    llamarApi_('guardarEmailTienda', [tienda, email, notas]),
-    llamarApi_('guardarLimiteTienda', [tienda, limite])
-  ])
+  // El límite ya no se guarda aquí: viene de GIDT.
+  llamarApi_('guardarEmailTienda', [tienda, email, notas])
     .then(function () {
       mostrarToast('Guardado');
       cargarTiendasConfig_();

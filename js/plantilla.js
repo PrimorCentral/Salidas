@@ -1069,9 +1069,9 @@ function abrirModalEditarTiendaPlantilla_(row) {
         '<button type="button" class="modal-limite-pill' + (info.tienda.limiteOverride ? ' activa' : '') + '" data-opcion="propio">Usar uno distinto solo este día</button>' +
       '</div>' +
       '<input type="text" id="modal-editar-tienda-lim" inputmode="numeric" placeholder="Ej: 6" style="margin-top:8px;' + (info.tienda.limiteOverride ? '' : 'display:none;') + '" value="' + escapeAttr(info.tienda.limiteOverride ? info.tienda.limite : '') + '">' +
-      '<span class="modal-campo-ayuda">El general se edita desde Configuración tiendas y se aplica a todos los días que no tengan aquí un valor propio.</span>' +
+      '<span class="modal-campo-ayuda">El general viene de GIDT y se aplica a todos los días que no tengan aquí un valor propio.</span>' +
     '</div>' +
-    '<p class="modal-campo-ayuda" style="margin-top:2px;">El número y el nombre de la tienda se cambian desde <b>Configuración tiendas</b>: se actualizan solos en todas las rutas donde aparezca.</p>';
+    '<p class="modal-campo-ayuda" style="margin-top:2px;">El número y el nombre de la tienda se cambian en <b>GIDT</b>: se actualizan solos en todas las rutas donde aparezca.</p>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -2337,7 +2337,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
       '</div>' +
       '<div class="modal-plantilla-lista-tiendas" id="modal-plantilla-lista-tiendas"></div>' +
       '<p class="modal-campo-ayuda" id="modal-plantilla-sin-tienda" style="display:none;">' +
-        '¿No aparece la tienda que buscas? <button type="button" class="modal-link-btn" id="modal-plantilla-ir-config">Créala primero en Configuración tiendas</button>.' +
+        '¿No aparece la tienda que buscas? Tiene que estar dada de alta y activa en <b>GIDT</b>; en cuanto lo esté, aparecerá aquí. <button type="button" class="modal-link-btn" id="modal-plantilla-ir-config">Ver Configuración tiendas</button>.' +
       '</p>' +
     '</div>' +
     // Límite: por defecto SIEMPRE el general de la tienda (en todos los
@@ -2461,11 +2461,11 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
       const limGeneral = limitesPorClave[seleccionadas[0]];
       limGeneralSeleccionada = limGeneral || '';
       limGeneralHint.innerHTML = limGeneral
-        ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (Configuración tiendas).<br><span class="modal-campo-ayuda" style="margin:0">Se usará en todos los días donde la añadas.</span></span>'
-        : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda todavía no tiene límite general. Puedes ponérselo en Configuración tiendas.</span>';
+        ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (viene de GIDT).<br><span class="modal-campo-ayuda" style="margin:0">Se usará en todos los días donde la añadas.</span></span>'
+        : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda no tiene límite general en GIDT (sin límite).</span>';
     } else if (n > 1) {
       limGeneralSeleccionada = '';
-      limGeneralHint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Cada tienda usará su límite general (Configuración tiendas). Para poner uno distinto solo este día, edítala después de añadirla.</span>';
+      limGeneralHint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Cada tienda usará su límite general (de GIDT). Para poner uno distinto solo este día, edítala después de añadirla.</span>';
     } else {
       limGeneralSeleccionada = '';
       limGeneralHint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Elige primero la tienda.</span>';
