@@ -2269,6 +2269,8 @@ function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
 function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig) {
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.add('ancho');
+  // Más ancho y alto que el resto: la lista de tiendas se ve en varias columnas.
+  document.getElementById('modal-box').classList.add('anadir-tienda-modal');
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
