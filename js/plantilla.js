@@ -2246,6 +2246,13 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
  *  su email/tránsito/límite general, en vez de poder nacer "al vuelo" con
  *  datos sueltos como antes. Aquí solo se elige, de entre las tiendas que
  *  ya existen en Configuración tiendas, cuál asignar a esta ruta/día. */
+/** Igual que _clave_tienda del backend: quita el "*" o "^" final, pasa a
+ *  mayúsculas y junta espacios. Sirve para comparar el nombre de una
+ *  tienda de la plantilla con su clave de Configuración tiendas. */
+function claveComparableTienda_(nombre) {
+  return String(nombre || '').replace(/\s*[*^]\s*$/, '').trim().toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
 function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
   // Antes de pintar el modal, se comprueba si esta misma ruta (misma
   // "agrupación", p.ej. "TXT ANDORRA") existe también otros días, para
@@ -2273,11 +2280,22 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   // en ninguna ruta -- el backend vuelve a comprobarlo al guardar (por si
   // ha cambiado algo entre medias), esto es solo para no ofrecer de
   // entrada algo que se sabe que va a fallar.
+  // diasConteo solo trae los días normales (LUNES..DOMINGO), así que además
+  // se quitan las tiendas que ya están en el día que se ve ahora (necesario
+  // en los conteos especiales).
+  const yaEnElDia = {};
+  PLANTILLA_ESTADO.secciones.forEach(function (s) {
+    s.tiendas.forEach(function (t) { yaEnElDia[claveComparableTienda_(t.nombre)] = true; });
+  });
   const candidatas = tiendasConfig
     .filter(function (t) { return (t.diasConteo || []).indexOf(PLANTILLA_ESTADO.dia) === -1; })
+    .filter(function (t) { return !yaEnElDia[claveComparableTienda_(t.tienda)]; })
     .sort(function (a, b) { return a.tienda.localeCompare(b.tienda); });
 
-  let seleccionada = null;
+  // Se pueden marcar varias tiendas a la vez; se añaden en el orden en que
+  // se marcaron.
+  let seleccionadas = [];
+  const limitesPorClave = {};
 
   // Tiendas y grupos de palets que tiene hoy esta ruta (para los
   // desplegables de "Posición" y "Grupo de palets").
@@ -2388,25 +2406,70 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     }
     avisoSinTienda.style.display = candidatas.length ? 'none' : '';
     listaEl.innerHTML = items.map(function (t) {
-      const marcada = t.tienda === seleccionada;
+      const marcada = seleccionadas.indexOf(t.tienda) !== -1;
       const esSinUso = /^SIN USO/i.test(t.estado || '');
       return '<button type="button" class="modal-plantilla-tienda-item' + (marcada ? ' activa' : '') + '" data-clave="' + escapeAttr(t.tienda) + '" data-limite="' + escapeAttr(t.limite != null ? t.limite : '') + '">' +
+        '<span class="modal-plantilla-tienda-check">' + (marcada ? '✓' : '') + '</span>' +
         '<span>' + escapeHtml(t.tienda) + '</span>' +
         (esSinUso ? '<span class="modal-plantilla-tienda-badge">sin uso</span>' : '') +
       '</button>';
     }).join('');
     listaEl.querySelectorAll('[data-clave]').forEach(function (btn) {
       btn.onclick = function () {
-        seleccionada = btn.getAttribute('data-clave');
-        const limGeneral = btn.getAttribute('data-limite');
-        limGeneralSeleccionada = limGeneral || '';
-        limGeneralHint.innerHTML = limGeneral
-          ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (Configuración tiendas).<br><span class="modal-campo-ayuda" style="margin:0">Se usará en todos los días donde la añadas.</span></span>'
-          : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda todavía no tiene límite general. Puedes ponérselo en Configuración tiendas.</span>';
-        listaEl.querySelectorAll('[data-clave]').forEach(function (b) { b.classList.toggle('activa', b === btn); });
+        const clave = btn.getAttribute('data-clave');
+        limitesPorClave[clave] = btn.getAttribute('data-limite') || '';
+        const i = seleccionadas.indexOf(clave);
+        if (i === -1) seleccionadas.push(clave); else seleccionadas.splice(i, 1);
+        btn.classList.toggle('activa', i === -1);
+        btn.querySelector('.modal-plantilla-tienda-check').textContent = i === -1 ? '✓' : '';
+        actualizarSeleccion();
       };
     });
   }
+
+  /** Pinta el resumen de lo marcado (chips) y la caja de límite según
+   *  haya 0, 1 o varias tiendas marcadas. */
+  function actualizarSeleccion() {
+    const n = seleccionadas.length;
+    resumenSel.style.display = n ? '' : 'none';
+    resumenSel.innerHTML = n
+      ? '<span class="modal-plantilla-sel-num">' + n + (n === 1 ? ' tienda marcada' : ' tiendas marcadas') + '</span>' +
+        seleccionadas.map(function (c) {
+          return '<button type="button" class="modal-plantilla-sel-chip" data-quitar="' + escapeAttr(c) + '" title="Quitar">' + escapeHtml(c) + ' ×</button>';
+        }).join('')
+      : '';
+    resumenSel.querySelectorAll('[data-quitar]').forEach(function (b) {
+      b.onclick = function () {
+        const c = b.getAttribute('data-quitar');
+        seleccionadas = seleccionadas.filter(function (x) { return x !== c; });
+        pintarLista(document.getElementById('modal-plantilla-buscar').value);
+        actualizarSeleccion();
+      };
+    });
+
+    if (n === 1) {
+      const limGeneral = limitesPorClave[seleccionadas[0]];
+      limGeneralSeleccionada = limGeneral || '';
+      limGeneralHint.innerHTML = limGeneral
+        ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (Configuración tiendas).<br><span class="modal-campo-ayuda" style="margin:0">Se usará en todos los días donde la añadas.</span></span>'
+        : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda todavía no tiene límite general. Puedes ponérselo en Configuración tiendas.</span>';
+    } else if (n > 1) {
+      limGeneralSeleccionada = '';
+      limGeneralHint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Cada tienda usará su límite general (Configuración tiendas). Para poner uno distinto solo este día, edítala después de añadirla.</span>';
+    } else {
+      limGeneralSeleccionada = '';
+      limGeneralHint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Elige primero la tienda.</span>';
+    }
+    // El límite "distinto solo este día" solo tiene sentido con una tienda.
+    toggleLim.style.display = n > 1 ? 'none' : '';
+    if (n > 1 && limPropio) toggleLim.onclick();
+    const btnOk = document.getElementById('modal-confirm-btn');
+    if (btnOk && !btnOk.disabled) btnOk.textContent = n > 1 ? ('Añadir ' + n + ' tiendas') : 'Añadir tienda';
+  }
+  const resumenSel = document.createElement('div');
+  resumenSel.className = 'modal-plantilla-sel';
+  resumenSel.style.display = 'none';
+  listaEl.parentNode.insertBefore(resumenSel, listaEl.nextSibling);
   pintarLista('');
 
   let temporizadorBusqueda = null;
@@ -2423,10 +2486,12 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
-    if (!seleccionada) { mostrarToast('Elige primero qué tienda añadir', true); return; }
+    if (!seleccionadas.length) { mostrarToast('Elige primero qué tienda añadir', true); return; }
+    const lista = seleccionadas.slice();
     const inputLim = document.getElementById('modal-plantilla-lim');
-    let limite = limPropio ? inputLim.value.trim() : '';
-    if (limPropio && (limite === '' || isNaN(Number(limite)))) { inputLim.focus(); return; }
+    // El límite "distinto solo este día" solo se ofrece con una tienda.
+    let limite = (limPropio && lista.length === 1) ? inputLim.value.trim() : '';
+    if (limPropio && lista.length === 1 && (limite === '' || isNaN(Number(limite)))) { inputLim.focus(); return; }
     // Si el "distinto" coincide con el general, se guarda como "usa el
     // general" (si no, saldría marcado en ámbar sin serlo de verdad).
     if (limite !== '' && limGeneralSeleccionada !== '' && Number(limite) === Number(limGeneralSeleccionada)) limite = '';
@@ -2437,79 +2502,121 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     const diasElegidos = Array.prototype.slice.call(document.querySelectorAll('.modal-anadir-tienda-dia-pill.activo'))
       .map(function (pill) { return pill.getAttribute('data-dia'); });
 
+    // La posición y el grupo se guardan por NOMBRE de tienda (no por nº de
+    // fila), porque al ir añadiendo tiendas una a una los números de fila
+    // cambian: antes de colocar cada tienda se vuelven a buscar.
+    const tiendaPorRow = function (row) {
+      const t = seccionActual ? seccionActual.tiendas.find(function (x) { return String(x.row) === String(row); }) : null;
+      return t ? t.nombre : null;
+    };
+    const anclaInicial = (posValor !== '' && posValor !== 'inicio') ? tiendaPorRow(posValor) : null;
+    const tiendaDelGrupo = grupoValor !== '' ? tiendaPorRow(grupoValor) : null;
+    const diaActual = PLANTILLA_ESTADO.dia;
+
     const btnConfirmar = document.getElementById('modal-confirm-btn');
     const avisoPrevio = document.getElementById('modal-plantilla-error');
     if (avisoPrevio) avisoPrevio.remove();
     btnConfirmar.disabled = true;
-    btnConfirmar.textContent = 'Añadiendo…';
 
-    // Primero se intenta en el día que se está viendo. El backend
-    // rechaza (sin insertar nada) si esa misma tienda ya existe ese día
-    // en cualquier agrupación -- si pasa, se deja el modal ABIERTO con
-    // los datos escritos y se muestra el motivo, en vez de cerrarlo y
-    // perder lo escrito.
-    llamarApi_('asignarTiendaExistentePlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, seleccionada, limite])
-      .then(function () {
-        cerrarModal();
-        const diaActual = PLANTILLA_ESTADO.dia;
-        // El día principal ya está añadido; los demás días marcados se
-        // intentan aparte -- si alguno falla (p.ej. porque ya existiera
-        // ahí), no se deshace lo del día principal, solo se avisa de
-        // cuáles no se han podido añadir y por qué. El límite "distinto"
-        // es solo para el día actual: en los demás días se usa el general.
-        return Promise.allSettled(
-          diasElegidos.map(function (dia) {
-            return llamarApi_('asignarTiendaExistentePlantilla', [dia, nombreRuta, seleccionada, '']);
-          })
-        ).then(function (resultados) {
-          const fallos = [];
-          const okDias = [];
-          resultados.forEach(function (r, i) {
-            if (r.status === 'rejected') fallos.push(diasElegidos[i] + ' (' + (r.reason && r.reason.message ? r.reason.message : 'error') + ')');
-            else okDias.push(diasElegidos[i]);
-          });
-          // Posición y grupo, en el día actual y en los que se ha añadido bien.
-          const hayColocar = posValor !== '' || grupoValor !== '';
-          const colocar = hayColocar
-            ? llamarApi_('colocarTiendaNuevaDias', [{
+    const anadidas = [];          // claves añadidas bien en el día actual
+    const fallosDiaActual = [];   // "tienda: motivo"
+    const fallosOtros = [];       // otros días / posición / grupo
+    const avisos = [];
+    let anterior = null;          // última tienda añadida (para encadenar el orden)
+
+    /** Busca el nº de fila actual de una tienda (por nombre o clave) en la ruta. */
+    function rowEnRuta(secciones, nombre) {
+      if (!nombre) return null;
+      const s = (secciones || []).find(function (x) { return x.nombre === nombreRuta; });
+      if (!s) return null;
+      const buscada = claveComparableTienda_(nombre);
+      const t = s.tiendas.find(function (x) { return claveComparableTienda_(x.nombre) === buscada; });
+      return t ? t.row : null;
+    }
+
+    function anadirUna(i) {
+      if (i >= lista.length) return Promise.resolve();
+      const clave = lista[i];
+      btnConfirmar.textContent = lista.length > 1 ? ('Añadiendo ' + (i + 1) + ' de ' + lista.length + '…') : 'Añadiendo…';
+      return llamarApi_('asignarTiendaExistentePlantilla', [diaActual, nombreRuta, clave, limite])
+        .then(function () {
+          anadidas.push(clave);
+          // Los demás días marcados se intentan aparte: si alguno falla no se
+          // deshace lo del día actual, solo se avisa. El límite "distinto" es
+          // solo para el día actual: en los demás días se usa el general.
+          return Promise.allSettled(diasElegidos.map(function (dia) {
+            return llamarApi_('asignarTiendaExistentePlantilla', [dia, nombreRuta, clave, '']);
+          })).then(function (resultados) {
+            const okDias = [];
+            resultados.forEach(function (r, k) {
+              if (r.status === 'rejected') fallosOtros.push(clave + ' en ' + diasElegidos[k] + ' (' + (r.reason && r.reason.message ? r.reason.message : 'error') + ')');
+              else okDias.push(diasElegidos[k]);
+            });
+            // Orden: la 1ª va donde se eligió; las siguientes, justo debajo
+            // de la anterior, para que queden seguidas y en el orden marcado.
+            const ancla = anterior || anclaInicial;
+            const alPrincipio = !anterior && posValor === 'inicio';
+            const hayColocar = !!ancla || alPrincipio || !!tiendaDelGrupo;
+            anterior = clave;
+            if (!hayColocar) return;
+            return llamarApi_('getPlantillaDia', [diaActual]).then(function (datos) {
+              const secciones = (datos && datos.secciones) || [];
+              const rowDebajo = ancla ? rowEnRuta(secciones, ancla) : null;
+              const rowGrupo = tiendaDelGrupo ? rowEnRuta(secciones, tiendaDelGrupo) : null;
+              if (ancla && rowDebajo == null) avisos.push(clave + ': no se encontró dónde colocarla, queda al final');
+              if (rowDebajo == null && !alPrincipio && rowGrupo == null) return;
+              return llamarApi_('colocarTiendaNuevaDias', [{
                 dia: diaActual,
                 nombreRuta: nombreRuta,
-                clave: seleccionada,
+                clave: clave,
                 dias: okDias,
-                rowDebajo: (posValor !== '' && posValor !== 'inicio') ? Number(posValor) : null,
-                alPrincipio: posValor === 'inicio',
-                rowGrupo: grupoValor !== '' ? Number(grupoValor) : null
-              }]).catch(function (err) {
-                fallos.push('posición/grupo (' + ((err && err.message) || 'error') + ')');
-                return [];
-              })
-            : Promise.resolve([]);
-          return colocar.then(function (res) {
-            const avisos = [];
-            (res || []).forEach(function (d) {
-              if (d.posicion === 'sin_vecina') avisos.push(d.dia + ': no está la tienda vecina, queda al final');
-              if (d.grupo === 'sin_grupo') avisos.push(d.dia + ': no tiene ese grupo, queda sin grupo');
+                rowDebajo: rowDebajo,
+                alPrincipio: alPrincipio,
+                rowGrupo: rowGrupo
+              }]).then(function (res) {
+                (res || []).forEach(function (d) {
+                  if (d.posicion === 'sin_vecina') avisos.push(clave + ' en ' + d.dia + ': no está la tienda vecina, queda al final');
+                  if (d.grupo === 'sin_grupo') avisos.push(clave + ' en ' + d.dia + ': no tiene ese grupo, queda sin grupo');
+                });
+              });
+            }).catch(function (err) {
+              fallosOtros.push(clave + ': posición/grupo (' + ((err && err.message) || 'error') + ')');
             });
-            cargarPlantilla_({ silencioso: true });
-            if (fallos.length) {
-              mostrarToast('Tienda añadida. No se pudo en: ' + fallos.join('; '), true);
-            } else if (avisos.length) {
-              mostrarToast('Tienda añadida. Ojo: ' + avisos.join('; '), true);
-            } else {
-              mostrarToast(okDias.length ? ('Tienda añadida (también en ' + okDias.length + ' día' + (okDias.length === 1 ? '' : 's') + ' más)') : 'Tienda añadida');
-            }
           });
-        });
-      })
-      .catch(function (err) {
+        })
+        .catch(function (err) {
+          // No se ha podido añadir en el día actual (p.ej. ya está ese día
+          // en otra agrupación): se apunta y se sigue con las demás.
+          fallosDiaActual.push(clave + ': ' + ((err && err.message) ? err.message : 'no se ha podido añadir'));
+        })
+        .then(function () { return anadirUna(i + 1); });
+    }
+
+    anadirUna(0).then(function () {
+      if (!anadidas.length) {
+        // No se ha añadido ninguna: se deja el modal abierto con el motivo.
         btnConfirmar.disabled = false;
-        btnConfirmar.textContent = 'Añadir tienda';
+        btnConfirmar.textContent = lista.length > 1 ? ('Añadir ' + lista.length + ' tiendas') : 'Añadir tienda';
         const aviso = document.createElement('div');
         aviso.id = 'modal-plantilla-error';
         aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
-        aviso.textContent = (err && err.message) ? err.message : 'No se ha podido añadir la tienda.';
+        aviso.textContent = fallosDiaActual.join(' · ') || 'No se ha podido añadir la tienda.';
         document.getElementById('modal-custom').appendChild(aviso);
-      });
+        return;
+      }
+      cerrarModal();
+      cargarPlantilla_({ silencioso: true });
+      const base = anadidas.length === 1 ? 'Tienda añadida' : (anadidas.length + ' tiendas añadidas');
+      const extraDias = diasElegidos.length ? (' (también en ' + diasElegidos.length + ' día' + (diasElegidos.length === 1 ? '' : 's') + ' más)') : '';
+      const problemas = fallosDiaActual.concat(fallosOtros);
+      if (problemas.length) {
+        mostrarToast(base + '. No se pudo: ' + problemas.join('; '), true);
+      } else if (avisos.length) {
+        mostrarToast(base + '. Ojo: ' + avisos.join('; '), true);
+      } else {
+        mostrarToast(base + extraDias);
+      }
+    });
   };
   setTimeout(function () { document.getElementById('modal-plantilla-buscar').focus(); }, 50);
 }
