@@ -435,9 +435,6 @@ function renderConfigTiendas() {
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-exportar-excel-tiendas" title="Exporta la lista visible (respeta el buscador y los filtros) a Excel (CSV)">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>' +
               'Excel</button>' +
-            '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-duplicados-tiendas" title="Compara los nombres de todas las tiendas para detectar la misma tienda escrita de forma distinta algún día">' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-              'Buscar posibles duplicados</button>' +
             '<button type="button" class="btn-sincronizar-agrupaciones" id="btn-sincronizar-tiendas" title="Vuelve a recorrer todas las hojas de día y añade las tiendas nuevas / marca las que ya no se usan">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6M3 22v-6h6M3.5 9a9 9 0 0 1 15-4L21 8M20.5 15a9 9 0 0 1-15 4L3 16"/></svg>' +
               'Buscar y sincronizar cambios de tiendas</button>' +
@@ -468,7 +465,6 @@ function renderConfigTiendas() {
   const btnNuevaTienda = document.getElementById('btn-nueva-tienda-config');
   if (btnNuevaTienda) btnNuevaTienda.onclick = abrirModalNuevaTiendaConfig_;
   document.getElementById('btn-sincronizar-tiendas').onclick = sincronizarTiendasDesdeApp_;
-  document.getElementById('btn-duplicados-tiendas').onclick = buscarDuplicadosTiendas_;
   document.getElementById('btn-exportar-pdf-tiendas').onclick = exportarTiendasConfigPDF_;
   document.getElementById('btn-exportar-excel-tiendas').onclick = exportarTiendasConfigExcel_;
 
@@ -752,12 +748,12 @@ function pintarListaTiendas_() {
           '</div>' +
           '<div class="emails-config-campo-fila">' +
             '<div class="emails-config-campo emails-config-campo-estrecho">' +
-              '<label>Tránsito</label>' +
-              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(transitoTextoTienda_(it.transito)) + '" readonly tabindex="-1" title="Viene de GIDT">' +
+              '<label>Tránsito <span class="emails-config-gidt-etiqueta"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Solo lectura · GIDT</span></label>' +
+              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(transitoTextoTienda_(it.transito)) + '" readonly tabindex="-1" aria-readonly="true" title="Solo lectura: viene de GIDT. Cámbialo allí.">' +
             '</div>' +
             '<div class="emails-config-campo emails-config-campo-estrecho">' +
-              '<label>Límite palets</label>' +
-              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(it.limite != null ? String(Number(it.limite)) : 'Sin límite') + '" readonly tabindex="-1" title="Viene de GIDT">' +
+              '<label>Límite palets <span class="emails-config-gidt-etiqueta"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Solo lectura · GIDT</span></label>' +
+              '<input type="text" class="emails-config-gidt" value="' + escapeAttr(it.limite != null ? String(Number(it.limite)) : 'Sin límite') + '" readonly tabindex="-1" aria-readonly="true" title="Solo lectura: viene de GIDT. Cámbialo allí.">' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -1121,56 +1117,4 @@ function sincronizarTiendasDesdeApp_() {
       if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
       mostrarErrorServidor(err);
     });
-}
-
-/** Compara por similitud de texto todas las claves de tiendas y muestra
- * en un modal las que se parecen mucho entre sí, para detectar la misma
- * tienda escrita de forma distinta algún día (espacios, guiones,
- * tildes...). El backend (buscar_posibles_duplicados_tiendas, con
- * pg_trgm) hace la comparación; aquí solo se pinta el resultado. */
-function buscarDuplicadosTiendas_() {
-  const btn = document.getElementById('btn-duplicados-tiendas');
-  if (btn) { btn.classList.add('girando'); btn.disabled = true; }
-  llamarApi_('buscarPosiblesDuplicadosTiendas', [])
-    .then(function (pares) {
-      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
-      mostrarModalDuplicadosTiendas_(pares || []);
-    })
-    .catch(function (err) {
-      if (btn) { btn.classList.remove('girando'); btn.disabled = false; }
-      mostrarErrorServidor(err);
-    });
-}
-
-function mostrarModalDuplicadosTiendas_(pares) {
-  document.getElementById('modal-box').classList.add('medio');
-  document.getElementById('modal-box').classList.remove('ancho');
-  document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Posibles tiendas duplicadas';
-  document.getElementById('modal-text').style.display = 'none';
-  document.getElementById('modal-textarea').style.display = 'none';
-
-  const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
-  custom.innerHTML = !pares.length
-    ? '<div class="modal-envio-ok">' +
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' +
-        '<span>No se ha encontrado ningún nombre sospechosamente parecido.</span>' +
-      '</div>'
-    : '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Estos nombres se parecen mucho entre sí. Si son la misma tienda, corrige el nombre en "Rutas y tiendas" el día que esté distinto, para que quede igual todos los días.</p>' +
-      '<div style="display:flex;flex-direction:column;gap:8px;">' +
-        pares.map(function (p) {
-          return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;">' +
-            '<div style="font-weight:700;font-size:13px;color:var(--navy);">' + escapeHtml(p.tienda1) + '</div>' +
-            '<div style="font-weight:700;font-size:13px;color:var(--navy);">' + escapeHtml(p.tienda2) + '</div>' +
-            '<div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">Coincidencia: ' + Math.round(p.similitud * 100) + '%</div>' +
-          '</div>';
-        }).join('') +
-      '</div>';
-
-  const actions = document.getElementById('modal-actions');
-  actions.innerHTML = '<button class="modal-confirm" id="modal-confirm-btn">Cerrar</button>';
-  document.getElementById('modal-overlay').style.display = 'flex';
-  document.getElementById('modal-confirm-btn').onclick = cerrarModal;
 }
