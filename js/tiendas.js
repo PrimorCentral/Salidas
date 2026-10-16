@@ -737,9 +737,7 @@ function pintarListaTiendas_() {
           '</span>' +
           '<span class="emails-config-acciones-derecha">' +
             badge +
-            '<button type="button" class="emails-config-borrar" title="' + (esSinUso ? 'Eliminar de la configuración' : 'No se puede eliminar: esta tienda está activa en el cuadrante de algún día') + '" data-borrar="' + escapeAttr(it.tienda) + '" ' + (esSinUso ? '' : 'disabled') + '>' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
-            '</button>' +
+            // Sin papelera: las bajas de tiendas se hacen en GIDT y llegan solas.
           '</span>' +
         '</div>' +
         filaDias +
