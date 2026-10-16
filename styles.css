@@ -3371,3 +3371,14 @@ body.plantilla-guardando-orden .plantilla-tienda-asa { opacity: .4; cursor: prog
 
 /* "Añadir tienda" (Rutas y tiendas): más ancho que .ancho -- va al final para ganarle */
 .modal-box.anadir-tienda-modal { max-width: 1100px; width: calc(100vw - 48px); }
+
+/* Configuración tiendas: datos que vienen de GIDT (solo lectura) */
+.tiendas-aviso-gidt {
+  display: flex; align-items: flex-start; gap: 9px;
+  background: #eef4fb; border: 1px solid #cfe0f3; color: #1d3a5f;
+  border-radius: 8px; padding: 9px 12px; margin: 4px 0 12px; font-size: 12.5px; line-height: 1.45;
+}
+.tiendas-aviso-gidt svg { flex: 0 0 auto; margin-top: 2px; color: var(--navy); }
+.emails-config-campo input.emails-config-gidt {
+  background: #f3f5f8; color: var(--ink); cursor: default;
+}
