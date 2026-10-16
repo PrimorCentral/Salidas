@@ -2319,6 +2319,10 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     '<div class="modal-campo">' +
       '<label for="modal-plantilla-buscar">Tienda</label>' +
       '<input type="text" id="modal-plantilla-buscar" placeholder="Buscar por número o nombre…">' +
+      '<div class="modal-plantilla-marcar">' +
+        '<button type="button" class="modal-link-btn" id="modal-plantilla-marcar-todas">Marcar todas</button>' +
+        '<button type="button" class="modal-link-btn" id="modal-plantilla-desmarcar-todas">Desmarcar todas</button>' +
+      '</div>' +
       '<div class="modal-plantilla-lista-tiendas" id="modal-plantilla-lista-tiendas"></div>' +
       '<p class="modal-campo-ayuda" id="modal-plantilla-sin-tienda" style="display:none;">' +
         '¿No aparece la tienda que buscas? <button type="button" class="modal-link-btn" id="modal-plantilla-ir-config">Créala primero en Configuración tiendas</button>.' +
@@ -2396,9 +2400,14 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     cambiarVista('configuracion', 'tiendas');
   };
 
+  let visiblesActuales = candidatas; // lo que se ve ahora en la lista (con el filtro de búsqueda)
   function pintarLista(filtro) {
     const f = (filtro || '').trim().toLowerCase();
     const items = f ? candidatas.filter(function (t) { return t.tienda.toLowerCase().indexOf(f) !== -1; }) : candidatas;
+    visiblesActuales = items;
+    // Con una búsqueda escrita, "Marcar todas" marca solo las que se ven.
+    const btnMarcar = document.getElementById('modal-plantilla-marcar-todas');
+    if (btnMarcar) btnMarcar.textContent = f ? ('Marcar las ' + items.length + ' que se ven') : 'Marcar todas';
     if (!items.length) {
       listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio">Ninguna tienda coincide.</div>';
       avisoSinTienda.style.display = '';
@@ -2434,9 +2443,12 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     resumenSel.style.display = n ? '' : 'none';
     resumenSel.innerHTML = n
       ? '<span class="modal-plantilla-sel-num">' + n + (n === 1 ? ' tienda marcada' : ' tiendas marcadas') + '</span>' +
-        seleccionadas.map(function (c) {
+        // Con muchas marcadas (p.ej. tras "Marcar todas") solo se enseñan
+        // las primeras; el resto se quita desmarcándolas en la lista.
+        seleccionadas.slice(0, 12).map(function (c) {
           return '<button type="button" class="modal-plantilla-sel-chip" data-quitar="' + escapeAttr(c) + '" title="Quitar">' + escapeHtml(c) + ' ×</button>';
-        }).join('')
+        }).join('') +
+        (n > 12 ? '<span class="modal-plantilla-sel-num" style="font-weight:500">y ' + (n - 12) + ' más</span>' : '')
       : '';
     resumenSel.querySelectorAll('[data-quitar]').forEach(function (b) {
       b.onclick = function () {
@@ -2470,6 +2482,22 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   resumenSel.className = 'modal-plantilla-sel';
   resumenSel.style.display = 'none';
   listaEl.parentNode.insertBefore(resumenSel, listaEl.nextSibling);
+
+  // "Marcar todas": marca todas las que se ven (si hay búsqueda, solo esas),
+  // en el orden de la lista; luego se pueden quitar las que no se quieran.
+  document.getElementById('modal-plantilla-marcar-todas').onclick = function () {
+    visiblesActuales.forEach(function (t) {
+      limitesPorClave[t.tienda] = t.limite != null ? String(t.limite) : '';
+      if (seleccionadas.indexOf(t.tienda) === -1) seleccionadas.push(t.tienda);
+    });
+    pintarLista(document.getElementById('modal-plantilla-buscar').value);
+    actualizarSeleccion();
+  };
+  document.getElementById('modal-plantilla-desmarcar-todas').onclick = function () {
+    seleccionadas = [];
+    pintarLista(document.getElementById('modal-plantilla-buscar').value);
+    actualizarSeleccion();
+  };
   pintarLista('');
 
   let temporizadorBusqueda = null;
@@ -2804,11 +2832,17 @@ function anadirRutaPlantilla_() {
         '</div>' +
         '<div class="modal-campo">' +
           '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
-          '<input type="text" id="modal-ruta-ubicacion" placeholder="Ej: GAITE">' +
+          '<select id="modal-ruta-ubicacion">' +
+            '<option value="">Selecciona…</option>' +
+            '<option value="GAITE">GAITE</option>' +
+            '<option value="CARTAMA">CARTAMA</option>' +
+            '<option value="PTA">PTA</option>' +
+            '<option value="AMBAS NAVES">AMBAS NAVES</option>' +
+          '</select>' +
         '</div>' +
         '<div class="modal-campo">' +
           '<label for="modal-ruta-hora">Hora de carga</label>' +
-          '<input type="text" id="modal-ruta-hora" placeholder="Ej: 10:00">' +
+          '<input type="time" id="modal-ruta-hora">' +
         '</div>';
 
       const btnConfirmar = document.getElementById('modal-confirm-btn');
@@ -2819,7 +2853,9 @@ function anadirRutaPlantilla_() {
         const inputHora = document.getElementById('modal-ruta-hora');
         const nombre = selectAgrupacion.value;
         const ubicacion = inputUbicacion.value.trim();
-        const hora = inputHora.value.trim();
+        // El campo de hora da "08:00"; se guarda como "8:00", igual que el
+        // resto de rutas ya existentes (p.ej. "GAITE 8:00").
+        const hora = inputHora.value.trim().replace(/^0(\d:)/, '$1');
         if (!nombre) { selectAgrupacion.focus(); return; }
         if (!ubicacion) { inputUbicacion.focus(); return; }
         if (!hora) { inputHora.focus(); return; }
