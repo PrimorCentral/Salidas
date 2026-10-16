@@ -2349,66 +2349,6 @@
   .modal-resultado.error { color: var(--danger); }
   .modal-resultado svg { flex-shrink: 0; }
 
-  /* ---------- Modal "Actualización obligatoria" ---------- */
-  .modal-overlay.overlay-actualizacion {
-    background: rgba(12,17,26,.78); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-  }
-  .modal-box.actualizacion {
-    max-width: 380px; padding: 0; overflow: hidden; text-align: center;
-    box-shadow: 0 24px 60px rgba(0,0,0,.45);
-  }
-  /* La actualización es obligatoria: este aviso no se puede cerrar con la ×. */
-  .modal-box.actualizacion .modal-cerrar-x { display: none; }
-  .actualizacion-cabecera {
-    background:
-      radial-gradient(circle at 20% 15%, rgba(217,140,43,.35), transparent 55%),
-      linear-gradient(160deg, var(--navy) 0%, #0f1a2c 100%);
-    padding: 34px 28px 22px;
-  }
-  .actualizacion-icono {
-    width: 60px; height: 60px; margin: 0 auto 16px; border-radius: 50%;
-    background: linear-gradient(150deg, var(--amber), var(--amber-dark));
-    display: flex; align-items: center; justify-content: center; color: #fff;
-    box-shadow: 0 0 0 7px rgba(217,140,43,.16), 0 10px 22px rgba(0,0,0,.35);
-    animation: pulso-actualizacion 2.2s ease-in-out infinite;
-  }
-  @keyframes pulso-actualizacion {
-    0%, 100% { box-shadow: 0 0 0 7px rgba(217,140,43,.16), 0 10px 22px rgba(0,0,0,.35); }
-    50% { box-shadow: 0 0 0 11px rgba(217,140,43,.08), 0 10px 22px rgba(0,0,0,.35); }
-  }
-  .actualizacion-cabecera h3 { margin: 0 0 6px; font-size: 18px; font-weight: 800; color: #fff; }
-  .actualizacion-cabecera p { margin: 0; font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.5; }
-  .actualizacion-versiones {
-    display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 16px;
-  }
-  .actualizacion-version-chip {
-    font-size: 11.5px; font-weight: 700; letter-spacing: .02em; padding: 4px 10px; border-radius: 20px;
-    font-variant-numeric: tabular-nums;
-  }
-  .actualizacion-version-chip.actual { background: rgba(255,255,255,.1); color: rgba(255,255,255,.65); }
-  .actualizacion-version-chip.nueva { background: var(--amber); color: #fff; }
-  .actualizacion-cuerpo { padding: 22px 26px 26px; }
-  .actualizacion-motivo {
-    display: flex; align-items: flex-start; gap: 9px; text-align: left; font-size: 12.5px;
-    color: var(--ink-soft); line-height: 1.5; background: #f6f7f9; border-radius: 10px; padding: 11px 12px;
-    margin-bottom: 18px;
-  }
-  .actualizacion-motivo svg { flex-shrink: 0; margin-top: 1px; color: var(--amber-dark); }
-  .btn-actualizar-obligatorio {
-    width: 100%; border: none; border-radius: 11px; padding: 14px 18px; font-size: 14.5px; font-weight: 700;
-    background: linear-gradient(135deg, var(--navy), var(--navy-soft)); color: #fff; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 9px;
-    transition: filter .15s, transform .05s; box-shadow: 0 8px 18px rgba(28,43,69,.35);
-  }
-  .btn-actualizar-obligatorio:hover { filter: brightness(1.08); }
-  .btn-actualizar-obligatorio:active { transform: scale(.98); }
-  .btn-actualizar-obligatorio:disabled { opacity: .8; cursor: default; }
-  .btn-actualizar-obligatorio .spinner { display: none; }
-  .btn-actualizar-obligatorio.cargando .spinner { display: inline-block; }
-  .actualizacion-nota-obligatoria {
-    margin: 12px 0 0; font-size: 11px; color: var(--ink-soft); opacity: .8;
-  }
-
   /* ---------- Insignia de versión (login e Inicio) ---------- */
   .version-badge {
     position: absolute; right: 18px; bottom: 34px; z-index: 2;
@@ -3226,43 +3166,6 @@
     .hi-orden-tabla td.hi-orden-num { width: 16px; font-weight: 700; }
   }
 
-/* ---------- Ventana "Acerca de" (al pulsar el logo) — js/acerca-de.js ---------- */
-.abre-acerca-de { cursor: pointer; }
-.login-logo.abre-acerca-de { transition: transform .15s; }
-.login-logo.abre-acerca-de:hover { transform: scale(1.05); }
-header.topbar .brand.abre-acerca-de:hover { opacity: .85; }
-.modal-box.acerca-de { max-width: 440px; padding: 0; overflow-x: hidden; }
-.modal-box.acerca-de .modal-cerrar-x { color: rgba(255,255,255,.75); }
-.modal-box.acerca-de .modal-cerrar-x:hover { background: rgba(255,255,255,.12); color: #fff; }
-.acerca-cabecera {
-  background: linear-gradient(160deg, var(--navy) 0%, #0f1a2c 100%);
-  padding: 30px 28px 22px; text-align: center; color: #fff;
-}
-.acerca-logo {
-  width: 56px; height: 56px; border-radius: 15px; margin: 0 auto 12px;
-  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
-  display: flex; align-items: center; justify-content: center;
-}
-.acerca-logo svg { width: 28px; height: 28px; }
-.acerca-nombre { font-size: 17px; font-weight: 700; letter-spacing: .4px; }
-.acerca-nombre span { color: var(--amber); }
-.acerca-version { font-size: 12.5px; color: rgba(255,255,255,.65); margin-top: 4px; min-height: 16px; }
-.acerca-cuerpo { padding: 20px 26px 6px; }
-.acerca-campo { display: flex; flex-direction: column; gap: 3px; margin-bottom: 14px; }
-.acerca-campo .lbl { font-size: 11px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .4px; }
-.acerca-campo .val { font-size: 14.5px; font-weight: 700; color: var(--ink); }
-.acerca-clave {
-  font-family: var(--mono); font-size: 13.5px; letter-spacing: .6px; text-align: center;
-  background: #f6f7fa; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
-  color: var(--ink); user-select: all;
-}
-.acerca-activado { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ok); margin-top: 3px; }
-.acerca-legal { border-top: 1px solid var(--line); margin: 0 26px; padding-top: 14px; }
-.modal-box.acerca-de .acerca-legal p { font-size: 11.5px; line-height: 1.5; color: var(--ink-soft); margin: 0 0 8px; white-space: normal; text-align: left; }
-.modal-box.acerca-de .acerca-legal p.acerca-copy { font-weight: 700; color: var(--ink); margin-bottom: 10px; }
-.acerca-copy span { display: block; font-weight: 600; color: var(--ink-soft); }
-.modal-box.acerca-de .modal-actions { padding: 0 26px 22px; margin-top: 10px; }
-
 /* ---- Rutas y tiendas: arrastrar tiendas (sustituye a las flechas) ---- */
 .plantilla-tienda-asa {
   width: 22px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -3392,3 +3295,339 @@ body .emails-config-campo input.emails-config-gidt:focus {
   color: #6b7380; background: #eceff3; border-radius: 999px; padding: 1px 7px;
   vertical-align: 1px;
 }
+
+/* =====================================================================
+   "Acerca de" (Licencia / Novedades) y aviso de actualización: mismas
+   ventanas que en GIDT (js/acerca-de.js, js/changelog.js y
+   js/actualizaciones.js). Los colores van en variables --sal-* para no
+   chocar con las de SALIDAS (aquí --bg es el gris claro de la app).
+   ===================================================================== */
+.acerca-de-overlay, .actualizacion-overlay {
+  --sal-accent: var(--amber);
+  --sal-accent-ink: #7a4a12;
+  --sal-oscuro: var(--navy);
+  --sal-muted: #f4f6f8;
+  --sal-azul: #3b74c9;
+  --sal-azul-bg: #e8f0fb;
+  --sal-ok-bg: #e3f3ec;
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(20,26,36,.55);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+  overscroll-behavior: contain;
+}
+.acerca-de-overlay.show, .actualizacion-overlay.show { display: flex; }
+/* Mientras están abiertas, el fondo no se desplaza (como body.modal-abierto). */
+body.modal-propio-abierto { overflow: hidden; }
+.acerca-de-box, .actualizacion-modal-box {
+  width: 100%; background: var(--panel); border-radius: 16px;
+  box-shadow: 0 30px 60px -20px rgba(0,0,0,.45);
+}
+.acerca-de-box button, .actualizacion-modal-box button { font-family: inherit; }
+.act-pie { display: flex; }
+.act-boton {
+  appearance: none; border: 1px solid var(--sal-accent); background: var(--sal-accent); color: #fff;
+  border-radius: 9px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+}
+.act-boton:hover { filter: brightness(1.05); }
+.act-titulo { margin: 0; font-weight: 700; color: var(--ink); }
+.act-mensaje { margin: 0; line-height: 1.5; }
+/* Por encima de todo (también del login y de cualquier otro modal). */
+.actualizacion-overlay { z-index: 10050; }
+
+  /* ---------- Modal de actualización disponible ---------- */
+  .actualizacion-overlay{
+    background:rgba(10,14,19,.72);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    z-index:10050; /* por encima de todo: login, cualquier otro modal y "Acerca de" */
+  }
+  .actualizacion-modal-box{
+    max-width:440px;
+    padding:0;
+    border-radius:20px;
+    overflow:hidden;
+    text-align:center;
+    animation:actEntrar .55s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  @keyframes actEntrar{ from{ opacity:0; transform:translateY(24px) scale(.94); } to{ opacity:1; transform:none; } }
+  .act-contenido{ padding:22px 30px 28px; }
+  .act-titulo{ font-size:20px; margin-bottom:8px; letter-spacing:-.2px; }
+  .act-mensaje{ font-size:14.5px; margin-bottom:22px; color:var(--ink-soft); }
+  .act-pie{ justify-content:center; }
+  .act-boton{
+    width:100%; justify-content:center; padding:13px; font-size:14.5px;
+  }
+  .act-boton:disabled{ opacity:.75; cursor:default; }
+
+  .act-versiones{ display:inline-flex; align-items:center; gap:8px; margin-bottom:12px; font:600 12px/1 var(--mono); }
+  .act-versiones[hidden]{ display:none; }
+  .act-v{ padding:5px 9px; border-radius:999px; background:var(--sal-muted); color:var(--ink-soft); border:1px solid var(--line); }
+  .act-v.act-nueva{ background:#FBEEDD; color:var(--sal-accent-ink); border-color:#F0D2A8; }
+  .act-flecha{ color:var(--ink-soft); }
+  .act-barra{ height:6px; border-radius:99px; background:var(--sal-muted); overflow:hidden; margin-top:14px; display:none; }
+  .act-barra i{ display:block; height:100%; width:40%; border-radius:99px; background:var(--sal-accent); animation:actCargando 1.1s ease-in-out infinite; }
+  @keyframes actCargando{ from{ transform:translateX(-100%); } to{ transform:translateX(250%); } }
+  .actualizacion-modal-box.actualizando .act-barra{ display:block; }
+
+  /* Escena animada (perro paseando). --vel: 1 = paseo; al actualizar se sube y corre. */
+  .act-escena{
+    --vel:1;
+    position:relative; height:180px; overflow:hidden;
+    background:linear-gradient(180deg,#FFD9B8 0%,#FFE9D6 45%,#FFF4EA 100%);
+  }
+  .act-sol{
+    position:absolute; top:22px; right:46px; width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 40% 40%,#FFC46B,#FF9A3D);
+    box-shadow:0 0 0 10px rgba(255,170,80,.18), 0 0 0 22px rgba(255,170,80,.08);
+  }
+  .act-tira{ position:absolute; left:0; display:flex; width:200%; will-change:transform; }
+  .act-tira svg{ flex:0 0 50%; display:block; }
+  .act-nubes  { top:14px;    animation:actMover calc(38s / var(--vel)) linear infinite; }
+  .act-ciudad { bottom:52px; animation:actMover calc(26s / var(--vel)) linear infinite; }
+  .act-arboles{ bottom:40px; animation:actMover calc(11s / var(--vel)) linear infinite; }
+  @keyframes actMover{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+  .act-suelo{ position:absolute; left:0; right:0; bottom:0; height:44px; background:#4A525C; border-top:6px solid #B8BEC6; }
+  .act-suelo::after{
+    content:""; position:absolute; left:0; right:0; top:17px; height:4px;
+    background:repeating-linear-gradient(90deg,#F2F4F6 0 26px,transparent 26px 52px);
+    animation:actLinea calc(.9s / var(--vel)) linear infinite;
+  }
+  @keyframes actLinea{ from{ background-position:0 0; } to{ background-position:-52px 0; } }
+  .act-perro{ position:absolute; z-index:2; left:50%; bottom:38px; width:150px; height:90px; margin-left:-80px; }
+  .act-cuerpo{ animation:actTrote calc(.5s / var(--vel)) ease-in-out infinite; }
+  @keyframes actTrote{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+  .act-pata{ transform-box:fill-box; transform-origin:50% 0; }
+  .act-pata.act-a{ animation:actPaso calc(.5s / var(--vel)) ease-in-out infinite; }
+  .act-pata.act-b{ animation:actPaso calc(.5s / var(--vel)) ease-in-out infinite reverse; }
+  @keyframes actPaso{ 0%,100%{ transform:rotate(24deg); } 50%{ transform:rotate(-24deg); } }
+  .act-cola{ transform-box:fill-box; transform-origin:100% 100%; animation:actCola calc(.35s / var(--vel)) ease-in-out infinite alternate; }
+  @keyframes actCola{ from{ transform:rotate(-14deg); } to{ transform:rotate(18deg); } }
+  .act-oreja{ transform-box:fill-box; transform-origin:50% 0; animation:actOreja calc(.5s / var(--vel)) ease-in-out infinite; }
+  @keyframes actOreja{ 0%,100%{ transform:rotate(0); } 50%{ transform:rotate(10deg); } }
+  .act-sombra{ transform-box:fill-box; transform-origin:center; animation:actSombra calc(.5s / var(--vel)) ease-in-out infinite; }
+  @keyframes actSombra{ 0%,100%{ transform:scaleX(1); opacity:.28; } 50%{ transform:scaleX(.9); opacity:.2; } }
+  .act-chapa{
+    position:absolute; z-index:3; left:50%; bottom:116px; margin-left:62px;
+    background:var(--sal-accent); color:#fff; font:700 11px/1 var(--mono);
+    padding:5px 7px; border-radius:6px; white-space:nowrap;
+    box-shadow:0 3px 8px -2px rgba(122,74,18,.45);
+    animation:actChapa calc(.5s / var(--vel)) ease-in-out infinite;
+  }
+  .act-chapa::after{ content:""; position:absolute; left:6px; bottom:-5px; border:5px solid transparent; border-top-color:var(--sal-accent); border-bottom:0; }
+  @keyframes actChapa{ 0%,100%{ transform:translateY(0) rotate(-3deg); } 50%{ transform:translateY(-3px) rotate(2deg); } }
+  @media (max-width:420px){ .act-contenido{ padding:20px 20px 24px; } .act-escena{ height:160px; } }
+  /* Nota: aquí NO se desactivan las animaciones con prefers-reduced-motion.
+     En los PCs del trabajo Windows tiene las animaciones del sistema
+     desactivadas y el perro se quedaba quieto (solo se movía la carretera).
+     Es una animación suave, sin destellos, y solo sale al actualizar. */
+
+
+/* ---------- Ventana "Acerca de" (js/acerca-de.js) ---------- */
+.abre-acerca-de{ cursor:pointer; }
+.login-logo.abre-acerca-de{ transition:transform .15s; }
+.login-logo.abre-acerca-de:hover{ transform:scale(1.05); }
+header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
+.acerca-de-overlay{ z-index:450; }
+.acerca-de-box{ position:relative; max-width:440px; padding:0; overflow-x:hidden; max-height:calc(100vh - 40px); overflow-y:auto; }
+.acerca-cerrar-x{
+  position:absolute; top:12px; right:12px;
+  width:30px; height:30px; border-radius:8px;
+  border:0; background:transparent; cursor:pointer;
+  color:rgba(255,255,255,.75); font-size:15px; line-height:1;
+}
+.acerca-cerrar-x:hover{ background:rgba(255,255,255,.12); color:#fff; }
+.acerca-cabecera{
+  background:linear-gradient(160deg, var(--sal-oscuro) 0%, #0f1a2c 100%);
+  padding:30px 28px 22px; text-align:center; color:#fff;
+}
+.acerca-logo{
+  width:56px; height:56px; border-radius:15px; margin:0 auto 12px;
+  background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.acerca-logo img{ width:100%; height:100%; object-fit:cover; display:block; }
+.acerca-logo svg{ width:56%; height:56%; }
+.acerca-nombre{ font-size:17px; font-weight:700; letter-spacing:.4px; }
+.acerca-nombre span{ color:var(--sal-accent); }
+.acerca-version{ font-size:12.5px; color:rgba(255,255,255,.65); margin-top:4px; min-height:16px; }
+.acerca-cuerpo{ padding:20px 26px 6px; }
+.acerca-campo{ display:flex; flex-direction:column; gap:3px; margin-bottom:14px; }
+.acerca-campo .lbl{ font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px; }
+.acerca-campo .val{ font-size:14.5px; font-weight:700; color:var(--ink); }
+.acerca-clave{
+  font-family:var(--mono); font-size:13.5px; letter-spacing:.6px; text-align:center;
+  background:#f6f7fa; border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+  color:var(--ink); user-select:all;
+}
+.acerca-activado{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; color:var(--ok); margin-top:3px; }
+.acerca-legal{ border-top:1px solid var(--line); margin:0 26px; padding-top:14px; }
+.acerca-legal p{ font-size:11.5px; line-height:1.5; color:var(--ink-soft); margin:0 0 8px; text-align:left; }
+.acerca-legal p.acerca-copy{ font-weight:700; color:var(--ink); margin-bottom:10px; }
+.acerca-copy span{ display:block; font-weight:600; color:var(--ink-soft); }
+.acerca-acciones{ display:flex; justify-content:flex-end; padding:0 26px 22px; margin-top:10px; }
+.acerca-aceptar{ background:var(--sal-oscuro); border-color:var(--sal-oscuro); color:#fff; font-weight:700; padding:9px 18px; }
+.acerca-aceptar:hover{ filter:brightness(1.25); }
+
+/* ---------- "Acerca de": pestañas Licencia / Novedades (js/acerca-de.js + js/changelog.js) ---------- */
+.acerca-tabs{ display:flex; border-bottom:1px solid var(--line); }
+.acerca-tab{
+  flex:1; padding:11px 10px; background:transparent; border:0; border-bottom:2px solid transparent;
+  border-radius:0; cursor:pointer; font-size:13px; font-weight:600; color:var(--ink-soft); margin-bottom:-1px;
+}
+.acerca-tab:hover{ color:var(--ink); }
+.acerca-tab.activa{ color:var(--ink); font-weight:700; border-bottom-color:var(--sal-accent); }
+.acerca-novedades{ padding:6px 26px 4px; max-height:380px; overflow-y:auto; }
+.acerca-version-item{ padding:12px 0; border-bottom:1px solid var(--line); }
+.acerca-version-item:last-child{ border-bottom:0; }
+.acerca-version-cab{ display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:var(--ink); }
+.acerca-version-actual{ font-size:10.5px; font-weight:700; background:var(--sal-oscuro); color:#fff; padding:2px 7px; border-radius:6px; }
+.acerca-version-fecha{ margin-left:auto; font-size:12px; font-weight:500; color:var(--ink-soft); }
+.acerca-cambios{ list-style:none; margin:8px 0 0; padding:0; }
+.acerca-cambios li{ display:flex; align-items:flex-start; gap:8px; margin:6px 0; font-size:13px; line-height:1.45; color:var(--ink); }
+.acerca-tag{ flex:0 0 auto; font-size:11px; font-weight:700; padding:1px 7px; border-radius:6px; margin-top:1px; }
+.acerca-tag.nuevo{ background:var(--sal-ok-bg); color:var(--ok); }
+.acerca-tag.mejora{ background:var(--sal-azul-bg); color:var(--sal-azul); }
+.acerca-tag.correccion{ background:#FBEEDD; color:var(--sal-accent-ink); }
+.acerca-novedades-vacio{ font-size:13px; color:var(--ink-soft); padding:16px 0; text-align:center; }
+.acerca-panel[hidden]{ display:none !important; }
+
+/* ---------- "Acerca de" ampliado (más ancho y legible) ---------- */
+.acerca-de-box{ max-width:960px; height:min(820px, calc(100vh - 40px)); display:flex; flex-direction:column; overflow:hidden; }
+.acerca-cabecera{ display:grid; grid-template-columns:auto 1fr; column-gap:18px; align-items:center; text-align:left; padding:26px 34px; flex:0 0 auto; }
+.acerca-logo{ grid-row:1 / span 2; width:72px; height:72px; border-radius:18px; margin:0; }
+.acerca-nombre{ font-size:24px; align-self:end; }
+.acerca-version{ font-size:14px; align-self:start; margin-top:6px; }
+.acerca-cerrar-x{
+  top:16px; right:16px; width:36px; height:36px; font-size:16px; z-index:2;
+  border-radius:50%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#fff;
+  display:flex; align-items:center; justify-content:center; transition:background .2s, transform .2s;
+}
+.acerca-cerrar-x:hover{ background:rgba(255,255,255,.18); transform:rotate(90deg); }
+.acerca-cerrar-x:focus-visible{ outline:2px solid var(--sal-accent); outline-offset:2px; }
+.acerca-tabs{ flex:0 0 auto; }
+.acerca-tab{ font-size:14.5px; padding:14px 10px; }
+.acerca-panel{ flex:1 1 auto; min-height:0; overflow-y:auto; }
+#acercaPanelLicencia{ display:grid; grid-template-columns:1fr 1fr; }
+.acerca-cuerpo{ padding:28px 34px; }
+.acerca-campo{ gap:5px; margin-bottom:22px; }
+.acerca-campo .lbl{ font-size:12px; }
+.acerca-campo .val{ font-size:18px; }
+.acerca-clave{ font-size:15.5px; padding:12px; }
+.acerca-activado{ font-size:13.5px; margin-top:6px; }
+.acerca-legal{ margin:0; padding:28px 34px; border-top:0; border-left:1px solid var(--line); background:var(--sal-muted); }
+.acerca-legal p{ font-size:13.5px; line-height:1.6; margin-bottom:12px; }
+.acerca-legal p.acerca-copy{ font-size:14.5px; margin-bottom:14px; }
+.acerca-novedades{ max-height:none; padding:8px 34px 12px; }
+.acerca-version-cab{ font-size:17px; gap:10px; }
+.acerca-version-actual{ font-size:12px; padding:3px 9px; }
+.acerca-version-fecha{ font-size:13.5px; }
+.acerca-cambios{ margin-top:12px; }
+.acerca-cambios li{ font-size:14.5px; line-height:1.55; gap:10px; margin:9px 0; }
+.acerca-tag{ font-size:12px; padding:2px 9px; min-width:92px; text-align:center; }
+.acerca-acciones{ flex:0 0 auto; margin:0; padding:16px 34px; border-top:1px solid var(--line); }
+.acerca-aceptar{ font-size:14px; padding:10px 26px; }
+@media (max-width:700px){
+  .acerca-de-box{ height:auto; max-height:calc(100vh - 20px); }
+  .acerca-cabecera{ padding:22px 52px 22px 20px; column-gap:14px; }
+  .acerca-logo{ width:56px; height:56px; border-radius:15px; }
+  .acerca-nombre{ font-size:17px; }
+  #acercaPanelLicencia{ display:block; }
+  .acerca-cuerpo, .acerca-legal{ padding:20px; }
+  .acerca-legal{ border-left:0; border-top:1px solid var(--line); }
+  .acerca-novedades{ padding:6px 20px 10px; }
+  .acerca-acciones{ padding:14px 20px; }
+}
+
+/* ---------- "Acerca de": animaciones ---------- */
+.acerca-de-overlay.show{ animation:acercaFondo .3s ease both; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+.acerca-de-overlay.show .acerca-de-box{ animation:acercaEntrada .55s cubic-bezier(.16,1,.3,1) both; }
+@keyframes acercaFondo{ from{ background:rgba(20,26,36,0); } }
+@keyframes acercaEntrada{ from{ opacity:0; transform:translateY(22px) scale(.94); } to{ opacity:1; transform:none; } }
+
+/* Cabecera: halo naranja que respira y destello que cruza */
+.acerca-cabecera{ position:relative; overflow:hidden; isolation:isolate; }
+.acerca-cabecera::before{
+  content:''; position:absolute; z-index:-1; width:320px; height:320px; left:-90px; top:-150px; border-radius:50%;
+  background:radial-gradient(circle, rgba(217,140,43,.28) 0%, rgba(217,140,43,0) 65%);
+  animation:acercaHalo 6s ease-in-out infinite alternate;
+}
+.acerca-cabecera::after{
+  content:''; position:absolute; z-index:-1; inset:0;
+  background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.07) 50%, transparent 65%);
+  transform:translateX(-100%); animation:acercaBrillo 1.6s .5s ease-out both;
+}
+@keyframes acercaHalo{ from{ transform:translate(0,0) scale(1); opacity:.8; } to{ transform:translate(40px,20px) scale(1.15); opacity:1; } }
+@keyframes acercaBrillo{ to{ transform:translateX(100%); } }
+.acerca-de-overlay.show .acerca-logo{ animation:acercaLogo .7s .15s cubic-bezier(.34,1.56,.64,1) both; box-shadow:0 10px 30px -8px rgba(217,140,43,.45); }
+@keyframes acercaLogo{ from{ opacity:0; transform:scale(.6) rotate(-8deg); } to{ opacity:1; transform:none; } }
+.acerca-de-overlay.show .acerca-nombre{ animation:acercaSube .5s .25s cubic-bezier(.16,1,.3,1) both; }
+.acerca-de-overlay.show .acerca-version{ animation:acercaSube .5s .35s cubic-bezier(.16,1,.3,1) both; }
+@keyframes acercaSube{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+
+/* Pestañas: barra naranja que se desliza */
+.acerca-tab{ transition:color .2s; }
+@supports selector(:has(*)){
+  .acerca-tabs{ position:relative; }
+  .acerca-tab.activa{ border-bottom-color:transparent; }
+  .acerca-tabs::after{
+    content:''; position:absolute; left:0; bottom:-1px; width:50%; height:2px; background:var(--sal-accent);
+    transition:transform .35s cubic-bezier(.16,1,.3,1);
+  }
+  .acerca-tabs:has(#acercaTabNovedades.activa)::after{ transform:translateX(100%); }
+}
+
+/* Contenido: aparece escalonado al abrir y al cambiar de pestaña */
+.acerca-panel:not([hidden]) .acerca-campo,
+.acerca-panel:not([hidden]) .acerca-legal,
+.acerca-panel:not([hidden]) .acerca-version-item{ animation:acercaSube .45s cubic-bezier(.16,1,.3,1) both; }
+.acerca-panel:not([hidden]) .acerca-campo:nth-child(1){ animation-delay:.30s; }
+.acerca-panel:not([hidden]) .acerca-campo:nth-child(2){ animation-delay:.38s; }
+.acerca-panel:not([hidden]) .acerca-campo:nth-child(3){ animation-delay:.46s; }
+.acerca-panel:not([hidden]) .acerca-legal{ animation-delay:.42s; }
+.acerca-panel:not([hidden]) .acerca-version-item:nth-child(1){ animation-delay:.05s; }
+.acerca-panel:not([hidden]) .acerca-version-item:nth-child(2){ animation-delay:.12s; }
+.acerca-panel:not([hidden]) .acerca-version-item:nth-child(3){ animation-delay:.19s; }
+.acerca-panel:not([hidden]) .acerca-version-item:nth-child(n+4){ animation-delay:.26s; }
+
+/* Nº de activación con destello y "Producto activado" con check que se dibuja */
+.acerca-clave{ position:relative; overflow:hidden; }
+.acerca-panel:not([hidden]) .acerca-clave::after{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(105deg, transparent 30%, rgba(217,140,43,.18) 50%, transparent 70%);
+  transform:translateX(-100%); animation:acercaBrillo 1s .75s ease-out both;
+}
+.acerca-panel:not([hidden]) .acerca-activado svg path{ stroke-dasharray:24; stroke-dashoffset:24; animation:acercaCheck .45s .95s ease-out forwards; }
+@keyframes acercaCheck{ to{ stroke-dashoffset:0; } }
+
+/* Novedades: versiones plegables (la actual abierta, las anteriores plegadas) */
+.acerca-version-item{ padding:4px 0; }
+.acerca-version-cab{
+  width:100%; display:flex; align-items:center; gap:10px; padding:14px 12px; margin:0 -12px; width:calc(100% + 24px);
+  background:transparent; border:0; border-radius:10px; cursor:pointer; text-align:left; font:inherit;
+  font-size:17px; font-weight:700; color:var(--ink); transition:background .2s;
+}
+.acerca-version-cab:hover{ background:var(--sal-muted); }
+.acerca-version-cab:focus-visible{ outline:2px solid var(--sal-accent); outline-offset:-2px; }
+.acerca-version-resumen{ display:inline-flex; gap:6px; flex-wrap:wrap; transition:opacity .25s; }
+.acerca-version-item.abierta .acerca-version-resumen{ opacity:0; pointer-events:none; }
+.acerca-resumen-tag{ font-size:11.5px; font-weight:700; padding:2px 8px; border-radius:999px; }
+.acerca-resumen-tag.nuevo{ background:var(--sal-ok-bg); color:var(--ok); }
+.acerca-resumen-tag.mejora{ background:var(--sal-azul-bg); color:var(--sal-azul); }
+.acerca-resumen-tag.correccion{ background:#FBEEDD; color:var(--sal-accent-ink); }
+.acerca-version-chevron{ flex:0 0 auto; color:var(--ink-soft); transition:transform .3s cubic-bezier(.16,1,.3,1); }
+.acerca-version-item.abierta .acerca-version-chevron{ transform:rotate(180deg); }
+.acerca-version-detalle{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .4s cubic-bezier(.16,1,.3,1); }
+.acerca-version-item.abierta .acerca-version-detalle{ grid-template-rows:1fr; }
+.acerca-version-detalle > div{ overflow:hidden; min-height:0; }
+.acerca-version-detalle .acerca-cambios{ margin:2px 0 14px; opacity:0; transform:translateY(-6px); transition:opacity .3s, transform .3s; }
+.acerca-version-item.abierta .acerca-version-detalle .acerca-cambios{ opacity:1; transform:none; }
+
+/* Detalles al pasar el ratón */
+.acerca-aceptar{ transition:transform .15s, filter .15s; }
+.acerca-aceptar:hover{ transform:translateY(-1px); }
+
+@media (prefers-reduced-motion: reduce){
+  .acerca-de-overlay *, .acerca-de-overlay *::before, .acerca-de-overlay *::after, .acerca-de-overlay{ animation:none !important; transition:none !important; }
+  .acerca-panel .acerca-activado svg path{ stroke-dashoffset:0; }
+}
+
