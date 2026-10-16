@@ -11,8 +11,9 @@
  * HTTP de los archivos propios y se recarga.
  *
  * PARA PUBLICAR UNA ACTUALIZACIÓN: sube los archivos que cambien (todos en el
- * mismo commit) y cambia SOLO el número de version.json. No hay que tocar
- * nada más (ni config.js ni service-worker.js).
+ * mismo commit), cambia el número de version.json y añade arriba del todo en
+ * js/changelog.js la entrada de esa versión (sale en "Acerca de" > Novedades).
+ * No hay que tocar nada más (ni config.js ni service-worker.js).
  */
 let actualizacionYaAvisada = false;
 const VERSION_INTERVALO_MS_ = 5 * 60 * 1000;
@@ -52,8 +53,13 @@ function comprobarActualizacion_() {
   });
 }
 
-/** versionNueva es opcional: si no se conoce, se omite el número en el chip
- *  "nueva versión" y se deja un texto genérico. */
+/** versionNueva es opcional: si no se conoce, se omiten los números y la
+ *  chapa del perro dice "Nueva versión". Misma ventana que en GIDT (marcado
+ *  en index.html, #actualizacionModalOverlay): un perro pasea por la calle
+ *  con la nueva versión; al pulsar "Actualizar ahora" echa a correr y sale
+ *  una barra de progreso mientras se limpia la caché y se recarga. No se
+ *  puede cerrar (ni con clic fuera ni con Escape): la actualización es
+ *  obligatoria. */
 function mostrarModalActualizacion(versionNueva) {
   // Si ya hay otro modal abierto (p.ej. alguien confirmando un cierre de
   // tienda), no se lo quitamos de encima: se reintenta en el próximo
@@ -63,73 +69,55 @@ function mostrarModalActualizacion(versionNueva) {
     setTimeout(function () { mostrarModalActualizacion(versionNueva); }, 15000);
     return;
   }
+  const overlay = document.getElementById('actualizacionModalOverlay');
+  if (!overlay) return;
   actualizacionYaAvisada = true;
 
-  const overlay = document.getElementById('modal-overlay');
-  const cajaModal = document.getElementById('modal-box');
-  cajaModal.classList.remove('ancho', 'medio', 'peligro', 'gestor-obs');
-  cajaModal.classList.add('actualizacion');
-  overlay.classList.add('overlay-actualizacion');
+  // "Acerca de" es solo informativa: si estaba abierta, se cierra.
+  if (typeof window.cerrarModalAcercaDe_ === 'function') window.cerrarModalAcercaDe_();
 
-  document.getElementById('modal-title').style.display = 'none';
-  document.getElementById('modal-text').style.display = 'none';
-  document.getElementById('modal-textarea').style.display = 'none';
-  document.getElementById('modal-actions').innerHTML = '';
+  if (APP_VERSION_ACTUAL && versionNueva) {
+    document.getElementById('actVersionActual').textContent = 'v' + APP_VERSION_ACTUAL;
+    document.getElementById('actVersionNueva').textContent = 'v' + versionNueva;
+    document.getElementById('actVersiones').hidden = false;
+  }
+  if (versionNueva) document.getElementById('actChapaVersion').textContent = 'v' + versionNueva;
 
-  const chipNueva = versionNueva
-    ? '<span class="actualizacion-version-chip nueva">v' + escapeHtml(versionNueva) + '</span>'
-    : '<span class="actualizacion-version-chip nueva">Nueva versión</span>';
-
-  const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
-  custom.innerHTML =
-    '<div class="actualizacion-cabecera">' +
-      '<div class="actualizacion-icono">' +
-        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.05-6.75"/><path d="M21 4v5h-5"/></svg>' +
-      '</div>' +
-      '<h3>Actualización disponible</h3>' +
-      '<p>Hay una nueva versión de Gestión Salidas lista para instalar.</p>' +
-      '<div class="actualizacion-versiones">' +
-        '<span class="actualizacion-version-chip actual">v' + escapeHtml(APP_VERSION_ACTUAL || '') + '</span>' +
-        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' +
-        chipNueva +
-      '</div>' +
-    '</div>' +
-    '<div class="actualizacion-cuerpo">' +
-      '<div class="actualizacion-motivo">' +
-        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>' +
-        '<span>Es necesario actualizar para seguir usando la app: así se evitan fallos y datos desincronizados con el resto del equipo.</span>' +
-      '</div>' +
-      '<button type="button" class="btn-actualizar-obligatorio" id="btn-actualizar-obligatorio">' +
-        '<span class="spinner" id="btn-actualizar-spinner"></span>' +
-        '<span id="btn-actualizar-texto">Actualizar ahora</span>' +
-      '</button>' +
-      '<p class="actualizacion-nota-obligatoria">La actualización es obligatoria; la app no se puede seguir usando en la versión anterior.</p>' +
-    '</div>';
-
-  overlay.style.display = 'flex';
-  document.getElementById('btn-actualizar-obligatorio').onclick = aplicarActualizacion;
+  overlay.classList.add('show');
+  document.body.classList.add('modal-propio-abierto');
+  const btn = document.getElementById('btnActualizarAhora');
+  btn.addEventListener('click', aplicarActualizacion, { once: true });
 }
 
-/** Botón "Actualizar ahora": deja la app limpia y recarga. */
+/** Botón "Actualizar ahora": el perro echa a correr y la app se deja limpia y se recarga. */
 function aplicarActualizacion() {
-  const btn = document.getElementById('btn-actualizar-obligatorio');
-  if (btn) {
-    btn.disabled = true;
-    btn.classList.add('cargando');
-    document.getElementById('btn-actualizar-texto').textContent = 'Actualizando…';
-  }
+  const btn = document.getElementById('btnActualizarAhora');
+  const caja = document.querySelector('#actualizacionModalOverlay .actualizacion-modal-box');
+  const escena = document.getElementById('actEscena');
+  const mensaje = document.getElementById('actualizacionModalMensaje');
+  if (btn) { btn.disabled = true; btn.textContent = 'Actualizando…'; }
+  if (caja) caja.classList.add('actualizando');
+  if (escena) escena.style.setProperty('--vel', '2.4');
+  if (mensaje) mensaje.textContent = 'Descargando la nueva versión… no cierres la aplicación.';
   forzarActualizacion_();
 }
+
+// Tiempo mínimo que se ve la animación de "Actualizando…" (el perro
+// corriendo) antes de recargar: la limpieza de caché suele tardar menos de
+// un segundo y, sin esto, la animación apenas se llegaba a ver.
+const DURACION_MINIMA_ACTUALIZANDO_MS_ = 3500;
 
 /** Desregistra el service worker, vacía las cachés y refresca la caché HTTP
  *  del navegador para cada archivo propio de la página (si no, el navegador
  *  podría servir el HTML/CSS/JS viejo guardado en su caché normal al
  *  recargar). Después recarga. */
 function forzarActualizacion_() {
+  const inicio = Date.now();
   let recargado = false;
   const recargar = function () {
     if (recargado) return;
+    const restante = DURACION_MINIMA_ACTUALIZANDO_MS_ - (Date.now() - inicio);
+    if (restante > 0) { setTimeout(recargar, restante); return; }
     recargado = true;
     // Evita el aviso del navegador "¿Quieres volver a cargar la aplicación?"
     // (lo lanza el beforeunload de sesion.js): esta recarga es intencionada.
