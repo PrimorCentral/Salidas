@@ -235,9 +235,10 @@ function diaNormalDeFecha_(fecha) {
 
 function abrirModalNuevoDiaEspecial_() {
   const manana = sumarDias_(hoyStr(), 1);
+  // value="" = empezar totalmente vacío (sin rutas ni tiendas).
   const opcionesBase = PLANTILLA_ESTADO.dias.map(function (d) {
     return '<option value="' + escapeAttr(d) + '">' + escapeHtml(d) + '</option>';
-  }).join('');
+  }).join('') + '<option value="">VACÍO (sin rutas)</option>';
 
   document.getElementById('modal-box').classList.remove('ancho', 'medio', 'peligro', 'usuario-form');
   document.getElementById('modal-title').style.display = '';
@@ -253,9 +254,9 @@ function abrirModalNuevoDiaEspecial_() {
       '<input type="date" id="modal-especial-fecha" min="' + manana + '">' +
     '</div>' +
     '<div class="modal-campo">' +
-      '<label>Copiar la configuración de</label>' +
+      '<label>Empezar desde</label>' +
       '<select id="modal-especial-base">' + opcionesBase + '</select>' +
-      '<span class="modal-campo-ayuda">Se copian todas sus rutas, tiendas, límites, grupos, notas de carga y casillas. Después lo cambias aquí como quieras, sin tocar el día normal.</span>' +
+      '<span class="modal-campo-ayuda" id="modal-especial-ayuda"></span>' +
     '</div>' +
     '<div class="modal-campo-ayuda" id="modal-especial-error" style="display:none;color:var(--danger);"></div>';
 
@@ -271,12 +272,19 @@ function abrirModalNuevoDiaEspecial_() {
   const errorEl = document.getElementById('modal-especial-error');
   // Mientras no se elija el día a mano, se propone el que le toca a la fecha.
   let baseElegidaAMano = false;
-  selectBase.onchange = function () { baseElegidaAMano = true; };
+  const ayudaEl = document.getElementById('modal-especial-ayuda');
+  function actualizarAyuda() {
+    ayudaEl.textContent = selectBase.value
+      ? 'Se copian todas sus rutas, tiendas, límites, grupos, notas de carga y casillas. Después lo cambias aquí como quieras, sin tocar el día normal.'
+      : 'Se crea sin ninguna ruta: luego las añades con "Añadir ruta nueva".';
+  }
+  actualizarAyuda();
+  selectBase.onchange = function () { baseElegidaAMano = true; actualizarAyuda(); };
   inputFecha.onchange = function () {
     errorEl.style.display = 'none';
     if (!baseElegidaAMano && inputFecha.value) {
       const d = diaNormalDeFecha_(inputFecha.value);
-      if (PLANTILLA_ESTADO.dias.indexOf(d) !== -1) selectBase.value = d;
+      if (PLANTILLA_ESTADO.dias.indexOf(d) !== -1) { selectBase.value = d; actualizarAyuda(); }
     }
   };
 
