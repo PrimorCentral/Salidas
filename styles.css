@@ -748,13 +748,7 @@
   .modal-plantilla-tienda-item.activa .modal-plantilla-tienda-check { border-color: #fff; background: #fff; color: var(--navy); }
   .modal-plantilla-tienda-item > .modal-plantilla-tienda-check + span { flex: 1 1 auto; }
   .modal-plantilla-marcar { display: flex; gap: 14px; margin-top: 8px; font-size: 12.5px; }
-  .modal-plantilla-sel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
-  .modal-plantilla-sel-num { font-size: 12px; font-weight: 700; color: var(--navy); margin-right: 2px; }
-  .modal-plantilla-sel-chip {
-    border: 1px solid #cfd6e3; background: #eef1f7; color: var(--navy); border-radius: 12px;
-    padding: 2px 9px; font-size: 11.5px; font-weight: 600;
-  }
-  .modal-plantilla-sel-chip:hover { background: #fceded; border-color: #e3b4b4; color: var(--danger); }
+  .modal-plantilla-marcar .modal-plantilla-ver-todas { margin-left: auto; }
   .modal-plantilla-tienda-vacio { background: #fff; padding: 14px 10px; font-size: 12.5px; color: var(--ink-soft); text-align: center; }
   .modal-link-btn {
     background: none; border: none; padding: 0; color: var(--navy); font-weight: 700; font-size: inherit;
