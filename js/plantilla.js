@@ -2287,10 +2287,19 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   PLANTILLA_ESTADO.secciones.forEach(function (s) {
     s.tiendas.forEach(function (t) { yaEnElDia[claveComparableTienda_(t.nombre)] = true; });
   });
-  const candidatas = tiendasConfig
+  const todasCandidatas = tiendasConfig
     .filter(function (t) { return (t.diasConteo || []).indexOf(PLANTILLA_ESTADO.dia) === -1; })
     .filter(function (t) { return !yaEnElDia[claveComparableTienda_(t.tienda)]; })
     .sort(function (a, b) { return a.tienda.localeCompare(b.tienda); });
+  // Por defecto solo se ofrecen las tiendas que ya pertenecen a esta
+  // agrupación (en cualquier otro día); con "Ver todas las tiendas" se
+  // puede elegir cualquier otra.
+  const claveRuta = claveAgrupacionJs_(nombreRuta);
+  const deLaAgrupacion = todasCandidatas.filter(function (t) {
+    return (t.agrupaciones || []).some(function (a) { return claveAgrupacionJs_(a) === claveRuta; });
+  });
+  let verTodas = false;
+  let candidatas = deLaAgrupacion;
 
   // Se pueden marcar varias tiendas a la vez; se añaden en el orden en que
   // se marcaron.
@@ -2322,6 +2331,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
       '<div class="modal-plantilla-marcar">' +
         '<button type="button" class="modal-link-btn" id="modal-plantilla-marcar-todas">Marcar todas</button>' +
         '<button type="button" class="modal-link-btn" id="modal-plantilla-desmarcar-todas">Desmarcar todas</button>' +
+        '<button type="button" class="modal-link-btn modal-plantilla-ver-todas" id="modal-plantilla-ver-todas"></button>' +
       '</div>' +
       '<div class="modal-plantilla-lista-tiendas" id="modal-plantilla-lista-tiendas"></div>' +
       '<p class="modal-campo-ayuda" id="modal-plantilla-sin-tienda" style="display:none;">' +
@@ -2409,11 +2419,15 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     const btnMarcar = document.getElementById('modal-plantilla-marcar-todas');
     if (btnMarcar) btnMarcar.textContent = f ? ('Marcar las ' + items.length + ' que se ven') : 'Marcar todas';
     if (!items.length) {
-      listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio">Ninguna tienda coincide.</div>';
-      avisoSinTienda.style.display = '';
+      listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio">' +
+        (f ? 'Ninguna tienda coincide.'
+           : (verTodas ? 'No queda ninguna tienda por añadir este día.'
+                       : 'No queda ninguna tienda de esta agrupación por añadir. Pulsa "Ver todas las tiendas" para elegir otra.')) +
+        '</div>';
+      avisoSinTienda.style.display = verTodas ? '' : 'none';
       return;
     }
-    avisoSinTienda.style.display = candidatas.length ? 'none' : '';
+    avisoSinTienda.style.display = 'none';
     listaEl.innerHTML = items.map(function (t) {
       const marcada = seleccionadas.indexOf(t.tienda) !== -1;
       const esSinUso = /^SIN USO/i.test(t.estado || '');
@@ -2436,29 +2450,11 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     });
   }
 
-  /** Pinta el resumen de lo marcado (chips) y la caja de límite según
-   *  haya 0, 1 o varias tiendas marcadas. */
+  /** Ajusta la caja de límite y el texto del botón según haya 0, 1 o
+   *  varias tiendas marcadas (lo marcado ya se ve en la lista: check y
+   *  fondo azul). */
   function actualizarSeleccion() {
     const n = seleccionadas.length;
-    resumenSel.style.display = n ? '' : 'none';
-    resumenSel.innerHTML = n
-      ? '<span class="modal-plantilla-sel-num">' + n + (n === 1 ? ' tienda marcada' : ' tiendas marcadas') + '</span>' +
-        // Con muchas marcadas (p.ej. tras "Marcar todas") solo se enseñan
-        // las primeras; el resto se quita desmarcándolas en la lista.
-        seleccionadas.slice(0, 12).map(function (c) {
-          return '<button type="button" class="modal-plantilla-sel-chip" data-quitar="' + escapeAttr(c) + '" title="Quitar">' + escapeHtml(c) + ' ×</button>';
-        }).join('') +
-        (n > 12 ? '<span class="modal-plantilla-sel-num" style="font-weight:500">y ' + (n - 12) + ' más</span>' : '')
-      : '';
-    resumenSel.querySelectorAll('[data-quitar]').forEach(function (b) {
-      b.onclick = function () {
-        const c = b.getAttribute('data-quitar');
-        seleccionadas = seleccionadas.filter(function (x) { return x !== c; });
-        pintarLista(document.getElementById('modal-plantilla-buscar').value);
-        actualizarSeleccion();
-      };
-    });
-
     if (n === 1) {
       const limGeneral = limitesPorClave[seleccionadas[0]];
       limGeneralSeleccionada = limGeneral || '';
@@ -2478,10 +2474,18 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     const btnOk = document.getElementById('modal-confirm-btn');
     if (btnOk && !btnOk.disabled) btnOk.textContent = n > 1 ? ('Añadir ' + n + ' tiendas') : 'Añadir tienda';
   }
-  const resumenSel = document.createElement('div');
-  resumenSel.className = 'modal-plantilla-sel';
-  resumenSel.style.display = 'none';
-  listaEl.parentNode.insertBefore(resumenSel, listaEl.nextSibling);
+  // "Ver todas las tiendas" / "Ver solo las de <agrupación>".
+  const btnVerTodas = document.getElementById('modal-plantilla-ver-todas');
+  function pintarBotonVerTodas() {
+    btnVerTodas.textContent = verTodas ? ('Ver solo las de ' + parsearNombreAgrupacion(nombreRuta).titulo) : 'Ver todas las tiendas';
+  }
+  btnVerTodas.onclick = function () {
+    verTodas = !verTodas;
+    candidatas = verTodas ? todasCandidatas : deLaAgrupacion;
+    pintarBotonVerTodas();
+    pintarLista(document.getElementById('modal-plantilla-buscar').value);
+  };
+  pintarBotonVerTodas();
 
   // "Marcar todas": marca todas las que se ven (si hay búsqueda, solo esas),
   // en el orden de la lista; luego se pueden quitar las que no se quieran.
