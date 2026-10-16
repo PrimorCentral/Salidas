@@ -949,6 +949,43 @@
   .plantilla-dias button:hover { background: #f0f2f6; }
   .plantilla-dias button.activo { background: var(--navy); color: #fff; border-color: var(--navy); }
 
+  /* Días especiales (conteo especial de una fecha concreta) en "Rutas y tiendas" */
+  .plantilla-dias-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
+  .plantilla-dias button.dia-especial { border-color: #e9c48f; background: #fdf5e9; color: var(--amber-dark); }
+  .plantilla-dias button.dia-especial:hover { background: #fbecd6; }
+  .plantilla-dias button.dia-especial.pasado { opacity: .65; }
+  .plantilla-dias button.dia-especial.activo { background: var(--amber); border-color: var(--amber-dark); color: #fff; opacity: 1; }
+  .plantilla-dias button.dia-especial-pasados { border-style: dashed; color: var(--ink-soft); font-weight: 500; }
+  .plantilla-dias button.dia-especial-nuevo {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-style: dashed; border-color: var(--amber); color: var(--amber-dark); background: #fff;
+  }
+  .plantilla-dias button.dia-especial-nuevo:hover { background: #fdf5e9; }
+  .plantilla-aviso-especial {
+    flex-basis: 100%; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #fdf5e9; border: 1px solid #e9c48f; color: #6b4410;
+    border-radius: 8px; padding: 8px 12px; font-size: 13px;
+  }
+  .plantilla-aviso-especial svg { flex: 0 0 auto; color: var(--amber-dark); }
+  .plantilla-aviso-especial span { flex: 1 1 240px; }
+  .plantilla-aviso-especial-eliminar {
+    border: 1px solid #e3b4b4; background: #fff; color: var(--danger); border-radius: 7px;
+    padding: 5px 10px; font-size: 12px; font-weight: 600;
+  }
+  .plantilla-aviso-especial-eliminar:hover { background: #fceded; }
+
+  /* Aviso arriba del conteo cuando ese día usa una plantilla especial */
+  .aviso-conteo-especial {
+    display: flex; align-items: center; gap: 10px;
+    background: #fdf5e9; border: 1px solid #e9c48f; color: #6b4410;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 13.5px;
+  }
+  .aviso-conteo-especial svg { flex: 0 0 auto; color: var(--amber-dark); }
+  /* "Bloqueos y cambios": columna de un día con conteo especial */
+  .festivos-dia-col-nombre.especial { color: var(--amber-dark); font-weight: 700; }
+  /* Calendario de Conteos: día con conteo especial (borde ámbar discontinuo) */
+  .cal-day.dia-especial { outline: 2px dashed var(--amber); outline-offset: -3px; }
+
   /* Buscadores de "Rutas y tiendas" (agrupación + tienda): viven juntos
      en la fila de días (misma línea que LUNES/MARTES...), que es "sticky",
      así que se mantienen visibles al hacer scroll. Solo aparecen cuando
