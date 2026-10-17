@@ -1919,8 +1919,7 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
   // se calcula, en vivo según se edita, qué cambiaría en cada día.
   let infoDias = null;          // null = cargando; false = no disponible
   let claveDeRow = {};
-  const diasMarcados = new Set();
-  let diasIniciados = false;
+  const diasMarcados = new Set(); // empieza vacío: solo se aplican los días que marque el usuario
 
   function gruposOrigenNormalizados() {
     return grupos
@@ -1982,10 +1981,6 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
       return;
     }
     const porDia = infoDias.map(function (d) { return { dia: d.dia, cambios: cambiosParaDia(d) }; });
-    if (!diasIniciados) {
-      porDia.forEach(function (x) { if (x.cambios.length) diasMarcados.add(x.dia); });
-      diasIniciados = true;
-    }
     // Días marcados con cambios, agrupados si los cambios son idénticos.
     const cajas = [];
     porDia.forEach(function (x) {
@@ -2016,7 +2011,7 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
         }).join('') +
         (porDia.every(function (x) { return !x.cambios.length; })
           ? '<p class="modal-campo-ayuda" style="margin:6px 0 0;">Los demás días ya tienen estos mismos grupos.</p>'
-          : '<p class="modal-campo-ayuda" style="margin:6px 0 0;">Las tiendas se emparejan por número. Los días que desmarques no se tocan.</p>') +
+          : '<p class="modal-campo-ayuda" style="margin:6px 0 0;">Las tiendas se emparejan por número. Solo se cambian los días que marques.</p>') +
       '</div>';
     cont.querySelectorAll('[data-dia-grupos]').forEach(function (btn) {
       btn.onclick = function () {
