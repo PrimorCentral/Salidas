@@ -64,7 +64,7 @@ function renderCalendario(dias) {
     if (info.tieneExcepciones) dots += '<span class="dot dot-cambio"></span>';
 
     const diaNum = Number(info.fecha.slice(8, 10));
-    const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y mañana' + (info.diaEspecial ? ' (conteo especial)' : '') + '"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : (info.diaEspecial ? ' title="Conteo especial"' : ''));
+    const atrBloqueo = info.bloqueada ? ' disabled title="Todavía no disponible: solo se puede abrir hoy y los 2 días siguientes' + (info.diaEspecial ? ' (conteo especial)' : '') + '"' : (info.soloLectura ? ' title="Solo lectura: han pasado más de 2 días"' : (info.diaEspecial ? ' title="Conteo especial"' : ''));
     celdas += '<button type="button" class="' + clases.join(' ') + '" data-fecha="' + info.fecha + '"' + atrBloqueo + '>' +
       '<span>' + diaNum + '</span>' +
       '<span class="dots">' + dots + '</span>' +
