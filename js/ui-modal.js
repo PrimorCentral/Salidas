@@ -539,6 +539,7 @@ function mostrarModalAjustarCarga(datos) {
   custom.innerHTML =
     cabeceraModalCarga_(revisar ? 'Verificar carga del camión' : 'Ajustar carga del camión',
       datos.titulo + ' · ' + (enEnvio ? etiquetaTipo + ' · ' : '') + datos.fechaTexto, revisar ? 'rojo' : '') +
+    estadoCargaHtml_(datos.carga) +
     '<div class="modal-carga-stats"></div>' +
     (revisar
       ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
