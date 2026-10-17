@@ -555,6 +555,7 @@ function mostrarModalAjustarCarga(datos) {
   actions.innerHTML =
     '<button type="button" class="modal-enlace izq" id="modal-restablecer-btn">Restablecer a lo contado</button>' +
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-secundario" id="modal-imprimir-btn">Imprimir</button>' +
     '<button class="modal-confirm" id="modal-confirm-btn">' +
       (revisar ? (enEnvio ? 'Verificar y continuar' : 'Verificar carga') : (enEnvio ? 'Guardar y continuar' : 'Guardar carga')) +
     '</button>';
@@ -562,6 +563,7 @@ function mostrarModalAjustarCarga(datos) {
 
   const inputs = Array.prototype.slice.call(custom.querySelectorAll('.modal-palets-ctrl input'));
   const btnOk = document.getElementById('modal-confirm-btn');
+  const btnImprimir = document.getElementById('modal-imprimir-btn');
   function valor(inp) {
     const v = parseInt(inp.value, 10);
     return isNaN(v) || v < 0 ? 0 : v;
@@ -596,6 +598,7 @@ function mostrarModalAjustarCarga(datos) {
           '<span>' + pasadas + (pasadas === 1 ? ' tienda sigue' : ' tiendas siguen') + ' por encima de su límite</span></div></div>'
       : '';
     btnOk.disabled = vacias > 0;
+    btnImprimir.disabled = vacias > 0;
   }
 
   custom.querySelectorAll('.modal-palets-ctrl button').forEach(function (b) {
@@ -615,6 +618,19 @@ function mostrarModalAjustarCarga(datos) {
   document.getElementById('modal-cancel-btn').onclick = function () {
     cerrarModal();
     if (datos.onCancelar) datos.onCancelar();
+  };
+  // Imprime la lista de carga con lo que hay ahora en pantalla (aunque no se
+  // haya guardado todavía), igual que la que imprimen los operadores.
+  btnImprimir.onclick = function () {
+    const lista = filasDatos.map(function (f, i) {
+      const nombre = quitarCodigoTienda(f.nombre);
+      if (f.cerrada) return { tienda: nombre, cerrada: true };
+      const inp = custom.querySelector('input[data-i="' + i + '"]');
+      return { tienda: nombre, contados: f.contados, cargar: inp ? valor(inp) : f.cargar, cerrada: false };
+    });
+    const tabla = tablaCargaFija_(lista, null, false);
+    imprimirListaCarga_(datos.titulo, datos.fechaTexto, enEnvio ? etiquetaTipo : 'Carga ajustada',
+      tabla.filas, tabla.totCargar, tabla.totSobra);
   };
   btnOk.onclick = function () {
     const cargas = {};
