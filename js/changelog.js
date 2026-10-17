@@ -8,6 +8,13 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.7',
+    fecha: '2026-10-17',
+    cambios: [
+      { tipo: 'mejora', texto: 'Calendario de conteos: ahora se puede abrir hoy y los 2 días siguientes (antes solo hoy y mañana), y en esos días se puede guardar, ajustar la carga y enviar a la agencia' }
+    ]
+  },
+  {
     version: '2.1.6',
     fecha: '2026-10-16',
     cambios: [
