@@ -353,8 +353,37 @@ const ICONO_CHECK_14_ = '<svg width="14" height="14" viewBox="0 0 24 24" fill="n
 const ICONO_CANDADO_15_ = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 const ICONO_INFO_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
 
+const ICONO_LAPIZ_15_ = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+const ICONO_LAPIZ_12_ = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+/**
+ * Lápiz de edición al lado de la X (modal de carga del camión).
+ * activo=false -> "Editar carga" (vista de solo lectura)
+ * activo=true  -> marcado mientras se edita; pulsarlo sale de la edición.
+ */
+function ponerLapizModal_(activo, onClick) {
+  quitarLapizModal_();
+  const box = document.getElementById('modal-box');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.id = 'modal-editar-lapiz';
+  b.className = 'modal-editar-lapiz' + (activo ? ' activo' : '');
+  b.title = activo ? 'Salir de la edición' : 'Editar carga';
+  b.setAttribute('aria-label', b.title);
+  b.innerHTML = ICONO_LAPIZ_15_;
+  b.onclick = onClick;
+  box.appendChild(b);
+  box.classList.add('con-lapiz');
+}
+function quitarLapizModal_() {
+  const b = document.getElementById('modal-editar-lapiz');
+  if (b) b.remove();
+  document.getElementById('modal-box').classList.remove('con-lapiz');
+}
+
 /** Prepara el modal "ancho" con contenido propio (sin título ni textarea). */
 function prepararModalCarga_() {
+  quitarLapizModal_();
   const box = document.getElementById('modal-box');
   box.classList.remove('usuario-form', 'medio', 'peligro');
   box.classList.add('ancho');
@@ -383,6 +412,9 @@ function cabeceraModalCarga_(titulo, subtitulo, variante) {
 /** Pastilla "Carga ajustada / Previsión enviada / Definitivo enviado a las X h por Y". */
 function estadoCargaHtml_(carga) {
   if (!carga) return '';
+  if (carga.origen === 'contado') {
+    return '<div class="modal-lista-estado contado">' + ICONO_INFO_16_ + 'Sin ajustar: se cargará lo contado</div>';
+  }
   const textos = { ajuste: 'Carga ajustada', prevision: 'Previsión enviada', definitivo: 'Definitivo enviado' };
   const clases = { ajuste: ' ajuste', prevision: ' prevision', definitivo: '' };
   return '<div class="modal-lista-estado' + (clases[carga.origen] || '') + '">' + ICONO_CHECK_14_ +
@@ -448,7 +480,8 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas) {
  * extra (opcional, servidor nuevo):
  *   revisar:     { 'NOMBRE TIENDA': {antes, ahora} } tiendas cuyo conteo cambió
  *   soloLectura: muestra la banda "Solo lectura" (usuario sin permiso)
- *   onAjustar:   si viene, botón "Ajustar carga" / "Verificar carga"
+ *   onEditar:    si viene, lápiz al lado de la X para pasar a editar la carga
+ * info.tipo 'contado': nadie ha ajustado todavía; se enseña lo contado.
  */
 function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   extra = extra || {};
@@ -467,6 +500,7 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
       '<p class="modal-envio-nota">Este envío se hizo antes de que la app guardase la lista de carga, así que no hay lista para él. Aparecerá en los próximos envíos.</p>';
   } else {
     tabla = tablaCargaFija_(lista, revisar, tipo === 'ajuste');
+    // tipo 'contado': aún no hay carga guardada, no hay hora ni autor.
     cuerpo = estadoCargaHtml_({ origen: tipo, hora: info.hora, por: info.enviadoPor }) +
       (hayRevisar
         ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
@@ -482,13 +516,12 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>' +
-    (extra.onAjustar ? '<button class="modal-secundario" id="modal-ajustar-btn">' + (hayRevisar ? 'Verificar carga' : 'Ajustar carga') + '</button>' : '') +
     (tabla ? '<button class="modal-confirm" id="modal-confirm-btn">Imprimir</button>' : '');
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  if (extra.onAjustar) document.getElementById('modal-ajustar-btn').onclick = extra.onAjustar;
+  if (extra.onEditar) ponerLapizModal_(false, extra.onEditar);
   if (tabla) {
-    const tipoTexto = tipo === 'definitivo' ? 'Definitivo' : (tipo === 'ajuste' ? 'Carga ajustada' : 'Previsión');
+    const tipoTexto = tipo === 'definitivo' ? 'Definitivo' : (tipo === 'ajuste' ? 'Carga ajustada' : (tipo === 'contado' ? 'Lo contado' : 'Previsión'));
     document.getElementById('modal-confirm-btn').onclick = function () {
       imprimirListaCarga_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra);
     };
@@ -504,7 +537,10 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
  *   carga: carga vigente (para decir quién la ajustó) o null,
  *   tipoEnvio: 'prevision'|'definitivo'|null (si se abre en mitad de un envío),
  *   onGuardar: function(cargas) con cargas = { 'NOMBRE TIENDA': palets },
- *   onCancelar: opcional
+ *   onCancelar: opcional,
+ *   desdeLapiz: true si se ha entrado pulsando el lápiz de la vista de
+ *     solo lectura: lápiz marcado, etiqueta "Modo edición" y sin Imprimir
+ *     (Cancelar o el lápiz vuelven a la vista de solo lectura vía onCancelar)
  * }
  */
 function mostrarModalAjustarCarga(datos) {
@@ -547,6 +583,7 @@ function mostrarModalAjustarCarga(datos) {
           '. La carga no se ha tocado: revísala y pulsa «' + (enEnvio ? 'Verificar y continuar' : 'Verificar carga') + '».</span></div></div>'
       : '') +
     '<div class="modal-carga-pasadas"></div>' +
+    (datos.desdeLapiz ? '<div class="modal-modo-edicion">' + ICONO_LAPIZ_12_ + 'Modo edición</div>' : '') +
     '<p class="modal-palets-intro">Palets que van en el camión por tienda: es lo que saldrá en el email a la agencia. ' +
       (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada.') + '</p>' +
     '<div class="modal-tabla-scroll"><table class="modal-palets-tabla modal-carga-ajuste"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th><th class="num">En nave</th></tr></thead>' +
@@ -556,7 +593,7 @@ function mostrarModalAjustarCarga(datos) {
   actions.innerHTML =
     '<button type="button" class="modal-enlace izq" id="modal-restablecer-btn">Restablecer a lo contado</button>' +
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-secundario" id="modal-imprimir-btn">Imprimir</button>' +
+    (datos.desdeLapiz ? '' : '<button class="modal-secundario" id="modal-imprimir-btn">Imprimir</button>') +
     '<button class="modal-confirm" id="modal-confirm-btn">' +
       (revisar ? (enEnvio ? 'Verificar y continuar' : 'Verificar carga') : (enEnvio ? 'Guardar y continuar' : 'Guardar carga')) +
     '</button>';
@@ -599,7 +636,7 @@ function mostrarModalAjustarCarga(datos) {
           '<span>' + pasadas + (pasadas === 1 ? ' tienda sigue' : ' tiendas siguen') + ' por encima de su límite</span></div></div>'
       : '';
     btnOk.disabled = vacias > 0;
-    btnImprimir.disabled = vacias > 0;
+    if (btnImprimir) btnImprimir.disabled = vacias > 0;
   }
 
   custom.querySelectorAll('.modal-palets-ctrl button').forEach(function (b) {
@@ -616,13 +653,15 @@ function mostrarModalAjustarCarga(datos) {
     inputs.forEach(function (inp) { inp.value = filasDatos[inp.getAttribute('data-i')].contados; });
     refrescar();
   };
-  document.getElementById('modal-cancel-btn').onclick = function () {
+  function cancelar() {
     cerrarModal();
     if (datos.onCancelar) datos.onCancelar();
-  };
+  }
+  document.getElementById('modal-cancel-btn').onclick = cancelar;
+  if (datos.desdeLapiz) ponerLapizModal_(true, cancelar);
   // Imprime la lista de carga con lo que hay ahora en pantalla (aunque no se
   // haya guardado todavía), igual que la que imprimen los operadores.
-  btnImprimir.onclick = function () {
+  if (btnImprimir) btnImprimir.onclick = function () {
     const lista = filasDatos.map(function (f, i) {
       const nombre = quitarCodigoTienda(f.nombre);
       if (f.cerrada) return { tienda: nombre, cerrada: true };
@@ -730,6 +769,7 @@ function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, to
 
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
 function mostrarModalCargando(texto) {
+  quitarLapizModal_();
   document.getElementById('modal-title').textContent = '';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
@@ -780,6 +820,7 @@ function mostrarModalSinPermiso(mensaje) {
 }
 
 function cerrarModal() {
+  quitarLapizModal_();
   document.getElementById('modal-overlay').style.display = 'none';
   document.getElementById('modal-overlay').classList.remove('overlay-actualizacion');
   document.getElementById('modal-box').classList.remove('ancho');

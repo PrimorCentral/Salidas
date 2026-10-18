@@ -333,23 +333,32 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const c = seccion.carga;
     const revisar = tiendasARevisar_();
     const hayRevisar = Object.keys(revisar).length > 0;
-    if (puedeAjustarCarga_() && (!c || c.origen === 'ajuste' || hayRevisar)) {
+    const puede = puedeAjustarCarga_();
+    // A revisar: se abre directamente en edición para verificarla.
+    if (puede && hayRevisar) {
       abrirAjustarCarga_(null, null);
       return;
     }
+    // Siempre se abre como la ven los flejadores (solo lectura). Con el
+    // permiso "Ajustar carga" sale además el lápiz al lado de la X para
+    // pasar a editarla y guardarla.
     // Carga ajustada sin enviar: se enseña con lo contado AHORA (la que
     // saldría en el email). Previsión/Definitivo: lo que se mandó.
-    const info = infoCargaParaModal_();
+    let info = infoCargaParaModal_();
     if (info && info.tipo === 'ajuste' && seccion.estado !== 'enviado') info.lista = listaCargaEfectiva_();
+    // Nadie la ha ajustado todavía: con permiso se enseña lo contado.
+    if (!info && puede) info = { tipo: 'contado', lista: listaCargaEfectiva_() };
     mostrarModalListaCarga(info, titulo, fechaTexto, {
       revisar: revisar,
-      soloLectura: !puedeAjustarCarga_() && !(c && c.origen === 'definitivo') && seccion.estado !== 'enviado',
-      onAjustar: puedeAjustarCarga_() ? function () { abrirAjustarCarga_(null, null); } : null
+      soloLectura: !puede && !(c && c.origen === 'definitivo') && seccion.estado !== 'enviado',
+      onEditar: puede ? function () { abrirAjustarCarga_(null, null, true); } : null
     });
   }
   // Modal editable. tipoEnvio: 'prevision'|'definitivo' si se abre en mitad
   // de un envío (entonces alTerminar sigue con el envío tras guardar).
-  function abrirAjustarCarga_(tipoEnvio, alTerminar) {
+  // desdeLapiz: se ha entrado con el lápiz de la vista de solo lectura;
+  // al guardar o cancelar se vuelve a esa vista.
+  function abrirAjustarCarga_(tipoEnvio, alTerminar, desdeLapiz) {
     const ajustes = ajustesGuardados_();
     const revisar = tiendasARevisar_();
     const filas = filasCargaActuales_().map(function (f) {
@@ -365,11 +374,14 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       filas: filas,
       carga: seccion.carga,
       tipoEnvio: tipoEnvio,
+      desdeLapiz: !!desdeLapiz,
+      onCancelar: desdeLapiz ? abrirCarga_ : null,
       onGuardar: function (cargas) {
         guardarCarga_(cargas, function (ok) {
           if (!ok) return;
           if (alTerminar) { alTerminar(); return; }
           cerrarModal();
+          if (desdeLapiz) abrirCarga_();
           mostrarToast('Carga guardada');
         });
       }
