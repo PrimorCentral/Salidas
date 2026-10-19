@@ -2398,6 +2398,22 @@
     font-size: 12.5px; font-weight: 700; color: var(--navy); background: #fff;
   }
   .modal-carga-ajuste select.sel-camion.falta { border-color: var(--danger); color: var(--danger); background: #fceded; }
+  /* Tienda dividida entre camiones: fila extra con una casilla por camión. */
+  .modal-carga-ajuste tr.fila-reparto td { background: #f3f6fb; padding: 6px 8px 8px; }
+  .modal-carga-ajuste tr.fila-reparto.mal td { background: #fdf3f3; }
+  .modal-reparto { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-end; gap: 6px 14px; }
+  .modal-reparto-campo { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .modal-reparto-campo input {
+    width: 54px; height: 28px; text-align: center; border: 1px solid var(--line); border-radius: 8px;
+    font-size: 14px; font-weight: 800; color: var(--navy); background: #fff; -moz-appearance: textfield;
+  }
+  .modal-reparto-campo input::-webkit-outer-spin-button,
+  .modal-reparto-campo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .modal-reparto-campo input:focus { outline: none; border-color: var(--navy-soft); box-shadow: 0 0 0 3px rgba(44,62,94,.12); }
+  .modal-carga-ajuste tr.fila-reparto.mal .modal-reparto-campo input { border-color: var(--danger); }
+  .modal-reparto-estado { font-size: 12px; font-weight: 700; color: #1f7a45; white-space: nowrap; }
+  .modal-reparto-estado.mal { color: var(--danger); }
+  .modal-lista-tabla .parte-reparto { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
   .modal-camiones-lista { max-height: 216px; overflow-y: auto; }
   @media (max-width: 560px) {
     /* Móvil: un camión por línea (sin etiquetas, el placeholder ya lo dice)
