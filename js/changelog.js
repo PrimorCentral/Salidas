@@ -8,7 +8,7 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
-    version: '2.2.0',
+    version: '2.1.8',
     fecha: '2026-10-19',
     cambios: [
       { tipo: 'nuevo',      texto: 'Carga del camión: al ajustar la carga se pueden indicar los camiones que salen, con su matrícula y la del remolque (opcional). Con 2 o más camiones se elige en cuál va cada tienda y se ven las tiendas y los palets de cada camión. Un camión lleva como máximo 33 palets: si no caben, se avisa de cuántos camiones hacen falta y no deja guardar' },
