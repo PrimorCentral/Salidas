@@ -433,6 +433,13 @@ function statsCargaHtml_(totContados, totCargar, totSobra) {
   '</div>';
 }
 
+/** Modales de la carga del camión en dos columnas (pantalla ancha): a la
+ *  izquierda las tarjetas, avisos y camiones; a la derecha la tabla de
+ *  tiendas. En pantalla estrecha (móvil) se apilan como siempre. */
+function columnasCarga_(izq, der) {
+  return '<div class="modal-carga-cols"><div class="modal-carga-izq">' + izq + '</div><div class="modal-carga-der">' + der + '</div></div>';
+}
+
 /** Etiqueta roja "Conteo cambiado: 7 → 9" para las tiendas a revisar. */
 function etiquetaCambioConteo_(cambio) {
   return ' <span class="modal-carga-cambio">Conteo cambiado: ' + cambio.antes + ' → ' + cambio.ahora + '</span>';
@@ -571,7 +578,8 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
         ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
             '<span>El conteo ha cambiado después de fijar la carga. Un responsable con permiso «Ajustar carga» tiene que verificarla.</span></div></div>'
         : '') +
-      statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) + tabla.html;
+      statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra);
+    cuerpo = columnasCarga_(cuerpo, tabla.html);
   }
 
   custom.innerHTML =
@@ -654,6 +662,7 @@ function mostrarModalAjustarCarga(datos) {
   custom.innerHTML =
     cabeceraModalCarga_(revisar ? 'Verificar carga del camión' : 'Ajustar carga del camión',
       datos.titulo + ' · ' + (enEnvio ? etiquetaTipo + ' · ' : '') + datos.fechaTexto, revisar ? 'rojo' : '') +
+    columnasCarga_(
     estadoCargaHtml_(datos.carga) +
     '<div class="modal-carga-stats"></div>' +
     (revisar
@@ -671,9 +680,9 @@ function mostrarModalAjustarCarga(datos) {
       '<button type="button" class="modal-camiones-add">+ Añadir camión</button>' +
     '</div>' +
     '<p class="modal-palets-intro">Palets que van en el camión por tienda: es lo que saldrá en el email a la agencia. ' +
-      (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada.') + '</p>' +
+      (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada.') + '</p>',
     '<div class="modal-tabla-scroll"><table class="modal-palets-tabla modal-carga-ajuste"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th><th class="num">En nave</th><th class="num col-camion">Camión</th></tr></thead>' +
-    '<tbody>' + filas + '</tbody></table></div>';
+    '<tbody>' + filas + '</tbody></table></div>');
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -907,11 +916,12 @@ function mostrarModalCargaCorrecta(datos) {
   const tabla = tablaCargaFija_(datos.lista, null, true, datos.carga && datos.carga.camiones);
   custom.innerHTML =
     cabeceraModalCarga_('¿Es correcta esta carga?', datos.titulo + ' · ' + etiqueta + ' · ' + datos.fechaTexto, 'ambar') +
+    columnasCarga_(
     estadoCargaHtml_(datos.carga) +
     statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) +
     '<div class="modal-envio-aviso modal-carga-info"><div class="modal-envio-aviso-titulo">' + ICONO_INFO_16_ +
-      '<span>Esta es la carga que irá en el email de ' + etiqueta.toLowerCase() + '.</span></div></div>' +
-    tabla.html;
+      '<span>Esta es la carga que irá en el email de ' + etiqueta.toLowerCase() + '.</span></div></div>',
+    tabla.html);
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -935,9 +945,10 @@ function mostrarModalCargaPendiente(datos) {
   const tabla = tablaCargaFija_(datos.lista, datos.revisar, false, datos.camiones);
   custom.innerHTML =
     cabeceraModalCarga_('No se puede enviar todavía', datos.titulo + ' · ' + (datos.tipo === 'definitivo' ? 'Definitivo' : 'Previsión') + ' · ' + datos.fechaTexto, 'rojo') +
+    columnasCarga_(
     '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
       '<span>El conteo ha cambiado después de fijar la carga. Avisa a un responsable con permiso «Ajustar carga» para que la verifique.</span></div></div>' +
-    statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) + tabla.html;
+    statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra), tabla.html);
   document.getElementById('modal-actions').innerHTML = '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
