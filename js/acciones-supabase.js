@@ -188,6 +188,19 @@ const SUPABASE_ACCIONES_ = {
   getCambiosPuntualesDiaEspecial: function (args) {
     return llamarRpcSupabase_('get_cambios_puntuales_dia_especial', { p_dia: args[0] });
   },
+  // Posición de la tienda puntual dentro de su agrupación de destino:
+  // debajo de una tienda (row), debajo de otra puntual (id), o al principio.
+  colocarCambioPuntual: function (args) {
+    return llamarRpcSupabase_('colocar_cambio_puntual', {
+      p_id: args[0], p_dia: args[1],
+      p_debajo_row: args[2] != null ? args[2] : null,
+      p_debajo_puntual: args[3] || null
+    });
+  },
+  // Grupo de palets de la tienda puntual en la agrupación de destino (null = sin grupo).
+  asignarGrupoCambioPuntual: function (args) {
+    return llamarRpcSupabase_('asignar_grupo_cambio_puntual', { p_id: args[0], p_grupo_id: args[1] || null });
+  },
   añadirTiendaPlantilla: function (args) {
     const dia = args[0], nombreSeccion = args[1], nombre = args[2], limite = args[3];
     return llamarRpcSupabase_('anadir_tienda_plantilla', {

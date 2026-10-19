@@ -630,6 +630,12 @@ function pintarPlantilla_() {
 
   listaEl.innerHTML = PLANTILLA_ESTADO.secciones.map(function (s, si) {
     let piezasTiendas = [];
+    // Tiendas que ese día ENTRAN en esta agrupación por un cambio puntual
+    // (solo en conteos especiales). Se intercalan entre las tiendas según
+    // su posición (p.pos = cuántas tiendas de aquí van antes).
+    const puntualesEntran = (PLANTILLA_ESTADO.puntuales || []).filter(function (p) { return p.destino === s.nombre; });
+    const puntualesPorGrupo = {};
+    puntualesEntran.forEach(function (p) { if (p.grupoId) puntualesPorGrupo[p.grupoId] = (puntualesPorGrupo[p.grupoId] || 0) + 1; });
     s.tiendas.forEach(function (t, ti) {
       const idSeguro = 'pt' + si + '_' + ti;
       const tieneNota = !!t.nota;
@@ -645,7 +651,7 @@ function pintarPlantilla_() {
             '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>' +
             '<span>' + escapeHtml(t.nota) + '</span>' +
             (t.notaGrupoId
-              ? '<span class="plantilla-tienda-notatxt-extra">' + (t.notaGrupoTipo === 'total' ? 'total' : ('máx ' + (t.notaLimite != null ? t.notaLimite : '?'))) + ' · ' + (t.notaNumFilas || 1) + ' tiendas</span>'
+              ? '<span class="plantilla-tienda-notatxt-extra">' + (t.notaGrupoTipo === 'total' ? 'total' : ('máx ' + (t.notaLimite != null ? t.notaLimite : '?'))) + ' · ' + ((t.notaNumFilas || 1) + (puntualesPorGrupo[t.notaGrupoId] || 0)) + ' tiendas</span>'
               : '') +
           '</div>'
         : '';
@@ -667,7 +673,7 @@ function pintarPlantilla_() {
         '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + (puntualSale ? (puntualSale.modo === 'doble' ? ' sale-puntual doble' : ' sale-puntual') : '') + '" data-tienda-row="' + t.row + '">' +
           // Asa para arrastrar la tienda dentro de su ruta (sustituye a las
           // antiguas flechas subir/bajar). Solo con permiso de plantilla.
-          (tienePermiso('plantilla') && s.tiendas.length > 1
+          (tienePermiso('plantilla') && (s.tiendas.length + puntualesEntran.length) > 1
             ? '<span class="plantilla-tienda-asa" data-asa-row="' + t.row + '" title="Arrastrar para cambiar de posición">' +
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>' +
               '</span>'
@@ -699,9 +705,7 @@ function pintarPlantilla_() {
         '</div>'
       );
     });
-    // Tiendas que ese día ENTRAN en esta agrupación por un cambio puntual
-    // (solo en conteos especiales): al final, marcadas, con botón para quitar.
-    const puntualesEntran = (PLANTILLA_ESTADO.puntuales || []).filter(function (p) { return p.destino === s.nombre; });
+    const piezasPuntuales = [];
     puntualesEntran.forEach(function (p) {
       const partes = dividirNombreTiendaPlantilla_(p.tienda);
       // La fila real de la tienda (en su agrupación de siempre): de ahí salen
@@ -710,9 +714,20 @@ function pintarPlantilla_() {
       // de esa fecha, bloquear aquí no afecta a ningún otro día.
       const secOrigen = PLANTILLA_ESTADO.secciones.find(function (x) { return x.nombre === p.origen; });
       const tOrigen = secOrigen ? secOrigen.tiendas.find(function (x) { return x.nombre === p.tienda; }) : null;
-      piezasTiendas.push(
-        '<div class="plantilla-tienda entra-puntual" data-puntual-id="' + escapeAttr(p.id) + '">' +
-          '<span class="plantilla-tienda-asa-hueco"></span>' +
+      const grupoPuntualHtml = p.grupoId
+        ? '<div class="plantilla-tienda-notatxt" title="Grupo de palets (solo este día)">' +
+            '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg>' +
+            '<span>' + escapeHtml(p.grupoTexto || 'Grupo') + '</span>' +
+            '<span class="plantilla-tienda-notatxt-extra">' + (p.grupoTipo === 'total' ? 'total' : ('máx ' + (p.grupoLimite != null ? p.grupoLimite : '?'))) + '</span>' +
+          '</div>'
+        : '';
+      piezasPuntuales.push({ pos: Number(p.pos) || 0, html:
+        '<div class="plantilla-tienda entra-puntual' + (p.grupoId ? ' con-nota' : '') + '" data-puntual-id="' + escapeAttr(p.id) + '">' +
+          (tienePermiso('plantilla')
+            ? '<span class="plantilla-tienda-asa" data-asa-puntual="' + escapeAttr(p.id) + '" title="Arrastrar para cambiar de posición (solo este día)">' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>' +
+              '</span>'
+            : '<span class="plantilla-tienda-asa-hueco"></span>') +
           (tOrigen ? '<span class="lim' + (tOrigen.limiteOverride ? ' lim-override' : '') + '" title="' + (tOrigen.limiteOverride ? 'Límite propio de este día (el general es ' + escapeAttr(tOrigen.limiteGeneral != null ? tOrigen.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(textoLimite_(tOrigen.limite)) + '</span>' : '') +
           (partes
             ? '<span class="numero">' + escapeHtml(partes.numero) + '</span><span class="nombre">' + escapeHtml(partes.resto) + '</span>'
@@ -726,6 +741,9 @@ function pintarPlantilla_() {
                 botonBloqueoPlantillaHtml_(tOrigen, 'cart', 'CART.') +
               '</div>'
             : '') +
+          (tienePermiso('plantilla')
+            ? '<button type="button" class="plantilla-tienda-nota' + (p.grupoId ? ' con-dato' : '') + '" data-grupo-puntual="' + escapeAttr(p.id) + '" title="Grupo de palets de esta tienda este día"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>'
+            : '') +
           // Lápiz: límite de palets solo para este día (es la misma fila de
           // la tienda en el conteo especial, así que no toca ningún otro día).
           ((tOrigen && tienePermiso('plantilla'))
@@ -735,9 +753,21 @@ function pintarPlantilla_() {
           (tienePermiso('plantilla')
             ? '<button type="button" class="plantilla-tienda-quitar-puntual" data-quitar-puntual="' + escapeAttr(p.id) + '" data-puntual-tienda="' + escapeAttr(p.tienda) + '" data-puntual-origen="' + escapeAttr(p.origen) + '" title="Quitar el cambio puntual: vuelve a salir por su agrupación">Quitar</button>'
             : '') +
+          grupoPuntualHtml +
         '</div>'
-      );
+      });
     });
+    // Intercalar: delante de la tienda nº pos van las puntuales con esa pos.
+    if (piezasPuntuales.length) {
+      const mezcla = [];
+      for (let k = 0; k <= piezasTiendas.length; k++) {
+        piezasPuntuales.forEach(function (pp) {
+          if (pp.pos === k || (k === piezasTiendas.length && pp.pos > k)) mezcla.push(pp.html);
+        });
+        if (k < piezasTiendas.length) mezcla.push(piezasTiendas[k]);
+      }
+      piezasTiendas = mezcla;
+    }
     const tiendasHtml = piezasTiendas.join('');
 
     const notasCargaHtml = s.notasCarga.map(function (n, ni) {
@@ -845,6 +875,9 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-borrar-tienda]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarTiendaPlantilla_(btn.getAttribute('data-borrar-tienda')); };
+  });
+  listaEl.querySelectorAll('[data-grupo-puntual]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalGrupoPuntualPlantilla_(btn.getAttribute('data-grupo-puntual')); };
   });
   listaEl.querySelectorAll('[data-quitar-puntual]').forEach(function (btn) {
     btn.onclick = function () {
@@ -1526,7 +1559,7 @@ function contenedorScrollPlantilla_(el) {
 }
 
 function activarArrastreTiendasPlantilla_(listaEl) {
-  listaEl.querySelectorAll('[data-asa-row]').forEach(function (asa) {
+  listaEl.querySelectorAll('[data-asa-row], [data-asa-puntual]').forEach(function (asa) {
     asa.onpointerdown = function (ev) {
       if (ev.pointerType === 'mouse' && ev.button !== 0) return;
       // Mientras se guarda un movimiento anterior (hasta que se repinta la
@@ -1537,8 +1570,10 @@ function activarArrastreTiendasPlantilla_(listaEl) {
       if (!fila || !cont) return;
       ev.preventDefault();
 
-      const filasDe = function () { return Array.prototype.filter.call(cont.children, function (el) { return el.classList.contains('plantilla-tienda') && !el.classList.contains('entra-puntual'); }); };
-      const ordenInicial = filasDe().map(function (el) { return el.getAttribute('data-tienda-row'); }).join(',');
+      // Las filas puntuales (conteo especial) también cuentan para colocar.
+      const filasDe = function () { return Array.prototype.filter.call(cont.children, function (el) { return el.classList.contains('plantilla-tienda'); }); };
+      const claveFila = function (el) { return el.getAttribute('data-tienda-row') || ('p' + el.getAttribute('data-puntual-id')); };
+      const ordenInicial = filasDe().map(claveFila).join(',');
       const scroller = contenedorScrollPlantilla_(cont);
       let ultimoY = ev.clientY;
       let rafId = null;
@@ -1591,11 +1626,29 @@ function activarArrastreTiendasPlantilla_(listaEl) {
         fila.classList.remove('arrastrando');
         document.body.classList.remove('plantilla-arrastrando');
 
-        const ordenFinal = filasDe().map(function (el) { return el.getAttribute('data-tienda-row'); }).join(',');
+        const ordenFinal = filasDe().map(claveFila).join(',');
         if (ordenFinal === ordenInicial) return;
 
         let anterior = fila.previousElementSibling;
         while (anterior && !anterior.classList.contains('plantilla-tienda')) anterior = anterior.previousElementSibling;
+
+        // Tienda puntual: se guarda su posición solo en el cambio puntual
+        // (no se toca su fila en la agrupación de siempre).
+        const puntualId = fila.getAttribute('data-puntual-id');
+        if (puntualId) {
+          fila.classList.add('recien-movida');
+          document.body.classList.add('plantilla-guardando-orden');
+          const antPuntual = anterior ? anterior.getAttribute('data-puntual-id') : null;
+          const antRow = (anterior && !antPuntual) ? Number(anterior.getAttribute('data-tienda-row')) : null;
+          llamarApi_('colocarCambioPuntual', [puntualId, PLANTILLA_ESTADO.dia, antRow, antPuntual])
+            .then(function () { mostrarToast('Tienda puntual colocada'); })
+            .catch(mostrarErrorServidor)
+            .then(function () { cargarPlantilla_({ silencioso: true }); });
+          return;
+        }
+        // Tienda normal: la referencia es la tienda normal anterior (las
+        // puntuales que haya en medio no cuentan).
+        while (anterior && (!anterior.classList.contains('plantilla-tienda') || anterior.getAttribute('data-puntual-id'))) anterior = anterior.previousElementSibling;
         const row = Number(fila.getAttribute('data-tienda-row'));
         const rowDebajo = anterior ? Number(anterior.getAttribute('data-tienda-row')) : null;
         fila.classList.add('recien-movida');
@@ -2837,6 +2890,72 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     });
   };
   setTimeout(function () { document.getElementById('modal-plantilla-buscar').focus(); }, 50);
+}
+
+/** Botón de etiqueta de una tienda puntual: elegir en qué grupo de palets
+ *  de la agrupación de destino va ese día (o ninguno). Solo cambia el
+ *  cambio puntual; su grupo en la agrupación de siempre no se toca. */
+function abrirModalGrupoPuntualPlantilla_(puntualId) {
+  const p = (PLANTILLA_ESTADO.puntuales || []).find(function (x) { return x.id === puntualId; });
+  if (!p) return;
+  const sec = PLANTILLA_ESTADO.secciones.find(function (x) { return x.nombre === p.destino; });
+  const grupos = [];
+  const vistos = {};
+  (sec ? sec.tiendas : []).forEach(function (t) {
+    if (!t.notaGrupoId || vistos[t.notaGrupoId]) return;
+    vistos[t.notaGrupoId] = true;
+    grupos.push({ id: t.notaGrupoId, texto: t.nota || 'Grupo', tipo: t.notaGrupoTipo, limite: t.notaLimite });
+  });
+
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.remove('medio');
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-box').classList.remove('usuario-form');
+  document.getElementById('modal-box').classList.remove('anadir-tienda-modal');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Grupo de palets — ' + p.tienda;
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-campo">' +
+      '<label for="modal-grupo-puntual">Grupo de palets en ' + escapeHtml(parsearNombreAgrupacion(p.destino).titulo) + '</label>' +
+      '<select id="modal-grupo-puntual">' +
+        '<option value="">Sin grupo</option>' +
+        grupos.map(function (g) {
+          return '<option value="' + escapeAttr(g.id) + '"' + (g.id === p.grupoId ? ' selected' : '') + '>' +
+            escapeHtml(g.texto) + ' (' + (g.tipo === 'total' ? 'total' : ('máx ' + (g.limite != null ? g.limite : '?'))) + ')</option>';
+        }).join('') +
+      '</select>' +
+      '<span class="modal-campo-ayuda">' + (grupos.length
+        ? 'Solo para este día. En su agrupación de siempre sigue con su grupo de siempre.'
+        : 'Esta agrupación no tiene grupos de palets. Créalos desde "Grupos de palets".') + '</span>' +
+    '</div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const valor = document.getElementById('modal-grupo-puntual').value || null;
+    if ((valor || null) === (p.grupoId || null)) { cerrarModal(); return; }
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    llamarApi_('asignarGrupoCambioPuntual', [p.id, valor])
+      .then(function () {
+        cerrarModal();
+        mostrarToast(valor ? 'Tienda metida en el grupo' : 'Tienda sacada del grupo');
+        cargarPlantilla_({ silencioso: true });
+      })
+      .catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Guardar';
+        mostrarErrorServidor(err);
+      });
+  };
 }
 
 /** Modal de confirmación pequeño que se abre centrado ENCIMA del modal que
