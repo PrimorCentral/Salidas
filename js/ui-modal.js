@@ -631,6 +631,7 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>' +
+    (tabla ? '<button class="modal-whatsapp" id="modal-whatsapp-btn" title="Compartir por WhatsApp">' + ICONO_COMPARTIR_16_ + '<span>WhatsApp</span></button>' : '') +
     (tabla ? '<button class="modal-confirm" id="modal-confirm-btn">Imprimir</button>' : '');
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
@@ -639,6 +640,9 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
     const tipoTexto = tipo === 'definitivo' ? 'Definitivo' : (tipo === 'ajuste' ? 'Carga ajustada' : (tipo === 'contado' ? 'Lo contado' : 'Previsión'));
     document.getElementById('modal-confirm-btn').onclick = function () {
       imprimirListaCarga_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra, tabla.camiones);
+    };
+    document.getElementById('modal-whatsapp-btn').onclick = function () {
+      compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra, tabla.camiones);
     };
   }
 }
@@ -1171,6 +1175,187 @@ function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, to
     iframe.contentWindow.focus();
     iframe.contentWindow.print();
   }, 150);
+}
+
+const ICONO_COMPARTIR_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>';
+
+/** Texto de la lista de carga para WhatsApp (*negrita* al estilo WhatsApp).
+ *  Mismo contenido que la hoja impresa: tiendas, a cargar, sobrante,
+ *  agrupado por camión si los hay. */
+function textoListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
+  camiones = camionesValidos_(camiones);
+  const lineas = ['*Lista de carga · ' + titulo + '*', fechaTexto + ' · ' + tipoTexto, ''];
+  function linea(f, cargar, sobra, parte) {
+    if (f.cerrada) return f.tienda + ': CERRADA';
+    if (cargar === undefined) { cargar = f.cargar; sobra = f.sobra; }
+    return f.tienda + (parte ? ' (' + parte.n + ' de ' + parte.de + ')' : '') + ': *' + cargar + '*' +
+      (sobra ? ' (' + (sobra === 1 ? 'sobra 1' : 'sobran ' + sobra) + ')' : '');
+  }
+  const agr = agruparFilasPorCamion_(filas, camiones);
+  if (!agr) {
+    filas.forEach(function (f) { lineas.push(linea(f)); });
+  } else {
+    agr.grupos.forEach(function (g) {
+      if (!g.items.length) return;
+      lineas.push(g.idx < 0
+        ? '*SIN CAMIÓN ASIGNADO*'
+        : '*CAMIÓN' + (agr.n >= 2 ? ' ' + (g.idx + 1) : '') + '* · Matrícula ' + (g.camion.matricula || '') + ' · Remolque ' + (g.camion.remolque || '—'));
+      g.items.forEach(function (it) { lineas.push(linea(it.f, it.cargar, it.sobra, it.parte)); });
+      if (agr.n >= 2 && g.idx >= 0) lineas.push('_Subtotal camión ' + (g.idx + 1) + ': ' + g.cargar + '_');
+      lineas.push('');
+    });
+    agr.cerradas.forEach(function (f) { lineas.push(linea(f)); });
+  }
+  if (lineas[lineas.length - 1] !== '') lineas.push('');
+  lineas.push('*Total palets: ' + totCargar + '*' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : '') +
+    ' · Sobrante: ' + totSobra);
+  return lineas.join('\n');
+}
+
+/** Dibuja la lista de carga como imagen PNG (pequeña, para WhatsApp).
+ *  Devuelve una Promise<Blob>. Mismo contenido que la hoja impresa. */
+function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
+  camiones = camionesValidos_(camiones);
+  // Filas a pintar: {k:'camion'|'fila'|'subtotal'|'cerrada', ...}
+  const items = [];
+  const agr = agruparFilasPorCamion_(filas, camiones);
+  function fila(f, cargar, sobra, parte) {
+    if (f.cerrada) { items.push({ k: 'cerrada', tienda: f.tienda }); return; }
+    if (cargar === undefined) { cargar = f.cargar; sobra = f.sobra; }
+    items.push({ k: 'fila', tienda: f.tienda + (parte ? ' (' + parte.n + ' de ' + parte.de + ')' : ''), cargar: cargar, sobra: sobra });
+  }
+  if (!agr) {
+    filas.forEach(function (f) { fila(f); });
+  } else {
+    agr.grupos.forEach(function (g) {
+      if (!g.items.length) return;
+      items.push({ k: 'camion', sin: g.idx < 0, texto: g.idx < 0
+        ? 'SIN CAMIÓN ASIGNADO'
+        : 'CAMIÓN' + (agr.n >= 2 ? ' ' + (g.idx + 1) : '') + ' · ' + (g.camion.matricula || '') + ' · Remolque ' + (g.camion.remolque || '—') });
+      g.items.forEach(function (it) { fila(it.f, it.cargar, it.sobra, it.parte); });
+      if (agr.n >= 2 && g.idx >= 0) items.push({ k: 'subtotal', texto: 'Subtotal camión ' + (g.idx + 1), cargar: g.cargar, sobra: g.sobra });
+    });
+    agr.cerradas.forEach(function (f) { fila(f); });
+  }
+
+  const ESC = 2;                 // nitidez (retina / zoom en el móvil)
+  const W = 560, PAD = 20;
+  const CAB = 74, TH = 34, FH = 36, PIE = 44;
+  const xCargar = W - PAD - 190, xSobra = W - PAD - 70;   // centros de columna
+  const H = CAB + TH + items.length * FH + PIE;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * ESC; canvas.height = H * ESC;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ESC, ESC);
+  const FUENTE = 'Arial, Helvetica, sans-serif';
+  function txt(s, x, y, tam, peso, color, alin) {
+    ctx.font = (peso || 'normal') + ' ' + tam + 'px ' + FUENTE;
+    ctx.fillStyle = color; ctx.textAlign = alin || 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(s, x, y);
+  }
+  function recortar(s, max, tam, peso) {
+    ctx.font = (peso || 'normal') + ' ' + tam + 'px ' + FUENTE;
+    if (ctx.measureText(s).width <= max) return s;
+    while (s.length > 1 && ctx.measureText(s + '…').width > max) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  // Fondo y cabecera
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#1c2b45'; ctx.fillRect(0, 0, W, CAB);
+  txt(recortar('Lista de carga · ' + titulo, W - 2 * PAD, 20, 'bold'), PAD, 28, 20, 'bold', '#ffffff');
+  txt(fechaTexto + ' · ' + tipoTexto, PAD, 54, 13, 'normal', '#c9d2e3');
+
+  // Encabezado de la tabla
+  let y = CAB;
+  ctx.fillStyle = '#f4f5f7'; ctx.fillRect(0, y, W, TH);
+  txt('TIENDA', PAD, y + TH / 2, 11, 'bold', '#5b6573');
+  txt('A CARGAR', xCargar, y + TH / 2, 11, 'bold', '#5b6573', 'center');
+  txt('SOBRANTE', xSobra, y + TH / 2, 11, 'bold', '#5b6573', 'center');
+  y += TH;
+
+  items.forEach(function (it) {
+    const cy = y + FH / 2;
+    if (it.k === 'camion') {
+      ctx.fillStyle = it.sin ? '#f8e6c4' : '#e4e8ef'; ctx.fillRect(0, y, W, FH);
+      txt(recortar(it.texto, W - 2 * PAD, 13, 'bold'), PAD, cy, 13, 'bold', '#1c2430');
+    } else if (it.k === 'subtotal') {
+      ctx.fillStyle = '#f7f8fa'; ctx.fillRect(0, y, W, FH);
+      txt(it.texto, xCargar - 60, cy, 12, 'normal', '#5b6573', 'right');
+      txt(String(it.cargar), xCargar, cy, 14, 'bold', '#1c2430', 'center');
+      txt(it.sobra ? String(it.sobra) : '—', xSobra, cy, 14, 'bold', it.sobra ? '#b8650a' : '#9aa3ae', 'center');
+    } else if (it.k === 'cerrada') {
+      txt(recortar(it.tienda, xCargar - 60 - PAD, 15, 'bold'), PAD, cy, 15, 'bold', '#9aa3ae');
+      txt('CERRADA', (xCargar + xSobra) / 2, cy, 12, 'bold', '#9aa3ae', 'center');
+    } else {
+      txt(recortar(it.tienda, xCargar - 60 - PAD, 15, 'bold'), PAD, cy, 15, 'bold', '#1c2430');
+      txt(String(it.cargar), xCargar, cy, 17, 'bold', '#1c2430', 'center');
+      txt(it.sobra ? String(it.sobra) : '—', xSobra, cy, 15, 'bold', it.sobra ? '#b8650a' : '#9aa3ae', 'center');
+    }
+    ctx.fillStyle = '#e6e8ec'; ctx.fillRect(0, y + FH - 1, W, 1);
+    y += FH;
+  });
+
+  // Total
+  ctx.fillStyle = '#1c2430'; ctx.fillRect(0, y, W, 2);
+  ctx.fillStyle = '#f4f5f7'; ctx.fillRect(0, y + 2, W, PIE - 2);
+  const ty = y + PIE / 2 + 1;
+  txt('Total palets' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : ''), PAD, ty, 15, 'bold', '#1c2430');
+  txt(String(totCargar), xCargar, ty, 18, 'bold', '#1c2430', 'center');
+  txt(String(totSobra), xSobra, ty, 16, 'bold', totSobra ? '#b8650a' : '#9aa3ae', 'center');
+
+  return new Promise(function (resolve, reject) {
+    canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error('No se pudo crear la imagen')); }, 'image/png');
+  });
+}
+
+/** Comparte la lista de carga por WhatsApp con texto e imagen.
+ *  WhatsApp no permite que una web mande directamente a un grupo concreto,
+ *  así que el grupo se elige cada vez.
+ *  - Móvil: menú de compartir del teléfono con la imagen y el texto
+ *    (WhatsApp → elegir grupo). Si el móvil no deja compartir archivos,
+ *    abre WhatsApp solo con el texto.
+ *  - Ordenador: copia la imagen al portapapeles y abre WhatsApp Web (pestaña
+ *    reutilizada) con el texto escrito; en el grupo se pega con Ctrl+V. */
+function compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
+  const texto = textoListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones);
+  const movil = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+  let imagen;
+  try { imagen = imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones); }
+  catch (e) { imagen = Promise.reject(e); }
+  imagen.catch(function () {}); // los fallos se tratan abajo; evita avisos de promesa sin capturar
+
+  if (movil) {
+    imagen.then(function (blob) {
+      const nombre = 'Lista de carga ' + String(titulo).replace(/[\\/:*?"<>|]/g, '') + '.png';
+      const archivo = new File([blob], nombre, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        return navigator.share({ files: [archivo], text: texto }).catch(function (e) {
+          if (e && e.name === 'AbortError') return; // el usuario cerró el menú
+          window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+        });
+      }
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+    }).catch(function () {
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+    });
+    return;
+  }
+
+  // Ordenador: el portapapeles y la ventana se piden ya, dentro del clic.
+  let copiada = Promise.reject(new Error('sin portapapeles de imágenes'));
+  try {
+    if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
+      copiada = navigator.clipboard.write([new ClipboardItem({ 'image/png': imagen })]);
+    }
+  } catch (e) { /* se avisa abajo */ }
+  const win = window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(texto), 'whatsapp-salidas');
+  if (win) { try { win.focus(); } catch (e) { /* nada */ } }
+  copiada.then(function () {
+    mostrarToast('Imagen copiada: en el grupo de WhatsApp pulsa Ctrl+V para pegarla');
+  }).catch(function () {
+    mostrarToast('No se pudo copiar la imagen; se envía solo el texto', true);
+  });
 }
 
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
