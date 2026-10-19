@@ -183,6 +183,11 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0];
     return llamarRpcSupabase_('get_plantilla_dia', { p_dia: dia });
   },
+  // Cambios puntuales de la fecha de un conteo especial (para marcarlos en
+  // Rutas y tiendas). En un día normal devuelve [].
+  getCambiosPuntualesDiaEspecial: function (args) {
+    return llamarRpcSupabase_('get_cambios_puntuales_dia_especial', { p_dia: args[0] });
+  },
   añadirTiendaPlantilla: function (args) {
     const dia = args[0], nombreSeccion = args[1], nombre = args[2], limite = args[3];
     return llamarRpcSupabase_('anadir_tienda_plantilla', {

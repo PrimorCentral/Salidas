@@ -15,7 +15,7 @@
  * cambian al insertar/borrar/mover, así que no se puede hacer una
  * actualización optimista local como en "Gestión festivos").
  */
-let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [], especiales: [], verEspecialesPasados: false };
+let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [], especiales: [], verEspecialesPasados: false, puntuales: [] };
 
 
 /** Busca en el caché local (PLANTILLA_ESTADO.secciones) la tienda con ese
@@ -384,10 +384,21 @@ function cargarPlantilla_(opts) {
   const silencioso = opts && opts.silencioso;
   const scrollY = window.scrollY;
   if (!silencioso) listaEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
-  llamarApi_('getPlantillaDia', [PLANTILLA_ESTADO.dia])
-    .then(function (resultado) {
+  // En un conteo especial se traen también los cambios puntuales de esa
+  // fecha, para marcarlos en la lista (si falla, se pinta igual sin ellos).
+  const diaPedido = PLANTILLA_ESTADO.dia;
+  Promise.all([
+    llamarApi_('getPlantillaDia', [diaPedido]),
+    especialPlantilla_(diaPedido)
+      ? llamarApi_('getCambiosPuntualesDiaEspecial', [diaPedido]).catch(function () { return []; })
+      : Promise.resolve([])
+  ])
+    .then(function (res) {
+      const resultado = res[0];
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'plantilla') return;
+      if (PLANTILLA_ESTADO.dia !== diaPedido) return; // se cambió de día mientras cargaba
       PLANTILLA_ESTADO.secciones = (resultado && resultado.secciones) || [];
+      PLANTILLA_ESTADO.puntuales = res[1] || [];
       pintarPlantilla_();
       if (silencioso) window.scrollTo(0, scrollY);
     })
@@ -617,8 +628,21 @@ function pintarPlantilla_() {
           '</div>'
         : '';
 
+      // Conteo especial: esta tienda sale ese día por otra agrupación
+      // (cambio puntual hecho desde "Añadir tienda" o desde Bloqueo y cambios).
+      const puntualSale = (PLANTILLA_ESTADO.puntuales || []).find(function (p) {
+        return p.origen === s.nombre && p.tienda === t.nombre;
+      });
+      const puntualSaleHtml = puntualSale
+        ? '<div class="plantilla-tienda-puntual-txt">' +
+            (puntualSale.modo === 'doble'
+              ? 'Este día también sale por <b>' + escapeHtml(parsearNombreAgrupacion(puntualSale.destino).titulo) + '</b> (doble salida)'
+              : 'Este día sale por <b>' + escapeHtml(parsearNombreAgrupacion(puntualSale.destino).titulo) + '</b> (cambio puntual)') +
+          '</div>'
+        : '';
+
       piezasTiendas.push(
-        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + '" data-tienda-row="' + t.row + '">' +
+        '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + (puntualSale ? (puntualSale.modo === 'doble' ? ' sale-puntual doble' : ' sale-puntual') : '') + '" data-tienda-row="' + t.row + '">' +
           // Asa para arrastrar la tienda dentro de su ruta (sustituye a las
           // antiguas flechas subir/bajar). Solo con permiso de plantilla.
           (tienePermiso('plantilla') && s.tiendas.length > 1
@@ -646,6 +670,26 @@ function pintarPlantilla_() {
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
           notaLineaHtml +
+          puntualSaleHtml +
+        '</div>'
+      );
+    });
+    // Tiendas que ese día ENTRAN en esta agrupación por un cambio puntual
+    // (solo en conteos especiales): al final, marcadas, con botón para quitar.
+    const puntualesEntran = (PLANTILLA_ESTADO.puntuales || []).filter(function (p) { return p.destino === s.nombre; });
+    puntualesEntran.forEach(function (p) {
+      const partes = dividirNombreTiendaPlantilla_(p.tienda);
+      piezasTiendas.push(
+        '<div class="plantilla-tienda entra-puntual">' +
+          '<span class="plantilla-tienda-asa-hueco"></span>' +
+          '<span class="plantilla-tienda-puntual-badge">' + (p.modo === 'doble' ? 'Doble' : 'Puntual') + '</span>' +
+          (partes
+            ? '<span class="numero">' + escapeHtml(partes.numero) + '</span><span class="nombre">' + escapeHtml(partes.resto) + '</span>'
+            : '<span class="nombre">' + escapeHtml(p.tienda) + '</span>') +
+          '<span class="plantilla-tienda-puntual-origen">Solo este día · su agrupación es <b>' + escapeHtml(parsearNombreAgrupacion(p.origen).titulo) + '</b></span>' +
+          (tienePermiso('plantilla')
+            ? '<button type="button" class="plantilla-tienda-quitar-puntual" data-quitar-puntual="' + escapeAttr(p.id) + '" data-puntual-tienda="' + escapeAttr(p.tienda) + '" data-puntual-origen="' + escapeAttr(p.origen) + '" title="Quitar el cambio puntual: vuelve a salir por su agrupación">Quitar</button>'
+            : '') +
         '</div>'
       );
     });
@@ -681,6 +725,7 @@ function pintarPlantilla_() {
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
             : '') +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
+          (puntualesEntran.length ? '<span class="plantilla-ruta-contador puntual">+' + puntualesEntran.length + ' puntual' + (puntualesEntran.length === 1 ? '' : 'es') + '</span>' : '') +
           '<div class="plantilla-ruta-spacer"></div>' +
           (tienePermiso('plantilla') ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
@@ -755,6 +800,24 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-borrar-tienda]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarTiendaPlantilla_(btn.getAttribute('data-borrar-tienda')); };
+  });
+  listaEl.querySelectorAll('[data-quitar-puntual]').forEach(function (btn) {
+    btn.onclick = function () {
+      const tienda = btn.getAttribute('data-puntual-tienda');
+      const origen = parsearNombreAgrupacion(btn.getAttribute('data-puntual-origen')).titulo;
+      appConfirm(
+        'Quitar cambio puntual',
+        '¿Quitar el cambio puntual de ' + tienda + '? Ese día volverá a salir por su agrupación de siempre (' + origen + ').',
+        function () {
+          llamarApi_('eliminarExcepcionTienda', [btn.getAttribute('data-quitar-puntual')])
+            .then(function () {
+              mostrarToast('Cambio puntual quitado');
+              cargarPlantilla_({ silencioso: true });
+            })
+            .catch(mostrarErrorServidor);
+        }
+      );
+    };
   });
   listaEl.querySelectorAll('[data-mover-tienda]').forEach(function (btn) {
     btn.onclick = function () { confirmarMoverTiendaPlantilla_(btn.getAttribute('data-mover-tienda')); };
@@ -1429,7 +1492,7 @@ function activarArrastreTiendasPlantilla_(listaEl) {
       if (!fila || !cont) return;
       ev.preventDefault();
 
-      const filasDe = function () { return Array.prototype.filter.call(cont.children, function (el) { return el.classList.contains('plantilla-tienda'); }); };
+      const filasDe = function () { return Array.prototype.filter.call(cont.children, function (el) { return el.classList.contains('plantilla-tienda') && !el.classList.contains('entra-puntual'); }); };
       const ordenInicial = filasDe().map(function (el) { return el.getAttribute('data-tienda-row'); }).join(',');
       const scroller = contenedorScrollPlantilla_(cont);
       let ultimoY = ev.clientY;
@@ -2282,11 +2345,29 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   // en los conteos especiales).
   const yaEnElDia = {};
   PLANTILLA_ESTADO.secciones.forEach(function (s) {
-    s.tiendas.forEach(function (t) { yaEnElDia[claveComparableTienda_(t.nombre)] = true; });
+    s.tiendas.forEach(function (t) { yaEnElDia[claveComparableTienda_(t.nombre)] = { nombre: t.nombre, agrupacion: s.nombre }; });
   });
+  // Conteo especial: una tienda que ese día ya está en OTRA agrupación sí se
+  // ofrece, marcada "en <agrupación>"; al añadirla aquí no se duplica, se
+  // hace un cambio puntual (sale por aquí solo esa fecha y en su agrupación
+  // de siempre queda marcada). Las que ya están en esta agrupación, o ya
+  // entran aquí por un puntual, no se ofrecen.
+  const especialActual = especialPlantilla_(PLANTILLA_ESTADO.dia);
+  const puntualPorClave = {};
+  (PLANTILLA_ESTADO.puntuales || []).forEach(function (p) { puntualPorClave[claveComparableTienda_(p.tienda)] = p; });
+  const enOtraPorClave = {}; // clave de config -> { nombre, agrupacion, saleYaPor }
   const todasCandidatas = tiendasConfig
     .filter(function (t) { return (t.diasConteo || []).indexOf(PLANTILLA_ESTADO.dia) === -1; })
-    .filter(function (t) { return !yaEnElDia[claveComparableTienda_(t.tienda)]; })
+    .filter(function (t) {
+      const k = claveComparableTienda_(t.tienda);
+      const enDia = yaEnElDia[k];
+      if (!enDia) return true;
+      if (!especialActual || enDia.agrupacion === nombreRuta) return false;
+      const punt = puntualPorClave[k];
+      if (punt && punt.destino === nombreRuta) return false;
+      enOtraPorClave[t.tienda] = { nombre: enDia.nombre, agrupacion: enDia.agrupacion, saleYaPor: punt ? punt.destino : null };
+      return true;
+    })
     .sort(function (a, b) { return a.tienda.localeCompare(b.tienda); });
   // Por defecto solo se ofrecen las tiendas que ya pertenecen a esta
   // agrupación (en cualquier otro día); con "Ver todas las tiendas" se
@@ -2432,6 +2513,9 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
         '<span class="modal-plantilla-tienda-check">' + (marcada ? '✓' : '') + '</span>' +
         '<span>' + escapeHtml(t.tienda) + '</span>' +
         (esSinUso ? '<span class="modal-plantilla-tienda-badge">sin uso</span>' : '') +
+        (enOtraPorClave[t.tienda]
+          ? '<span class="modal-plantilla-tienda-badge en-otra" title="Este día ya está en ' + escapeAttr(enOtraPorClave[t.tienda].agrupacion) + '. Si la añades aquí, será un cambio puntual solo para este día.">en ' + escapeHtml(parsearNombreAgrupacion(enOtraPorClave[t.tienda].agrupacion).titulo) + '</span>'
+          : '') +
       '</button>';
     }).join('');
     listaEl.querySelectorAll('[data-clave]').forEach(function (btn) {
@@ -2468,9 +2552,14 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     // El límite "distinto solo este día" solo tiene sentido con una tienda.
     toggleLim.style.display = n > 1 ? 'none' : '';
     if (n > 1 && limPropio) toggleLim.onclick();
+    // Si cambia lo marcado, hay que volver a confirmar los cambios puntuales.
+    puntualConfirmado = false;
+    const avisoPuntual = document.getElementById('modal-plantilla-aviso-puntual');
+    if (avisoPuntual) avisoPuntual.remove();
     const btnOk = document.getElementById('modal-confirm-btn');
     if (btnOk && !btnOk.disabled) btnOk.textContent = n > 1 ? ('Añadir ' + n + ' tiendas') : 'Añadir tienda';
   }
+  let puntualConfirmado = false;
   // "Ver todas las tiendas" / "Ver solo las de <agrupación>".
   const btnVerTodas = document.getElementById('modal-plantilla-ver-todas');
   function pintarBotonVerTodas() {
@@ -2488,6 +2577,9 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   // en el orden de la lista; luego se pueden quitar las que no se quieran.
   document.getElementById('modal-plantilla-marcar-todas').onclick = function () {
     visiblesActuales.forEach(function (t) {
+      // Las que ya están en otra agrupación este día no se marcan en bloque
+      // (sería un cambio puntual): hay que marcarlas una a una.
+      if (enOtraPorClave[t.tienda]) return;
       limitesPorClave[t.tienda] = t.limite != null ? String(t.limite) : '';
       if (seleccionadas.indexOf(t.tienda) === -1) seleccionadas.push(t.tienda);
     });
@@ -2516,7 +2608,33 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
     if (!seleccionadas.length) { mostrarToast('Elige primero qué tienda añadir', true); return; }
-    const lista = seleccionadas.slice();
+    // Las que ya están en otra agrupación este día van como cambio puntual;
+    // el resto se añade a la plantilla como siempre.
+    const puntualesSel = seleccionadas.filter(function (c) { return !!enOtraPorClave[c]; });
+    const lista = seleccionadas.filter(function (c) { return !enOtraPorClave[c]; });
+    if (puntualesSel.length && !puntualConfirmado) {
+      const tituloAqui = parsearNombreAgrupacion(nombreRuta).titulo;
+      const prev = document.getElementById('modal-plantilla-aviso-puntual');
+      if (prev) prev.remove();
+      const aviso = document.createElement('div');
+      aviso.id = 'modal-plantilla-aviso-puntual';
+      aviso.className = 'modal-plantilla-aviso-puntual';
+      aviso.innerHTML =
+        '<b>' + (puntualesSel.length === 1 ? 'Esta tienda ya está' : 'Estas tiendas ya están') + ' en otra agrupación el ' + escapeHtml(formatearFechaLarga(especialActual.fecha)) + ':</b>' +
+        '<ul>' + puntualesSel.map(function (c) {
+          const info = enOtraPorClave[c];
+          return '<li><b>' + escapeHtml(info.nombre) + '</b> está en ' + escapeHtml(parsearNombreAgrupacion(info.agrupacion).titulo) +
+            (info.saleYaPor ? ' (y ese día ya sale por ' + escapeHtml(parsearNombreAgrupacion(info.saleYaPor).titulo) + ': se cambiará a aquí)' : '') + '</li>';
+        }).join('') + '</ul>' +
+        '¿Quitarla' + (puntualesSel.length === 1 ? '' : 's') + ' de ahí y ponerla' + (puntualesSel.length === 1 ? '' : 's') + ' en <b>' + escapeHtml(tituloAqui) + '</b> como cambio puntual solo para ese día? ' +
+        'En su agrupación de siempre saldrá' + (puntualesSel.length === 1 ? '' : 'n') + ' marcada' + (puntualesSel.length === 1 ? '' : 's') + ' como "sale por excepción". ' +
+        '<span class="modal-campo-ayuda" style="margin:0">La posición, el grupo y el límite elegidos aquí no se aplican a ' + (puntualesSel.length === 1 ? 'esta tienda' : 'estas tiendas') + '.</span>';
+      document.getElementById('modal-custom').appendChild(aviso);
+      aviso.scrollIntoView({ block: 'nearest' });
+      puntualConfirmado = true;
+      document.getElementById('modal-confirm-btn').textContent = lista.length ? 'Sí, añadir y poner como puntual' : 'Sí, poner como puntual';
+      return;
+    }
     const inputLim = document.getElementById('modal-plantilla-lim');
     // El límite "distinto solo este día" solo se ofrece con una tienda.
     let limite = (limPropio && lista.length === 1) ? inputLim.value.trim() : '';
@@ -2621,11 +2739,36 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
         .then(function () { return anadirUna(i + 1); });
     }
 
-    anadirUna(0).then(function () {
-      if (!anadidas.length) {
+    const puntualesOk = [];
+    function ponerPuntual(i) {
+      if (i >= puntualesSel.length) return Promise.resolve();
+      const clave = puntualesSel[i];
+      const info = enOtraPorClave[clave];
+      btnConfirmar.textContent = 'Cambio puntual ' + (i + 1) + ' de ' + puntualesSel.length + '…';
+      return llamarApi_('guardarExcepcionTienda', [{
+        fecha: especialActual.fecha,
+        dia: diaActual,
+        agrupacionOrigen: info.agrupacion,
+        tienda: info.nombre,
+        agrupacionDestino: nombreRuta,
+        transito: null,
+        modo: 'mover'
+      }])
+        .then(function () { puntualesOk.push(info.nombre); })
+        .catch(function (err) {
+          fallosDiaActual.push(info.nombre + ': ' + ((err && err.message) ? err.message : 'no se ha podido poner como puntual'));
+        })
+        .then(function () { return ponerPuntual(i + 1); });
+    }
+
+    anadirUna(0).then(function () { return ponerPuntual(0); }).then(function () {
+      if (!anadidas.length && !puntualesOk.length) {
         // No se ha añadido ninguna: se deja el modal abierto con el motivo.
         btnConfirmar.disabled = false;
-        btnConfirmar.textContent = lista.length > 1 ? ('Añadir ' + lista.length + ' tiendas') : 'Añadir tienda';
+        btnConfirmar.textContent = seleccionadas.length > 1 ? ('Añadir ' + seleccionadas.length + ' tiendas') : 'Añadir tienda';
+        puntualConfirmado = false;
+        const avisoPuntualPrevio = document.getElementById('modal-plantilla-aviso-puntual');
+        if (avisoPuntualPrevio) avisoPuntualPrevio.remove();
         const aviso = document.createElement('div');
         aviso.id = 'modal-plantilla-error';
         aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
@@ -2635,8 +2778,11 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
       }
       cerrarModal();
       cargarPlantilla_({ silencioso: true });
-      const base = anadidas.length === 1 ? 'Tienda añadida' : (anadidas.length + ' tiendas añadidas');
-      const extraDias = diasElegidos.length ? (' (también en ' + diasElegidos.length + ' día' + (diasElegidos.length === 1 ? '' : 's') + ' más)') : '';
+      const partesBase = [];
+      if (anadidas.length) partesBase.push(anadidas.length === 1 ? 'Tienda añadida' : (anadidas.length + ' tiendas añadidas'));
+      if (puntualesOk.length) partesBase.push(puntualesOk.length === 1 ? (puntualesOk[0] + ' puesta como cambio puntual') : (puntualesOk.length + ' tiendas puestas como cambio puntual'));
+      const base = partesBase.join(' · ');
+      const extraDias = (diasElegidos.length && anadidas.length) ? (' (también en ' + diasElegidos.length + ' día' + (diasElegidos.length === 1 ? '' : 's') + ' más)') : '';
       const problemas = fallosDiaActual.concat(fallosOtros);
       if (problemas.length) {
         mostrarToast(base + '. No se pudo: ' + problemas.join('; '), true);
