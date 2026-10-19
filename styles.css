@@ -3660,8 +3660,9 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     background: #e9c48f; color: #5b3a0c; border-radius: 10px; padding: 2px 8px; flex-shrink: 0;
   }
   .plantilla-tienda-puntual-origen { font-size: 11.5px; color: #8a5a12; margin-left: 4px; flex: 1 1 auto; }
+  .plantilla-tienda.entra-puntual .nombre { flex: 0 1 auto; }
   .plantilla-tienda-quitar-puntual {
-    margin-left: auto; border: 1px solid #e3b4b4; background: #fff; color: var(--danger);
+    margin-left: 6px; border: 1px solid #e3b4b4; background: #fff; color: var(--danger);
     border-radius: 7px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
   }
   .plantilla-tienda-quitar-puntual:hover { background: #fceded; }
