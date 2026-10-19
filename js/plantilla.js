@@ -2554,8 +2554,6 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     if (n > 1 && limPropio) toggleLim.onclick();
     // Si cambia lo marcado, hay que volver a confirmar los cambios puntuales.
     puntualConfirmado = false;
-    const avisoPuntual = document.getElementById('modal-plantilla-aviso-puntual');
-    if (avisoPuntual) avisoPuntual.remove();
     const btnOk = document.getElementById('modal-confirm-btn');
     if (btnOk && !btnOk.disabled) btnOk.textContent = n > 1 ? ('Añadir ' + n + ' tiendas') : 'Añadir tienda';
   }
@@ -2613,26 +2611,28 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     const puntualesSel = seleccionadas.filter(function (c) { return !!enOtraPorClave[c]; });
     const lista = seleccionadas.filter(function (c) { return !enOtraPorClave[c]; });
     if (puntualesSel.length && !puntualConfirmado) {
+      // Confirmación en un modal aparte, centrado ENCIMA del de "Añadir
+      // tienda" (que se queda abierto detrás con todo lo marcado).
       const tituloAqui = parsearNombreAgrupacion(nombreRuta).titulo;
-      const prev = document.getElementById('modal-plantilla-aviso-puntual');
-      if (prev) prev.remove();
-      const aviso = document.createElement('div');
-      aviso.id = 'modal-plantilla-aviso-puntual';
-      aviso.className = 'modal-plantilla-aviso-puntual';
-      aviso.innerHTML =
-        '<b>' + (puntualesSel.length === 1 ? 'Esta tienda ya está' : 'Estas tiendas ya están') + ' en otra agrupación el ' + escapeHtml(formatearFechaLarga(especialActual.fecha)) + ':</b>' +
-        '<ul>' + puntualesSel.map(function (c) {
+      const una = puntualesSel.length === 1;
+      abrirConfirmPuntualPlantilla_(
+        una ? 'Esta tienda ya está en otra agrupación' : 'Estas tiendas ya están en otra agrupación',
+        '<p class="confirm-puntual-intro">El <b>' + escapeHtml(formatearFechaLarga(especialActual.fecha)) + '</b>:</p>' +
+        '<ul class="confirm-puntual-lista">' + puntualesSel.map(function (c) {
           const info = enOtraPorClave[c];
-          return '<li><b>' + escapeHtml(info.nombre) + '</b> está en ' + escapeHtml(parsearNombreAgrupacion(info.agrupacion).titulo) +
-            (info.saleYaPor ? ' (y ese día ya sale por ' + escapeHtml(parsearNombreAgrupacion(info.saleYaPor).titulo) + ': se cambiará a aquí)' : '') + '</li>';
+          return '<li><b>' + escapeHtml(info.nombre) + '</b> está en <b>' + escapeHtml(parsearNombreAgrupacion(info.agrupacion).titulo) + '</b>' +
+            (info.saleYaPor ? '<br><span>Ese día ya sale por ' + escapeHtml(parsearNombreAgrupacion(info.saleYaPor).titulo) + ': se cambiará a aquí.</span>' : '') + '</li>';
         }).join('') + '</ul>' +
-        '¿Quitarla' + (puntualesSel.length === 1 ? '' : 's') + ' de ahí y ponerla' + (puntualesSel.length === 1 ? '' : 's') + ' en <b>' + escapeHtml(tituloAqui) + '</b> como cambio puntual solo para ese día? ' +
-        'En su agrupación de siempre saldrá' + (puntualesSel.length === 1 ? '' : 'n') + ' marcada' + (puntualesSel.length === 1 ? '' : 's') + ' como "sale por excepción". ' +
-        '<span class="modal-campo-ayuda" style="margin:0">La posición, el grupo y el límite elegidos aquí no se aplican a ' + (puntualesSel.length === 1 ? 'esta tienda' : 'estas tiendas') + '.</span>';
-      document.getElementById('modal-custom').appendChild(aviso);
-      aviso.scrollIntoView({ block: 'nearest' });
-      puntualConfirmado = true;
-      document.getElementById('modal-confirm-btn').textContent = lista.length ? 'Sí, añadir y poner como puntual' : 'Sí, poner como puntual';
+        '<p>¿Quitarla' + (una ? '' : 's') + ' de ahí y ponerla' + (una ? '' : 's') + ' en <b>' + escapeHtml(tituloAqui) + '</b> como <b>cambio puntual solo para ese día</b>?</p>' +
+        '<p class="confirm-puntual-nota">En su agrupación de siempre saldrá' + (una ? '' : 'n') + ' marcada' + (una ? '' : 's') + ' como "sale por excepción". ' +
+        'La posición, el grupo y el límite elegidos no se aplican a ' + (una ? 'esta tienda' : 'estas tiendas') + '.</p>',
+        una ? 'Sí, poner como puntual' : ('Sí, poner las ' + puntualesSel.length + ' como puntual'),
+        function () {
+          puntualConfirmado = true;
+          const btn = document.getElementById('modal-confirm-btn');
+          if (btn) btn.click();
+        }
+      );
       return;
     }
     const inputLim = document.getElementById('modal-plantilla-lim');
@@ -2767,8 +2767,6 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
         btnConfirmar.disabled = false;
         btnConfirmar.textContent = seleccionadas.length > 1 ? ('Añadir ' + seleccionadas.length + ' tiendas') : 'Añadir tienda';
         puntualConfirmado = false;
-        const avisoPuntualPrevio = document.getElementById('modal-plantilla-aviso-puntual');
-        if (avisoPuntualPrevio) avisoPuntualPrevio.remove();
         const aviso = document.createElement('div');
         aviso.id = 'modal-plantilla-error';
         aviso.style.cssText = 'margin-top:12px;font-size:12.5px;color:var(--danger);background:#fceded;border-radius:8px;padding:9px 11px;';
@@ -2794,6 +2792,43 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     });
   };
   setTimeout(function () { document.getElementById('modal-plantilla-buscar').focus(); }, 50);
+}
+
+/** Modal de confirmación pequeño que se abre centrado ENCIMA del modal que
+ *  ya está abierto (sin cerrarlo ni tocar su contenido). Usado al añadir
+ *  como cambio puntual una tienda que ya está en otra agrupación. */
+function abrirConfirmPuntualPlantilla_(titulo, cuerpoHtml, textoOk, onOk) {
+  const previo = document.getElementById('confirm-puntual-overlay');
+  if (previo) previo.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'confirm-puntual-overlay';
+  overlay.className = 'modal-overlay confirm-puntual-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML =
+    '<div class="modal-box confirm-puntual-box" role="dialog" aria-modal="true">' +
+      '<div class="confirm-puntual-icono">' +
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>' +
+      '</div>' +
+      '<h3>' + escapeHtml(titulo) + '</h3>' +
+      '<div class="confirm-puntual-cuerpo">' + cuerpoHtml + '</div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="modal-cancel" data-confirm-puntual="no">Cancelar</button>' +
+        '<button type="button" class="modal-confirm" data-confirm-puntual="si">' + escapeHtml(textoOk) + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  function cerrar() {
+    overlay.remove();
+    document.removeEventListener('keydown', teclas, true);
+  }
+  function teclas(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); cerrar(); }
+  }
+  document.addEventListener('keydown', teclas, true);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrar(); });
+  overlay.querySelector('[data-confirm-puntual="no"]').onclick = cerrar;
+  overlay.querySelector('[data-confirm-puntual="si"]').onclick = function () { cerrar(); onOk(); };
+  setTimeout(function () { overlay.querySelector('[data-confirm-puntual="si"]').focus(); }, 30);
 }
 
 /** Si el nombre de una agrupación sigue el formato habitual
