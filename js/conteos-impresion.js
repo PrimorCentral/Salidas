@@ -177,7 +177,8 @@ function construirGrupoImpresionDia_(seccion) {
   // Solo las tiendas que hoy hay que contar físicamente aquí: se dejan
   // fuera las cerradas y las que hoy salen por otra agrupación (cambio
   // puntual), igual que en pantalla no se cuentan ahí.
-  const tiendas = (seccion.tiendas || []).filter(function (t) { return !t.cerrada && !t.salePorExcepcion; });
+  // Las del mismo grupo de palets, juntas (igual que en pantalla).
+  const tiendas = juntarGruposDePalets((seccion.tiendas || []).filter(function (t) { return !t.cerrada && !t.salePorExcepcion; }));
 
   const nombresPorGrupo = {};
   tiendas.forEach(function (t) {

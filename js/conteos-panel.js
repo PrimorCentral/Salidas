@@ -480,9 +480,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     nombresPorGrupo[t.notaGrupoId].push(t.nombre);
   });
 
-  const filasHtml = seccion.tiendas.map(function (t, i) {
-    const anterior = seccion.tiendas[i - 1];
-    const siguiente = seccion.tiendas[i + 1];
+  // Las tiendas de un mismo grupo de palets se pintan juntas (ver
+  // juntarGruposDePalets en conteos-badges.js), aunque en la plantilla haya
+  // otras tiendas en medio.
+  const tiendasEnOrden = juntarGruposDePalets(seccion.tiendas);
+  const filasHtml = tiendasEnOrden.map(function (t, i) {
+    const anterior = tiendasEnOrden[i - 1];
+    const siguiente = tiendasEnOrden[i + 1];
     const esPrimeraDeGrupo = !!t.notaGrupoId && (!anterior || anterior.notaGrupoId !== t.notaGrupoId);
     const esUltimaDeGrupo = !!t.notaGrupoId && (!siguiente || siguiente.notaGrupoId !== t.notaGrupoId);
     const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes, seccion.tieneCasillaDomingo) : '';

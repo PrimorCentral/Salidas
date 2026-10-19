@@ -46,6 +46,30 @@ function badgePrevision(seccion) {
  *    vivo de esa agrupación, sin ningún aviso/alerta de límite (es solo
  *    información visual).
  */
+/**
+ * Junta las tiendas de cada grupo de palets: todas las del mismo grupo se
+ * colocan seguidas, en el sitio de la primera de ellas, para que en el
+ * conteo salga un solo bloque con una sola cabecera (y su contador) aunque
+ * en Rutas y tiendas no estén todas seguidas (p. ej. una tienda puntual
+ * colocada más abajo). El resto de tiendas no cambia de orden.
+ */
+function juntarGruposDePalets(tiendas) {
+  const porGrupo = {};
+  (tiendas || []).forEach(function (t) {
+    if (!t.notaGrupoId) return;
+    (porGrupo[t.notaGrupoId] = porGrupo[t.notaGrupoId] || []).push(t);
+  });
+  const puestos = {};
+  const res = [];
+  (tiendas || []).forEach(function (t) {
+    if (!t.notaGrupoId) { res.push(t); return; }
+    if (puestos[t.notaGrupoId]) return;
+    puestos[t.notaGrupoId] = true;
+    porGrupo[t.notaGrupoId].forEach(function (m) { res.push(m); });
+  });
+  return res;
+}
+
 function filaGrupoHeaderHtml(t, nombresGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes, tieneDomingo) {
   const esTotal = t.notaGrupoTipo === 'total';
   const tiendas = (nombresGrupo || []).map(quitarCodigoTienda).join(' + ');
