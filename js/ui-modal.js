@@ -456,6 +456,8 @@ function etiquetaCambioConteo_(cambio) {
  *   suma lo que se carga, la tienda sale entera en «SIN CAMIÓN ASIGNADO».
  * Las tiendas abiertas que no estén en ningún camión salen en «SIN CAMIÓN
  * ASIGNADO» y las cerradas, al final (igual que en el email a la agencia). */
+/** Máximo de palets que puede llevar un camión (no hay camiones más grandes). */
+const MAX_PALETS_CAMION = 33;
 function camionesValidos_(camiones) {
   return Array.isArray(camiones) ? camiones.filter(function (c) { return c && c.matricula; }) : [];
 }
@@ -724,7 +726,7 @@ function mostrarModalAjustarCarga(datos) {
     (datos.desdeLapiz ? '<div class="modal-modo-edicion">' + ICONO_LAPIZ_12_ + 'Modo edición</div>' : '') +
     '<div class="modal-camiones">' +
       '<div class="modal-camiones-cab"><span class="modal-camiones-titulo">' + ICONO_CAMION_16_ + 'Camiones</span>' +
-        '<span class="modal-camiones-ayuda">Matrícula y remolque (opcional)</span></div>' +
+        '<span class="modal-camiones-ayuda">Matrícula y remolque (opcional) · máx. ' + MAX_PALETS_CAMION + ' palets por camión</span></div>' +
       '<div class="modal-camiones-lista"></div>' +
       '<div class="modal-camiones-aviso"></div>' +
       '<button type="button" class="modal-camiones-add">+ Añadir camión</button>' +
@@ -934,9 +936,18 @@ function mostrarModalAjustarCarga(datos) {
       : '';
     // Totales de cada camión y avisos (falta matrícula / tiendas sin camión).
     let sinMatricula = 0;
+    const excedidos = [];
     camiones.forEach(function (c, k) {
       const t = listaCamiones.querySelector('[data-t="' + k + '"]');
-      if (t) t.textContent = totCamion[k].tiendas + (totCamion[k].tiendas === 1 ? ' tienda' : ' tiendas') + ' · ' + totCamion[k].palets + ' palets';
+      const exceso = totCamion[k].palets - MAX_PALETS_CAMION;
+      if (exceso > 0) excedidos.push({ k: k, exceso: exceso });
+      if (t) {
+        t.textContent = totCamion[k].tiendas + (totCamion[k].tiendas === 1 ? ' tienda' : ' tiendas') + ' · ' + totCamion[k].palets + ' palets' +
+          (exceso > 0 ? ' · ' + exceso + ' de más' : '');
+        t.classList.toggle('pasado', exceso > 0);
+      }
+      const tarjeta = listaCamiones.querySelector('.modal-camion[data-k="' + k + '"]');
+      if (tarjeta) tarjeta.classList.toggle('pasado', exceso > 0);
       const inp = listaCamiones.querySelector('input.cam-matricula[data-k="' + k + '"]');
       const falta = !c.matricula.trim();
       if (falta) sinMatricula++;
@@ -946,10 +957,21 @@ function mostrarModalAjustarCarga(datos) {
     if (sinMatricula) avisos.push(sinMatricula === 1 ? 'Falta la matrícula de un camión' : 'Falta la matrícula de ' + sinMatricula + ' camiones');
     if (sinCamion) avisos.push(sinCamion === 1 ? '1 tienda sin camión' : sinCamion + ' tiendas sin camión');
     if (descuadres) avisos.push(descuadres === 1 ? '1 tienda dividida no cuadra' : descuadres + ' tiendas divididas no cuadran');
-    avisoCamiones.textContent = avisos.join(' · ');
+    // Máximo 33 palets por camión. Si no caben, se dice cuántos camiones hacen falta.
+    if (excedidos.length) {
+      const necesarios = Math.ceil(totCargar / MAX_PALETS_CAMION);
+      if (camiones.length < necesarios) {
+        avisos.push(totCargar + ' palets no caben en ' + camiones.length + (camiones.length === 1 ? ' camión' : ' camiones') +
+          ' (máx. ' + MAX_PALETS_CAMION + ' por camión): hacen falta ' + necesarios + '. Añade ' + (necesarios - camiones.length === 1 ? 'otro camión' : (necesarios - camiones.length) + ' camiones más'));
+      } else {
+        avisos.push(excedidos.map(function (e) { return 'El camión ' + (e.k + 1) + ' lleva ' + e.exceso + ' de más'; }).join(' · ') +
+          ' (máx. ' + MAX_PALETS_CAMION + ' por camión): pasa tiendas a otro camión');
+      }
+    }
+    avisoCamiones.innerHTML = avisos.map(function (t) { return '<div>' + escapeHtml(t) + '</div>'; }).join('');
     avisoCamiones.style.display = avisos.length ? '' : 'none';
     custom.querySelector('.modal-camiones-add').style.display = camiones.length >= 10 ? 'none' : '';
-    btnOk.disabled = vacias > 0 || sinMatricula > 0 || sinCamion > 0 || descuadres > 0;
+    btnOk.disabled = vacias > 0 || sinMatricula > 0 || sinCamion > 0 || descuadres > 0 || excedidos.length > 0;
     if (btnImprimir) btnImprimir.disabled = vacias > 0;
   }
 

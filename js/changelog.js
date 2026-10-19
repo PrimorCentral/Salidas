@@ -8,6 +8,21 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.2.0',
+    fecha: '2026-10-19',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Carga del camión: al ajustar la carga se pueden indicar los camiones que salen, con su matrícula y la del remolque (opcional). Con 2 o más camiones se elige en cuál va cada tienda y se ven las tiendas y los palets de cada camión. Un camión lleva como máximo 33 palets: si no caben, se avisa de cuántos camiones hacen falta y no deja guardar' },
+      { tipo: 'nuevo',      texto: 'Carga del camión: una tienda se puede repartir entre varios camiones con la opción «Dividir…» (p. ej. 5 palets en un camión y 5 en otro). Lo repartido tiene que sumar lo que se carga para poder guardar' },
+      { tipo: 'nuevo',      texto: 'El email de previsión y de definitivo a la agencia, la lista de carga impresa y la del camioncito salen agrupados por camión, con la matrícula, el remolque y el subtotal de cada uno. Sin camiones indicados, todo sale como antes' },
+      { tipo: 'nuevo',      texto: 'Conteos especiales: desde Rutas y tiendas, al añadir una tienda que ese día ya está en otra agrupación, se ofrece hacerlo como cambio puntual solo para esa fecha. La tienda puntual se puede colocar arrastrando, meter en un grupo de palets, bloquear 60/PTA/CART., cambiar su límite de ese día o quitar el cambio' },
+      { tipo: 'mejora',     texto: 'Los modales de la carga del camión se ven en dos columnas en pantalla ancha: a la izquierda los totales, avisos y camiones, y a la derecha la lista de tiendas' },
+      { tipo: 'mejora',     texto: 'Carga del camión: se abre siempre como la ven los operadores (solo lectura); quien tiene el permiso «Ajustar carga» pasa a editarla con el lápiz junto a la X. Si nadie la ha ajustado, se indica que se cargará lo contado' },
+      { tipo: 'mejora',     texto: 'Ajustar carga del camión: nuevo botón Imprimir y se indica quién ajustó la carga y a qué hora' },
+      { tipo: 'mejora',     texto: 'Buscador de tiendas en Rutas y tiendas y en Conteos: una tienda con cambio puntual lleva a la agrupación por la que sale ese día' },
+      { tipo: 'correccion', texto: 'Email a la agencia: cuando se cargan menos palets de los contados, el peso se calcula con los palets que se cargan de verdad (se quitan primero los de PTA, luego CARTAMA y por último GAITE)' }
+    ]
+  },
+  {
     version: '2.1.7',
     fecha: '2026-10-17',
     cambios: [
