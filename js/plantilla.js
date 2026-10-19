@@ -2056,10 +2056,19 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     if (!t.notaGrupoId) return;
     if (!(t.notaGrupoId in indicePorId)) {
       indicePorId[t.notaGrupoId] = grupos.length;
-      grupos.push({ texto: t.nota || '', limite: t.notaLimite != null ? String(t.notaLimite) : '', tipo: t.notaGrupoTipo || '', rows: [] });
+      grupos.push({ texto: t.nota || '', limite: t.notaLimite != null ? String(t.notaLimite) : '', tipo: t.notaGrupoTipo || '', rows: [], puntuales: [] });
     }
     grupos[indicePorId[t.notaGrupoId]].rows.push(t.row);
   });
+  // Conteo especial: tiendas que ese día entran aquí por un cambio puntual.
+  // Se pueden meter en los grupos igual que las demás (se guardan aparte,
+  // en el propio cambio puntual).
+  const puntualesRuta = (PLANTILLA_ESTADO.puntuales || []).filter(function (p) { return p.destino === nombreRuta; });
+  puntualesRuta.forEach(function (p) {
+    if (p.grupoId && (p.grupoId in indicePorId)) grupos[indicePorId[p.grupoId]].puntuales.push(p.id);
+  });
+  function puntualPorId(id) { return puntualesRuta.find(function (p) { return p.id === id; }); }
+  function nombrePuntual(p) { return quitarCodigoTienda(quitarMarcadorNombre(p.tienda)); }
 
   document.getElementById('modal-box').classList.add('ancho');
   document.getElementById('modal-box').classList.add('orden-retirada-modal');
@@ -2231,9 +2240,14 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     const enGrupo = new Set();
     grupos.forEach(function (g) { g.rows.forEach(function (r) { enGrupo.add(r); }); });
     const sinGrupo = seccion.tiendas.filter(function (t) { return !enGrupo.has(t.row); });
+    const puntualEnGrupo = new Set();
+    grupos.forEach(function (g) { g.puntuales.forEach(function (id) { puntualEnGrupo.add(id); }); });
+    const puntualesSinGrupo = puntualesRuta.filter(function (p) { return !puntualEnGrupo.has(p.id); });
+    const nSinGrupo = sinGrupo.length + puntualesSinGrupo.length;
 
     const tarjetasHtml = grupos.map(function (g, idx) {
       const miembros = seccion.tiendas.filter(function (t) { return g.rows.indexOf(t.row) !== -1; });
+      const miembrosPuntuales = g.puntuales.map(puntualPorId).filter(Boolean);
       return (
         '<div class="grupos2-card' + (idx === activo ? ' activo' : '') + '" data-grupo-card="' + idx + '">' +
           '<div class="grupos2-card-cab">' +
@@ -2243,16 +2257,20 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
             '<label class="grupos2-tipo" title="Solo suma y muestra el total, sin avisar aunque se pase">' +
               '<input type="checkbox" data-grupo-tipo="' + idx + '"' + (g.tipo === 'total' ? ' checked' : '') + '>Solo informativo' +
             '</label>' +
-            '<span class="grupos2-contador">' + miembros.length + '</span>' +
+            '<span class="grupos2-contador">' + (miembros.length + miembrosPuntuales.length) + '</span>' +
             '<button type="button" class="modal-grupo-eliminar" data-grupo-eliminar="' + idx + '" title="Eliminar este grupo">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
             '</button>' +
           '</div>' +
           '<div class="grupos2-chips">' +
-            (miembros.length
+            (miembros.length || miembrosPuntuales.length
               ? miembros.map(function (t) {
                   return '<button type="button" class="grupos2-chip miembro" data-quitar-row="' + t.row + '" title="Quitar del grupo">' +
                     escapeHtml(nombreLimpio(t)) + '<span class="x">×</span></button>';
+                }).join('') +
+                miembrosPuntuales.map(function (p) {
+                  return '<button type="button" class="grupos2-chip miembro puntual" data-quitar-puntual-grupo="' + escapeAttr(p.id) + '" title="Tienda puntual (solo este día). Quitar del grupo">' +
+                    escapeHtml(nombrePuntual(p)) + ' <span class="grupos2-chip-puntual">puntual</span><span class="x">×</span></button>';
                 }).join('')
               : '<span class="grupos2-vacio">Sin tiendas: pulsa las de la derecha para añadirlas.</span>') +
           '</div>' +
@@ -2269,13 +2287,16 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
             '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>' +
         '</div>' +
         '<div class="grupos2-col">' +
-          '<div class="modal-orden-col-titulo">Tiendas sin grupo <span class="modal-orden-col-contador">(' + sinGrupo.length + ')</span></div>' +
+          '<div class="modal-orden-col-titulo">Tiendas sin grupo <span class="modal-orden-col-contador">(' + nSinGrupo + ')</span></div>' +
           '<div class="grupos2-pool">' +
-            (sinGrupo.length ? '<div class="grupos2-destino" id="grupos2-destino"></div>' : '') +
+            (nSinGrupo ? '<div class="grupos2-destino" id="grupos2-destino"></div>' : '') +
             '<div class="grupos2-chips">' +
-              (sinGrupo.length
+              (nSinGrupo
                 ? sinGrupo.map(function (t) {
                     return '<button type="button" class="grupos2-chip libre" data-anadir-row="' + t.row + '">+ ' + escapeHtml(nombreLimpio(t)) + '</button>';
+                  }).join('') +
+                  puntualesSinGrupo.map(function (p) {
+                    return '<button type="button" class="grupos2-chip libre puntual" data-anadir-puntual-grupo="' + escapeAttr(p.id) + '" title="Tienda puntual (solo este día)">+ ' + escapeHtml(nombrePuntual(p)) + ' <span class="grupos2-chip-puntual">puntual</span></button>';
                   }).join('')
                 : '<span class="grupos2-vacio">Todas las tiendas de la ruta están en algún grupo.</span>') +
             '</div>' +
@@ -2323,6 +2344,20 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
         pintar();
       };
     });
+    custom.querySelectorAll('[data-quitar-puntual-grupo]').forEach(function (btn) {
+      btn.onclick = function () {
+        const id = btn.getAttribute('data-quitar-puntual-grupo');
+        grupos.forEach(function (g) { g.puntuales = g.puntuales.filter(function (x) { return x !== id; }); });
+        pintar();
+      };
+    });
+    custom.querySelectorAll('[data-anadir-puntual-grupo]').forEach(function (btn) {
+      btn.onclick = function () {
+        if (!grupos[activo]) { mostrarToast('Crea o elige primero un grupo', true); return; }
+        grupos[activo].puntuales.push(btn.getAttribute('data-anadir-puntual-grupo'));
+        pintar();
+      };
+    });
     custom.querySelectorAll('[data-anadir-row]').forEach(function (btn) {
       btn.onclick = function () {
         if (!grupos[activo]) { mostrarToast('Crea o elige primero un grupo', true); return; }
@@ -2333,7 +2368,7 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     const btnAnadir = document.getElementById('modal-grupo-anadir');
     if (btnAnadir) {
       btnAnadir.onclick = function () {
-        grupos.push({ texto: '', limite: '', tipo: '', rows: [] });
+        grupos.push({ texto: '', limite: '', tipo: '', rows: [], puntuales: [] });
         activo = grupos.length - 1;
         pintar();
         setTimeout(function () {
@@ -2353,11 +2388,23 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
     for (let i = 0; i < grupos.length; i++) {
-      if (grupos[i].rows.length > 0 && !grupos[i].texto.trim()) {
+      if ((grupos[i].rows.length > 0 || grupos[i].puntuales.length > 0) && !grupos[i].texto.trim()) {
         mostrarToast('Ponle un texto al grupo ' + (i + 1) + ' antes de guardar', true);
         return;
       }
+      if (!grupos[i].rows.length && grupos[i].puntuales.length) {
+        mostrarToast('El grupo "' + grupos[i].texto.trim() + '" necesita al menos una tienda de la ruta, no solo puntuales', true);
+        return;
+      }
     }
+    // Al guardar, el backend borra y vuelve a crear los grupos de la ruta
+    // (cambian sus ids), así que luego hay que volver a apuntar cada tienda
+    // puntual a su grupo: se localiza el grupo nuevo por una de sus tiendas.
+    const puntualesTrasGuardar = puntualesRuta.map(function (p) {
+      const g = grupos.find(function (x) { return x.rows.length && x.puntuales.indexOf(p.id) !== -1; });
+      const ancla = g ? seccion.tiendas.find(function (t) { return t.row === g.rows[0]; }) : null;
+      return { id: p.id, tiendaAncla: ancla ? ancla.nombre : null, antes: p.grupoId || null };
+    });
     const payload = grupos
       .filter(function (g) { return g.rows.length > 0; })
       .map(function (g) {
@@ -2372,6 +2419,22 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
     const diaActual = PLANTILLA_ESTADO.dia;
     cerrarModal();
     llamarApi_('establecerGruposLimiteRuta', [diaActual, nombreRuta, payload])
+      .then(function () {
+        if (!puntualesTrasGuardar.length) return null;
+        return llamarApi_('getPlantillaDia', [diaActual]).then(function (datos) {
+          const sec = ((datos && datos.secciones) || []).find(function (x) { return x.nombre === nombreRuta; });
+          let cadena = Promise.resolve();
+          puntualesTrasGuardar.forEach(function (pt) {
+            const t = (sec && pt.tiendaAncla) ? sec.tiendas.find(function (x) { return x.nombre === pt.tiendaAncla; }) : null;
+            const nuevo = t ? (t.notaGrupoId || null) : null;
+            if (!nuevo && !pt.antes) return; // sigue sin grupo
+            cadena = cadena.then(function () { return llamarApi_('asignarGrupoCambioPuntual', [pt.id, nuevo]); });
+          });
+          return cadena;
+        }).catch(function (err) {
+          mostrarToast('Grupos guardados, pero no se pudo colocar alguna tienda puntual: ' + ((err && err.message) || 'error'), true);
+        });
+      })
       .then(function () {
         if (!dias.length) return null;
         // Se copia lo que ACABA de guardarse en este día (el backend lo lee
