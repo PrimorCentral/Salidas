@@ -460,7 +460,15 @@ function inicializarBuscadoresPlantilla_() {
     const encontradas = [];
     PLANTILLA_ESTADO.secciones.forEach(function (s) {
       s.tiendas.forEach(function (t) {
-        if (normalizarBusquedaPlantilla_(t.nombre).indexOf(q) !== -1) encontradas.push({ tienda: t, ruta: s.nombre });
+        if (normalizarBusquedaPlantilla_(t.nombre).indexOf(q) === -1) return;
+        // Conteo especial con cambio puntual: se lleva a la agrupación por
+        // la que sale ese día (en "doble salida", a las dos).
+        const p = (PLANTILLA_ESTADO.puntuales || []).find(function (x) { return x.origen === s.nombre && x.tienda === t.nombre; });
+        if (p) {
+          encontradas.push({ tienda: t, ruta: p.destino, puntualId: p.id });
+          if (p.modo !== 'doble') return;
+        }
+        encontradas.push({ tienda: t, ruta: s.nombre });
       });
     });
     return encontradas.slice(0, 8);
@@ -521,14 +529,24 @@ function pintarResultadosBuscadorTiendaPlantilla_(encontradas, resultadosEl) {
   }
   resultadosEl.innerHTML = encontradas.map(function (it) {
     const tituloRuta = parsearNombreAgrupacion(it.ruta).titulo;
-    return '<button type="button" class="plantilla-buscador-item" data-tienda-row="' + it.tienda.row + '">' +
+    return '<button type="button" class="plantilla-buscador-item" data-tienda-row="' + it.tienda.row + '"' + (it.puntualId ? ' data-puntual-id="' + escapeAttr(it.puntualId) + '"' : '') + '>' +
       '<span class="nombre">' + escapeHtml(it.tienda.nombre) + '</span>' +
-      '<span class="dia-tag">' + escapeHtml(tituloRuta) + '</span>' +
+      '<span class="dia-tag">' + escapeHtml(tituloRuta) + (it.puntualId ? ' · puntual' : '') + '</span>' +
     '</button>';
   }).join('');
   resultadosEl.style.display = 'block';
   resultadosEl.querySelectorAll('.plantilla-buscador-item').forEach(function (btn) {
-    btn.onclick = function () { irATiendaPlantilla_(Number(btn.getAttribute('data-tienda-row')), resultadosEl); };
+    btn.onclick = function () {
+      const puntualId = btn.getAttribute('data-puntual-id');
+      if (puntualId) {
+        resultadosEl.style.display = 'none';
+        const input = document.getElementById('plantilla-buscador-tienda-input');
+        if (input) { input.value = ''; input.blur(); }
+        resaltarFilaPlantilla_(document.querySelector('.plantilla-tienda[data-puntual-id="' + CSS.escape(puntualId) + '"]'));
+        return;
+      }
+      irATiendaPlantilla_(Number(btn.getAttribute('data-tienda-row')), resultadosEl);
+    };
   });
 }
 
@@ -563,7 +581,11 @@ function resaltarRutaPlantilla_(nombreRuta) {
 /** Hace scroll hasta la tienda indicada (por su "row" físico) dentro de
  *  "Rutas y tiendas" y la resalta un momento para que se note cuál es. */
 function resaltarTiendaPlantilla_(row) {
-  const el = document.querySelector('.plantilla-tienda[data-tienda-row="' + row + '"]');
+  resaltarFilaPlantilla_(document.querySelector('.plantilla-tienda[data-tienda-row="' + row + '"]'));
+}
+
+/** Scroll + resaltado de una fila de tienda ya localizada. */
+function resaltarFilaPlantilla_(el) {
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   el.classList.add('plantilla-tienda-resaltada');
@@ -653,11 +675,14 @@ function pintarPlantilla_() {
           '<span class="lim' + (t.limiteOverride ? ' lim-override' : '') + '" title="' + (t.limiteOverride ? 'Límite propio de este día (distinto del general de Configuración tiendas: ' + escapeAttr(t.limiteGeneral != null ? t.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(textoLimite_(t.limite)) + '</span>' +
           camposNombreHtml +
           '<div class="plantilla-tienda-bloqueos">' +
+            // Si ese día sale por otra agrupación (cambio puntual), los
+            // bloqueos 60/PTA/CART. se tocan en la fila de destino.
+            ((puntualSale && puntualSale.modo !== 'doble') ? '' :
             (s.tieneViernes ? botonViernesTiendaPlantillaHtml_(t) : '') +
             (s.tieneCasillaDomingo ? botonDomingoTiendaPlantillaHtml_(t) : '') +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
-            botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
+            botonBloqueoPlantillaHtml_(t, 'cart', 'CART.')) +
           '</div>' +
           '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-grupo="' + (t.notaGrupoId ? '1' : '0') + '" title="' + (t.notaGrupoId ? 'Pertenece a un grupo de palets: edítalo desde Grupos de palets' : (tieneNota ? 'Editar comentario' : 'Añadir comentario')) + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
@@ -679,14 +704,34 @@ function pintarPlantilla_() {
     const puntualesEntran = (PLANTILLA_ESTADO.puntuales || []).filter(function (p) { return p.destino === s.nombre; });
     puntualesEntran.forEach(function (p) {
       const partes = dividirNombreTiendaPlantilla_(p.tienda);
+      // La fila real de la tienda (en su agrupación de siempre): de ahí salen
+      // su límite y sus bloqueos 60/PTA/CART., que son los que usa Conteos
+      // también en la agrupación de destino. Como el conteo especial es solo
+      // de esa fecha, bloquear aquí no afecta a ningún otro día.
+      const secOrigen = PLANTILLA_ESTADO.secciones.find(function (x) { return x.nombre === p.origen; });
+      const tOrigen = secOrigen ? secOrigen.tiendas.find(function (x) { return x.nombre === p.tienda; }) : null;
       piezasTiendas.push(
-        '<div class="plantilla-tienda entra-puntual">' +
+        '<div class="plantilla-tienda entra-puntual" data-puntual-id="' + escapeAttr(p.id) + '">' +
           '<span class="plantilla-tienda-asa-hueco"></span>' +
-          '<span class="plantilla-tienda-puntual-badge">' + (p.modo === 'doble' ? 'Doble' : 'Puntual') + '</span>' +
+          (tOrigen ? '<span class="lim' + (tOrigen.limiteOverride ? ' lim-override' : '') + '" title="' + (tOrigen.limiteOverride ? 'Límite propio de este día (el general es ' + escapeAttr(tOrigen.limiteGeneral != null ? tOrigen.limiteGeneral : 'sin definir') + ')' : 'Límite (el general de Configuración tiendas)') + '">' + escapeHtml(textoLimite_(tOrigen.limite)) + '</span>' : '') +
           (partes
             ? '<span class="numero">' + escapeHtml(partes.numero) + '</span><span class="nombre">' + escapeHtml(partes.resto) + '</span>'
             : '<span class="nombre">' + escapeHtml(p.tienda) + '</span>') +
+          '<span class="plantilla-tienda-puntual-badge">' + (p.modo === 'doble' ? 'Doble' : 'Puntual') + '</span>' +
           '<span class="plantilla-tienda-puntual-origen">Solo este día · su agrupación es <b>' + escapeHtml(parsearNombreAgrupacion(p.origen).titulo) + '</b></span>' +
+          ((tOrigen && p.modo !== 'doble')
+            ? '<div class="plantilla-tienda-bloqueos">' +
+                botonBloqueoPlantillaHtml_(tOrigen, 'c60', '60') +
+                botonBloqueoPlantillaHtml_(tOrigen, 'pta', 'PTA') +
+                botonBloqueoPlantillaHtml_(tOrigen, 'cart', 'CART.') +
+              '</div>'
+            : '') +
+          // Lápiz: límite de palets solo para este día (es la misma fila de
+          // la tienda en el conteo especial, así que no toca ningún otro día).
+          ((tOrigen && tienePermiso('plantilla'))
+            ? '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + tOrigen.row + '" title="Límite de palets de esta tienda este día">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
+            : '') +
           (tienePermiso('plantilla')
             ? '<button type="button" class="plantilla-tienda-quitar-puntual" data-quitar-puntual="' + escapeAttr(p.id) + '" data-puntual-tienda="' + escapeAttr(p.tienda) + '" data-puntual-origen="' + escapeAttr(p.origen) + '" title="Quitar el cambio puntual: vuelve a salir por su agrupación">Quitar</button>'
             : '') +

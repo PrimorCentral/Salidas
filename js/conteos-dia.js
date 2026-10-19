@@ -297,7 +297,9 @@ function pintarMenuRapido_() {
   const secccionesFiltradas = !filtro ? secciones : secciones.filter(function (seccion) {
     const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
     if (normalizarBusquedaPlantilla_(titulo).indexOf(filtro) !== -1) return true;
-    return (seccion.tiendas || []).some(function (t) { return normalizarBusquedaPlantilla_(t.nombre).indexOf(filtro) !== -1; });
+    // Una tienda que ese día sale por otra agrupación (cambio puntual) solo
+    // cuenta en la agrupación por la que sale, no en la de siempre.
+    return (seccion.tiendas || []).some(function (t) { return !t.salePorExcepcion && normalizarBusquedaPlantilla_(t.nombre).indexOf(filtro) !== -1; });
   });
 
   if (!secccionesFiltradas.length) {
