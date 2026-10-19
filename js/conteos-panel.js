@@ -270,15 +270,28 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const c = seccion.carga;
     return !!(c && c.origen !== 'definitivo' && seccion.estado !== 'enviado' && Array.isArray(c.lista));
   }
-  // { 'NOMBRE TIENDA': palets } de las tiendas ajustadas a mano que siguen en la tabla.
+  // { 'NOMBRE TIENDA': true } de las tiendas repartidas entre varios camiones
+  // («Dividir…»). Su carga queda fijada como si se hubiera ajustado a mano:
+  // si cambia su conteo, hay que revisar el reparto.
+  function tiendasDivididas_() {
+    const res = {};
+    const c = seccion.carga;
+    if (!c || !Array.isArray(c.camiones) || c.camiones.length < 2) return res;
+    c.camiones.forEach(function (cam) {
+      if (cam && cam.parciales) Object.keys(cam.parciales).forEach(function (t) { res[t] = true; });
+    });
+    return res;
+  }
+  // { 'NOMBRE TIENDA': palets } de las tiendas ajustadas a mano (o divididas) que siguen en la tabla.
   function ajustesGuardados_() {
     const res = {};
     if (!cargaEditable_()) return res;
     const abiertas = {};
+    const divididas = tiendasDivididas_();
     filasCargaActuales_().forEach(function (f) { if (!f.cerrada) abiertas[f.nombre] = true; });
     seccion.carga.lista.forEach(function (t) {
       if (t.cerrada || t.cargar === null || t.cargar === undefined || !abiertas[t.tienda]) return;
-      if (Number(t.cargar) !== Number(t.contados)) res[t.tienda] = Number(t.cargar);
+      if (Number(t.cargar) !== Number(t.contados) || divididas[t.tienda]) res[t.tienda] = Number(t.cargar);
     });
     return res;
   }
@@ -287,12 +300,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const res = {};
     if (!cargaEditable_()) return res;
     const guardadas = {};
+    const divididas = tiendasDivididas_();
     seccion.carga.lista.forEach(function (t) { guardadas[t.tienda] = t; });
     filasCargaActuales_().forEach(function (f) {
       const g = guardadas[f.nombre];
       if (f.cerrada || !g || g.cerrada) return;
       const antes = Number(g.contados) || 0;
-      if (Number(g.cargar) !== antes && f.contados !== antes) res[f.nombre] = { antes: antes, ahora: f.contados };
+      if ((Number(g.cargar) !== antes || divididas[f.nombre]) && f.contados !== antes) res[f.nombre] = { antes: antes, ahora: f.contados };
     });
     return res;
   }

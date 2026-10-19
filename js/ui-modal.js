@@ -446,15 +446,20 @@ function etiquetaCambioConteo_(cambio) {
 }
 
 /* ---------------- CAMIONES DE LA CARGA ----------------
- * camiones = [{ matricula, remolque, tiendas: ['NOMBRE TIENDA', ...] }] o
- * null/[] (sin camiones: todo como antes). Con un solo camión todas las
- * tiendas van en él aunque no estén en "tiendas". Las tiendas abiertas que
- * no estén en ningún camión salen en "SIN CAMIÓN ASIGNADO" y las cerradas,
- * al final (igual que en el email a la agencia). */
+ * camiones = [{ matricula, remolque, tiendas: ['NOMBRE TIENDA', ...],
+ *               parciales: { 'NOMBRE TIENDA': palets } }] o null/[] (sin
+ * camiones: todo como antes).
+ * - tiendas: las que van ENTERAS en ese camión. Con un solo camión todas
+ *   van en él aunque no estén en la lista.
+ * - parciales: tiendas REPARTIDAS entre varios camiones (opción «Dividir…»):
+ *   cuántos palets de esa tienda van en este camión. Si lo repartido no
+ *   suma lo que se carga, la tienda sale entera en «SIN CAMIÓN ASIGNADO».
+ * Las tiendas abiertas que no estén en ningún camión salen en «SIN CAMIÓN
+ * ASIGNADO» y las cerradas, al final (igual que en el email a la agencia). */
 function camionesValidos_(camiones) {
   return Array.isArray(camiones) ? camiones.filter(function (c) { return c && c.matricula; }) : [];
 }
-/** Nº de camión (0, 1, ...) de una tienda, o -1 si no está en ninguno. */
+/** Nº de camión (0, 1, ...) de una tienda que va entera, o -1 si no está en ninguno. */
 function indiceCamionTienda_(camiones, tienda) {
   if (!camiones || !camiones.length) return -1;
   if (camiones.length === 1) return 0;
@@ -463,6 +468,20 @@ function indiceCamionTienda_(camiones, tienda) {
   }
   return -1;
 }
+/** Reparto de una tienda dividida: [palets camión 1, palets camión 2, ...] o null si va entera. */
+function repartoTienda_(camiones, tienda) {
+  if (!camiones || camiones.length < 2) return null;
+  let hay = false;
+  const r = camiones.map(function (c) {
+    const n = c && c.parciales && Object.prototype.hasOwnProperty.call(c.parciales, tienda) ? (Number(c.parciales[tienda]) || 0) : 0;
+    if (n > 0) hay = true;
+    return n;
+  });
+  return hay ? r : null;
+}
+function sumaReparto_(r) {
+  return (r || []).reduce(function (a, n) { return a + (Number(n) || 0); }, 0);
+}
 /** Texto de la franja: "CAMIÓN 2 · Matrícula 2210 MBX · Remolque R 0973 BFH". */
 function tituloCamionHtml_(camion, idx, n) {
   if (idx < 0) return '<b>SIN CAMIÓN ASIGNADO</b>';
@@ -470,35 +489,52 @@ function tituloCamionHtml_(camion, idx, n) {
     '</b> · Remolque <b>' + escapeHtml(camion.remolque || '—') + '</b>';
 }
 /**
- * Agrupa filas [{cerrada, camion (nº o -1), cargar, sobra}] por camión.
- * Devuelve null si no hay camiones; si no, { n, grupos: [{idx, camion,
- * filas, cargar, sobra}] (los no asignados al final, idx -1), cerradas }.
+ * Agrupa filas [{cerrada, camion (nº o -1), reparto (array o null), cargar,
+ * sobra}] por camión. Devuelve null si no hay camiones; si no, { n, grupos:
+ * [{idx, camion, items, cargar, sobra}] (los no asignados al final, idx -1),
+ * cerradas }. Cada item es { f, cargar, sobra, parte }: parte = null si la
+ * tienda va entera, o { n, de } si es su parte de un reparto (el sobrante
+ * de la tienda se cuenta solo en su primera parte).
  */
 function agruparFilasPorCamion_(filas, camiones) {
   const n = camiones ? camiones.length : 0;
   if (!n) return null;
-  const grupos = camiones.map(function (c, i) { return { idx: i, camion: c, filas: [], cargar: 0, sobra: 0 }; });
-  const sin = { idx: -1, camion: null, filas: [], cargar: 0, sobra: 0 };
+  const grupos = camiones.map(function (c, i) { return { idx: i, camion: c, items: [], cargar: 0, sobra: 0 }; });
+  const sin = { idx: -1, camion: null, items: [], cargar: 0, sobra: 0 };
   const cerradas = [];
+  function meter(g, item) { g.items.push(item); g.cargar += item.cargar; g.sobra += item.sobra; }
   filas.forEach(function (f) {
     if (f.cerrada) { cerradas.push(f); return; }
-    const g = (f.camion >= 0 && f.camion < n) ? grupos[f.camion] : sin;
-    g.filas.push(f);
-    g.cargar += Number(f.cargar) || 0;
-    g.sobra += Number(f.sobra) || 0;
+    const cargar = Number(f.cargar) || 0, sobra = Number(f.sobra) || 0;
+    if (n >= 2 && Array.isArray(f.reparto) && sumaReparto_(f.reparto) === cargar && cargar > 0) {
+      let primera = true;
+      f.reparto.forEach(function (p, k) {
+        p = Number(p) || 0;
+        if (p <= 0 || k >= n) return;
+        meter(grupos[k], { f: f, cargar: p, sobra: primera ? sobra : 0, parte: { n: p, de: cargar } });
+        primera = false;
+      });
+      return;
+    }
+    const enteraEn = (!Array.isArray(f.reparto) && f.camion >= 0 && f.camion < n) ? grupos[f.camion] : sin;
+    meter(enteraEn, { f: f, cargar: cargar, sobra: sobra, parte: null });
   });
-  if (sin.filas.length) grupos.push(sin);
+  if (sin.items.length) grupos.push(sin);
   return { n: n, grupos: grupos, cerradas: cerradas };
+}
+/** "(5 de 10)" para la parte de una tienda repartida. */
+function etiquetaParte_(parte) {
+  return parte ? ' <span class="parte-reparto">(' + parte.n + ' de ' + parte.de + ')</span>' : '';
 }
 
 /**
  * Tabla de solo lectura TIENDA / A CARGAR / SOBRANTE.
- * lista: [{tienda, contados, cargar, cerrada, camion (opcional)}]
+ * lista: [{tienda, contados, cargar, cerrada, camion (opcional), reparto (opcional)}]
  * revisar: { 'NOMBRE TIENDA': {antes, ahora} } (opcional)
  * marcarAjustadas: añade la etiqueta "Ajustada" donde cargar ≠ contados.
  * camiones (opcional): agrupa las tiendas por camión, con su matrícula y
  *   remolque y (con 2 o más camiones) el subtotal de cada uno. Si una fila
- *   trae "camion" se usa ese nº; si no, se busca la tienda en los camiones.
+ *   trae "camion"/"reparto" se usan; si no, se buscan en los camiones.
  * Devuelve { html, filas (para imprimir), totContados, totCargar, totSobra, camiones }.
  */
 function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
@@ -507,34 +543,38 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
   let totContados = 0, totCargar = 0, totSobra = 0;
   const filas = lista.map(function (t) {
     const camion = typeof t.camion === 'number' ? t.camion : indiceCamionTienda_(camiones, t.tienda);
-    if (t.cerrada) {
-      return { html: '<tr class="cerrada"><td class="tienda">' + escapeHtml(t.tienda) + '</td><td class="num" colspan="2">CERRADA</td></tr>', tienda: t.tienda, cerrada: true, camion: camion };
-    }
+    const reparto = t.reparto !== undefined ? t.reparto : repartoTienda_(camiones, t.tienda);
+    if (t.cerrada) return { tienda: t.tienda, cerrada: true, camion: camion, reparto: null };
     const contados = Number(t.contados) || 0;
     const cargar = Number(t.cargar) || 0;
     const sobra = Math.max(0, contados - cargar);
     const cambio = revisar[t.tienda];
-    const ajustada = marcarAjustadas && cargar !== contados && !cambio;
     totContados += contados; totCargar += cargar; totSobra += sobra;
     return {
-      html: '<tr class="' + (cambio ? 'revisar' : (ajustada ? 'ajustada' : '')) + '"><td class="tienda">' + escapeHtml(t.tienda) + (cambio ? etiquetaCambioConteo_(cambio) : '') + '</td>' +
-        '<td class="num cargar' + (cambio ? ' revisar' : '') + '">' + cargar + '</td>' +
-        '<td class="num sobra' + (sobra ? '' : ' cero') + '">' + (sobra || '—') + '</td></tr>',
-      tienda: t.tienda, cargar: cargar, sobra: sobra, camion: camion
+      tienda: t.tienda, cargar: cargar, sobra: sobra, camion: camion, reparto: reparto,
+      cambio: cambio, ajustada: marcarAjustadas && cargar !== contados && !cambio
     };
   });
+  function filaHtml(f, cargar, sobra, parte) {
+    if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(f.tienda) + '</td><td class="num" colspan="2">CERRADA</td></tr>';
+    if (cargar === undefined) { cargar = f.cargar; sobra = f.sobra; }
+    return '<tr class="' + (f.cambio ? 'revisar' : (f.ajustada ? 'ajustada' : '')) + '"><td class="tienda">' + escapeHtml(f.tienda) +
+        etiquetaParte_(parte) + (f.cambio ? etiquetaCambioConteo_(f.cambio) : '') + '</td>' +
+      '<td class="num cargar' + (f.cambio ? ' revisar' : '') + '">' + cargar + '</td>' +
+      '<td class="num sobra' + (sobra ? '' : ' cero') + '">' + (sobra || '—') + '</td></tr>';
+  }
   const agr = agruparFilasPorCamion_(filas, camiones);
   let cuerpo;
   if (!agr) {
-    cuerpo = filas.map(function (f) { return f.html; }).join('');
+    cuerpo = filas.map(function (f) { return filaHtml(f); }).join('');
   } else {
     cuerpo = agr.grupos.map(function (g) {
       return '<tr class="fila-camion' + (g.idx < 0 ? ' sin-camion' : '') + '"><td colspan="3">' + tituloCamionHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
-        g.filas.map(function (f) { return f.html; }).join('') +
+        g.items.map(function (it) { return filaHtml(it.f, it.cargar, it.sobra, it.parte); }).join('') +
         (agr.n >= 2 && g.idx >= 0
           ? '<tr class="fila-subtotal-camion"><td>Subtotal camión ' + (g.idx + 1) + '</td><td class="num">' + g.cargar + '</td><td class="num">' + (g.sobra || '—') + '</td></tr>'
           : '');
-    }).join('') + agr.cerradas.map(function (f) { return f.html; }).join('');
+    }).join('') + agr.cerradas.map(function (f) { return filaHtml(f); }).join('');
   }
   const html = '<div class="modal-tabla-scroll"><table class="modal-lista-tabla">' +
     '<thead><tr><th>Tienda</th><th class="num">A cargar</th><th class="num">Sobrante</th></tr></thead>' +
@@ -608,10 +648,11 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
  *   titulo, fechaTexto,
  *   filas: [{ nombre, contados, limite, otros, cerrada, cargar, cambio: {antes, ahora}|null }],
  *   carga: carga vigente (para decir quién la ajustó) o null,
- *   camiones: camiones guardados [{matricula, remolque, tiendas}] o null,
+ *   camiones: camiones guardados [{matricula, remolque, tiendas, parciales}] o null,
  *   tipoEnvio: 'prevision'|'definitivo'|null (si se abre en mitad de un envío),
  *   onGuardar: function(cargas, camiones) con cargas = { 'NOMBRE TIENDA': palets }
- *     y camiones = [{matricula, remolque, tiendas: ['NOMBRE TIENDA', ...]}] ([] = sin camiones),
+ *     y camiones = [{matricula, remolque, tiendas: ['NOMBRE TIENDA', ...],
+ *       parciales: {'NOMBRE TIENDA': palets}}] ([] = sin camiones),
  *   onCancelar: opcional,
  *   desdeLapiz: true si se ha entrado pulsando el lápiz de la vista de
  *     solo lectura: lápiz marcado, etiqueta "Modo edición" y sin Imprimir
@@ -622,6 +663,9 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
  * cada camión. Con 2 o más camiones aparece la columna «Camión» para decir
  * en cuál va cada tienda, y todas las tiendas abiertas tienen que tener uno
  * para poder guardar. Con un solo camión, todas van en él.
+ * «Dividir…» en ese desplegable reparte una tienda entre varios camiones:
+ * debajo de la fila sale una casilla por camión y lo repartido tiene que
+ * sumar lo que se carga para poder guardar.
  */
 function mostrarModalAjustarCarga(datos) {
   const custom = prepararModalCarga_();
@@ -632,10 +676,16 @@ function mostrarModalAjustarCarga(datos) {
   const etiquetaTipo = datos.tipoEnvio === 'definitivo' ? 'Definitivo' : 'Previsión';
 
   // Estado de los camiones: lista de {matricula, remolque} y, por fila, el
-  // nº de camión (0, 1, ...) o -1 si todavía no tiene.
+  // nº de camión (0, 1, ...), -1 si todavía no tiene o DIVIDIR si está
+  // repartida entre varios (reparto[i] = palets en cada camión).
+  const DIVIDIR = -2;
   const guardados = camionesValidos_(datos.camiones);
   const camiones = guardados.map(function (c) { return { matricula: c.matricula || '', remolque: c.remolque || '' }; });
-  const asignacion = filasDatos.map(function (f) { return f.cerrada ? -1 : indiceCamionTienda_(guardados, f.nombre); });
+  const reparto = filasDatos.map(function (f) { return f.cerrada ? null : repartoTienda_(guardados, f.nombre); });
+  const asignacion = filasDatos.map(function (f, i) {
+    if (f.cerrada) return -1;
+    return reparto[i] ? DIVIDIR : indiceCamionTienda_(guardados, f.nombre);
+  });
 
   const filas = filasDatos.map(function (f, i) {
     if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="5">CERRADA</td></tr>';
@@ -708,11 +758,16 @@ function mostrarModalAjustarCarga(datos) {
   function normalizarMatricula(t) {
     return String(t || '').toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 15);
   }
-  // Nº de camión efectivo de una fila: con un solo camión, el 0.
+  // Nº de camión efectivo de una fila: con un solo camión, el 0; DIVIDIR
+  // si está repartida.
   function camionDeFila(i) {
     if (filasDatos[i].cerrada || !camiones.length) return -1;
     if (camiones.length === 1) return 0;
     return asignacion[i];
+  }
+  function cargaFila(i) {
+    const inp = custom.querySelector('input[data-i="' + i + '"]');
+    return inp ? valor(inp) : 0;
   }
 
   // Tarjetas de los camiones (matrícula, remolque, quitar) y desplegables
@@ -743,15 +798,56 @@ function mostrarModalAjustarCarga(datos) {
     });
     tabla.classList.toggle('con-camiones', camiones.length >= 2);
     pintarOpciones();
+    pintarRepartos();
   }
   function pintarOpciones() {
     const opciones = '<option value="-1">—</option>' + camiones.map(function (c, k) {
       return '<option value="' + k + '">' + (k + 1) + (c.matricula ? ' · ' + escapeHtml(c.matricula) : '') + '</option>';
-    }).join('');
+    }).join('') + '<option value="' + DIVIDIR + '">Dividir…</option>';
     selects.forEach(function (s) {
       const i = Number(s.getAttribute('data-c'));
       s.innerHTML = opciones;
-      s.value = String(asignacion[i] >= 0 && asignacion[i] < camiones.length ? asignacion[i] : -1);
+      const a = asignacion[i];
+      s.value = String(a === DIVIDIR || (a >= 0 && a < camiones.length) ? a : -1);
+    });
+    // Las etiquetas de las casillas del reparto llevan la matrícula.
+    custom.querySelectorAll('.modal-reparto-campo > span[data-rl]').forEach(function (sp) {
+      const k = Number(sp.getAttribute('data-rl'));
+      if (camiones[k]) sp.textContent = 'Camión ' + (k + 1) + (camiones[k].matricula ? ' · ' + camiones[k].matricula : '');
+    });
+  }
+  // Fila extra debajo de cada tienda dividida: una casilla de palets por camión.
+  function pintarRepartos() {
+    custom.querySelectorAll('tr.fila-reparto').forEach(function (tr) { tr.remove(); });
+    filasDatos.forEach(function (f, i) {
+      if (camionDeFila(i) !== DIVIDIR) return;
+      const fila = custom.querySelector('tr[data-fila="' + i + '"]');
+      if (!fila) return;
+      const tr = document.createElement('tr');
+      tr.className = 'fila-reparto';
+      tr.setAttribute('data-r', i);
+      tr.innerHTML = '<td colspan="6"><div class="modal-reparto">' +
+        camiones.map(function (c, k) {
+          return '<label class="modal-reparto-campo"><span data-rl="' + k + '">Camión ' + (k + 1) + (c.matricula ? ' · ' + escapeHtml(c.matricula) : '') + '</span>' +
+            '<input type="number" min="0" step="1" inputmode="numeric" data-ri="' + i + '" data-rk="' + k + '" value="' + (reparto[i][k] || 0) + '"></label>';
+        }).join('') +
+        '<span class="modal-reparto-estado" data-re="' + i + '"></span></div></td>';
+      fila.insertAdjacentElement('afterend', tr);
+      tr.querySelectorAll('input').forEach(function (inp) {
+        inp.oninput = function () {
+          const v = parseInt(inp.value, 10);
+          const k = Number(inp.getAttribute('data-rk'));
+          reparto[i][k] = isNaN(v) || v < 0 ? 0 : v;
+          // Con 2 camiones, el otro se queda con lo que falta.
+          if (camiones.length === 2) {
+            const otro = 1 - k;
+            reparto[i][otro] = Math.max(0, cargaFila(i) - reparto[i][k]);
+            const inpOtro = tr.querySelector('input[data-rk="' + otro + '"]');
+            if (inpOtro) inpOtro.value = reparto[i][otro];
+          }
+          refrescar();
+        };
+      });
     });
   }
   function anadirCamion() {
@@ -759,6 +855,7 @@ function mostrarModalAjustarCarga(datos) {
     // Al pasar de 1 a 2 camiones, las tiendas se quedan en el camión 1.
     if (camiones.length === 1) filasDatos.forEach(function (f, i) { if (!f.cerrada) asignacion[i] = 0; });
     camiones.push({ matricula: '', remolque: '' });
+    reparto.forEach(function (r) { if (r) r.push(0); });
     pintarCamiones();
     refrescar();
     const nuevo = listaCamiones.querySelector('input.cam-matricula[data-k="' + (camiones.length - 1) + '"]');
@@ -766,10 +863,17 @@ function mostrarModalAjustarCarga(datos) {
   }
   function quitarCamion(k) {
     camiones.splice(k, 1);
-    // Las tiendas de ese camión se quedan sin camión; las de los siguientes bajan un número.
+    // Las tiendas de ese camión se quedan sin camión; las de los siguientes
+    // bajan un número. En las divididas se quita la casilla de ese camión
+    // (si ya no cuadra, sale en rojo). Con menos de 2 camiones no hay reparto.
     asignacion.forEach(function (a, i) {
       if (a === k) asignacion[i] = -1;
       else if (a > k) asignacion[i] = a - 1;
+    });
+    reparto.forEach(function (r, i) {
+      if (!r) return;
+      r.splice(k, 1);
+      if (camiones.length < 2) { reparto[i] = null; asignacion[i] = 0; }
     });
     pintarCamiones();
     refrescar();
@@ -778,7 +882,7 @@ function mostrarModalAjustarCarga(datos) {
   function refrescar() {
     let totContados = 0, totCargar = 0, pasadas = 0, vacias = 0;
     const totCamion = camiones.map(function () { return { palets: 0, tiendas: 0 }; });
-    let sinCamion = 0;
+    let sinCamion = 0, descuadres = 0;
     inputs.forEach(function (inp) {
       const i = Number(inp.getAttribute('data-i'));
       const f = filasDatos[i];
@@ -791,7 +895,22 @@ function mostrarModalAjustarCarga(datos) {
       if (vacio) vacias++;
       const cam = camionDeFila(i);
       if (cam >= 0) { totCamion[cam].palets += v; totCamion[cam].tiendas++; }
-      const falta = camiones.length >= 2 && cam < 0;
+      if (cam === DIVIDIR) {
+        reparto[i].forEach(function (n, k) {
+          if (n > 0 && totCamion[k]) { totCamion[k].palets += n; totCamion[k].tiendas++; }
+        });
+        const suma = sumaReparto_(reparto[i]);
+        const cuadra = suma === v;
+        if (!cuadra) descuadres++;
+        const est = custom.querySelector('[data-re="' + i + '"]');
+        if (est) {
+          est.textContent = cuadra ? 'Repartidos ' + suma + ' de ' + v : 'Repartidos ' + suma + ' de ' + v + (suma < v ? ' · faltan ' + (v - suma) : ' · sobran ' + (suma - v));
+          est.classList.toggle('mal', !cuadra);
+        }
+        const trR = custom.querySelector('tr[data-r="' + i + '"]');
+        if (trR) trR.classList.toggle('mal', !cuadra);
+      }
+      const falta = camiones.length >= 2 && cam === -1;
       if (falta) sinCamion++;
       const sel = custom.querySelector('select.sel-camion[data-c="' + i + '"]');
       if (sel) sel.classList.toggle('falta', falta);
@@ -826,10 +945,11 @@ function mostrarModalAjustarCarga(datos) {
     const avisos = [];
     if (sinMatricula) avisos.push(sinMatricula === 1 ? 'Falta la matrícula de un camión' : 'Falta la matrícula de ' + sinMatricula + ' camiones');
     if (sinCamion) avisos.push(sinCamion === 1 ? '1 tienda sin camión' : sinCamion + ' tiendas sin camión');
+    if (descuadres) avisos.push(descuadres === 1 ? '1 tienda dividida no cuadra' : descuadres + ' tiendas divididas no cuadran');
     avisoCamiones.textContent = avisos.join(' · ');
     avisoCamiones.style.display = avisos.length ? '' : 'none';
     custom.querySelector('.modal-camiones-add').style.display = camiones.length >= 10 ? 'none' : '';
-    btnOk.disabled = vacias > 0 || sinMatricula > 0 || sinCamion > 0;
+    btnOk.disabled = vacias > 0 || sinMatricula > 0 || sinCamion > 0 || descuadres > 0;
     if (btnImprimir) btnImprimir.disabled = vacias > 0;
   }
 
@@ -843,8 +963,24 @@ function mostrarModalAjustarCarga(datos) {
   inputs.forEach(function (inp) { inp.oninput = refrescar; });
   selects.forEach(function (s) {
     s.onchange = function () {
-      asignacion[Number(s.getAttribute('data-c'))] = Number(s.value);
+      const i = Number(s.getAttribute('data-c'));
+      const nuevo = Number(s.value);
+      if (nuevo === DIVIDIR && asignacion[i] !== DIVIDIR) {
+        // Al dividir, de entrada todo va en el camión que tenía (o el 1):
+        // solo hay que pasar al otro los palets que van allí.
+        const r = camiones.map(function () { return 0; });
+        r[asignacion[i] >= 0 && asignacion[i] < camiones.length ? asignacion[i] : 0] = cargaFila(i);
+        reparto[i] = r;
+      } else if (nuevo !== DIVIDIR) {
+        reparto[i] = null;
+      }
+      asignacion[i] = nuevo;
+      pintarRepartos();
       refrescar();
+      if (nuevo === DIVIDIR) {
+        const otra = custom.querySelector('input[data-ri="' + i + '"][data-rk="' + (reparto[i].indexOf(cargaFila(i)) === 0 ? 1 : 0) + '"]');
+        if (otra) { otra.focus(); otra.select(); }
+      }
     };
   });
   custom.querySelector('.modal-camiones-add').onclick = anadirCamion;
@@ -861,13 +997,19 @@ function mostrarModalAjustarCarga(datos) {
   }
   document.getElementById('modal-cancel-btn').onclick = cancelar;
   if (datos.desdeLapiz) ponerLapizModal_(true, cancelar);
-  // Camiones tal y como se guardan: matrícula, remolque y sus tiendas.
+  // Camiones tal y como se guardan: matrícula, remolque, las tiendas que
+  // van enteras y los palets de las tiendas divididas.
   function camionesParaGuardar() {
     return camiones.map(function (c, k) {
+      const parciales = {};
+      filasDatos.forEach(function (f, i) {
+        if (camionDeFila(i) === DIVIDIR && reparto[i][k] > 0) parciales[f.nombre] = reparto[i][k];
+      });
       return {
         matricula: c.matricula.trim(),
         remolque: c.remolque.trim(),
-        tiendas: filasDatos.filter(function (f, i) { return camionDeFila(i) === k; }).map(function (f) { return f.nombre; })
+        tiendas: filasDatos.filter(function (f, i) { return camionDeFila(i) === k; }).map(function (f) { return f.nombre; }),
+        parciales: parciales
       };
     });
   }
@@ -878,7 +1020,9 @@ function mostrarModalAjustarCarga(datos) {
       const nombre = quitarCodigoTienda(f.nombre);
       if (f.cerrada) return { tienda: nombre, cerrada: true };
       const inp = custom.querySelector('input[data-i="' + i + '"]');
-      return { tienda: nombre, contados: f.contados, cargar: inp ? valor(inp) : f.cargar, cerrada: false, camion: camionDeFila(i) };
+      const cam = camionDeFila(i);
+      return { tienda: nombre, contados: f.contados, cargar: inp ? valor(inp) : f.cargar, cerrada: false,
+        camion: cam, reparto: cam === DIVIDIR ? reparto[i].slice() : null };
     });
     const tabla = tablaCargaFija_(lista, null, false, camiones.filter(function (c) { return c.matricula.trim(); }).length === camiones.length ? camiones : null);
     imprimirListaCarga_(datos.titulo, datos.fechaTexto, enEnvio ? etiquetaTipo : 'Carga ajustada',
@@ -896,6 +1040,8 @@ function mostrarModalAjustarCarga(datos) {
     if (sinMatricula) { sinMatricula.focus(); return; }
     const sinCamion = custom.querySelector('select.sel-camion.falta');
     if (sinCamion) { sinCamion.focus(); return; }
+    const descuadre = custom.querySelector('tr.fila-reparto.mal input');
+    if (descuadre) { descuadre.focus(); return; }
     datos.onGuardar(cargas, camionesParaGuardar());
   };
 }
@@ -958,25 +1104,27 @@ function mostrarModalCargaPendiente(datos) {
  *  la hoja de impresión del día ni el resto de la pantalla.
  *  camiones (opcional): todo en una hoja, agrupado por camión con su
  *  matrícula, remolque y (con 2 o más) subtotal. Cada fila trae su nº de
- *  camión en f.camion (ver tablaCargaFija_). */
+ *  camión en f.camion, o su reparto en f.reparto (ver tablaCargaFija_). */
 function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
   const celda = 'padding:6px 12px;border:1px solid #999;';
   camiones = camionesValidos_(camiones);
-  function filaHtml(f) {
-    return f.cerrada
-      ? '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" colspan="2" style="' + celda + 'font-weight:bold;">CERRADA</td></tr>'
-      : '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" style="' + celda + 'font-weight:bold;">' + f.cargar + '</td><td class="n" style="' + celda + '">' + (f.sobra || '') + '</td></tr>';
+  function filaHtml(f, cargar, sobra, parte) {
+    if (f.cerrada) return '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" colspan="2" style="' + celda + 'font-weight:bold;">CERRADA</td></tr>';
+    if (cargar === undefined) { cargar = f.cargar; sobra = f.sobra; }
+    return '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) +
+        (parte ? ' <span style="font-size:13px;color:#555;">(' + parte.n + ' de ' + parte.de + ')</span>' : '') + '</td>' +
+      '<td class="n" style="' + celda + 'font-weight:bold;">' + cargar + '</td><td class="n" style="' + celda + '">' + (sobra || '') + '</td></tr>';
   }
   const agr = agruparFilasPorCamion_(filas, camiones);
   const cuerpo = !agr
-    ? filas.map(filaHtml).join('')
+    ? filas.map(function (f) { return filaHtml(f); }).join('')
     : agr.grupos.map(function (g) {
         return '<tr><td colspan="3" style="' + celda + 'background:' + (g.idx < 0 ? '#f3d9a8' : '#d9d9d9') + ';font-size:14px;">' + tituloCamionHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
-          g.filas.map(filaHtml).join('') +
+          g.items.map(function (it) { return filaHtml(it.f, it.cargar, it.sobra, it.parte); }).join('') +
           (agr.n >= 2 && g.idx >= 0
             ? '<tr><td style="' + celda + 'background:#f4f4f4;text-align:right;font-size:13px;">Subtotal camión ' + (g.idx + 1) + '</td><td class="n" style="' + celda + 'background:#f4f4f4;font-weight:bold;">' + g.cargar + '</td><td class="n" style="' + celda + 'background:#f4f4f4;">' + (g.sobra || '') + '</td></tr>'
             : '');
-      }).join('') + agr.cerradas.map(filaHtml).join('');
+      }).join('') + agr.cerradas.map(function (f) { return filaHtml(f); }).join('');
   const html =
     '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Lista de carga</title>' +
     '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 16px;color:#444;font-size:13px}' +
