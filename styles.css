@@ -2314,6 +2314,40 @@
   .modal-tabla-scroll thead th { position: sticky; top: 0; z-index: 1; background: #fff; padding-top: 9px; box-shadow: inset 0 -1px 0 var(--line); }
   .modal-tabla-scroll tfoot td { position: sticky; bottom: 0; z-index: 1; }
   .modal-tabla-scroll .modal-lista-tabla tr:last-child td, .modal-tabla-scroll .modal-palets-tabla tr:last-child td { border-bottom: none; }
+  /* Modales de carga en dos columnas (ver columnasCarga_ en ui-modal.js):
+     izquierda tarjetas, avisos y camiones; derecha la tabla de tiendas.
+     Cada columna se desplaza por su cuenta; cabecera y botones quietos. */
+  .modal-box:has(> #modal-custom > .modal-carga-cols) { display: flex; flex-direction: column; overflow: hidden; }
+  .modal-box:has(> #modal-custom > .modal-carga-cols) > #modal-custom { flex: 1 1 auto; min-height: 0; }
+  .modal-box:has(> #modal-custom > .modal-carga-cols) > .modal-actions { flex-shrink: 0; }
+  #modal-custom > .modal-carga-cols { flex: 1 1 auto; min-height: 0; }
+  .modal-carga-cols { display: flex; flex-direction: column; gap: 0; }
+  .modal-carga-izq, .modal-carga-der { min-width: 0; }
+  .modal-carga-der > .modal-tabla-scroll { border: 1px solid var(--line); border-radius: 10px; }
+  .modal-carga-izq > :last-child { margin-bottom: 0; }
+  @media (min-width: 900px) {
+    .modal-box.ancho:has(> #modal-custom > .modal-carga-cols) { max-width: 1120px; width: calc(100vw - 48px); }
+    .modal-carga-cols {
+      display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr); gap: 22px;
+    }
+    .modal-carga-izq { overflow-y: auto; padding-right: 2px; }
+    .modal-carga-der { display: flex; flex-direction: column; min-height: 0; }
+    .modal-carga-der > .modal-tabla-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+    /* En la columna estrecha, las 3 tarjetas más compactas. */
+    .modal-carga-izq .modal-envio-stats { gap: 8px; }
+    .modal-carga-izq .modal-envio-stat { padding: 11px 12px; }
+    .modal-carga-izq .modal-envio-stat .lbl { font-size: 9.5px; }
+    .modal-carga-izq .modal-camion-campo input { width: 112px; }
+    .modal-carga-cols .modal-carga-ajuste.con-camiones .col-camion { width: 128px; }
+    .modal-carga-cols .modal-carga-ajuste select.sel-camion { max-width: 128px; }
+  }
+  @media (max-width: 899px) {
+    /* Pantalla estrecha: todo apilado y se desplaza junto (sin que la
+       tabla quede aplastada debajo de los camiones). */
+    .modal-carga-cols { overflow-y: auto; }
+    .modal-carga-izq { margin-bottom: 4px; }
+  }
   /* Filas compactas en "Ajustar carga" (una fila de altura por tienda). */
   .modal-carga-ajuste td { padding: 5px 8px; }
   .modal-carga-ajuste td.tienda { white-space: normal; }
