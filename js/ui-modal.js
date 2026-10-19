@@ -347,6 +347,7 @@ function htmlBotonListaCarga_(seccion, revisar) {
 }
 
 const ICONO_CAMION_20_ = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>';
+const ICONO_CAMION_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>';
 const ICONO_AVISO_20_ = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
 const ICONO_AVISO_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
 const ICONO_CHECK_14_ = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
@@ -437,19 +438,70 @@ function etiquetaCambioConteo_(cambio) {
   return ' <span class="modal-carga-cambio">Conteo cambiado: ' + cambio.antes + ' → ' + cambio.ahora + '</span>';
 }
 
+/* ---------------- CAMIONES DE LA CARGA ----------------
+ * camiones = [{ matricula, remolque, tiendas: ['NOMBRE TIENDA', ...] }] o
+ * null/[] (sin camiones: todo como antes). Con un solo camión todas las
+ * tiendas van en él aunque no estén en "tiendas". Las tiendas abiertas que
+ * no estén en ningún camión salen en "SIN CAMIÓN ASIGNADO" y las cerradas,
+ * al final (igual que en el email a la agencia). */
+function camionesValidos_(camiones) {
+  return Array.isArray(camiones) ? camiones.filter(function (c) { return c && c.matricula; }) : [];
+}
+/** Nº de camión (0, 1, ...) de una tienda, o -1 si no está en ninguno. */
+function indiceCamionTienda_(camiones, tienda) {
+  if (!camiones || !camiones.length) return -1;
+  if (camiones.length === 1) return 0;
+  for (let i = 0; i < camiones.length; i++) {
+    if (Array.isArray(camiones[i].tiendas) && camiones[i].tiendas.indexOf(tienda) !== -1) return i;
+  }
+  return -1;
+}
+/** Texto de la franja: "CAMIÓN 2 · Matrícula 2210 MBX · Remolque R 0973 BFH". */
+function tituloCamionHtml_(camion, idx, n) {
+  if (idx < 0) return '<b>SIN CAMIÓN ASIGNADO</b>';
+  return '<b>CAMIÓN' + (n >= 2 ? ' ' + (idx + 1) : '') + '</b> · Matrícula <b>' + escapeHtml(camion.matricula || '') +
+    '</b> · Remolque <b>' + escapeHtml(camion.remolque || '—') + '</b>';
+}
+/**
+ * Agrupa filas [{cerrada, camion (nº o -1), cargar, sobra}] por camión.
+ * Devuelve null si no hay camiones; si no, { n, grupos: [{idx, camion,
+ * filas, cargar, sobra}] (los no asignados al final, idx -1), cerradas }.
+ */
+function agruparFilasPorCamion_(filas, camiones) {
+  const n = camiones ? camiones.length : 0;
+  if (!n) return null;
+  const grupos = camiones.map(function (c, i) { return { idx: i, camion: c, filas: [], cargar: 0, sobra: 0 }; });
+  const sin = { idx: -1, camion: null, filas: [], cargar: 0, sobra: 0 };
+  const cerradas = [];
+  filas.forEach(function (f) {
+    if (f.cerrada) { cerradas.push(f); return; }
+    const g = (f.camion >= 0 && f.camion < n) ? grupos[f.camion] : sin;
+    g.filas.push(f);
+    g.cargar += Number(f.cargar) || 0;
+    g.sobra += Number(f.sobra) || 0;
+  });
+  if (sin.filas.length) grupos.push(sin);
+  return { n: n, grupos: grupos, cerradas: cerradas };
+}
+
 /**
  * Tabla de solo lectura TIENDA / A CARGAR / SOBRANTE.
- * lista: [{tienda, contados, cargar, cerrada}]
+ * lista: [{tienda, contados, cargar, cerrada, camion (opcional)}]
  * revisar: { 'NOMBRE TIENDA': {antes, ahora} } (opcional)
  * marcarAjustadas: añade la etiqueta "Ajustada" donde cargar ≠ contados.
- * Devuelve { html, filas (para imprimir), totContados, totCargar, totSobra }.
+ * camiones (opcional): agrupa las tiendas por camión, con su matrícula y
+ *   remolque y (con 2 o más camiones) el subtotal de cada uno. Si una fila
+ *   trae "camion" se usa ese nº; si no, se busca la tienda en los camiones.
+ * Devuelve { html, filas (para imprimir), totContados, totCargar, totSobra, camiones }.
  */
-function tablaCargaFija_(lista, revisar, marcarAjustadas) {
+function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
   revisar = revisar || {};
+  camiones = camionesValidos_(camiones);
   let totContados = 0, totCargar = 0, totSobra = 0;
   const filas = lista.map(function (t) {
+    const camion = typeof t.camion === 'number' ? t.camion : indiceCamionTienda_(camiones, t.tienda);
     if (t.cerrada) {
-      return { html: '<tr class="cerrada"><td class="tienda">' + escapeHtml(t.tienda) + '</td><td class="num" colspan="2">CERRADA</td></tr>', tienda: t.tienda, cerrada: true };
+      return { html: '<tr class="cerrada"><td class="tienda">' + escapeHtml(t.tienda) + '</td><td class="num" colspan="2">CERRADA</td></tr>', tienda: t.tienda, cerrada: true, camion: camion };
     }
     const contados = Number(t.contados) || 0;
     const cargar = Number(t.cargar) || 0;
@@ -461,22 +513,35 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas) {
       html: '<tr class="' + (cambio ? 'revisar' : (ajustada ? 'ajustada' : '')) + '"><td class="tienda">' + escapeHtml(t.tienda) + (cambio ? etiquetaCambioConteo_(cambio) : '') + '</td>' +
         '<td class="num cargar' + (cambio ? ' revisar' : '') + '">' + cargar + '</td>' +
         '<td class="num sobra' + (sobra ? '' : ' cero') + '">' + (sobra || '—') + '</td></tr>',
-      tienda: t.tienda, cargar: cargar, sobra: sobra
+      tienda: t.tienda, cargar: cargar, sobra: sobra, camion: camion
     };
   });
+  const agr = agruparFilasPorCamion_(filas, camiones);
+  let cuerpo;
+  if (!agr) {
+    cuerpo = filas.map(function (f) { return f.html; }).join('');
+  } else {
+    cuerpo = agr.grupos.map(function (g) {
+      return '<tr class="fila-camion' + (g.idx < 0 ? ' sin-camion' : '') + '"><td colspan="3">' + tituloCamionHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
+        g.filas.map(function (f) { return f.html; }).join('') +
+        (agr.n >= 2 && g.idx >= 0
+          ? '<tr class="fila-subtotal-camion"><td>Subtotal camión ' + (g.idx + 1) + '</td><td class="num">' + g.cargar + '</td><td class="num">' + (g.sobra || '—') + '</td></tr>'
+          : '');
+    }).join('') + agr.cerradas.map(function (f) { return f.html; }).join('');
+  }
   const html = '<div class="modal-tabla-scroll"><table class="modal-lista-tabla">' +
     '<thead><tr><th>Tienda</th><th class="num">A cargar</th><th class="num">Sobrante</th></tr></thead>' +
-    '<tbody>' + filas.map(function (f) { return f.html; }).join('') + '</tbody>' +
-    '<tfoot><tr><td>Total palets</td><td class="num">' + totCargar + '</td><td class="num">' + totSobra + '</td></tr></tfoot>' +
+    '<tbody>' + cuerpo + '</tbody>' +
+    '<tfoot><tr><td>Total palets' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : '') + '</td><td class="num">' + totCargar + '</td><td class="num">' + totSobra + '</td></tr></tfoot>' +
   '</table></div>';
-  return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra };
+  return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra, camiones: camiones };
 }
 
 
 /**
  * Modal "Lista de carga" (camioncito): TIENDA, TOTAL a cargar y SOBRANTE.
  *
- * info: { tipo: 'ajuste'|'prevision'|'definitivo', hora, enviadoPor, lista } o null
+ * info: { tipo: 'ajuste'|'prevision'|'definitivo', hora, enviadoPor, lista, camiones } o null
  * extra (opcional, servidor nuevo):
  *   revisar:     { 'NOMBRE TIENDA': {antes, ahora} } tiendas cuyo conteo cambió
  *   soloLectura: muestra la banda "Solo lectura" (usuario sin permiso)
@@ -499,7 +564,7 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
     cuerpo = estadoCargaHtml_({ origen: tipo, hora: info.hora, por: info.enviadoPor }) +
       '<p class="modal-envio-nota">Este envío se hizo antes de que la app guardase la lista de carga, así que no hay lista para él. Aparecerá en los próximos envíos.</p>';
   } else {
-    tabla = tablaCargaFija_(lista, revisar, tipo === 'ajuste');
+    tabla = tablaCargaFija_(lista, revisar, tipo === 'ajuste', info.camiones);
     // tipo 'contado': aún no hay carga guardada, no hay hora ni autor.
     cuerpo = estadoCargaHtml_({ origen: tipo, hora: info.hora, por: info.enviadoPor }) +
       (hayRevisar
@@ -523,7 +588,7 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   if (tabla) {
     const tipoTexto = tipo === 'definitivo' ? 'Definitivo' : (tipo === 'ajuste' ? 'Carga ajustada' : (tipo === 'contado' ? 'Lo contado' : 'Previsión'));
     document.getElementById('modal-confirm-btn').onclick = function () {
-      imprimirListaCarga_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra);
+      imprimirListaCarga_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra, tabla.camiones);
     };
   }
 }
@@ -535,13 +600,20 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
  *   titulo, fechaTexto,
  *   filas: [{ nombre, contados, limite, otros, cerrada, cargar, cambio: {antes, ahora}|null }],
  *   carga: carga vigente (para decir quién la ajustó) o null,
+ *   camiones: camiones guardados [{matricula, remolque, tiendas}] o null,
  *   tipoEnvio: 'prevision'|'definitivo'|null (si se abre en mitad de un envío),
- *   onGuardar: function(cargas) con cargas = { 'NOMBRE TIENDA': palets },
+ *   onGuardar: function(cargas, camiones) con cargas = { 'NOMBRE TIENDA': palets }
+ *     y camiones = [{matricula, remolque, tiendas: ['NOMBRE TIENDA', ...]}] ([] = sin camiones),
  *   onCancelar: opcional,
  *   desdeLapiz: true si se ha entrado pulsando el lápiz de la vista de
  *     solo lectura: lápiz marcado, etiqueta "Modo edición" y sin Imprimir
  *     (Cancelar o el lápiz vuelven a la vista de solo lectura vía onCancelar)
  * }
+ *
+ * Camiones (opcional): matrícula (obligatoria) y remolque (opcional) de
+ * cada camión. Con 2 o más camiones aparece la columna «Camión» para decir
+ * en cuál va cada tienda, y todas las tiendas abiertas tienen que tener uno
+ * para poder guardar. Con un solo camión, todas van en él.
  */
 function mostrarModalAjustarCarga(datos) {
   const custom = prepararModalCarga_();
@@ -551,8 +623,14 @@ function mostrarModalAjustarCarga(datos) {
   const enEnvio = !!datos.tipoEnvio;
   const etiquetaTipo = datos.tipoEnvio === 'definitivo' ? 'Definitivo' : 'Previsión';
 
+  // Estado de los camiones: lista de {matricula, remolque} y, por fila, el
+  // nº de camión (0, 1, ...) o -1 si todavía no tiene.
+  const guardados = camionesValidos_(datos.camiones);
+  const camiones = guardados.map(function (c) { return { matricula: c.matricula || '', remolque: c.remolque || '' }; });
+  const asignacion = filasDatos.map(function (f) { return f.cerrada ? -1 : indiceCamionTienda_(guardados, f.nombre); });
+
   const filas = filasDatos.map(function (f, i) {
-    if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="4">CERRADA</td></tr>';
+    if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="5">CERRADA</td></tr>';
     const hayLimite = !isNaN(f.limite) && f.limite > 0;
     return '<tr class="' + (f.cambio ? 'revisar' : '') + '" data-fila="' + i + '">' +
       '<td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + (f.cambio ? etiquetaCambioConteo_(f.cambio) : '') + '</td>' +
@@ -565,6 +643,7 @@ function mostrarModalAjustarCarga(datos) {
         '<button type="button" data-i="' + i + '" data-d="1" aria-label="Sumar">+</button>' +
       '</div></td>' +
       '<td class="num nave" data-q="' + i + '"></td>' +
+      '<td class="num col-camion"><select class="sel-camion" data-c="' + i + '" aria-label="Camión de ' + escapeHtml(quitarCodigoTienda(f.nombre)) + '"></select></td>' +
     '</tr>';
   }).join('');
 
@@ -584,9 +663,16 @@ function mostrarModalAjustarCarga(datos) {
       : '') +
     '<div class="modal-carga-pasadas"></div>' +
     (datos.desdeLapiz ? '<div class="modal-modo-edicion">' + ICONO_LAPIZ_12_ + 'Modo edición</div>' : '') +
+    '<div class="modal-camiones">' +
+      '<div class="modal-camiones-cab"><span class="modal-camiones-titulo">' + ICONO_CAMION_16_ + 'Camiones</span>' +
+        '<span class="modal-camiones-ayuda">Matrícula y remolque (opcional)</span></div>' +
+      '<div class="modal-camiones-lista"></div>' +
+      '<div class="modal-camiones-aviso"></div>' +
+      '<button type="button" class="modal-camiones-add">+ Añadir camión</button>' +
+    '</div>' +
     '<p class="modal-palets-intro">Palets que van en el camión por tienda: es lo que saldrá en el email a la agencia. ' +
       (enEnvio ? 'Al confirmar se guarda y sigues con el envío.' : 'Se guarda sin enviar nada.') + '</p>' +
-    '<div class="modal-tabla-scroll"><table class="modal-palets-tabla modal-carga-ajuste"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th><th class="num">En nave</th></tr></thead>' +
+    '<div class="modal-tabla-scroll"><table class="modal-palets-tabla modal-carga-ajuste"><thead><tr><th>Tienda</th><th class="num">Contados</th><th class="num">Límite</th><th class="num">A cargar</th><th class="num">En nave</th><th class="num col-camion">Camión</th></tr></thead>' +
     '<tbody>' + filas + '</tbody></table></div>';
 
   const actions = document.getElementById('modal-actions');
@@ -600,23 +686,106 @@ function mostrarModalAjustarCarga(datos) {
   document.getElementById('modal-overlay').style.display = 'flex';
 
   const inputs = Array.prototype.slice.call(custom.querySelectorAll('.modal-palets-ctrl input'));
+  const selects = Array.prototype.slice.call(custom.querySelectorAll('select.sel-camion'));
+  const tabla = custom.querySelector('table.modal-carga-ajuste');
+  const listaCamiones = custom.querySelector('.modal-camiones-lista');
+  const avisoCamiones = custom.querySelector('.modal-camiones-aviso');
   const btnOk = document.getElementById('modal-confirm-btn');
   const btnImprimir = document.getElementById('modal-imprimir-btn');
   function valor(inp) {
     const v = parseInt(inp.value, 10);
     return isNaN(v) || v < 0 ? 0 : v;
   }
+  function normalizarMatricula(t) {
+    return String(t || '').toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 15);
+  }
+  // Nº de camión efectivo de una fila: con un solo camión, el 0.
+  function camionDeFila(i) {
+    if (filasDatos[i].cerrada || !camiones.length) return -1;
+    if (camiones.length === 1) return 0;
+    return asignacion[i];
+  }
+
+  // Tarjetas de los camiones (matrícula, remolque, quitar) y desplegables
+  // de la columna «Camión». Se rehacen al añadir/quitar un camión.
+  function pintarCamiones() {
+    listaCamiones.innerHTML = camiones.map(function (c, k) {
+      return '<div class="modal-camion" data-k="' + k + '">' +
+        '<span class="modal-camion-num">' + (k + 1) + '</span>' +
+        '<label class="modal-camion-campo"><span>Matrícula</span><input type="text" class="cam-matricula" data-k="' + k + '" maxlength="15" autocomplete="off" placeholder="Matrícula" value="' + escapeHtml(c.matricula) + '"></label>' +
+        '<label class="modal-camion-campo"><span>Remolque</span><input type="text" class="cam-remolque" data-k="' + k + '" maxlength="15" autocomplete="off" placeholder="Remolque" value="' + escapeHtml(c.remolque) + '"></label>' +
+        '<span class="modal-camion-total" data-t="' + k + '"></span>' +
+        '<button type="button" class="modal-camion-quitar" data-k="' + k + '" aria-label="Quitar camión ' + (k + 1) + '" title="Quitar camión">×</button>' +
+      '</div>';
+    }).join('');
+    listaCamiones.querySelectorAll('input.cam-matricula, input.cam-remolque').forEach(function (inp) {
+      inp.oninput = function () {
+        const pos = inp.selectionStart;
+        const limpio = normalizarMatricula(inp.value);
+        if (limpio !== inp.value) { inp.value = limpio; try { inp.setSelectionRange(pos, pos); } catch (e) { /* nada */ } }
+        const k = Number(inp.getAttribute('data-k'));
+        if (inp.classList.contains('cam-matricula')) { camiones[k].matricula = limpio; pintarOpciones(); }
+        else camiones[k].remolque = limpio;
+        refrescar();
+      };
+    });
+    listaCamiones.querySelectorAll('.modal-camion-quitar').forEach(function (b) {
+      b.onclick = function () { quitarCamion(Number(b.getAttribute('data-k'))); };
+    });
+    tabla.classList.toggle('con-camiones', camiones.length >= 2);
+    pintarOpciones();
+  }
+  function pintarOpciones() {
+    const opciones = '<option value="-1">—</option>' + camiones.map(function (c, k) {
+      return '<option value="' + k + '">' + (k + 1) + (c.matricula ? ' · ' + escapeHtml(c.matricula) : '') + '</option>';
+    }).join('');
+    selects.forEach(function (s) {
+      const i = Number(s.getAttribute('data-c'));
+      s.innerHTML = opciones;
+      s.value = String(asignacion[i] >= 0 && asignacion[i] < camiones.length ? asignacion[i] : -1);
+    });
+  }
+  function anadirCamion() {
+    if (camiones.length >= 10) return;
+    // Al pasar de 1 a 2 camiones, las tiendas se quedan en el camión 1.
+    if (camiones.length === 1) filasDatos.forEach(function (f, i) { if (!f.cerrada) asignacion[i] = 0; });
+    camiones.push({ matricula: '', remolque: '' });
+    pintarCamiones();
+    refrescar();
+    const nuevo = listaCamiones.querySelector('input.cam-matricula[data-k="' + (camiones.length - 1) + '"]');
+    if (nuevo) nuevo.focus();
+  }
+  function quitarCamion(k) {
+    camiones.splice(k, 1);
+    // Las tiendas de ese camión se quedan sin camión; las de los siguientes bajan un número.
+    asignacion.forEach(function (a, i) {
+      if (a === k) asignacion[i] = -1;
+      else if (a > k) asignacion[i] = a - 1;
+    });
+    pintarCamiones();
+    refrescar();
+  }
+
   function refrescar() {
     let totContados = 0, totCargar = 0, pasadas = 0, vacias = 0;
+    const totCamion = camiones.map(function () { return { palets: 0, tiendas: 0 }; });
+    let sinCamion = 0;
     inputs.forEach(function (inp) {
-      const f = filasDatos[inp.getAttribute('data-i')];
-      const q = custom.querySelector('[data-q="' + inp.getAttribute('data-i') + '"]');
+      const i = Number(inp.getAttribute('data-i'));
+      const f = filasDatos[i];
+      const q = custom.querySelector('[data-q="' + i + '"]');
       const v = valor(inp);
       const vacio = inp.value === '';
       const pasado = !isNaN(f.limite) && f.limite > 0 && v + f.otros > f.limite;
       totContados += f.contados; totCargar += v;
       if (pasado) pasadas++;
       if (vacio) vacias++;
+      const cam = camionDeFila(i);
+      if (cam >= 0) { totCamion[cam].palets += v; totCamion[cam].tiendas++; }
+      const falta = camiones.length >= 2 && cam < 0;
+      if (falta) sinCamion++;
+      const sel = custom.querySelector('select.sel-camion[data-c="' + i + '"]');
+      if (sel) sel.classList.toggle('falta', falta);
       inp.classList.toggle('pasado', pasado || vacio);
       q.classList.toggle('pasado', pasado || vacio);
       q.classList.toggle('cero', !vacio && !pasado && v === f.contados);
@@ -635,7 +804,23 @@ function mostrarModalAjustarCarga(datos) {
       ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
           '<span>' + pasadas + (pasadas === 1 ? ' tienda sigue' : ' tiendas siguen') + ' por encima de su límite</span></div></div>'
       : '';
-    btnOk.disabled = vacias > 0;
+    // Totales de cada camión y avisos (falta matrícula / tiendas sin camión).
+    let sinMatricula = 0;
+    camiones.forEach(function (c, k) {
+      const t = listaCamiones.querySelector('[data-t="' + k + '"]');
+      if (t) t.textContent = totCamion[k].tiendas + (totCamion[k].tiendas === 1 ? ' tienda' : ' tiendas') + ' · ' + totCamion[k].palets + ' palets';
+      const inp = listaCamiones.querySelector('input.cam-matricula[data-k="' + k + '"]');
+      const falta = !c.matricula.trim();
+      if (falta) sinMatricula++;
+      if (inp) inp.classList.toggle('falta', falta);
+    });
+    const avisos = [];
+    if (sinMatricula) avisos.push(sinMatricula === 1 ? 'Falta la matrícula de un camión' : 'Falta la matrícula de ' + sinMatricula + ' camiones');
+    if (sinCamion) avisos.push(sinCamion === 1 ? '1 tienda sin camión' : sinCamion + ' tiendas sin camión');
+    avisoCamiones.textContent = avisos.join(' · ');
+    avisoCamiones.style.display = avisos.length ? '' : 'none';
+    custom.querySelector('.modal-camiones-add').style.display = camiones.length >= 10 ? 'none' : '';
+    btnOk.disabled = vacias > 0 || sinMatricula > 0 || sinCamion > 0;
     if (btnImprimir) btnImprimir.disabled = vacias > 0;
   }
 
@@ -647,6 +832,14 @@ function mostrarModalAjustarCarga(datos) {
     };
   });
   inputs.forEach(function (inp) { inp.oninput = refrescar; });
+  selects.forEach(function (s) {
+    s.onchange = function () {
+      asignacion[Number(s.getAttribute('data-c'))] = Number(s.value);
+      refrescar();
+    };
+  });
+  custom.querySelector('.modal-camiones-add').onclick = anadirCamion;
+  pintarCamiones();
   refrescar();
 
   document.getElementById('modal-restablecer-btn').onclick = function () {
@@ -659,6 +852,16 @@ function mostrarModalAjustarCarga(datos) {
   }
   document.getElementById('modal-cancel-btn').onclick = cancelar;
   if (datos.desdeLapiz) ponerLapizModal_(true, cancelar);
+  // Camiones tal y como se guardan: matrícula, remolque y sus tiendas.
+  function camionesParaGuardar() {
+    return camiones.map(function (c, k) {
+      return {
+        matricula: c.matricula.trim(),
+        remolque: c.remolque.trim(),
+        tiendas: filasDatos.filter(function (f, i) { return camionDeFila(i) === k; }).map(function (f) { return f.nombre; })
+      };
+    });
+  }
   // Imprime la lista de carga con lo que hay ahora en pantalla (aunque no se
   // haya guardado todavía), igual que la que imprimen los operadores.
   if (btnImprimir) btnImprimir.onclick = function () {
@@ -666,11 +869,11 @@ function mostrarModalAjustarCarga(datos) {
       const nombre = quitarCodigoTienda(f.nombre);
       if (f.cerrada) return { tienda: nombre, cerrada: true };
       const inp = custom.querySelector('input[data-i="' + i + '"]');
-      return { tienda: nombre, contados: f.contados, cargar: inp ? valor(inp) : f.cargar, cerrada: false };
+      return { tienda: nombre, contados: f.contados, cargar: inp ? valor(inp) : f.cargar, cerrada: false, camion: camionDeFila(i) };
     });
-    const tabla = tablaCargaFija_(lista, null, false);
+    const tabla = tablaCargaFija_(lista, null, false, camiones.filter(function (c) { return c.matricula.trim(); }).length === camiones.length ? camiones : null);
     imprimirListaCarga_(datos.titulo, datos.fechaTexto, enEnvio ? etiquetaTipo : 'Carga ajustada',
-      tabla.filas, tabla.totCargar, tabla.totSobra);
+      tabla.filas, tabla.totCargar, tabla.totSobra, tabla.camiones);
   };
   btnOk.onclick = function () {
     const cargas = {};
@@ -680,7 +883,11 @@ function mostrarModalAjustarCarga(datos) {
       cargas[filasDatos[inp.getAttribute('data-i')].nombre] = valor(inp);
     });
     if (falta) { falta.focus(); return; }
-    datos.onGuardar(cargas);
+    const sinMatricula = listaCamiones.querySelector('input.cam-matricula.falta');
+    if (sinMatricula) { sinMatricula.focus(); return; }
+    const sinCamion = custom.querySelector('select.sel-camion.falta');
+    if (sinCamion) { sinCamion.focus(); return; }
+    datos.onGuardar(cargas, camionesParaGuardar());
   };
 }
 
@@ -691,11 +898,13 @@ function mostrarModalAjustarCarga(datos) {
  *
  * datos: { titulo, fechaTexto, tipo, carga, lista: [{tienda, contados, cargar, cerrada}],
  *          onSi, onModificar (null si el usuario no tiene permiso) }
+ * Si la carga tiene camiones (datos.carga.camiones), la tabla sale agrupada
+ * por camión, igual que en el email.
  */
 function mostrarModalCargaCorrecta(datos) {
   const custom = prepararModalCarga_();
   const etiqueta = datos.tipo === 'definitivo' ? 'Definitivo' : 'Previsión';
-  const tabla = tablaCargaFija_(datos.lista, null, true);
+  const tabla = tablaCargaFija_(datos.lista, null, true, datos.carga && datos.carga.camiones);
   custom.innerHTML =
     cabeceraModalCarga_('¿Es correcta esta carga?', datos.titulo + ' · ' + etiqueta + ' · ' + datos.fechaTexto, 'ambar') +
     estadoCargaHtml_(datos.carga) +
@@ -719,11 +928,11 @@ function mostrarModalCargaCorrecta(datos) {
  * Modal "No se puede enviar todavía": la carga está pendiente de verificar
  * y el usuario no tiene el permiso "Ajustar carga".
  *
- * datos: { titulo, fechaTexto, tipo, lista, revisar }
+ * datos: { titulo, fechaTexto, tipo, lista, revisar, camiones (opcional) }
  */
 function mostrarModalCargaPendiente(datos) {
   const custom = prepararModalCarga_();
-  const tabla = tablaCargaFija_(datos.lista, datos.revisar, false);
+  const tabla = tablaCargaFija_(datos.lista, datos.revisar, false, datos.camiones);
   custom.innerHTML =
     cabeceraModalCarga_('No se puede enviar todavía', datos.titulo + ' · ' + (datos.tipo === 'definitivo' ? 'Definitivo' : 'Previsión') + ' · ' + datos.fechaTexto, 'rojo') +
     '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
@@ -735,22 +944,38 @@ function mostrarModalCargaPendiente(datos) {
 }
 
 /** Imprime la lista de carga en una hoja limpia (iframe oculto), sin tocar
- *  la hoja de impresión del día ni el resto de la pantalla. */
-function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra) {
+ *  la hoja de impresión del día ni el resto de la pantalla.
+ *  camiones (opcional): todo en una hoja, agrupado por camión con su
+ *  matrícula, remolque y (con 2 o más) subtotal. Cada fila trae su nº de
+ *  camión en f.camion (ver tablaCargaFija_). */
+function imprimirListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
   const celda = 'padding:6px 12px;border:1px solid #999;';
+  camiones = camionesValidos_(camiones);
+  function filaHtml(f) {
+    return f.cerrada
+      ? '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" colspan="2" style="' + celda + 'font-weight:bold;">CERRADA</td></tr>'
+      : '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" style="' + celda + 'font-weight:bold;">' + f.cargar + '</td><td class="n" style="' + celda + '">' + (f.sobra || '') + '</td></tr>';
+  }
+  const agr = agruparFilasPorCamion_(filas, camiones);
+  const cuerpo = !agr
+    ? filas.map(filaHtml).join('')
+    : agr.grupos.map(function (g) {
+        return '<tr><td colspan="3" style="' + celda + 'background:' + (g.idx < 0 ? '#f3d9a8' : '#d9d9d9') + ';font-size:14px;">' + tituloCamionHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
+          g.filas.map(filaHtml).join('') +
+          (agr.n >= 2 && g.idx >= 0
+            ? '<tr><td style="' + celda + 'background:#f4f4f4;text-align:right;font-size:13px;">Subtotal camión ' + (g.idx + 1) + '</td><td class="n" style="' + celda + 'background:#f4f4f4;font-weight:bold;">' + g.cargar + '</td><td class="n" style="' + celda + 'background:#f4f4f4;">' + (g.sobra || '') + '</td></tr>'
+            : '');
+      }).join('') + agr.cerradas.map(filaHtml).join('');
   const html =
     '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Lista de carga</title>' +
     '<style>body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px}h1{font-size:20px;margin:0 0 4px}p{margin:0 0 16px;color:#444;font-size:13px}' +
-    'table{border-collapse:collapse;width:100%;font-size:15px}th{background:#eee;text-align:left}td.n,th.n{text-align:center;width:110px}</style></head><body>' +
+    'table{border-collapse:collapse;width:100%;font-size:15px}th{background:#eee;text-align:left}td.n,th.n{text-align:center;width:110px}' +
+    'tr{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>' +
     '<h1>Lista de carga · ' + escapeHtml(titulo) + '</h1>' +
     '<p>' + escapeHtml(fechaTexto) + ' · ' + tipoTexto + '</p>' +
     '<table><tr><th style="' + celda + '">TIENDA</th><th class="n" style="' + celda + '">TOTAL</th><th class="n" style="' + celda + '">SOBRANTE</th></tr>' +
-    filas.map(function (f) {
-      return f.cerrada
-        ? '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" colspan="2" style="' + celda + 'font-weight:bold;">CERRADA</td></tr>'
-        : '<tr><td style="' + celda + '">' + escapeHtml(f.tienda) + '</td><td class="n" style="' + celda + 'font-weight:bold;">' + f.cargar + '</td><td class="n" style="' + celda + '">' + (f.sobra || '') + '</td></tr>';
-    }).join('') +
-    '<tr><td style="' + celda + 'font-weight:bold;background:#eee;">TOTAL PALETS</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totCargar + '</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totSobra + '</td></tr>' +
+    cuerpo +
+    '<tr><td style="' + celda + 'font-weight:bold;background:#eee;">TOTAL PALETS' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : '') + '</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totCargar + '</td><td class="n" style="' + celda + 'font-weight:bold;background:#eee;">' + totSobra + '</td></tr>' +
     '</table></body></html>';
 
   const viejo = document.getElementById('iframe-lista-carga');

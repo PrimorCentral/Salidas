@@ -105,9 +105,18 @@ const SUPABASE_ACCIONES_ = {
   // Carga del camión ajustada a mano sin enviar nada (camioncito de la
   // cabecera). cargas = { 'NOMBRE TIENDA': palets }. Requiere el permiso
   // "ajustar_carga" (el backend lo comprueba). Devuelve la carga vigente.
+  // camiones (opcional) = [{ matricula, remolque, tiendas: ['NOMBRE TIENDA', ...] }]
+  // ([] = sin camiones). Si viene, se usa guardar_carga_ajustada_v2, que los
+  // guarda; el email de previsión/definitivo los saca de ahí agrupando las
+  // tiendas por camión. Sin camiones, la llamada de siempre.
   guardarCargaAjustada: function (args) {
-    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], cargas = args[3];
-    return llamarRpcSupabase_('guardar_carga_ajustada', { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha, p_cargas: cargas || {} });
+    const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], cargas = args[3], camiones = args[4];
+    const params = { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha, p_cargas: cargas || {} };
+    if (Array.isArray(camiones)) {
+      params.p_camiones = camiones;
+      return llamarRpcSupabase_('guardar_carga_ajustada_v2', params);
+    }
+    return llamarRpcSupabase_('guardar_carga_ajustada', params);
   },
   // "Enviar a informática": misma previsión, pero solo a transporte@primor.eu.
   enviarInformaticaAgencia: function (args) {

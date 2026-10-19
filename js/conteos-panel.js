@@ -324,7 +324,12 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }
   function infoCargaParaModal_() {
     const c = seccion.carga;
-    return c ? { tipo: c.origen, hora: c.hora, enviadoPor: c.por, lista: c.lista } : null;
+    return c ? { tipo: c.origen, hora: c.hora, enviadoPor: c.por, lista: c.lista, camiones: c.camiones || null } : null;
+  }
+  // Camiones (matrícula, remolque y tiendas) de la carga vigente, si la hay.
+  function camionesCarga_() {
+    const c = seccion.carga;
+    return (c && Array.isArray(c.camiones)) ? c.camiones : null;
   }
   // Click en el camioncito (servidor nuevo).
   function abrirCarga_() {
@@ -373,11 +378,12 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       fechaTexto: formatearFechaLarga(fecha),
       filas: filas,
       carga: seccion.carga,
+      camiones: camionesCarga_(),
       tipoEnvio: tipoEnvio,
       desdeLapiz: !!desdeLapiz,
       onCancelar: desdeLapiz ? abrirCarga_ : null,
-      onGuardar: function (cargas) {
-        guardarCarga_(cargas, function (ok) {
+      onGuardar: function (cargas, camiones) {
+        guardarCarga_(cargas, camiones, function (ok) {
           if (!ok) return;
           if (alTerminar) { alTerminar(); return; }
           cerrarModal();
@@ -388,12 +394,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     });
   }
   // Guarda primero el conteo (para que el servidor vea lo mismo que hay en
-  // pantalla) y después la carga.
-  function guardarCarga_(cargas, done) {
+  // pantalla) y después la carga, con sus camiones (matrícula, remolque y
+  // tiendas de cada uno; [] = sin camiones).
+  function guardarCarga_(cargas, camiones, done) {
     mostrarModalCargando('Guardando la carga del camión…');
     autoguardarSeccion(function (ok) {
       if (!ok) { cerrarModal(); done(false); return; }
-      llamarApi_('guardarCargaAjustada', [dia, seccion.nombre, fecha, cargas])
+      llamarApi_('guardarCargaAjustada', [dia, seccion.nombre, fecha, cargas, camiones || []])
         .then(function (carga) {
           seccion.carga = carga || null;
           actualizarEstadoCarga_();
@@ -1001,7 +1008,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const revisar = tiendasARevisar_();
       if (Object.keys(revisar).length) {
         if (puedeAjustarCarga_()) abrirAjustarCarga_(tipo, function () { continuarEnvio_(tipo); });
-        else mostrarModalCargaPendiente({ titulo: titulo, fechaTexto: fechaTexto, tipo: tipo, lista: listaCargaEfectiva_(), revisar: revisar });
+        else mostrarModalCargaPendiente({ titulo: titulo, fechaTexto: fechaTexto, tipo: tipo, lista: listaCargaEfectiva_(), revisar: revisar, camiones: camionesCarga_() });
         return;
       }
       mostrarModalCargaCorrecta({
@@ -1277,7 +1284,9 @@ if (callback) callback(true, mensaje);
       origen: tipo,
       hora: ('0' + ahora.getHours()).slice(-2) + ':' + ('0' + ahora.getMinutes()).slice(-2),
       por: SESSION_NOMBRE || (resultado && resultado.enviadoPor) || '',
-      lista: (resultado && Array.isArray(resultado.listaCarga)) ? resultado.listaCarga : (seccion.carga ? seccion.carga.lista : null)
+      lista: (resultado && Array.isArray(resultado.listaCarga)) ? resultado.listaCarga : (seccion.carga ? seccion.carga.lista : null),
+      // Los camiones que salieron en el email (el servidor los toma de la carga vigente).
+      camiones: (resultado && resultado.camiones !== undefined) ? resultado.camiones : camionesCarga_()
     };
   }
 
