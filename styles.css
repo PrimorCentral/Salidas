@@ -2124,6 +2124,7 @@
   .modal-cancel { background: #eef0f3; color: var(--ink); }
   .modal-confirm { background: var(--navy); color: #fff; }
   .modal-confirm.danger { background: var(--danger); }
+  .modal-whatsapp { background: #1fa855; color: #fff; display: inline-flex; align-items: center; gap: 7px; }
   .modal-confirm:disabled { background: #c7cbd3; color: #fff; cursor: not-allowed; }
   .modal-confirm:disabled:hover { filter: none; }
 
