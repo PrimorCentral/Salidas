@@ -1315,8 +1315,8 @@ function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totS
  *  - Móvil: menú de compartir del teléfono con la imagen y el texto
  *    (WhatsApp → elegir grupo). Si el móvil no deja compartir archivos,
  *    abre WhatsApp solo con el texto.
- *  - Ordenador: copia la imagen al portapapeles y abre WhatsApp Web (pestaña
- *    reutilizada) con el texto escrito; en el grupo se pega con Ctrl+V. */
+ *  - Ordenador: copia la imagen al portapapeles (sin abrir pestañas); el
+ *    usuario la pega con Ctrl+V en el grupo, en su WhatsApp ya abierto. */
 function compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones) {
   const texto = textoListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totCargar, totSobra, camiones);
   const movil = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
@@ -1342,19 +1342,25 @@ function compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totC
     return;
   }
 
-  // Ordenador: el portapapeles y la ventana se piden ya, dentro del clic.
+  // Ordenador: no se abre ninguna pestaña (el navegador no deja usar la de
+  // WhatsApp Web que ya tiene abierta el usuario). Se copia la imagen y se
+  // pega con Ctrl+V en el grupo, en su WhatsApp de siempre. El portapapeles
+  // se pide ya, dentro del clic.
   let copiada = Promise.reject(new Error('sin portapapeles de imágenes'));
   try {
     if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
       copiada = navigator.clipboard.write([new ClipboardItem({ 'image/png': imagen })]);
     }
-  } catch (e) { /* se avisa abajo */ }
-  const win = window.open('https://web.whatsapp.com/send?text=' + encodeURIComponent(texto), 'whatsapp-salidas');
-  if (win) { try { win.focus(); } catch (e) { /* nada */ } }
+  } catch (e) { /* se prueba con el texto */ }
   copiada.then(function () {
-    mostrarToast('Imagen copiada: en el grupo de WhatsApp pulsa Ctrl+V para pegarla');
+    mostrarToast('Lista copiada como imagen. Ve a WhatsApp, abre el grupo y pulsa Ctrl+V');
   }).catch(function () {
-    mostrarToast('No se pudo copiar la imagen; se envía solo el texto', true);
+    // Navegador sin imágenes en el portapapeles: al menos el texto.
+    try {
+      navigator.clipboard.writeText(texto).then(function () {
+        mostrarToast('Lista copiada como texto. Ve a WhatsApp, abre el grupo y pulsa Ctrl+V');
+      }).catch(function () { mostrarToast('No se pudo copiar la lista', true); });
+    } catch (e) { mostrarToast('No se pudo copiar la lista', true); }
   });
 }
 
