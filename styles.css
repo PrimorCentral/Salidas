@@ -3647,3 +3647,29 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
   .acerca-panel .acerca-activado svg path{ stroke-dashoffset:0; }
 }
 
+
+  /* Conteo especial: cambios puntuales hechos desde Rutas y tiendas */
+  .plantilla-tienda.sale-puntual { flex-wrap: wrap; background: #fbf7f0; }
+  .plantilla-tienda.sale-puntual .nombre, .plantilla-tienda.sale-puntual .numero { text-decoration: line-through; opacity: .6; }
+  .plantilla-tienda-puntual-txt {
+    flex-basis: 100%; padding-left: 26px; font-size: 11.5px; color: #8a5a12;
+  }
+  .plantilla-tienda.entra-puntual { background: #fdf5e9; border-left: 3px solid var(--amber-dark, #c98a2b); flex-wrap: wrap; }
+  .plantilla-tienda-puntual-badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    background: #e9c48f; color: #5b3a0c; border-radius: 10px; padding: 2px 8px; flex-shrink: 0;
+  }
+  .plantilla-tienda-puntual-origen { font-size: 11.5px; color: #8a5a12; margin-left: 4px; flex: 1 1 auto; }
+  .plantilla-tienda-quitar-puntual {
+    margin-left: auto; border: 1px solid #e3b4b4; background: #fff; color: var(--danger);
+    border-radius: 7px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .plantilla-tienda-quitar-puntual:hover { background: #fceded; }
+  .plantilla-ruta-contador.puntual { background: #fdf5e9; color: #8a5a12; border: 1px solid #e9c48f; }
+  .modal-plantilla-tienda-badge.en-otra { background: #fdf0dc; color: #8a5a12; text-transform: none; }
+  .modal-plantilla-aviso-puntual {
+    margin-top: 12px; font-size: 12.5px; color: #6b4410; background: #fdf5e9;
+    border: 1px solid #e9c48f; border-radius: 8px; padding: 10px 12px; line-height: 1.45;
+  }
+  .modal-plantilla-aviso-puntual ul { margin: 6px 0 8px 18px; padding: 0; }
+  .plantilla-tienda.sale-puntual.doble .nombre, .plantilla-tienda.sale-puntual.doble .numero { text-decoration: none; opacity: 1; }
