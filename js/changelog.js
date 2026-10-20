@@ -8,6 +8,17 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.10',
+    fecha: '2026-10-20',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Pantalla de inicio de sesión renovada: la foto del almacén a la izquierda con lo que hace la app y el formulario en un panel blanco a la derecha (en el móvil, una tarjeta sobre la foto)' },
+      { tipo: 'nuevo',      texto: 'Inicio de sesión animado: la foto se mueve despacio, pasa un reflejo de luz, flota polvo en el aire y un camioncito recorre GAITE, PTA y CARTAMA cargando un palet en cada nave. Se ve también en los equipos con las animaciones de Windows desactivadas' },
+      { tipo: 'mejora',     texto: 'El navegador ya no rellena solo el campo Usuario del inicio de sesión' },
+      { tipo: 'mejora',     texto: 'El navegador ya no avisa de «contraseña no segura / hay que cambiarla» ni ofrece guardarla: en el inicio de sesión, el cambio obligatorio de contraseña, Mi usuario y Usuarios' },
+      { tipo: 'mejora',     texto: 'La contraseña no puede ser igual que el usuario: al cambiarla en Mi usuario, al crear un usuario y al cambiarle la contraseña desde Usuarios' }
+    ]
+  },
+  {
     version: '2.1.9',
     fecha: '2026-10-20',
     cambios: [

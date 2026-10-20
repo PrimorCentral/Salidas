@@ -388,6 +388,9 @@ function abrirModalUsuario_(usuarioExistente) {
       const inputPassword = document.getElementById('modal-usuario-password');
       const password = inputPassword.value;
       if (!password || password.length < 3) { inputPassword.focus(); return; }
+      if (String(password).trim().toLowerCase() === String(usuario || '').trim().toLowerCase()) {
+        mostrarToast('La contraseña no puede ser igual que el usuario', true); inputPassword.focus(); return;
+      }
       const btn = document.getElementById('modal-confirm-btn');
       btn.disabled = true;
       llamarApi_('crearUsuario', [usuario, nombreCompleto, password, rol, permisos])
@@ -451,6 +454,9 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
     const input = document.getElementById('modal-usuario-password-nueva');
     const password = input.value;
     if (!password || password.length < 3) { input.focus(); return; }
+    if (String(password).trim().toLowerCase() === String(usuarioExistente.usuario || '').trim().toLowerCase()) {
+      mostrarToast('La contraseña no puede ser igual que el usuario', true); input.focus(); return;
+    }
     const btn = document.getElementById('modal-confirm-btn');
     btn.disabled = true;
     llamarApi_('cambiarPasswordUsuario', [usuarioExistente.id, password])
