@@ -8,6 +8,13 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.9',
+    fecha: '2026-10-20',
+    cambios: [
+      { tipo: 'mejora', texto: 'Imagen de la lista de carga para WhatsApp: ya no lleva la columna de sobrante y se destaca si es «PREVISIÓN DE CARGA» (en amarillo) o «CARGA DEFINITIVA» (en verde)' }
+    ]
+  },
+  {
     version: '2.1.8',
     fecha: '2026-10-19',
     cambios: [
