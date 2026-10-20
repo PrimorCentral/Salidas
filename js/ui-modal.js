@@ -1241,7 +1241,7 @@ function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totS
   const ESC = 2;                 // nitidez (retina / zoom en el móvil)
   const W = 560, PAD = 20;
   const CAB = 74, TH = 34, FH = 36, PIE = 44;
-  const xCargar = W - PAD - 190, xSobra = W - PAD - 70;   // centros de columna
+  const xCargar = W - PAD - 70;   // centro de la columna A CARGAR (sin sobrante)
   const H = CAB + TH + items.length * FH + PIE;
   const canvas = document.createElement('canvas');
   canvas.width = W * ESC; canvas.height = H * ESC;
@@ -1264,14 +1264,23 @@ function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totS
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#1c2b45'; ctx.fillRect(0, 0, W, CAB);
   txt(recortar('Lista de carga · ' + titulo, W - 2 * PAD, 20, 'bold'), PAD, 28, 20, 'bold', '#ffffff');
-  txt(fechaTexto + ' · ' + tipoTexto, PAD, 54, 13, 'normal', '#c9d2e3');
+  txt(fechaTexto, PAD, 54, 13, 'normal', '#c9d2e3');
+  // Etiqueta destacada: verde si es definitivo, amarilla en cualquier otro caso
+  const esDefinitivo = tipoTexto === 'Definitivo';
+  const etiqueta = esDefinitivo ? 'CARGA DEFINITIVA' : 'PREVISIÓN DE CARGA';
+  ctx.font = 'normal 13px ' + FUENTE;
+  const xEtq = PAD + ctx.measureText(fechaTexto).width + 12;
+  ctx.font = 'bold 13px ' + FUENTE;
+  const anchoEtq = ctx.measureText(etiqueta).width + 20;
+  ctx.fillStyle = esDefinitivo ? '#22a447' : '#ffd400';
+  ctx.fillRect(xEtq, 54 - 12, anchoEtq, 24);
+  txt(etiqueta, xEtq + 10, 55, 13, 'bold', esDefinitivo ? '#ffffff' : '#1c2430');
 
   // Encabezado de la tabla
   let y = CAB;
   ctx.fillStyle = '#f4f5f7'; ctx.fillRect(0, y, W, TH);
   txt('TIENDA', PAD, y + TH / 2, 11, 'bold', '#5b6573');
   txt('A CARGAR', xCargar, y + TH / 2, 11, 'bold', '#5b6573', 'center');
-  txt('SOBRANTE', xSobra, y + TH / 2, 11, 'bold', '#5b6573', 'center');
   y += TH;
 
   items.forEach(function (it) {
@@ -1283,14 +1292,12 @@ function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totS
       ctx.fillStyle = '#f7f8fa'; ctx.fillRect(0, y, W, FH);
       txt(it.texto, xCargar - 60, cy, 12, 'normal', '#5b6573', 'right');
       txt(String(it.cargar), xCargar, cy, 14, 'bold', '#1c2430', 'center');
-      txt(it.sobra ? String(it.sobra) : '—', xSobra, cy, 14, 'bold', it.sobra ? '#b8650a' : '#9aa3ae', 'center');
     } else if (it.k === 'cerrada') {
       txt(recortar(it.tienda, xCargar - 60 - PAD, 15, 'bold'), PAD, cy, 15, 'bold', '#9aa3ae');
-      txt('CERRADA', (xCargar + xSobra) / 2, cy, 12, 'bold', '#9aa3ae', 'center');
+      txt('CERRADA', xCargar, cy, 12, 'bold', '#9aa3ae', 'center');
     } else {
       txt(recortar(it.tienda, xCargar - 60 - PAD, 15, 'bold'), PAD, cy, 15, 'bold', '#1c2430');
       txt(String(it.cargar), xCargar, cy, 17, 'bold', '#1c2430', 'center');
-      txt(it.sobra ? String(it.sobra) : '—', xSobra, cy, 15, 'bold', it.sobra ? '#b8650a' : '#9aa3ae', 'center');
     }
     ctx.fillStyle = '#e6e8ec'; ctx.fillRect(0, y + FH - 1, W, 1);
     y += FH;
@@ -1302,7 +1309,6 @@ function imagenListaCarga_(titulo, fechaTexto, tipoTexto, filas, totCargar, totS
   const ty = y + PIE / 2 + 1;
   txt('Total palets' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : ''), PAD, ty, 15, 'bold', '#1c2430');
   txt(String(totCargar), xCargar, ty, 18, 'bold', '#1c2430', 'center');
-  txt(String(totSobra), xSobra, ty, 16, 'bold', totSobra ? '#b8650a' : '#9aa3ae', 'center');
 
   return new Promise(function (resolve, reject) {
     canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error('No se pudo crear la imagen')); }, 'image/png');
