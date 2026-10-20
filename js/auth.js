@@ -59,11 +59,11 @@ function abrirModalCambioPasswordObligatorio_(datos, passActual) {
     '<input type="text" autocomplete="username" value="' + escapeAttr(datos.usuario || '') + '" style="display:none" readonly>' +
     '<div class="modal-campo">' +
       '<label for="obligatorio-password-nueva">Contraseña nueva</label>' +
-      '<input type="password" id="obligatorio-password-nueva" placeholder="Mínimo 4 caracteres" autocomplete="new-password">' +
+      '<input type="text" id="obligatorio-password-nueva" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="Mínimo 4 caracteres">' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="obligatorio-password-repetir">Repetir contraseña nueva</label>' +
-      '<input type="password" id="obligatorio-password-repetir" autocomplete="new-password">' +
+      '<input type="text" id="obligatorio-password-repetir" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other">' +
     '</div>' +
     '<p class="cambio-obligatorio-error" id="obligatorio-error"></p>';
 
@@ -165,7 +165,58 @@ document.getElementById('login-pass').addEventListener('keydown', function (e) {
 });
 document.getElementById('toggle-pass').addEventListener('click', function () {
   const input = document.getElementById('login-pass');
-  input.type = input.type === 'password' ? 'text' : 'password';
+  // Si va con puntos por CSS, se muestra/oculta quitando la clase; si el
+  // navegador no admite esos puntos, se usa el cambio de tipo de siempre.
+  if (input.type === 'password' || input.dataset.modoTipo === '1') {
+    input.type = input.type === 'password' ? 'text' : 'password';
+  } else {
+    input.classList.toggle('mostrar');
+  }
 });
+
+/* Campos del login sin autorrelleno ni aviso de "contraseña no segura".
+   - Los dos campos empiezan en solo lectura y se desbloquean al entrar en
+     ellos: así el navegador no los rellena solo al cargar la página.
+   - La contraseña es un campo de texto que se ve con puntos por CSS. Si el
+     navegador no admite esos puntos (muy raro), vuelve a type="password"
+     para que nunca se vea la contraseña en claro. */
+(function () {
+  ['login-usuario', 'login-pass'].forEach(function (id) {
+    const el = document.getElementById(id);
+    const desbloquear = function () { el.removeAttribute('readonly'); };
+    el.addEventListener('focus', desbloquear);
+    el.addEventListener('pointerdown', desbloquear);
+    if (document.activeElement === el) desbloquear();
+  });
+  const pass = document.getElementById('login-pass');
+  const admitePuntos = window.CSS && CSS.supports &&
+    (CSS.supports('-webkit-text-security', 'disc') || CSS.supports('text-security', 'disc'));
+  if (!admitePuntos) {
+    pass.type = 'password'; pass.dataset.modoTipo = '1';
+    // Lo mismo para las contraseñas de los modales (cambio obligatorio,
+    // Mi usuario, Usuarios), que se crean más tarde.
+    new MutationObserver(function () {
+      document.querySelectorAll('input.campo-oculto:not([data-modo-tipo])').forEach(function (el) {
+        el.type = 'password'; el.dataset.modoTipo = '1';
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  // Polvo flotando sobre la foto del login (solo decoración).
+  const polvo = document.getElementById('login-polvo');
+  if (polvo) {
+    for (let i = 0; i < 26; i++) {
+      const s = document.createElement('span');
+      const tam = 2 + Math.random() * 4;
+      s.style.width = s.style.height = tam + 'px';
+      s.style.left = (Math.random() * 70) + '%';
+      s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
+      s.style.animationDuration = (14 + Math.random() * 16) + 's';
+      s.style.animationDelay = (-Math.random() * 25) + 's';
+      s.style.opacity = (0.3 + Math.random() * 0.6).toFixed(2);
+      polvo.appendChild(s);
+    }
+  }
+})();
 document.getElementById('btn-mi-usuario').addEventListener('click', abrirModalMiUsuario_);
 document.getElementById('btn-imprimir-dia').addEventListener('click', function () { imprimirConteoDia_(); });

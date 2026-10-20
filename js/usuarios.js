@@ -297,7 +297,7 @@ function abrirModalUsuario_(usuarioExistente) {
         (esNuevo
           ? '<div class="modal-campo">' +
               '<label for="modal-usuario-password">Contraseña</label>' +
-              '<input type="password" id="modal-usuario-password" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
+              '<input type="text" id="modal-usuario-password" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="Mínimo 3 caracteres">' +
             '</div>'
           : '') +
         '<div class="modal-campo">' +
@@ -438,7 +438,7 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
   custom.innerHTML =
     '<div class="modal-campo">' +
       '<label for="modal-usuario-password-nueva">Contraseña nueva</label>' +
-      '<input type="password" id="modal-usuario-password-nueva" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
+      '<input type="text" id="modal-usuario-password-nueva" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="Mínimo 3 caracteres">' +
     '</div>';
 
   const actions = document.getElementById('modal-actions');
@@ -521,15 +521,15 @@ function abrirModalMiUsuario_() {
     '<hr class="mi-usuario-separador">' +
     '<div class="modal-campo">' +
       '<label for="mi-usuario-password-actual">Contraseña actual</label>' +
-      '<input type="password" id="mi-usuario-password-actual" autocomplete="current-password">' +
+      '<input type="text" id="mi-usuario-password-actual" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other">' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="mi-usuario-password-nueva">Contraseña nueva</label>' +
-      '<input type="password" id="mi-usuario-password-nueva" placeholder="Mínimo 3 caracteres" autocomplete="new-password">' +
+      '<input type="text" id="mi-usuario-password-nueva" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="Mínimo 3 caracteres">' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="mi-usuario-password-repetir">Repetir contraseña nueva</label>' +
-      '<input type="password" id="mi-usuario-password-repetir" autocomplete="new-password">' +
+      '<input type="text" id="mi-usuario-password-repetir" class="campo-oculto" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other">' +
     '</div>';
 
   const actions = document.getElementById('modal-actions');
@@ -545,6 +545,9 @@ function abrirModalMiUsuario_() {
 
     if (!inputActual.value) { mostrarToast('Escribe tu contraseña actual', true); inputActual.focus(); return; }
     if (!inputNueva.value || inputNueva.value.length < 3) { mostrarToast('La contraseña nueva debe tener al menos 3 caracteres', true); inputNueva.focus(); return; }
+    if (inputNueva.value.trim().toLowerCase() === String(SESSION_USUARIO || '').trim().toLowerCase()) {
+      mostrarToast('La contraseña no puede ser igual que el usuario', true); inputNueva.focus(); return;
+    }
     if (inputRepetir.value !== inputNueva.value) { mostrarToast('Las dos contraseñas nuevas no coinciden', true); inputRepetir.focus(); return; }
 
     const btn = document.getElementById('modal-confirm-btn');
