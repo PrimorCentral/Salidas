@@ -1,280 +1,2411 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gestión Salidas</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png" type="image/png">
-<meta name="theme-color" content="#1c2b45">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Salidas">
-<link rel="stylesheet" href="styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gestión de Flota · Primor</title>
+
+  <!-- ══════════════════════════════════════════════════════════
+       VERSIÓN DE LA APLICACIÓN
+       La versión se escribe SOLO en version.json. Para publicar:
+       sube los archivos cambiados y, al final, version.json con el
+       número nuevo. No hace falta tocar nada en este archivo.
+  ══════════════════════════════════════════════════════════════ -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚛</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flota Primor">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Cliente Supabase (sustituye a Google Apps Script como backend) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- PDF.js — visor de documentos embebido -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module" id="pdfjs-script"></script>
+  <script src="js/pdfjs-loader.js"></script>
+  <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
 
-  <!-- INSTALACIÓN OBLIGATORIA (PWA): igual que en GIDT. Tapa la app desde el
-       primer instante (class "show" por defecto) y NO se cierra con click
-       fuera ni con Escape. js/instalar-app.js lo oculta solo si detecta que
-       la app se está ejecutando ya instalada (modo standalone). -->
-  <div class="instalar-overlay show" id="instalarAppModalOverlay">
-    <div class="instalar-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="instalarModalTitulo">
-      <div class="instalar-modal-icono"><img src="icon-192.png" alt=""></div>
-      <h3 class="instalar-modal-titulo" id="instalarModalTitulo">Instala la app para continuar</h3>
-      <p class="instalar-modal-mensaje">Esta aplicación debe usarse instalada en el dispositivo (no desde el navegador) para que todo funcione correctamente.</p>
-      <div class="instalar-modal-pasos">
-        <b>Cómo instalarla:</b>
-        <ol>
-          <li>Toca el botón <b>"Instalar App"</b> de abajo.</li>
-          <li>Confirma pulsando <b>"Instalar"</b> en el aviso que aparecerá.</li>
-          <li>Abre la app desde el icono nuevo en tu pantalla de inicio.</li>
-        </ol>
-      </div>
-      <p class="instalar-modal-ayuda" id="instalarAppAyuda">
-        Tu navegador no permite instalar la app automáticamente desde aquí. En Chrome o Edge, abre el menú (⋮ arriba a la derecha) y elige <b>"Instalar aplicación"</b> (o el icono ⊕ en la barra de direcciones). En iPhone/iPad (Safari), toca el icono de compartir y luego <b>"Añadir a pantalla de inicio"</b>.
-      </p>
-      <div class="instalar-modal-botones">
-        <button type="button" class="instalar-btn instalar-btn-principal" id="btnInstalarApp"><span id="btnInstalarAppTexto">⬇️ Instalar App</span></button>
-        <button type="button" class="instalar-btn instalar-btn-secundario" id="btnYaInstalada">Ya la tengo instalada · Recargar</button>
-      </div>
-    </div>
-  </div>
+<!-- MODAL CARGA CUADRANTE -->
+<div id="modal-cargando">
+  <div class="carga-box">
 
-  <!-- LOGIN -->
-  <div id="login-screen">
-    <!-- Animación de fondo: barrido de luz y polvo (la foto se mueve por CSS) -->
-    <div class="login-luz"></div>
-    <div class="login-polvo" id="login-polvo"></div>
-    <!-- Izquierda: la foto del almacén con el nombre y lo que hace la app
-         (en pantallas estrechas solo queda la marca, encima del panel). -->
-    <div class="login-hero">
-      <div class="login-entra login-brand" style="animation-delay:0.1s">
-        <div class="login-logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
-            <circle cx="7.5" cy="18" r="1.6" fill="#fff" stroke="none"/>
-            <circle cx="17.5" cy="18" r="1.6" fill="#fff" stroke="none"/>
-          </svg>
-        </div>
-        <div class="login-brand-txt">PRIMOR<small>Transporte</small></div>
-      </div>
-      <div class="login-hero-txt">
-        <span class="login-entra login-eyebrow" style="animation-delay:0.3s">Gestión Salidas</span>
-        <h2 class="login-entra" style="animation-delay:.45s">Cada palet,<br>en su camión.</h2>
-        <p class="login-entra" style="animation-delay:.6s">Conteos diarios, avisos a tiendas y agencias, y carga de camiones desde un mismo sitio.</p>
-        <div class="login-feat">
-          <div class="login-entra" style="animation-delay:0.8s"><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg></i>Conteos por nave y verificación</div>
-          <div class="login-entra" style="animation-delay:0.95s"><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></i>Previsión y definitivo a agencias</div>
-          <div class="login-entra" style="animation-delay:1.1s"><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/></svg></i>Ajuste de carga y matrículas</div>
-        </div>
-      </div>
-      <!-- Camión que recorre las tres naves y carga un palet en cada una -->
-      <div class="login-carril login-entra" style="animation-delay:1.3s" aria-hidden="true">
-        <span class="login-nave n1">GAITE</span><span class="login-nave n2">PTA</span><span class="login-nave n3">CARTAMA</span>
-        <div class="login-linea"></div>
-        <svg class="login-camion" viewBox="0 0 46 26"><g class="bote">
-          <rect x="1" y="4" width="28" height="15" rx="2" fill="#fff"/>
-          <rect class="p p1" x="4" y="8" width="6" height="8" rx="1" fill="#d98c2b"/>
-          <rect class="p p2" x="12" y="8" width="6" height="8" rx="1" fill="#d98c2b"/>
-          <rect class="p p3" x="20" y="8" width="6" height="8" rx="1" fill="#d98c2b"/>
-          <path d="M30 8h8l6 6v5H30z" fill="#fff"/><path d="M32 10h5l3.5 3.5H32z" fill="#1c2b45"/></g>
-          <circle cx="9" cy="21" r="3.2" fill="#1c2b45" stroke="#fff" stroke-width="1.6"/>
-          <circle cx="37" cy="21" r="3.2" fill="#1c2b45" stroke="#fff" stroke-width="1.6"/>
-        </svg>
-      </div>
-    </div>
-
-    <!-- Derecha: panel blanco con el formulario -->
-    <div class="login-panel">
-      <div class="login-form">
-        <h1 class="login-entra" style="animation-delay:.35s">Iniciar sesión</h1>
-        <p class="sub login-entra" style="animation-delay:.45s">Entra con tu usuario de Gestión Salidas</p>
-
-        <label class="login-label" for="login-usuario">Usuario</label>
-        <div class="campo-pass">
-          <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
-          <!-- Sin autorrelleno: el navegador no debe proponer usuarios guardados. -->
-          <input type="text" id="login-usuario" name="salidas-u" placeholder="Usuario" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other" autofocus>
-        </div>
-        <label class="login-label" for="login-pass">Contraseña</label>
-        <div class="campo-pass">
-          <svg class="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <!-- Campo de TEXTO que se ve con puntos (por CSS), no type="password":
-               así el navegador no lo trata como contraseña y no avisa de
-               "contraseña no segura / hay que cambiarla" ni ofrece guardarla. -->
-          <input type="text" id="login-pass" name="salidas-c" class="campo-oculto" placeholder="Contraseña" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other">
-          <button type="button" class="toggle-pass" id="toggle-pass" aria-label="Mostrar contraseña">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-
-        <button class="btn-primary" id="btn-login" onclick="intentarLogin()">
-          <span class="spinner" id="login-spinner"></span>
-          <span id="login-btn-text">Entrar</span>
-          <svg class="login-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
-        <p id="login-error">Usuario o contraseña incorrectos</p>
-      </div>
-      <div class="login-pie">
-        <span>© Primor · Departamento de Transporte</span>
-        <div class="version-badge" id="login-version-badge"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- APP -->
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">GESTIÓN <span>SALIDAS</span></div>
-      <nav class="topbar-nav" id="topbar-nav">
-        <button type="button" class="topbar-nav-item" data-vista="inicio">Inicio</button>
-        <button type="button" class="topbar-nav-item" data-vista="conteos">Conteos Diarios</button>
-        <div class="topbar-nav-dropdown" id="topbar-dropdown-configuracion">
-          <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="configuracion" aria-haspopup="true" aria-expanded="false">
-            Diseño
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-configuracion"></div>
-        </div>
-        <div class="topbar-nav-dropdown" id="topbar-dropdown-administracion">
-          <button type="button" class="topbar-nav-item topbar-nav-item-dropdown" data-vista="administracion" aria-haspopup="true" aria-expanded="false">
-            Administración
-            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="topbar-dropdown-menu" id="topbar-dropdown-menu-administracion"></div>
-        </div>
-      </nav>
-      <div class="topbar-fecha-wrap" id="topbar-fecha-wrap">
-        <div class="topbar-fecha" id="topbar-fecha"></div>
-        <button type="button" class="btn-imprimir-dia" id="btn-imprimir-dia" title="Imprimir el conteo de este día">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="6 9 6 2 18 2 18 9"></polyline>
-            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-            <rect x="6" y="14" width="12" height="8"></rect>
-          </svg>
-        </button>
-      </div>
-      <div class="topbar-derecha">
-        <span class="sync-indicator-global" id="sync-indicator-global"></span>
-        <div class="topbar-refresco-conteo" id="topbar-refresco-conteo" title="Tiempo hasta el próximo sondeo automático del conteo del día"></div>
-        <div class="topbar-reloj" id="topbar-reloj"></div>
-        <div class="topbar-usuario">
-          <button type="button" class="btn-mi-usuario" id="btn-mi-usuario" title="Mi usuario">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span class="topbar-usuario-rol" id="topbar-usuario-rol">&nbsp;</span>
-          </button>
-          <button type="button" class="btn-salir" onclick="cerrarSesion()">Salir</button>
-        </div>
-      </div>
-    </header>
-    <main id="main"></main>
-  </div>
-
-  <!-- Hoja de impresión del conteo del día: se genera aparte (ver
-       construirHojaImpresionDia_ / imprimirConteoDia_), como cuadrícula
-       pensada para rellenar a mano, independiente del diseño de pantalla.
-       Solo es visible mientras se imprime (ver @media print). -->
-  <div id="hoja-impresion-manual"></div>
-
-  <!-- MODAL -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal-box" id="modal-box">
-      <button type="button" class="modal-cerrar-x" id="modal-cerrar-x" title="Cerrar" aria-label="Cerrar">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-      <h3 id="modal-title"></h3>
-      <p id="modal-text"></p>
-      <div id="modal-custom" style="display:none;"></div>
-      <textarea id="modal-textarea" style="display:none;" placeholder="Escribe aquí…"></textarea>
-      <div class="modal-actions" id="modal-actions"></div>
-    </div>
-  </div>
-
-  <div id="toast"></div>
-
-<!-- Modal de actualización disponible (no se cierra clicando fuera: la actualización no es opcional) -->
-<div class="actualizacion-overlay" id="actualizacionModalOverlay">
-  <div class="actualizacion-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="actualizacionModalTitulo">
-    <!-- Escena animada: un perro pasea por la calle llevando la nueva versión.
-         Todo es SVG/CSS propio (sin imágenes externas). La velocidad la marca
-         la variable --vel (1 = paseo, más alto = corre al actualizar). -->
-    <div class="act-escena" id="actEscena" aria-hidden="true">
-      <div class="act-sol"></div>
-      <div class="act-tira act-nubes">
-        <svg viewBox="0 0 440 40" height="40"><g fill="#fff" opacity=".85"><ellipse cx="60" cy="22" rx="28" ry="10"/><ellipse cx="78" cy="16" rx="18" ry="10"/><ellipse cx="250" cy="26" rx="22" ry="8"/><ellipse cx="264" cy="21" rx="14" ry="8"/><ellipse cx="380" cy="14" rx="20" ry="7"/></g></svg>
-        <svg viewBox="0 0 440 40" height="40"><g fill="#fff" opacity=".85"><ellipse cx="60" cy="22" rx="28" ry="10"/><ellipse cx="78" cy="16" rx="18" ry="10"/><ellipse cx="250" cy="26" rx="22" ry="8"/><ellipse cx="264" cy="21" rx="14" ry="8"/><ellipse cx="380" cy="14" rx="20" ry="7"/></g></svg>
-      </div>
-      <div class="act-tira act-ciudad">
-        <svg viewBox="0 0 440 70" height="70" preserveAspectRatio="none"><g fill="#F3C9A6"><rect x="0" y="30" width="36" height="40"/><rect x="40" y="12" width="28" height="58"/><rect x="72" y="38" width="40" height="32"/><rect x="120" y="22" width="30" height="48"/><rect x="154" y="44" width="46" height="26"/><rect x="206" y="8" width="24" height="62"/><rect x="234" y="34" width="38" height="36"/><rect x="278" y="20" width="32" height="50"/><rect x="314" y="40" width="44" height="30"/><rect x="362" y="16" width="26" height="54"/><rect x="392" y="32" width="48" height="38"/></g></svg>
-        <svg viewBox="0 0 440 70" height="70" preserveAspectRatio="none"><g fill="#F3C9A6"><rect x="0" y="30" width="36" height="40"/><rect x="40" y="12" width="28" height="58"/><rect x="72" y="38" width="40" height="32"/><rect x="120" y="22" width="30" height="48"/><rect x="154" y="44" width="46" height="26"/><rect x="206" y="8" width="24" height="62"/><rect x="234" y="34" width="38" height="36"/><rect x="278" y="20" width="32" height="50"/><rect x="314" y="40" width="44" height="30"/><rect x="362" y="16" width="26" height="54"/><rect x="392" y="32" width="48" height="38"/></g></svg>
-      </div>
-      <div class="act-tira act-arboles">
-        <svg viewBox="0 0 440 60" height="60"><g fill="#7DB86A"><circle cx="40" cy="22" r="16"/><circle cx="54" cy="28" r="12"/><circle cx="210" cy="24" r="14"/><circle cx="350" cy="20" r="17"/><circle cx="366" cy="28" r="11"/></g><g fill="#6B4A2E"><rect x="44" y="34" width="5" height="26"/><rect x="208" y="34" width="5" height="26"/><rect x="354" y="34" width="5" height="26"/></g><g fill="#5B6572"><rect x="128" y="10" width="3" height="50"/><rect x="128" y="8" width="16" height="3" rx="1.5"/><rect x="278" y="10" width="3" height="50"/><rect x="278" y="8" width="16" height="3" rx="1.5"/></g><g fill="#FFC46B"><circle cx="142" cy="13" r="3"/><circle cx="292" cy="13" r="3"/></g></svg>
-        <svg viewBox="0 0 440 60" height="60"><g fill="#7DB86A"><circle cx="40" cy="22" r="16"/><circle cx="54" cy="28" r="12"/><circle cx="210" cy="24" r="14"/><circle cx="350" cy="20" r="17"/><circle cx="366" cy="28" r="11"/></g><g fill="#6B4A2E"><rect x="44" y="34" width="5" height="26"/><rect x="208" y="34" width="5" height="26"/><rect x="354" y="34" width="5" height="26"/></g><g fill="#5B6572"><rect x="128" y="10" width="3" height="50"/><rect x="128" y="8" width="16" height="3" rx="1.5"/><rect x="278" y="10" width="3" height="50"/><rect x="278" y="8" width="16" height="3" rx="1.5"/></g><g fill="#FFC46B"><circle cx="142" cy="13" r="3"/><circle cx="292" cy="13" r="3"/></g></svg>
-      </div>
-      <div class="act-suelo"></div>
-      <svg class="act-perro" viewBox="0 0 150 90">
-        <ellipse class="act-sombra" cx="70" cy="86" rx="46" ry="4" fill="#000"/>
-        <g class="act-cuerpo">
-          <rect class="act-pata act-b" x="34" y="50" width="9" height="32" rx="4.5" fill="#A8703C"/>
-          <rect class="act-pata act-a" x="84" y="50" width="9" height="32" rx="4.5" fill="#A8703C"/>
-          <path class="act-cola" d="M18 44 C 8 38, 6 26, 12 18" stroke="#C98B4F" stroke-width="7" stroke-linecap="round" fill="none"/>
-          <rect x="16" y="34" width="86" height="30" rx="15" fill="#C98B4F"/>
-          <ellipse cx="62" cy="58" rx="30" ry="6" fill="#E8B985"/>
-          <rect class="act-pata act-a" x="24" y="50" width="9" height="33" rx="4.5" fill="#C98B4F"/>
-          <rect class="act-pata act-b" x="92" y="50" width="9" height="33" rx="4.5" fill="#C98B4F"/>
-          <rect x="96" y="34" width="8" height="22" rx="3" fill="#D98C2B"/>
-          <circle cx="102" cy="58" r="3.5" fill="#FFC46B"/>
-          <circle cx="114" cy="30" r="16" fill="#C98B4F"/>
-          <ellipse cx="130" cy="36" rx="12" ry="8.5" fill="#E8B985"/>
-          <circle cx="140" cy="33" r="3.6" fill="#2B1B10"/>
-          <circle cx="117" cy="25" r="2.6" fill="#2B1B10"/>
-          <circle cx="118" cy="24.2" r=".9" fill="#fff"/>
-          <path d="M128 42 q4 3 8 0" stroke="#2B1B10" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-          <path class="act-oreja" d="M104 16 C 96 18, 96 34, 102 40 C 108 36, 110 24, 108 16 Z" fill="#8A5A2B"/>
-        </g>
+    <!-- Spinner doble anillo -->
+    <div class="carga-anillo">
+      <!-- Anillo exterior -->
+      <svg class="carga-anillo-svg" width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="36" cy="36" r="32" stroke="rgba(255,255,255,0.05)" stroke-width="3.5"/>
+        <path d="M36 4 A32 32 0 0 1 68 36" stroke="#e84545" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M68 36 A32 32 0 0 1 36 68" stroke="#e84545" stroke-width="3.5" stroke-linecap="round" opacity="0.25"/>
       </svg>
-      <div class="act-chapa" id="actChapaVersion">Nueva versión</div>
+      <!-- Anillo interior (gira al revés) -->
+      <svg class="carga-anillo-svg2" width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="30" cy="30" r="26" stroke="rgba(255,255,255,0.04)" stroke-width="2.5"/>
+        <path d="M30 4 A26 26 0 0 1 56 30" stroke="#e84545" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="carga-icono-center">🚛</div>
     </div>
 
-    <div class="act-contenido">
-      <div class="act-versiones" id="actVersiones" hidden>
-        <span class="act-v" id="actVersionActual"></span><span class="act-flecha">→</span><span class="act-v act-nueva" id="actVersionNueva"></span>
-      </div>
-      <h3 class="act-titulo" id="actualizacionModalTitulo">¡Nueva versión en camino!</h3>
-      <p class="act-mensaje" id="actualizacionModalMensaje">Hay una nueva versión de Gestión Salidas disponible. Es necesario actualizar para seguir usando la app.</p>
-      <div class="act-pie">
-        <button type="button" class="act-boton" id="btnActualizarAhora">🔄 Actualizar ahora</button>
-      </div>
-      <div class="act-barra"><i></i></div>
+    <div class="carga-label">Gestión de Flota · Primor</div>
+    <div class="carga-titulo">Cargando cuadrante</div>
+    <div class="carga-subtitulo" id="carga-titulo">Espere un momento, por favor</div>
+
+    <div class="carga-barra-wrap">
+      <div class="carga-barra" id="carga-barra"></div>
+    </div>
+    <div class="carga-paso" id="carga-paso">Iniciando…</div>
+
+    <div class="carga-dots">
+      <span></span><span></span><span></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL ERROR DE CARGA — con botón Reintentar -->
+<div id="modal-error-carga">
+  <div class="err-box">
+    <div class="err-icono">⚠️</div>
+    <div class="err-titulo" id="err-carga-titulo">No se pudieron cargar los datos</div>
+    <div class="err-detalle" id="err-carga-detalle">Comprueba tu conexión a Internet e inténtalo de nuevo.</div>
+    <button class="err-btn-reintentar" id="err-carga-btn" onclick="reintentarCargaError()">↻ Reintentar</button>
+  </div>
+</div>
+
+<!-- MODAL SISTEMA OCUPADO — lock del servidor -->
+<div id="modal-sistema-ocupado">
+  <div class="err-box">
+    <div class="err-icono">⏳</div>
+    <div class="err-titulo">Sistema ocupado</div>
+    <div class="err-detalle">Otro usuario está guardando datos ahora mismo. Espera unos segundos e inténtalo de nuevo.</div>
+    <button class="err-btn-reintentar" onclick="cerrarModalOcupado()">Entendido</button>
+  </div>
+</div>
+
+<!-- MODAL GENERANDO ORDEN -->
+<div id="modal-generando-orden">
+  <div class="gen-box">
+    <div class="gen-icono-wrap">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" stroke="#252545" stroke-width="4"/>
+        <path d="M32 4 A28 28 0 0 1 60 32" stroke="#e84545" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+      <div class="gen-icono-centro">🖨️</div>
+    </div>
+    <div class="gen-titulo">Generando orden de trabajo</div>
+    <div class="gen-sub">Preparando el documento,<br>un momento…</div>
+    <div class="gen-dots">
+      <span></span><span></span><span></span>
     </div>
   </div>
 </div>
 
-<!-- Ventana "Acerca de" (al pulsar el logo del login o de la cabecera) — js/acerca-de.js -->
+<!-- SPLASH -->
+<div id="splash" role="status" aria-live="polite">
+  <div class="splash-rejilla" aria-hidden="true"></div>
+  <div class="splash-brillo" aria-hidden="true"></div>
+  <div class="splash-contenido">
+    <div class="splash-logo">
+      <div class="splash-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>
+      </div>
+      <div class="splash-textos">
+        <div class="splash-title">GESTIÓN<br>DE FLOTA</div>
+        <div class="splash-sub">PRIMOR · CONTROL DIARIO</div>
+      </div>
+    </div>
+
+    <!-- Barra de progreso en forma de carretera: el camión avanza con la carga -->
+    <div class="splash-carretera" aria-hidden="true">
+      <div class="splash-bar-wrap"><div class="splash-bar" id="splash-bar"></div></div>
+      <div class="splash-lineas"></div>
+      <div class="splash-camion" id="splash-camion">
+        <svg width="28" height="24" viewBox="0 0 28 24" fill="none"><rect x="1" y="4" width="16" height="12" rx="2" fill="#fff"/><path d="M17 8h5l4 4v4h-9z" fill="#C93636"/><path d="M19 9.5h3l2.2 2.5H19z" fill="#0E1726"/><circle class="splash-rueda" cx="6.5" cy="18.5" r="3" fill="#0E1726" stroke="#fff" stroke-width="1.6" stroke-dasharray="3 2"/><circle class="splash-rueda" cx="21" cy="18.5" r="3" fill="#0E1726" stroke="#fff" stroke-width="1.6" stroke-dasharray="3 2"/></svg>
+      </div>
+    </div>
+
+    <div class="splash-msg" id="splash-msg">Iniciando…</div>
+
+    <div class="splash-pasos">
+      <span class="splash-paso" id="splash-paso-config"><i></i>Configuración</span>
+      <span class="splash-paso" id="splash-paso-servidor"><i></i>Servidor</span>
+      <span class="splash-paso" id="splash-paso-version"><i></i>Versión</span>
+      <span class="splash-paso" id="splash-paso-acceso"><i></i>Acceso</span>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🚛</div>
+    <div style="flex:1">
+      <div class="logo-text">GESTIÓN<br>DE FLOTA</div>
+      <div class="logo-sub">Cuadrante diario</div>
+    </div>
+    <button id="btn-panel-admin" onclick="abrirLoginAdmin()" title="Panel Admin" aria-label="Panel de administración" style="display:none;background:transparent;border:none;font-size:18px;cursor:pointer;opacity:0.65;transition:opacity 0.2s;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">⚙️</button>
+  </div>
+
+  <div class="user-pill" id="user-pill" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="user-pill-icon">👤</div>
+      <div style="flex:1;min-width:0;">
+        <div class="user-pill-name" id="user-pill-name">—</div>
+        <div class="user-pill-sub" id="user-pill-sub">—</div>
+        <div class="session-countdown" id="session-countdown"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:9px;">
+      <button class="btn-logout" style="flex:1;padding:7px 6px;font-size:11px;" onclick="cerrarSesionManual()" aria-label="Cerrar sesión">🚪 Salir</button>
+      <button class="btn-logout" style="flex:1;padding:7px 6px;font-size:11px;" onclick="abrirModalCambioClave()" aria-label="Cambiar clave de acceso">🔑 Clave</button>
+    </div>
+  </div>
+
+  <!-- Pastilla turno/fecha en sidebar -->
+  <div id="sb-turno-info" style="
+    background: linear-gradient(135deg, #1e1e38 0%, #252545 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 11px 12px 10px;
+    margin-bottom: 8px;
+    display: flex; flex-direction: column; gap: 5px;
+    position: relative; overflow: hidden;
+  ">
+    <!-- Línea de acento izquierda -->
+    <div id="sb-acento" style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#f97316;border-radius:3px 0 0 3px;"></div>
+
+    <!-- Turno badge -->
+    <div id="sb-turno-badge" style="
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 14px; font-weight: 900; letter-spacing: 1px;
+      text-transform: uppercase; color: #f97316;
+    ">
+      <span id="sb-turno-dot" style="width:8px;height:8px;border-radius:50%;background:#f97316;flex-shrink:0;display:inline-block;"></span>
+      <span id="sb-turno-texto">TURNO DE: TARDE</span>
+    </div>
+
+    <!-- Fecha grande -->
+    <div id="sb-fecha-texto" style="
+      font-size: 11px; font-weight: 700; color: #e8eaf2; letter-spacing: 0.2px; line-height: 1.3;
+    ">—</div>
+
+    <!-- Selector de fecha/turno integrado en la misma tarjeta -->
+    <div style="border-top:1px solid rgba(255,255,255,0.08);margin-top:8px;padding-top:9px;display:flex;flex-direction:column;gap:7px;">
+      <input type="date" id="fecha-input" style="width:100%;padding:7px 9px;background:#242440;border:1.5px solid #3a3a5a;border-radius:7px;color:#f5f5f5;font-family:'Barlow',sans-serif;font-size:11px;font-weight:600;outline:none;">
+      <div class="turno-btns">
+        <button class="turno-btn active" data-turno="MANANA" onclick="seleccionarTurno(this)">☀️ Mañana</button>
+        <button class="turno-btn" data-turno="TARDE" onclick="seleccionarTurno(this)">🌆 Tarde</button>
+      </div>
+    </div>
+  </div>
+
+<!-- MODAL: SESIÓN A PUNTO DE EXPIRAR -->
+<div class="modal-overlay" id="modal-sesion-expira">
+  <div class="modal-box">
+    <div class="exp-icon">⏱️</div>
+    <div class="exp-title">Sesión a punto de expirar</div>
+    <div class="exp-sub">Tu sesión se cerrará en</div>
+    <div class="exp-counter" id="exp-counter">60</div>
+    <div class="exp-sub">segundos. ¿Deseas continuar?</div>
+    <div class="exp-btns">
+      <button class="btn-continuar" onclick="renovarSesion()">✓ Continuar sesión</button>
+      <button class="btn-salir" onclick="expirarSesion()">Cerrar ahora</button>
+    </div>
+  </div>
+</div>
+
+  <div class="divider"></div>
+
+  <div class="sb-label">Vehículos</div>
+  <div style="background:#3a3a3a;border:1px solid #4a4a4a;border-radius:10px;padding:10px 10px 11px;margin-bottom:12px;">
+    <div class="sb-stats" style="margin-bottom:6px;">
+      <div class="sb-stat" style="background:#484848;"><div class="sb-stat-val green" id="stat-asignados">0</div><div class="sb-stat-label">Asignados</div></div>
+      <div class="sb-stat" style="background:#484848;"><div class="sb-stat-val" id="stat-total">0</div><div class="sb-stat-label">Total</div></div>
+    </div>
+    <div style="height:5px;background:#585858;border-radius:4px;overflow:hidden;">
+      <div id="sb-stats-bar" style="width:0%;height:100%;background:#2ecc71;border-radius:4px;transition:width 0.3s;"></div>
+    </div>
+  </div>
+  <div class="save-indicator" id="save-indicator" style="display:none"><span>—</span></div>
+
+  <div class="divider"></div>
+
+  <div class="sb-label">Acciones</div>
+  <div class="sb-action-btns">
+    <button class="btn-icon-sq btn-sq-secondary" onclick="if(usuarioActual) cargarCuadrante()">
+      <span class="bsq-icon">↺</span>
+      <span class="bsq-label">Recargar</span>
+    </button>
+    <button class="btn-icon-sq btn-sq-secondary" onclick="imprimirCuadrante()">
+      <span class="bsq-icon">🖨️</span>
+      <span class="bsq-label">Imprimir cuadrante</span>
+    </button>
+  </div>
+  <button class="btn-action btn-secondary" id="btn-incidencias-pendientes" onclick="abrirModalIncidenciasPendientes()">✅ Sin incidencias activas</button>
+
+  <!-- LOGO DE FONDO — rellena el hueco libre antes del reloj -->
+  <div style="flex:1; min-height:20px; display:flex; align-items:center; justify-content:center; padding:10px 0; overflow:hidden;">
+    <img src="logo-fondo.jpg" alt="" style="width:100%; opacity:0.28; filter:invert(1) grayscale(1) brightness(1.6); mix-blend-mode:screen; pointer-events:none; user-select:none; transform:scale(1.7);">
+  </div>
+
+  <!-- RELOJ EN TIEMPO REAL -->
+  <div class="sb-clock" style="margin-top:auto;">
+    <div class="sb-clock-time" id="sb-clock-time">00:00<span class="sb-clock-secs">:00</span></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div id="banner-devol-pendientes">
+    <span class="bdp-icon">⚠️</span>
+    <span class="bdp-texto"><strong>Tienes devoluciones pendientes del turno anterior.</strong> Regístralas para mantener el cuadrante correcto.</span>
+    <button class="bdp-btn" onclick="reabrirModalDevolPendientes()">Registrar ahora</button>
+  </div>
+  <div class="table-container">
+    <div class="table-wrap" id="table-wrap">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🚛</div>
+        <div class="empty-title">Cuadrante vacío</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANTALLA BIENVENIDA / LOGIN -->
+<div id="pantalla-login">
+
+  <!-- Panel izquierdo: marca -->
+  <div class="login-brand">
+    <!-- Escena animada de fondo: camión circulando de noche (solo decorativa) -->
+    <div class="login-escena" aria-hidden="true">
+      <div class="esc-lejos"></div>
+      <div class="esc-farolas"></div>
+      <div class="esc-carretera"><div class="esc-lineas"></div></div>
+      <div class="esc-camion">
+        <svg viewBox="0 0 470 130" width="470" height="130">
+          <defs>
+            <linearGradient id="esc-luz" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#FFE9B0" stop-opacity="0.55"/>
+              <stop offset="1" stop-color="#FFE9B0" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- haz de los faros -->
+          <path d="M318 84 L470 62 L470 116 Z" fill="url(#esc-luz)"/>
+          <!-- sombra -->
+          <ellipse cx="160" cy="122" rx="170" ry="6" fill="#000" opacity="0.45"/>
+          <g class="esc-carroceria">
+            <!-- remolque -->
+            <rect x="4" y="14" width="208" height="80" rx="4" fill="#1B2A42" stroke="#33445F" stroke-width="2"/>
+            <rect x="4" y="80" width="208" height="5" fill="#C93636"/>
+            <text x="108" y="60" text-anchor="middle" font-family="'Barlow Condensed','Barlow',sans-serif" font-weight="700" font-size="30" letter-spacing="4" fill="#E9EDF3" fill-opacity="0.85">PRIMOR</text>
+            <rect x="10" y="94" width="196" height="8" fill="#0B1220"/>
+            <!-- cabeza tractora -->
+            <path d="M222 102 L222 40 Q222 30 232 30 L276 30 Q286 30 292 40 L306 64 Q312 66 314 74 L316 102 Z" fill="#C93636"/>
+            <path d="M262 38 L280 38 Q284 38 287 43 L298 62 L262 62 Z" fill="#9DB8FF" fill-opacity="0.35"/>
+            <rect x="230" y="38" width="24" height="24" rx="2" fill="#9DB8FF" fill-opacity="0.18"/>
+            <rect x="212" y="88" width="104" height="14" fill="#0B1220"/>
+            <rect x="308" y="78" width="10" height="7" rx="2" fill="#FFE9B0"/>
+            <rect x="226" y="20" width="5" height="16" rx="2" fill="#4A5872"/>
+          </g>
+          <!-- ruedas -->
+          <g class="esc-rueda"><circle cx="40" cy="106" r="14" fill="#05090F"/><circle cx="40" cy="106" r="7" fill="none" stroke="#6E7B90" stroke-width="3" stroke-dasharray="4 3"/></g>
+          <g class="esc-rueda"><circle cx="74" cy="106" r="14" fill="#05090F"/><circle cx="74" cy="106" r="7" fill="none" stroke="#6E7B90" stroke-width="3" stroke-dasharray="4 3"/></g>
+          <g class="esc-rueda"><circle cx="240" cy="106" r="14" fill="#05090F"/><circle cx="240" cy="106" r="7" fill="none" stroke="#6E7B90" stroke-width="3" stroke-dasharray="4 3"/></g>
+          <g class="esc-rueda"><circle cx="292" cy="106" r="14" fill="#05090F"/><circle cx="292" cy="106" r="7" fill="none" stroke="#6E7B90" stroke-width="3" stroke-dasharray="4 3"/></g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="login-brand-cabecera">
+      <div class="login-brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>
+      </div>
+      <div>
+        <div class="login-brand-title">GESTIÓN DE FLOTA</div>
+        <div class="login-brand-sub">PRIMOR · CONTROL DIARIO</div>
+      </div>
+    </div>
+
+    <div class="login-brand-hero">
+      <h1>Cada llave,<br>cada vehículo,<br>cada turno.</h1>
+      <p>Asigna conductores, registra entregas y devoluciones y controla incidencias desde un único cuadrante.</p>
+    </div>
+
+    <div class="login-brand-fichas">
+      <div class="login-brand-ficha login-brand-badge">
+        <span class="login-brand-ficha-lbl" id="login-status-title">Servidor</span>
+        <span class="login-brand-ficha-val"><span class="login-brand-badge-dot"></span><span id="login-status-sub">Conectando…</span></span>
+      </div>
+      <div class="login-brand-ficha">
+        <span class="login-brand-ficha-lbl">Hoy</span>
+        <span class="login-brand-ficha-val" id="login-fecha-hoy">—</span>
+      </div>
+      <div class="login-brand-ficha">
+        <span class="login-brand-ficha-lbl">Versión</span>
+        <span class="login-brand-ficha-val login-brand-ficha-mono" id="login-version-badge">v —</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: formulario -->
+  <div class="login-form-panel">
+    <div class="login-form-box">
+      <div class="login-form-eyebrow">ACCESO RESPONSABLES</div>
+      <div class="login-form-title">Bienvenido/a</div>
+      <div class="login-form-sub">Identifícate para abrir el cuadrante del turno.</div>
+
+      <div class="login-error" id="mlr-error" role="alert">Usuario o clave incorrectos</div>
+
+      <div class="login-field">
+        <label for="mlr-num">Número de usuario</label>
+        <input type="text" id="mlr-num" placeholder="Tu número de usuario" maxlength="10"
+          inputmode="numeric" pattern="[0-9]*"
+          autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+          oninput="this.value=this.value.replace(/\D/g,'')"
+          onkeydown="if(event.key==='Enter') document.getElementById('mlr-clave').focus()">
+      </div>
+      <div class="login-field">
+        <label for="mlr-clave">Clave de acceso</label>
+        <input type="text" class="inp-clave" id="mlr-clave" placeholder="••••••" maxlength="20"
+          autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+          onkeydown="if(event.key==='Enter') loginResponsable()">
+      </div>
+
+      <button class="login-btn" id="btn-mlr-entrar" onclick="loginResponsable()">
+        Entrar al cuadrante
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+
+      <div class="login-loading" id="mlr-loading">
+        <div class="login-loading-inner">
+          <svg width="16" height="16" viewBox="0 0 16 16" style="animation:spin 0.7s linear infinite;flex-shrink:0"><circle cx="8" cy="8" r="6" fill="none" stroke="#dde1e8" stroke-width="2.5"/><path d="M8 2 A6 6 0 0 1 14 8" fill="none" stroke="#C93636" stroke-width="2.5" stroke-linecap="round"/></svg>
+          <span id="mlr-loading-msg">Verificando identidad…</span>
+        </div>
+      </div>
+
+      <div class="login-preload-bar">
+        <div class="login-preload-fill" id="login-preload-fill"></div>
+      </div>
+      <div class="login-preload-msg" id="login-preload-msg"></div>
+
+      <p class="login-ayuda">¿Problemas para entrar? Avisa a tu responsable de turno o a administración.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: CONFIRMAR ASIGNACIÓN DE CHOFER -->
+<div class="modal-overlay" id="modal-confirmar-asignacion">
+  <div style="background:white;border-radius:16px;padding:28px 28px 22px;width:420px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:Barlow,sans-serif;">
+    <div style="font-size:32px;margin-bottom:10px;text-align:center">🚛</div>
+    <div style="font-size:16px;font-weight:900;color:#1a1a2e;margin-bottom:6px;text-align:center">Confirmar asignación</div>
+    <div style="font-size:12px;color:#8899aa;margin-bottom:20px;text-align:center">¿Asignar este conductor al vehículo?</div>
+
+    <div style="background:#f7f8fa;border:1.5px solid #dde1e8;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;width:70px;flex-shrink:0">Vehículo</span>
+        <span id="confirmar-asig-matricula" style="font-size:13px;font-weight:800;color:#1a1a2e;background:#e8eaef;border-radius:5px;padding:2px 10px"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;width:70px;flex-shrink:0">Conductor</span>
+        <span id="confirmar-asig-chofer" style="font-size:13px;font-weight:800;color:#e84545"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;width:70px;flex-shrink:0">Entrega</span>
+        <span id="confirmar-asig-resp" style="font-size:12px;font-weight:700;color:#334"></span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <button id="btn-confirmar-asig-cancel"
+        style="flex:1;padding:11px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.15s"
+        onmouseover="this.style.background='#eaecf2'" onmouseout="this.style.background='#f4f5f8'">
+        Cancelar
+      </button>
+      <button id="btn-confirmar-asig-ok"
+        style="flex:2;padding:11px;background:#e84545;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:background 0.15s"
+        onmouseover="this.style.background='#c63030'" onmouseout="this.style.background='#e84545'">
+        ✓ Confirmar asignación
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONFIRMAR RECIBIR LLAVES -->
+<div class="modal-overlay" id="modal-confirmar-recibir-llaves">
+  <div style="background:white;border-radius:16px;padding:28px 28px 22px;width:400px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:Barlow,sans-serif;">
+    <div style="font-size:32px;margin-bottom:10px;text-align:center">🔑 🚛</div>
+    <div style="font-size:16px;font-weight:900;color:#1a1a2e;margin-bottom:6px;text-align:center">Confirmar recepción</div>
+    <div style="font-size:12px;color:#8899aa;margin-bottom:18px;text-align:center">¿Confirmas que has recibido las llaves?</div>
+    <div style="background:#f0fff4;border:1.5px solid #a9dfbf;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:22px">🚛</span>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Vehículo</div>
+        <div id="confirmar-recibir-matricula" style="font-size:15px;font-weight:900;color:#1a1a2e;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button
+        onclick="document.getElementById('modal-confirmar-recibir-llaves').classList.remove('open')"
+        style="flex:1;padding:11px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.15s"
+        onmouseover="this.style.background='#eaecf2'" onmouseout="this.style.background='#f4f5f8'">
+        Cancelar
+      </button>
+      <button id="btn-confirmar-recibir-ok"
+        style="flex:2;padding:11px;background:#16a34a;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:background 0.15s"
+        onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">
+        🚛 Sí, recibir llaves
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY: CARGANDO ORDEN -->
+<div id="carga-orden-overlay">
+  <div class="carga-orden-box">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="animation:spin 0.9s linear infinite">
+      <circle cx="24" cy="24" r="20" stroke="#252545" stroke-width="4"/>
+      <path d="M24 4 A20 20 0 0 1 44 24" stroke="#e84545" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <div class="carga-orden-txt">Comprobando órdenes…</div>
+  </div>
+</div>
+
+<!-- MODAL: ORDEN DE TRABAJO -->
+<div class="modal-overlay" id="modal-orden">
+  <div class="modal-orden">
+    <div class="modal-orden-header">
+      <div>
+        <div class="modal-orden-title">🖨️ Orden de Trabajo</div>
+        <div class="modal-orden-sub">Configura e imprime la orden para este vehículo</div>
+      </div>
+      <button class="modal-orden-close" onclick="cerrarModalOrden()">✕</button>
+    </div>
+    <div class="orden-info-grid">
+      <div class="orden-info-field">
+        <div class="orden-info-label">Vehículo</div>
+        <div class="orden-info-val" id="orden-matricula">—</div>
+      </div>
+      <div class="orden-info-field">
+        <div class="orden-info-label">Operario / Chofer</div>
+        <div class="orden-info-val" id="orden-operario">—</div>
+      </div>
+      <div class="orden-info-field">
+        <div class="orden-info-label">Fecha</div>
+        <div class="orden-info-val" id="orden-fecha">—</div>
+      </div>
+      <div class="orden-info-field">
+        <div class="orden-info-label">Turno</div>
+        <div class="orden-info-val" id="orden-turno">—</div>
+      </div>
+    </div>
+    <div class="orden-section-label">Empresa</div>
+    <div class="orden-empresa-btns">
+      <button class="orden-emp-btn" id="orden-emp-JD" onclick="selOrdenEmpresa('JD')">JIMENEZ &amp; DÍAZ</button>
+      <button class="orden-emp-btn" id="orden-emp-LD" onclick="selOrdenEmpresa('LD')">LOCURA DESMEDIDA</button>
+    </div>
+    <!-- Placeholder cuando no hay empresa seleccionada -->
+    <div class="orden-sin-empresa" id="orden-sin-empresa">
+      <div class="orden-sin-empresa-icon">🏢</div>
+      <div class="orden-sin-empresa-txt">Elige una empresa arriba<br>para ver las rutas disponibles</div>
+    </div>
+
+    <!-- Rutas: sólo visible tras elegir empresa -->
+    <div class="orden-rutas-wrapper oculto" id="orden-rutas-wrapper">
+      <div class="orden-section-label" style="display:flex;align-items:center;gap:8px">
+        Rutas
+        <span class="orden-ruta-count" id="orden-ruta-count">0 seleccionadas</span>
+      </div>
+      <div class="orden-sel-hint">Selecciona una o varias rutas — se imprimirán juntas en una sola hoja</div>
+      <div class="orden-rutas-lista" id="orden-rutas-lista"></div>
+    </div>
+    <div style="flex-shrink:0">
+    <div class="orden-actions">
+      <button class="btn-modal-cancelar" onclick="cerrarModalOrden()">Cancelar</button>
+      <button class="btn-modal-imprimir" onclick="ejecutarOrden()">🖨️ Imprimir orden</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn-packing-list" onclick="abrirPackingList()">📋 IMPRIMIR PACKING LIST</button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PACKING LIST -->
+<div class="modal-overlay" id="modal-packing-list">
+  <div class="modal-packing">
+    <div class="modal-packing-header">
+      <div>
+        <div class="modal-packing-title">📋 Packing List Choferes</div>
+        <div class="modal-packing-sub">Previsualización del documento</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-packing-print" onclick="imprimirPackingList()">🖨️ Imprimir</button>
+        <button class="modal-orden-close" onclick="cerrarPackingList()">✕</button>
+      </div>
+    </div>
+    <div class="modal-packing-body">
+      <iframe id="packing-list-iframe" src="" style="width:100%;height:100%;border:none;border-radius:8px;"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: LOGIN ADMIN -->
+<div class="modal-overlay" id="modal-login-admin">
+  <div class="modal-login-admin">
+    <div class="lock-icon" id="admin-lock-icon">🔐</div>
+    <h2>Panel de Administración</h2>
+    <p id="admin-login-subtitle">Introduce la contraseña de administrador</p>
+    <div class="error-msg" id="admin-error-msg">Contraseña incorrecta</div>
+    <input type="text" class="inp-clave" id="inp-admin-password" placeholder="• • • • •" maxlength="20"
+      autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+      onkeydown="if(event.key==='Enter') verificarPasswordAdmin()">
+    <button class="btn-entrar" id="btn-admin-entrar" onclick="verificarPasswordAdmin()">Entrar</button>
+    <div id="admin-login-loading" style="display:none;margin:10px 0 4px;display:none;align-items:center;justify-content:center;gap:10px;padding:10px 0">
+      <svg width="18" height="18" viewBox="0 0 18 18" style="animation:spin 0.75s linear infinite;flex-shrink:0"><circle cx="9" cy="9" r="7" fill="none" stroke="#dde1e8" stroke-width="2.5"/><path d="M9 2 A7 7 0 0 1 16 9" fill="none" stroke="#e84545" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span id="admin-login-loading-msg" style="font-size:12px;font-weight:700;color:#8899aa;letter-spacing:0.3px">Verificando…</span>
+    </div>
+    <button class="btn-cancelar" id="btn-admin-cancelar" onclick="document.getElementById('modal-login-admin').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: PANEL ADMIN -->
+<div class="modal-overlay" id="modal-admin">
+  <div class="modal-admin">
+    <aside class="admin-sidebar">
+      <div class="admin-brand">
+        <div class="admin-brand-logo">P</div>
+        <div class="admin-brand-txt"><strong>Flota Primor</strong><span>Administración</span></div>
+      </div>
+      <nav class="admin-tabs" aria-label="Secciones del panel">
+      <div class="admin-nav-grupo">Flota</div>
+      <button class="admin-tab" id="tab-btn-vehiculos" onclick="cambiarTab('vehiculos')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7M7 19a2 2 0 1 0 0-.01M17 19a2 2 0 1 0 0-.01"/></svg><span>Vehículos</span></button>
+      <button class="admin-tab" id="tab-btn-conductores" onclick="cambiarTab('conductores')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0"/></svg><span>Conductores</span></button>
+      <button class="admin-tab" id="tab-btn-asignaciones" onclick="cambiarTab('asignaciones')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 7a3 3 0 1 1-3 3M12 13l-7 7M7 18l2 2M9 16l2 2M17 4l3 3"/></svg><span>Asignaciones</span></button>
+      <button class="admin-tab" id="tab-btn-historial" onclick="cambiarTab('historial')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2"/></svg><span>Historial</span></button>
+      <div class="admin-nav-grupo">Operativa</div>
+      <button class="admin-tab" id="tab-btn-log" onclick="cambiarTab('log')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Log de órdenes</span></button>
+      <button class="admin-tab" id="tab-btn-reasignaciones" onclick="cambiarTab('reasignaciones')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/></svg><span>Reasignaciones</span></button>
+      <button class="admin-tab" id="tab-btn-incidencias" onclick="cambiarTab('incidencias')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg><span>Incidencias</span></button>
+      <button class="admin-tab" id="tab-btn-repostajes" onclick="cambiarTab('repostajes')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3"/></svg><span>Repostajes</span></button>
+      <div class="admin-nav-grupo">Sistema</div>
+      <button class="admin-tab" id="tab-btn-responsables" onclick="cambiarTab('responsables')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3"/></svg><span>Responsables</span></button>
+      <button class="admin-tab" id="tab-btn-activos" onclick="cambiarTab('activos')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Usuarios activos</span></button>
+      <button class="admin-tab" id="tab-btn-config" onclick="abrirLoginConfig()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M14 4v4M8 10v4M16 16v4"/></svg><span>Configuración</span></button>
+      </nav>
+      <button class="btn-cerrar-admin" onclick="cerrarAdmin()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span>Cerrar panel</span></button>
+    </aside>
+
+    <div class="admin-main">
+
+    <!-- LOGO DE FONDO — solo visible cuando no hay ninguna pestaña seleccionada -->
+    <div id="admin-home-watermark" style="flex:1; display:flex; align-items:center; justify-content:center; min-height:0;">
+      <img src="logo-fondo.jpg" alt="" style="max-width:680px; width:72%; opacity:0.16; filter:grayscale(1); mix-blend-mode:multiply; pointer-events:none; user-select:none;">
+    </div>
+
+    <!-- TAB: VEHÍCULOS -->
+    <div class="admin-tab-panel active" id="tab-panel-vehiculos">
+      <div class="adm-page-head">
+        <div>
+          <h1>Vehículos</h1>
+          <p>Flota de las naves, ITV, seguros y estado de cada vehículo.</p>
+        </div>
+        <div class="adm-page-actions">
+          <button class="adm-btn" onclick="exportarFlotaPDF()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Exportar PDF</button>
+          <button class="adm-btn adm-btn-primary" onclick="abrirModalNuevoVehiculo()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Añadir vehículo</button>
+        </div>
+      </div>
+      <div class="admin-stats" id="admin-stats"></div>
+      <div id="admin-lista-vehiculos"></div>
+      <p class="adm-nota">Los vehículos <strong>restringidos</strong> solo pueden asignarse a personas autorizadas. Son de <strong>alquiler</strong> los que tienen un proveedor distinto a PROPIEDAD (PINVECO, DFM, etc.).</p>
+    </div>
+
+
+    <!-- TAB: CONDUCTORES -->
+    <div class="admin-tab-panel" id="tab-panel-conductores">
+      <div class="adm-page-head">
+        <div>
+          <h1>Conductores</h1>
+          <p id="cond-resumen">—</p>
+        </div>
+        <div class="adm-page-actions">
+          <button class="adm-btn" onclick="exportarConductoresPDF()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Exportar PDF</button>
+          <button class="adm-btn adm-btn-primary" onclick="abrirModalNuevoConductor()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Añadir conductor</button>
+        </div>
+      </div>
+      <div class="adm-card cond-card">
+        <div class="adm-toolbar cond-toolbar">
+          <label class="adm-search cond-search">
+            <svg class="adm-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <span class="adm-sr">Buscar conductor</span>
+            <input type="text" id="cond-filtro" placeholder="Buscar por nombre, DNI, Nº usuario o sociedad…" oninput="renderAdminConductores()" autocomplete="off">
+          </label>
+          <div class="adm-toolbar-right">
+            <label class="adm-sr" for="cond-filtro-nave">Filtrar por nave</label>
+            <select id="cond-filtro-nave" class="cond-select" onchange="renderAdminConductores()">
+              <option value="">Todas las naves</option>
+            </select>
+            <label class="adm-sr" for="cond-filtro-turno">Filtrar por turno</label>
+            <select id="cond-filtro-turno" class="cond-select" onchange="renderAdminConductores()">
+              <option value="">Todos los turnos</option>
+              <option value="1">Turno 1</option>
+              <option value="2">Turno 2</option>
+              <option value="0">Sin turno</option>
+            </select>
+          </div>
+        </div>
+        <div class="adm-table-wrap" id="admin-lista-conductores"></div>
+        <div class="cond-pie" id="cond-pie"></div>
+      </div>
+    </div>
+
+    <!-- TAB: ASIGNACIONES (choferes habituales por matrícula y turno) -->
+    <div class="admin-tab-panel" id="tab-panel-asignaciones">
+      <div class="adm-page-head">
+        <div>
+          <h1>Asignaciones</h1>
+          <p>Choferes habituales de cada matrícula. Se resaltan al asignar en el cuadrante.</p>
+        </div>
+        <div class="adm-page-actions">
+          <button class="adm-btn" onclick="exportarAsignacionesPDF()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Exportar PDF</button>
+        </div>
+      </div>
+      <div class="admin-stats" id="asig-stats"></div>
+      <div id="asig-rotacion"></div>
+      <div class="adm-card" id="asig-card">
+        <div class="adm-toolbar">
+          <div class="adm-seg" id="asig-seg">
+            <button data-f="todas" class="on" onclick="asigCambiarFiltro('todas')">Todas</button>
+            <button data-f="con" onclick="asigCambiarFiltro('con')">Con habituales</button>
+            <button data-f="sin" onclick="asigCambiarFiltro('sin')">Sin habituales</button>
+          </div>
+          <div class="adm-toolbar-right">
+            <label class="adm-search"><svg class="adm-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4"/></svg>
+              <span class="adm-sr">Buscar</span><input type="text" id="asig-filtro" placeholder="Buscar matrícula o chofer" oninput="renderAdminAsignaciones()"></label>
+          </div>
+        </div>
+        <div class="adm-table-wrap" id="admin-lista-asignaciones"></div>
+      </div>
+      <p class="adm-nota">El turno de cada chofer se marca en <strong>Conductores</strong>. Un chofer puede ser habitual de varias matrículas. Es solo una ayuda: en el cuadrante se puede seguir asignando a cualquiera.</p>
+    </div>
+
+    <!-- TAB: HISTORIAL -->
+    <div class="admin-tab-panel" id="tab-panel-historial" style="flex-direction:column;gap:10px">
+      <div class="hist-filters">
+        <input type="date" id="hist-fecha-desde">
+        <input type="date" id="hist-fecha-hasta">
+        <select id="hist-turno">
+          <option value="">Todos los turnos</option>
+          <option value="MAÑANA">Mañana</option>
+          <option value="TARDE">Tarde</option>
+        </select>
+        <select id="hist-matricula"><option value="">Todas las matrículas</option></select>
+        <button class="btn-add-item" onclick="cargarHistorial()" style="background:#3498db">🔍 Buscar</button>
+        <button class="btn-add-item" onclick="exportarCSV()">⬇ CSV</button>
+        <button class="btn-add-item" onclick="exportarPDF('historial')" style="background:#e84545">📄 PDF</button>
+      </div>
+      <div class="hist-table-wrap">
+        <table class="hist-table">
+          <thead><tr>
+            <th>Fecha</th><th>Turno</th><th>Matrícula</th><th>Tipo</th>
+            <th>Operario</th><th>Resp. Entrega</th><th>Resp. Recibe</th>
+            <th>H. Entrega</th><th>H. Dev.</th><th>Nº Tarjeta</th><th>ITV</th><th>Incidencias</th><th class="col-acciones"></th>
+          </tr></thead>
+          <tbody id="hist-tbody"><tr><td colspan="13" class="hist-empty">Usa el filtro para buscar en el historial.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: LOG ÓRDENES -->
+    <div class="admin-tab-panel" id="tab-panel-log" style="flex-direction:column;gap:10px">
+      <div class="hist-filters">
+        <input type="date" id="log-fecha-desde">
+        <input type="date" id="log-fecha-hasta">
+        <input type="text" id="log-filtro-usuario" placeholder="Filtrar responsable…">
+        <button class="btn-add-item" onclick="cargarLog()" style="background:#3498db">🔍 Buscar</button>
+        <button class="btn-add-item" onclick="exportarLogCSV()">⬇ CSV</button>
+        <button class="btn-add-item" onclick="exportarPDF('log')" style="background:#e84545">📄 PDF</button>
+      </div>
+      <div class="hist-table-wrap">
+        <table class="log-table">
+          <thead><tr>
+            <th>Fecha/Hora</th><th>Responsable</th><th>Nº Usuario</th>
+            <th>Vehículo</th><th>Operario</th><th>Empresa</th><th>Ruta</th><th>Turno</th>
+            <th class="col-acciones"></th>
+          </tr></thead>
+          <tbody id="log-tbody"><tr><td colspan="9" class="hist-empty">Usa el filtro para buscar en el log de órdenes.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: REASIGNACIONES -->
+    <div class="admin-tab-panel" id="tab-panel-reasignaciones" style="flex-direction:column;gap:10px">
+      <div class="hist-filters">
+        <input type="date" id="reasig-fecha-desde">
+        <input type="date" id="reasig-fecha-hasta">
+        <select id="reasig-filtro-matricula"><option value="">Todas las matrículas</option></select>
+        <button class="btn-add-item" onclick="cargarReasignaciones()" style="background:#3498db">🔍 Buscar</button>
+        <button class="btn-add-item" onclick="exportarReasignacionesCSV()">⬇ CSV</button>
+        <button class="btn-add-item" onclick="exportarPDF('reasignaciones')" style="background:#e84545">📄 PDF</button>
+      </div>
+      <div class="hist-table-wrap">
+        <table class="hist-table">
+          <thead><tr>
+            <th>Fecha/Hora</th><th>Turno</th><th>Matrícula</th>
+            <th>Conductor anterior</th><th>Responsable entrega</th><th>Responsable recibe</th>
+            <th>H. Entrega</th><th>H. Reasig.</th>
+            <th class="col-acciones"></th>
+          </tr></thead>
+          <tbody id="reasig-tbody"><tr><td colspan="9" class="hist-empty">Usa el filtro para buscar reasignaciones.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: INCIDENCIAS -->
+    <div class="admin-tab-panel" id="tab-panel-incidencias" style="flex-direction:column;gap:10px">
+      <div class="hist-filters">
+        <input type="date" id="incid-fecha-desde">
+        <input type="date" id="incid-fecha-hasta">
+        <select id="incid-filtro-matricula"><option value="">Todas las matrículas</option></select>
+        <select id="incid-filtro-estado" style="padding:7px 10px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE">⏳ Pendiente</option>
+          <option value="COMPLETADO">✅ Resuelto</option>
+        </select>
+        <button class="btn-add-item" onclick="cargarTabIncidencias()" style="background:#3498db">🔍 Buscar</button>
+        <button class="btn-add-item" onclick="exportarIncidenciasCSV()">⬇ CSV</button>
+        <button class="btn-add-item" onclick="exportarPDF('incidencias')" style="background:#e84545">📄 PDF</button>
+        <button class="btn-add-item" onclick="cargarTabIncidencias()" style="background:#2ecc71" title="Recargar desde Sheets">🔄 Recargar</button>
+      </div>
+      <div class="hist-table-wrap">
+        <table class="hist-table">
+          <thead><tr>
+            <th>Fecha/Hora</th>
+            <th>Matrícula</th><th>Responsable</th><th style="min-width:260px">Descripción</th><th>Estado</th><th></th>
+          </tr></thead>
+          <tbody id="incid-tbody"><tr><td colspan="6" class="hist-empty">Usa el filtro para buscar incidencias.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: REPOSTAJES -->
+    <div class="admin-tab-panel" id="tab-panel-repostajes" style="flex-direction:column;gap:10px">
+      <div class="hist-filters">
+        <input type="date" id="repo-tab-fecha-desde">
+        <input type="date" id="repo-tab-fecha-hasta">
+        <select id="repo-tab-filtro-matricula"><option value="">Todas las matrículas</option></select>
+        <select id="repo-tab-filtro-estado" style="padding:7px 10px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE">⏳ Pendiente devolución</option>
+          <option value="COMPLETADO">✅ Completado</option>
+        </select>
+        <input type="text" id="repo-tab-filtro-ref" placeholder="🧾 Nº Ref. Ticket" style="width:160px"
+          onkeydown="if(event.key==='Enter') cargarTabRepostajes()">
+        <button class="btn-add-item" onclick="cargarTabRepostajes()" style="background:#3498db">🔍 Buscar</button>
+        <button class="btn-add-item" onclick="exportarRepostajesCSV()">⬇ CSV</button>
+        <button class="btn-add-item" onclick="exportarPDF('repostajes')" style="background:#e84545">📄 PDF</button>
+        <button class="btn-add-item" onclick="cargarTabRepostajes()" style="background:#2ecc71" title="Recargar desde Sheets">🔄 Recargar</button>
+        <button class="btn-add-item" onclick="abrirModalResumenMensual()" style="background:#6c3ce8" title="Resumen de importe y km por vehículo y día">📊 Resumen mensual</button>
+        <button class="btn-add-item" onclick="abrirModalRegistroManual()" style="background:#0f9d8c" title="Añadir un repostaje histórico (tickets en papel anteriores al sistema)">📋 Registro manual</button>
+        <!-- Resumen estadístico -->
+        <div id="repo-tab-stats" style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;margin-left:auto"></div>
+      </div>
+      <div class="hist-table-wrap">
+        <table class="hist-table">
+          <thead><tr>
+            <th>Fecha</th>
+            <th>Matrícula</th>
+            <th>Chofer</th>
+            <th>Km</th>
+            <th>Tarjeta</th>
+            <th>H. Entrega</th>
+            <th>H. Dev.</th>
+            <th>⛽ Antes/Después</th>
+            <th>🧪 Antes/Después</th>
+            <th>🧾 Ref. Ticket</th>
+            <th>💶 Importe</th>
+            <th>Resp. Entrega</th>
+            <th>Resp. Recibe</th>
+            <th>Estado</th>
+            <th class="col-acciones"></th>
+          </tr></thead>
+          <tbody id="repo-tab-tbody">
+            <tr><td colspan="15" class="hist-empty">Usa el filtro para buscar repostajes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+   <!-- TAB: RESPONSABLES -->
+    <div class="admin-tab-panel" id="tab-panel-responsables" style="flex-direction:column;gap:10px">
+      <div id="resp-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex-shrink:0;"></div>
+      <div class="admin-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap">
+          <div class="admin-section-title" style="margin-bottom:0">👥 Responsables autorizados</div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button onclick="cargarResponsables()" style="background:#f0f4ff;color:#3b5bdb;border:1.5px solid #c5d0ff;border-radius:8px;padding:8px 14px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">↺ Recargar</button>
+            <button class="btn-add-item" onclick="abrirModalNuevoResponsable()" style="background:#16a34a;color:white;border:none;border-radius:8px;padding:8px 16px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">+ Añadir responsable</button>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="position:relative;">
+            <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;">🔍</span>
+            <input type="text" id="resp-filtro" placeholder="Buscar por nombre, Nº usuario o rol…"
+              oninput="renderAdminResponsables()" style="width:100%;box-sizing:border-box;padding:9px 12px 9px 32px;border:1.5px solid #dde1e8;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:600;color:#1a1a2e;outline:none;transition:border-color .15s,box-shadow .15s;"
+              onfocus="this.style.borderColor='#3b5bdb';this.style.boxShadow='0 0 0 3px rgba(59,91,219,0.1)'"
+              onblur="this.style.borderColor='#dde1e8';this.style.boxShadow='none'">
+          </div>
+        </div>
+        <div class="admin-list" id="admin-lista-responsables" style="max-height:420px"></div>
+      </div>
+    </div>
+
+<!-- MODAL: NUEVO VEHÍCULO -->
+    <div id="modal-nuevo-vehiculo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;align-items:center;justify-content:center;">
+      <div style="background:white;border-radius:14px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:Barlow,sans-serif;">
+        <div style="font-size:15px;font-weight:900;color:#1a1a2e;margin-bottom:18px;">🚛 Añadir nuevo vehículo</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Matrícula <span style="color:#e84545">*</span></label>
+            <input type="text" id="modal-add-matricula" placeholder="Ej: IVECO 1234 ABC" oninput="this.value=this.value.toUpperCase()"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Tipo <span style="color:#e84545">*</span></label>
+            <select id="modal-add-tipo" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+              <option value="FURGONETA">Furgoneta</option>
+              <option value="CAMION 8P">Camión 8P</option>
+              <option value="CAMION 15P">Camión 15P</option>
+              <option value="CAMION 24P">Camión 24P</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nave <span style="color:#e84545">*</span></label>
+            <div id="modal-add-grupo-wrap"></div>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Propiedad</label>
+            <div id="modal-add-nota-wrap"></div>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Sociedad</label>
+            <div id="modal-add-soc-wrap"></div>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Fecha fin ITV <span style="color:#e84545">*</span></label>
+            <input type="date" id="modal-add-itv-fin"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+          </div>
+
+          <!-- ── DATOS SEGURO ── -->
+          <div style="border-top:2px solid #f0f2f5;padding-top:14px;margin-top:2px;">
+            <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:#3b5bdb;text-transform:uppercase;margin-bottom:10px;">🛡️ Seguro</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Aseguradora</label>
+                <input type="text" id="modal-add-seguro-nombre" placeholder="Ej: Mapfre"
+                  style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:600;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">CIF</label>
+                <input type="text" id="modal-add-seguro-cif" placeholder="Ej: A12345678" oninput="this.value=this.value.toUpperCase()"
+                  style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:600;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nº Póliza</label>
+                <input type="text" id="modal-add-seguro-poliza" placeholder="Ej: POL-2024-XXXX"
+                  style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:600;outline:none;">
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Vencimiento</label>
+                <input type="date" id="modal-add-seguro-vencimiento"
+                  style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:600;outline:none;">
+              </div>
+              <div style="grid-column:1/-1">
+                <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">📞 Tel. Asistencia / Grúa</label>
+                <input type="tel" id="modal-add-seguro-tel" placeholder="Ej: 900 123 456"
+                  style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;color:#e84545;">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button onclick="cerrarModalNuevoVehiculo()" style="padding:9px 20px;background:#f4f5f8;color:#556;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+          <button onclick="confirmarNuevoVehiculo()" style="padding:9px 20px;background:#2ecc71;color:white;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✓ Añadir vehículo</button>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- MODAL: FICHA DEL CONDUCTOR (se abre al pulsar una fila de la lista) -->
+    <div id="modal-ficha-conductor" class="cond-ficha-overlay" style="display:none">
+      <div class="cond-ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-cond-nombre">
+        <div class="cond-ficha-head">
+          <div class="cond-ficha-ini" id="ficha-cond-ini" aria-hidden="true"></div>
+          <div class="cond-ficha-tit">
+            <div class="cond-ficha-sup">Conductor · Nº <span id="ficha-cond-num"></span></div>
+            <h2 id="ficha-cond-nombre"></h2>
+          </div>
+          <button type="button" class="cond-ficha-x" id="ficha-cond-cerrar" onclick="cerrarFichaConductor()" aria-label="Cerrar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+
+        <div class="cond-ficha-body">
+          <div class="cond-ficha-grid">
+            <label class="cond-campo cond-campo-ancho">
+              <span>Nombre completo</span>
+              <input type="text" id="ficha-cond-in-nombre" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+            </label>
+            <label class="cond-campo">
+              <span>DNI / NIE</span>
+              <input type="text" id="ficha-cond-in-dni" class="mono" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+            </label>
+            <div class="cond-campo">
+              <span>Nº usuario</span>
+              <div class="cond-campo-fijo mono" id="ficha-cond-in-num" title="El Nº de usuario no se puede cambiar"></div>
+            </div>
+            <label class="cond-campo">
+              <span>Sociedad</span>
+              <input type="text" id="ficha-cond-in-sociedad" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+            </label>
+            <label class="cond-campo">
+              <span>Nave</span>
+              <input type="text" id="ficha-cond-in-nave" oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+            </label>
+          </div>
+
+          <div>
+            <div class="cond-ficha-lbl" id="ficha-cond-turno-lbl">Turno</div>
+            <div class="cond-ficha-turno" role="radiogroup" aria-labelledby="ficha-cond-turno-lbl" id="ficha-cond-turno"></div>
+          </div>
+
+          <div id="ficha-cond-hab-sec">
+            <div class="cond-ficha-lbl-fila">
+              <span class="cond-ficha-lbl">Vehículos habituales</span>
+              <button type="button" class="adm-link" onclick="irAAsignacionesDesdeFicha()">Gestionar en Asignaciones</button>
+            </div>
+            <div class="cond-ficha-habs" id="ficha-cond-habituales"></div>
+          </div>
+        </div>
+
+        <div class="cond-ficha-pie">
+          <button type="button" class="adm-btn cond-btn-eliminar" onclick="eliminarDesdeFichaConductor()">Eliminar conductor</button>
+          <span style="flex:1"></span>
+          <button type="button" class="adm-btn" onclick="cerrarFichaConductor()">Cancelar</button>
+          <button type="button" class="adm-btn adm-btn-primary" id="ficha-cond-guardar" onclick="guardarFichaConductor()">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: NUEVO CONDUCTOR -->
+    <div id="modal-nuevo-conductor" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;align-items:center;justify-content:center;">
+      <div style="background:white;border-radius:14px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:Barlow,sans-serif;">
+        <div style="font-size:15px;font-weight:900;color:#1a1a2e;margin-bottom:18px;">🧑‍✈️ Añadir nuevo conductor</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nombre completo <span style="color:#e84545">*</span></label>
+            <input type="text" id="modal-cond-nombre" placeholder="Nombre y apellidos" oninput="this.value=this.value.toUpperCase()"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">DNI / NIE <span style="color:#e84545">*</span></label>
+              <input type="text" id="modal-cond-dni" placeholder="12345678A" oninput="this.value=this.value.toUpperCase()"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nº Usuario <span style="color:#e84545">*</span></label>
+              <input type="text" id="modal-cond-num" placeholder="Ej: 1234"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Sociedad</label>
+              <input type="text" id="modal-cond-sociedad" placeholder="Empresa" oninput="this.value=this.value.toUpperCase()"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nave</label>
+              <input type="text" id="modal-cond-nave" placeholder="GAITE / PTA…" oninput="this.value=this.value.toUpperCase()"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button onclick="cerrarModalNuevoConductor()" style="padding:9px 20px;background:#f4f5f8;color:#556;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+          <button onclick="confirmarNuevoConductor()" style="padding:9px 20px;background:#2ecc71;color:white;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✓ Añadir conductor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: NUEVO RESPONSABLE -->
+    <div id="modal-nuevo-responsable" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:4000;align-items:center;justify-content:center;">
+      <div style="background:white;border-radius:14px;padding:28px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:Barlow,sans-serif;">
+        <div style="font-size:15px;font-weight:900;color:#1a1a2e;margin-bottom:18px;">👥 Añadir nuevo responsable</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nº Usuario <span style="color:#e84545">*</span></label>
+              <input type="text" id="modal-resp-num" placeholder="Ej: 1234" maxlength="10"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nombre completo <span style="color:#e84545">*</span></label>
+              <input type="text" id="modal-resp-nombre" placeholder="Nombre y apellidos" oninput="this.value=this.value.toUpperCase()"
+                style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Clave de acceso <span style="color:#e84545">*</span></label>
+            <input type="text" class="inp-clave" id="modal-resp-clave" placeholder="Clave de acceso"
+              autocomplete="off" data-lpignore="true" data-1p-ignore="true"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Nave <span style="color:#e84545">*</span></label>
+            <select id="modal-resp-rol"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;outline:none;color:#1a1a2e;background:white;cursor:pointer;">
+              <option value="">— Selecciona un rol —</option>
+              <option value="GAITE">GAITE</option>
+              <option value="CARTAMA">CARTAMA</option>
+              <option value="LIBIAO">LIBIAO</option>
+              <option value="PTA">PTA</option>
+              <option value="ILLESCAS">ILLESCAS</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#f8f9fc;border:1.5px solid #dde1e8;border-radius:8px;padding:10px 14px;">
+            <div>
+              <div style="font-size:12px;font-weight:800;color:#1a1a2e;">Administrador</div>
+              <div style="font-size:10px;color:#8899aa;margin-top:1px;">Acceso al panel de administración</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;cursor:pointer;" onclick="toggleAdminSwitch()">
+              <div id="modal-resp-admin-track" style="position:absolute;inset:0;background:#ccd1db;border-radius:22px;transition:background .2s;"></div>
+              <div id="modal-resp-admin-knob" style="position:absolute;height:16px;width:16px;left:3px;top:3px;background:white;border-radius:50%;transition:transform .2s;"></div>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button onclick="cerrarModalNuevoResponsable()" style="padding:9px 20px;background:#f4f5f8;color:#556;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+          <button onclick="confirmarNuevoResponsable()" style="padding:9px 20px;background:#2ecc71;color:white;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">✓ Añadir responsable</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- TAB: USUARIOS ACTIVOS -->
+    <div class="admin-tab-panel" id="tab-panel-activos" style="flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+        <div>
+          <div style="font-size:11px;font-weight:900;color:#1a1a2e;letter-spacing:1px">USUARIOS CON SESIÓN INICIADA</div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px">Se actualiza cada 30 segundos · Se considera activo si el heartbeat tiene menos de 2 minutos</div>
+        </div>
+        <button class="btn-add-item" onclick="cargarUsuariosActivos()" style="background:#2ecc71;flex-shrink:0">🔄 Recargar</button>
+      </div>
+      <!-- Contador resumen -->
+      <div id="activos-resumen" style="display:flex;gap:10px;flex-wrap:wrap;flex-shrink:0"></div>
+      <!-- Lista de usuarios -->
+      <div class="admin-section" style="flex:1;min-height:0">
+        <div class="admin-section-title">Sesiones abiertas ahora mismo</div>
+        <div id="activos-lista" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto">
+          <div style="text-align:center;padding:40px 0;color:#b0bac8;font-size:13px;font-weight:600">
+            Abre esta pestaña para ver los usuarios activos
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CONFIG -->
+    <div class="admin-tab-panel" id="tab-panel-config">
+
+      <!-- PANTALLA DE BLOQUEO CONFIG -->
+      <div id="config-lock-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 20px;text-align:center;">
+        <div style="font-size:56px;margin-bottom:16px;">⛔</div>
+        <div style="font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:8px;letter-spacing:0.5px;">ACCESO RESTRINGIDO</div>
+        <div style="font-size:12px;color:#e84545;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;">Solo personal técnico autorizado</div>
+        <div style="background:#fff0f0;border:1.5px solid #fecaca;border-left:4px solid #e84545;border-radius:10px;padding:14px 20px;max-width:440px;margin-bottom:28px;text-align:left;">
+          <div style="font-size:11px;font-weight:900;color:#b91c1c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">⚠️ Zona de peligro</div>
+          <div style="font-size:12px;color:#7f1d1d;line-height:1.7;font-weight:600;">
+            Esta sección contiene la configuración crítica del sistema. Un cambio incorrecto puede dejar la aplicación <strong>inoperativa para todos los usuarios</strong>.<br><br>
+            El acceso está reservado exclusivamente a los <strong>programadores y administradores técnicos</strong> del sistema.
+          </div>
+        </div>
+        <button onclick="abrirLoginConfig()" style="padding:11px 32px;background:#e84545;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;">🔐 Introducir contraseña</button>
+      </div>
+
+      <!-- CONTENIDO REAL DE CONFIG (oculto hasta verificar) -->
+      <div id="config-content" style="display:none;flex-direction:column;gap:14px;">
+
+        <!-- MENÚ PRINCIPAL DE CONFIG -->
+        <div id="config-menu" class="config-menu-grid">
+          <div class="config-menu-card" onclick="abrirConfigSeccion('conexion')">
+            <div class="config-menu-icon">🔌</div>
+            <div class="config-menu-title">Conexión</div>
+            <div class="config-menu-desc">URL del Apps Script y reconexión con la base de datos.</div>
+          </div>
+          <div class="config-menu-card" onclick="abrirConfigSeccion('seguridad')">
+            <div class="config-menu-icon">🔐</div>
+            <div class="config-menu-title">Seguridad</div>
+            <div class="config-menu-desc">Contraseña de administrador y contraseña de acceso a Config.</div>
+          </div>
+          <div class="config-menu-card" onclick="abrirConfigSeccion('destinatarios')">
+            <div class="config-menu-icon">📧</div>
+            <div class="config-menu-title">Destinatarios de correo</div>
+            <div class="config-menu-desc">Quién recibe los avisos de incidencias y de bloqueos de vehículos.</div>
+          </div>
+          <div class="config-menu-card" onclick="abrirConfigSeccion('diagnostico')">
+            <div class="config-menu-icon">🤖</div>
+            <div class="config-menu-title">Diagnóstico</div>
+            <div class="config-menu-desc">Estado del servidor Google en tiempo real.</div>
+          </div>
+          <div class="config-menu-card" onclick="abrirConfigSeccion('logacciones')">
+            <div class="config-menu-icon">📋</div>
+            <div class="config-menu-title">Log de Acciones</div>
+            <div class="config-menu-desc">Historial de todo lo que han hecho los usuarios: login, cuadrante, incidencias, vehículos, repostajes…</div>
+          </div>
+          <div class="config-menu-card" onclick="abrirConfigSeccion('rutas')">
+            <div class="config-menu-icon">🗺️</div>
+            <div class="config-menu-title">Rutas y Empresas</div>
+            <div class="config-menu-desc">Gestiona las empresas, sus rutas de reparto y las ubicaciones/almacenes disponibles.</div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: CONEXIÓN -->
+        <div class="config-section-panel" id="config-section-conexion">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+          <div class="admin-section">
+            <div class="admin-section-title">Google Apps Script</div>
+            <div class="admin-add-form" style="flex-direction:column;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <label style="font-size:10px;font-weight:700;color:#778;letter-spacing:1px;text-transform:uppercase">URL del Apps Script</label>
+                <input type="url" id="admin-config-url" placeholder="https://script.google.com/macros/s/.../exec">
+              </div>
+              <button class="btn-add-item" onclick="guardarConfigAdmin()">💾 Guardar y reconectar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: SEGURIDAD -->
+        <div class="config-section-panel" id="config-section-seguridad">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+          <div class="admin-section">
+            <div class="admin-section-title">Contraseña de administrador</div>
+            <div style="background:#fff8f0;border:1px solid #ffe0b2;border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:11px;color:#8b4513;font-weight:600;display:flex;align-items:flex-start;gap:8px">
+              <span style="font-size:15px;flex-shrink:0">☁️</span>
+              <span>La contraseña se guarda <strong>hasheada en Google Sheets</strong> (hoja <em>Config</em>). Al verificar, el hash se comprueba siempre contra la base de datos, no contra el navegador.</span>
+            </div>
+            <div id="admin-pass-sync-status" style="font-size:11px;color:#8899aa;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+              <span id="admin-pass-sync-icon">⏳</span>
+              <span id="admin-pass-sync-text">Comprobando estado en Sheets…</span>
+            </div>
+            <div class="admin-add-form" style="flex-direction:column;gap:10px">
+              <input type="text" class="inp-clave" id="admin-pass-nueva" placeholder="Nueva contraseña (mínimo 4 caracteres)"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+              <input type="text" class="inp-clave" id="admin-pass-confirm" placeholder="Repetir nueva contraseña"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+              <button class="btn-add-item" id="btn-cambiar-pass" onclick="cambiarPasswordAdmin()" style="background:#e84545">🚛 Cambiar y guardar en Sheets</button>
+            </div>
+          </div>
+          <div class="admin-section" style="margin-top:14px">
+            <div class="admin-section-title">Contraseña de acceso a Config</div>
+            <div style="background:#f0f4ff;border:1px solid #c5d0ff;border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:11px;color:#3b5bdb;font-weight:600;display:flex;align-items:flex-start;gap:8px">
+              <span style="font-size:15px;flex-shrink:0">🔐</span>
+              <span>Esta contraseña es <strong>independiente</strong> de la de administrador. Se solicita cada vez que alguien intenta abrir esta pestaña.</span>
+            </div>
+            <div id="config-pass-sync-status" style="font-size:11px;color:#8899aa;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+              <span id="config-pass-sync-icon">⏳</span>
+              <span id="config-pass-sync-text">Comprobando estado en Sheets…</span>
+            </div>
+            <div class="admin-add-form" style="flex-direction:column;gap:10px">
+              <input type="text" class="inp-clave" id="config-pass-nueva" placeholder="Nueva contraseña de Config (mínimo 4 caracteres)"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+              <input type="text" class="inp-clave" id="config-pass-confirm" placeholder="Repetir contraseña"
+                autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+              <button class="btn-add-item" id="btn-cambiar-config-pass" onclick="cambiarPasswordConfig()" style="background:#3b5bdb">🔐 Cambiar contraseña de Config</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: DESTINATARIOS DE CORREO -->
+        <div class="config-section-panel" id="config-section-destinatarios">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+          <div class="admin-section">
+            <div class="admin-section-title">⚠️ Destinatarios de incidencias</div>
+            <div style="background:#fff8f0;border:1px solid #ffe0b2;border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:11px;color:#8b4513;font-weight:600;">
+              Reciben un correo cada vez que se registra una nueva incidencia en un vehículo.
+            </div>
+            <div id="dest-lista-incidencias" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+            <div class="admin-add-form">
+              <input type="email" id="dest-incid-nuevo" placeholder="correo@primor.eu" onkeydown="if(event.key==='Enter') añadirDestinatario('incidencias')">
+              <button class="btn-add-item" onclick="añadirDestinatario('incidencias')">+ Añadir</button>
+            </div>
+          </div>
+          <div class="admin-section" style="margin-top:14px">
+            <div class="admin-section-title">⛔ Destinatarios de bloqueos de vehículos</div>
+            <div style="background:#fff0f0;border:1px solid #fecaca;border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:11px;color:#b91c1c;font-weight:600;">
+              Reciben un correo cuando un vehículo queda bloqueado y fuera de servicio.
+            </div>
+            <div id="dest-lista-bloqueos" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+            <div class="admin-add-form">
+              <input type="email" id="dest-bloq-nuevo" placeholder="correo@primor.eu" onkeydown="if(event.key==='Enter') añadirDestinatario('bloqueos')">
+              <button class="btn-add-item" onclick="añadirDestinatario('bloqueos')">+ Añadir</button>
+            </div>
+          </div>
+          <div class="admin-section" style="margin-top:14px">
+            <div class="admin-section-title">🔧 Destinatarios de caducidad de ITV</div>
+            <div style="background:#fff8f0;border:1px solid #fde8d0;border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:11px;color:#b07040;font-weight:600;">
+              Reciben un correo cuando la ITV de un vehículo está a 60 días o menos de caducar (o ya vencida).
+            </div>
+            <div id="dest-lista-itv" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+            <div class="admin-add-form">
+              <input type="email" id="dest-itv-nuevo" placeholder="correo@primor.eu" onkeydown="if(event.key==='Enter') añadirDestinatario('itv')">
+              <button class="btn-add-item" onclick="añadirDestinatario('itv')">+ Añadir</button>
+            </div>
+          </div>
+          <div id="dest-sync-status" style="font-size:11px;color:#8899aa;display:flex;align-items:center;gap:6px">
+            <span id="dest-sync-icon">⏳</span>
+            <span id="dest-sync-text">Cargando destinatarios…</span>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: DIAGNÓSTICO -->
+        <div class="config-section-panel" id="config-section-diagnostico">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+          <div class="admin-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+              <div>
+                <div class="admin-section-title" style="margin-bottom:2px">Estado de las hojas</div>
+                <div style="font-size:11px;color:#8899aa;font-weight:600">Comprueba cuántas filas tiene cada hoja ahora mismo en Google Sheets.</div>
+              </div>
+              <button class="btn-add-item" id="btn-verificar-diagnostico" onclick="verificarDiagnostico()" style="background:#2ecc71;flex-shrink:0">🩺 Verificar</button>
+            </div>
+            <div id="diagnostico-resultado" style="display:flex;flex-direction:column;gap:6px">
+              <div style="text-align:center;padding:24px 0;color:#b0bac8;font-size:12px;font-weight:600">Pulsa "Verificar" para comprobar el estado de las hojas</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: LOG DE ACCIONES -->
+        <div class="config-section-panel" id="config-section-logacciones">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+          <div class="admin-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+              <div>
+                <div class="admin-section-title" style="margin-bottom:2px">📋 Log de Acciones</div>
+                <div style="font-size:11px;color:#8899aa;font-weight:600">Registro de todas las acciones realizadas por los usuarios</div>
+              </div>
+              <button class="btn-add-item" onclick="cargarLogAcciones()" style="background:#3b5bdb;flex-shrink:0">🔍 Buscar</button>
+            </div>
+            <!-- Filtros -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:12px;align-items:end;">
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <label style="font-size:10px;font-weight:700;color:#778;letter-spacing:1px;text-transform:uppercase">Desde</label>
+                <input type="date" id="logac-desde" style="padding:8px;border:1.5px solid #dde1ea;border-radius:7px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <label style="font-size:10px;font-weight:700;color:#778;letter-spacing:1px;text-transform:uppercase">Hasta</label>
+                <input type="date" id="logac-hasta" style="padding:8px;border:1.5px solid #dde1ea;border-radius:7px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <label style="font-size:10px;font-weight:700;color:#778;letter-spacing:1px;text-transform:uppercase">Usuario</label>
+                <input type="text" id="logac-usuario" placeholder="Nombre o nº…" style="padding:8px;border:1.5px solid #dde1ea;border-radius:7px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;" onkeydown="if(event.key==='Enter') cargarLogAcciones()">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <label style="font-size:10px;font-weight:700;color:#778;letter-spacing:1px;text-transform:uppercase">Categoría</label>
+                <select id="logac-categoria" style="padding:8px;border:1.5px solid #dde1ea;border-radius:7px;font-family:Barlow,sans-serif;font-size:12px;color:#1a1a2e;outline:none;background:white;">
+                  <option value="">Todas</option>
+                  <option value="SESION">🔑 Sesión</option>
+                  <option value="CUADRANTE">📅 Cuadrante</option>
+                  <option value="INCIDENCIA">⚠️ Incidencias</option>
+                  <option value="VEHICULO">🚛 Vehículos</option>
+                  <option value="MANTENIMIENTO">🛠️ Mantenimiento</option>
+                  <option value="REPOSTAJE">⛽ Repostajes</option>
+                  <option value="ADMIN">👤 Admin</option>
+                </select>
+              </div>
+            </div>
+            <!-- Resultado -->
+            <div id="logac-resultado" style="display:flex;flex-direction:column;gap:0">
+              <div style="text-align:center;padding:24px 0;color:#b0bac8;font-size:12px;font-weight:600">Pulsa «Buscar» para ver el log de acciones</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN: RUTAS Y EMPRESAS -->
+        <div class="config-section-panel" id="config-section-rutas">
+          <button class="config-back-btn" onclick="volverConfigMenu()">← Volver al menú</button>
+
+          <!-- UBICACIONES -->
+          <div class="admin-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+              <div>
+                <div class="admin-section-title" style="margin-bottom:2px">📍 Ubicaciones / Almacenes</div>
+                <div style="font-size:11px;color:#8899aa;font-weight:600">Puntos de origen/destino disponibles para las rutas</div>
+              </div>
+              <button class="btn-add-item" onclick="rutasAddUbic()" style="background:#3b5bdb">+ Añadir ubicación</button>
+            </div>
+            <div id="rutas-ubic-lista" style="display:flex;flex-direction:column;gap:6px;"></div>
+          </div>
+
+          <!-- EMPRESAS -->
+          <div class="admin-section">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+              <div>
+                <div class="admin-section-title" style="margin-bottom:2px">🏢 Empresas y Rutas</div>
+                <div style="font-size:11px;color:#8899aa;font-weight:600">Cada empresa tiene su propio conjunto de rutas</div>
+              </div>
+              <button class="btn-add-item" onclick="rutasAddEmpresa()">+ Añadir empresa</button>
+            </div>
+            <div id="rutas-emp-lista" style="display:flex;flex-direction:column;gap:14px;"></div>
+          </div>
+
+          <!-- GUARDAR -->
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding:4px 0 8px">
+            <button onclick="rutasGuardar()" style="padding:10px 28px;background:#16a34a;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:1px;">💾 Guardar cambios</button>
+          </div>
+        </div>
+
+      </div><!-- fin config-content -->
+    </div>
+    </div><!-- fin admin-main -->
+  </div>
+</div>
+
+<!-- MODAL: RECIBIR LLAVES -->
+<div class="modal-overlay" id="modal-recibir-llaves">
+  <div style="background:white;border-radius:16px;padding:28px 28px 22px;width:620px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:Barlow,sans-serif;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-shrink:0">
+      <div>
+        <div style="font-size:18px;font-weight:900;color:#1a1a2e">🔑 Recibir llaves</div>
+        <div style="font-size:11px;color:#8899aa;margin-top:3px">Vehículos entregados pendientes de recibir — confirma la devolución</div>
+      </div>
+      <button onclick="cerrarModalRecibirLlaves()" style="background:none;border:1.5px solid #dde1e8;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:14px;color:#889;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0" onmouseover="this.style.background='#e84545';this.style.color='white'" onmouseout="this.style.background='none';this.style.color='#889'">✕</button>
+    </div>
+    <div id="recibir-llaves-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0">
+      <div style="text-align:center;padding:40px;color:#8899aa;font-size:13px">⏳ Cargando datos un momento por favor…</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding-top:14px;flex-shrink:0;border-top:1px solid #f0f2f5;margin-top:14px">
+      <button onclick="cerrarModalRecibirLlaves()" style="padding:10px 22px;background:#f4f5f8;color:#556;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONFIRMANDO RECEPCIÓN DE LLAVES -->
+<div class="modal-overlay" id="modal-confirmando-recepcion" style="z-index:10200">
+  <div style="background:white;border-radius:18px;padding:38px 36px 32px;width:360px;max-width:94vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.35);font-family:Barlow,sans-serif;">
+    <div style="font-size:44px;margin-bottom:14px;animation:spin-key 1.2s linear infinite;display:inline-block">🚛</div>
+    <div style="font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:6px">Confirmando recepción</div>
+    <div id="confirmando-recepcion-matricula" style="font-size:13px;font-weight:800;color:#e84545;background:#fff0f0;border-radius:7px;padding:5px 14px;display:inline-block;margin-bottom:14px;letter-spacing:0.5px"></div>
+    <div style="font-size:12px;color:#8899aa;font-weight:600">Un momento, por favor…</div>
+    <div style="margin-top:18px;height:4px;background:#f0f2f5;border-radius:99px;overflow:hidden">
+      <div style="height:100%;background:#e84545;border-radius:99px;animation:progress-bar 1.8s ease-in-out infinite"></div>
+    </div>
+  </div>
+</div>
+<link rel="stylesheet" href="css/estilos-2.css">
+<link rel="stylesheet" href="css/admin-panel.css">
+
+<!-- MODAL: REGISTRAR REPOSTAJE -->
+<div class="modal-overlay" id="modal-registrar-repostaje">
+  <div style="background:white;border-radius:20px;width:540px;max-width:96vw;max-height:92vh;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;">
+
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:22px 26px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:44px;height:44px;background:#e8a23d;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⛽</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:900;color:#ffffff;letter-spacing:0.3px;">Registrar repostaje</div>
+        <div style="font-size:11px;color:#6b7a94;margin-top:2px;">Entrega de tarjeta GASOIL — rellena los datos antes de repostar</div>
+      </div>
+      <button onclick="cerrarModalRepostaje()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;line-height:1;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+
+    <!-- PILLS INFO -->
+    <div style="background:#f4f6fb;padding:10px 26px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #e8eaf0;flex-wrap:wrap;flex-shrink:0;">
+      <span id="repo-pill-fecha" style="display:inline-flex;align-items:center;gap:5px;background:white;border:1.5px solid #dde1ea;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;color:#556;">📅 —</span>
+      <span id="repo-pill-turno" style="display:inline-flex;align-items:center;gap:5px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:800;color:#92600a;">● Mañana</span>
+      <span id="repo-pill-hora" style="display:inline-flex;align-items:center;gap:5px;background:white;border:1.5px solid #dde1ea;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;color:#556;">🕐 —</span>
+    </div>
+
+    <!-- CUERPO -->
+    <div style="padding:22px 26px 24px;overflow-y:auto;flex:1;">
+
+      <!-- Fila: Matrícula + Tarjeta -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:10px;font-weight:800;color:#8899aa;letter-spacing:1.5px;text-transform:uppercase;">Matrícula</label>
+          <div style="position:relative;">
+            <input id="repo-matricula" readonly tabindex="-1"
+              placeholder="—"
+              autocomplete="off"
+              style="width:100%;padding:11px 40px 11px 12px;border:1.5px solid #e8eaf0;border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;background:#f4f5f8;box-sizing:border-box;cursor:default;pointer-events:none;">
+            <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#d0d4db;pointer-events:none;user-select:none;">🔒</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:10px;font-weight:800;color:#8899aa;letter-spacing:1.5px;text-transform:uppercase;">Número de tarjeta</label>
+          <select id="repo-tarjeta" onchange="this.style.color=this.value===''?'#b0bac8':'#1a1a2e'"
+            style="padding:11px 12px;border:1.5px solid #dde1ea;border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#b0bac8;outline:none;transition:border-color .2s,box-shadow .2s;background:white;cursor:pointer;appearance:auto;"
+            onfocus="this.style.borderColor='#e8a23d';this.style.boxShadow='0 0 0 3px rgba(232,162,61,0.1)'" onblur="this.style.borderColor='#dde1ea';this.style.boxShadow='none'">
+            <option value="" disabled selected style="color:#b0bac8;">— Seleccionar tarjeta —</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Chofer -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+        <label style="font-size:10px;font-weight:800;color:#8899aa;letter-spacing:1.5px;text-transform:uppercase;">Usuario / Chofer</label>
+        <div style="position:relative;">
+          <input id="repo-chofer" readonly tabindex="-1"
+            placeholder="—"
+            autocomplete="off"
+            style="width:100%;padding:11px 40px 11px 12px;border:1.5px solid #e8eaf0;border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;font-weight:600;color:#1a1a2e;outline:none;background:#f4f5f8;box-sizing:border-box;cursor:default;pointer-events:none;">
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:14px;color:#d0d4db;pointer-events:none;user-select:none;">🔒</span>
+        </div>
+      </div>
+
+      <!-- Kilometraje -->
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px;">
+        <label style="font-size:10px;font-weight:800;color:#8899aa;letter-spacing:1.5px;text-transform:uppercase;">Kilometraje</label>
+        <input type="text" inputmode="numeric" id="repo-km" placeholder="Ej: 125400" maxlength="7"
+          style="padding:11px 12px;border:1.5px solid #dde1ea;border-radius:10px;font-family:Barlow,sans-serif;font-size:13px;color:#1a1a2e;outline:none;transition:border-color .2s,box-shadow .2s;"
+          oninput="soloDigitosKm(this)"
+          onfocus="this.style.borderColor='#e8a23d';this.style.boxShadow='0 0 0 3px rgba(232,162,61,0.1)'" onblur="this.style.borderColor='#dde1ea';this.style.boxShadow='none'">
+        <span style="font-size:10px;color:#8899aa;">Solo números, sin puntos ni comas (ej: 125400 = 125.400 km)</span>
+      </div>
+
+      <!-- Sección: Antes de repostar -->
+      <div style="background:#fffbeb;border:1px solid #fde8a0;border-left:4px solid #e8a23d;padding:14px 16px;border-radius:0 10px 10px 0;margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:800;color:#b07a10;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">⛽ Depósitos antes de repostar</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;">
+
+          <!-- GASOIL: medidor semicircular tipo velocímetro (igual al PDF) -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <label style="font-size:10px;font-weight:700;color:#92600a;letter-spacing:1px;text-transform:uppercase;align-self:flex-start;">Gasoil</label>
+            <div style="background:white;border:1.5px solid #fde68a;border-radius:12px;padding:10px 10px 6px;width:100%;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:border-color .2s,box-shadow .2s;"
+                 onclick="abrirSelectorGasoil(event)"
+                 onmouseover="this.style.borderColor='#e8a23d';this.style.boxShadow='0 0 0 3px rgba(232,162,61,0.12)'"
+                 onmouseout="this.style.borderColor='#fde68a';this.style.boxShadow='none'"
+                 title="Pulsa para seleccionar nivel">
+              <!-- SVG medidor semicircular -->
+              <svg id="svg-gasoil" viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:130px;display:block;">
+                <defs>
+                  <clipPath id="clip-gauge-gasoil">
+                    <rect x="0" y="0" width="120" height="70"/>
+                  </clipPath>
+                </defs>
+                <!-- Arco fondo gris (semicírculo de 180°) -->
+                <path id="arc-bg-gasoil"
+                  d="M 10,60 A 50,50 0 0 1 110,60"
+                  fill="none" stroke="#dde1ea" stroke-width="10" stroke-linecap="round"/>
+                <!-- Arco coloreado (nivel actual) -->
+                <path id="arc-fill-gasoil"
+                  d="M 10,60 A 50,50 0 0 1 110,60"
+                  fill="none" stroke="#dde1ea" stroke-width="10" stroke-linecap="butt"
+                  pathLength="100" stroke-dasharray="0 100"
+                  style="transition:stroke-dasharray 0.4s ease,stroke 0.3s ease,opacity 0.3s ease;opacity:0;"/>
+                <!-- Marcas de cuartos -->
+                <line x1="60" y1="10" x2="60" y2="18" stroke="#e8d8b0" stroke-width="1.5"/>
+                <line x1="17.6" y1="24.6" x2="22.9" y2="31.7" stroke="#e8d8b0" stroke-width="1.5"/>
+                <line x1="102.4" y1="24.6" x2="97.1" y2="31.7" stroke="#e8d8b0" stroke-width="1.5"/>
+                <!-- Aguja -->
+                <line id="needle-gasoil" x1="60" y1="60" x2="10" y2="60"
+                  stroke="#556" stroke-width="2" stroke-linecap="round"
+                  style="transform-origin:60px 60px;transform:rotate(0deg);transition:transform 0.4s cubic-bezier(.34,1.2,.64,1);"/>
+                <!-- Centro -->
+                <circle cx="60" cy="60" r="4" fill="#556"/>
+                <circle cx="60" cy="60" r="2" fill="white"/>
+                <!-- Etiquetas E / F -->
+                <text x="6"   y="68" text-anchor="middle" font-size="9" fill="#92600a" font-family="Barlow,sans-serif" font-weight="800">E</text>
+                <text x="114" y="68" text-anchor="middle" font-size="9" fill="#92600a" font-family="Barlow,sans-serif" font-weight="800">F</text>
+                <!-- Porcentaje central -->
+                <text id="pct-gasoil" x="60" y="52" text-anchor="middle" font-size="11" fill="#92600a" font-family="Barlow,sans-serif" font-weight="900">—</text>
+              </svg>
+              <div style="font-size:9px;color:#b07a10;font-weight:700;margin-top:2px;">Pulsa para marcar nivel</div>
+            </div>
+            <!-- Dropdown niveles gasoil -->
+            <div id="dropdown-gasoil" style="display:none;position:fixed;z-index:9999;background:white;border:1.5px solid #fde68a;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.15);padding:6px 0;min-width:145px;">
+              <div style="padding:5px 12px 4px;font-size:9px;font-weight:800;color:#b07a10;letter-spacing:1px;border-bottom:1px solid #fde68a;margin-bottom:3px;">NIVEL GASOIL</div>
+              <div onclick="setGasoil(0)"   style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Vacío (0%)</div>
+              <div onclick="setGasoil(10)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Casi vacío (~10%)</div>
+              <div onclick="setGasoil(25)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;"></span>1/4 (25%)</div>
+              <div onclick="setGasoil(50)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;"></span>Mitad (50%)</div>
+              <div onclick="setGasoil(75)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>3/4 (75%)</div>
+              <div onclick="setGasoil(100)" style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>Lleno (100%)</div>
+            </div>
+            <input type="hidden" id="repo-gasoil-antes" value="">
+          </div>
+
+          <!-- ADBLUE: barra vertical con depósito -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px;">
+              <label style="font-size:10px;font-weight:700;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;">AdBlue</label>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;font-weight:700;color:#64748b;white-space:nowrap;" title="Marcar si el vehículo no tiene depósito de AdBlue">
+                <input type="checkbox" id="chk-sin-adblue" onchange="toggleSinAdblue(this.checked)" style="width:13px;height:13px;cursor:pointer;accent-color:#64748b;">
+                Sin AdBlue
+              </label>
+            </div>
+            <div id="wrap-adblue-gauge" style="width:100%;">
+              <div style="background:white;border:1.5px solid #bfdbfe;border-radius:12px;padding:10px 10px 8px;width:100%;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;"
+                   onclick="abrirSelectorAdblue(event)"
+                   onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)'"
+                   onmouseout="this.style.borderColor='#bfdbfe';this.style.boxShadow='none'"
+                   title="Pulsa para seleccionar nivel">
+                <svg id="svg-adblue" viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:130px;display:block;">
+                  <defs>
+                    <linearGradient id="grad-adblue-fill" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#60a5fa"/>
+                      <stop offset="100%" stop-color="#1d4ed8"/>
+                    </linearGradient>
+                  </defs>
+                  <rect x="12" y="24" width="96" height="22" rx="11" fill="#e8f0fe" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <rect id="fill-adblue" x="12" y="24" width="0" height="22" rx="11" fill="url(#grad-adblue-fill)" style="transition:width 0.4s cubic-bezier(.34,1.2,.64,1);"/>
+                  <line x1="36" y1="20" x2="36" y2="28" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <line x1="60" y1="18" x2="60" y2="26" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <line x1="84" y1="20" x2="84" y2="28" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <text x="9"   y="55" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="800">E</text>
+                  <text x="111" y="55" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="800">F</text>
+                  <text x="36"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">25%</text>
+                  <text x="60"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">50%</text>
+                  <text x="84"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">75%</text>
+                  <rect x="12" y="24" width="96" height="22" rx="11" fill="none" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <text x="60" y="14" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="900" letter-spacing="1">ADBLUE</text>
+                  <text id="pct-adblue" x="60" y="38" text-anchor="middle" font-size="10" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="900" style="transition:opacity 0.3s;">—</text>
+                </svg>
+                <div style="font-size:9px;color:#1d4ed8;font-weight:700;margin-top:2px;">Pulsa para marcar nivel</div>
+              </div>
+            </div>
+            <div id="wrap-sin-adblue" style="display:none;width:100%;background:#f1f5f9;border:1.5px dashed #94a3b8;border-radius:12px;padding:14px 10px;text-align:center;">
+              <div style="font-size:18px;margin-bottom:4px;">🚫</div>
+              <div style="font-size:11px;font-weight:800;color:#64748b;letter-spacing:0.5px;">Sin depósito AdBlue</div>
+            </div>
+            <!-- Dropdown niveles adblue -->
+            <div id="dropdown-adblue" style="display:none;position:fixed;z-index:9999;background:white;border:1.5px solid #bfdbfe;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.15);padding:6px 0;min-width:145px;">
+              <div style="padding:5px 12px 4px;font-size:9px;font-weight:800;color:#1d4ed8;letter-spacing:1px;border-bottom:1px solid #bfdbfe;margin-bottom:3px;">NIVEL ADBLUE</div>
+              <div onclick="setAdblue(0)"   style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Vacío (0%)</div>
+              <div onclick="setAdblue(10)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Casi vacío (~10%)</div>
+              <div onclick="setAdblue(25)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block;flex-shrink:0;"></span>1/4 (25%)</div>
+              <div onclick="setAdblue(50)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#3b82f6;display:inline-block;flex-shrink:0;"></span>Mitad (50%)</div>
+              <div onclick="setAdblue(75)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;flex-shrink:0;"></span>3/4 (75%)</div>
+              <div onclick="setAdblue(100)" style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;flex-shrink:0;"></span>Lleno (100%)</div>
+            </div>
+            <input type="hidden" id="repo-adblue-antes" value="">
+          </div>
+
+        </div>
+      </div>
+
+      <div style="font-size:10px;color:#aab5c0;font-weight:600;margin-bottom:20px;">La hora de entrega se registrará automáticamente al confirmar.</div>
+
+      <!-- Botones -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="cerrarModalRepostaje()"
+          style="padding:11px 22px;background:#f4f5f8;color:#667;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background .15s;"
+          onmouseover="this.style.background='#e8eaf0'" onmouseout="this.style.background='#f4f5f8'">Cancelar</button>
+        <button onclick="enviarRegistroRepostaje()"
+          style="padding:11px 26px;background:#e8a23d;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(232,162,61,0.35);transition:background .15s,transform .1s;"
+          onmouseover="this.style.background='#c8821d'" onmouseout="this.style.background='#e8a23d'"
+          id="btn-enviar-repostaje">⛽ Entregar tarjeta y registrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: RESUMEN MENSUAL REPOSTAJES -->
+<div class="modal-overlay" id="modal-resumen-mensual">
+  <div style="background:white;border-radius:18px;width:96vw;max-width:1500px;max-height:94vh;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;">
+
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:18px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:40px;height:40px;background:#6c3ce8;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">📊</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:16px;font-weight:900;color:#ffffff;letter-spacing:0.3px;">Resumen mensual — Control Gasoil</div>
+        <div style="font-size:11px;color:#6b7a94;margin-top:2px;">Importe y kilometraje por vehículo y día. Se muestran todos los vehículos activos.</div>
+      </div>
+      <input type="month" id="resumen-mensual-mes" class="input-mes-oscuro" style="padding:8px 12px;border-radius:8px;border:1.5px solid #2a2a4a;background:#11111f;color:#fff;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;outline:none;cursor:pointer;">
+      <button onclick="generarResumenMensual()"
+        style="padding:9px 18px;background:#6c3ce8;color:white;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:0.4px;white-space:nowrap;">🔍 Generar</button>
+      <button onclick="exportarResumenMensualPDF()"
+        style="padding:9px 16px;background:#e84545;color:white;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:900;cursor:pointer;letter-spacing:0.4px;white-space:nowrap;">📄 PDF</button>
+      <button onclick="cerrarModalResumenMensual()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+
+    <!-- CUERPO -->
+    <div id="resumen-mensual-body" style="flex:1;overflow:auto;padding:16px;background:#f4f6fb;min-height:200px;">
+      <div style="text-align:center;color:#8899aa;font-size:13px;font-weight:700;padding:60px 0;">Selecciona un mes y pulsa "Generar".</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REGISTRO MANUAL DE REPOSTAJE (para volcar tickets antiguos en papel) -->
+<div class="modal-overlay" id="modal-registro-manual">
+  <div style="background:white;border-radius:18px;width:560px;max-width:96vw;max-height:92vh;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);display:flex;flex-direction:column;">
+
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:22px 26px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:44px;height:44px;background:#0f9d8c;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📋</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:900;color:#ffffff;letter-spacing:0.3px;">Registro manual de repostaje</div>
+        <div style="font-size:11px;color:#6b7a94;margin-top:2px;">Para volcar tickets de gasoil anteriores al uso del sistema</div>
+      </div>
+      <button onclick="cerrarModalRegistroManual()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+
+    <!-- CUERPO -->
+    <div style="padding:22px 26px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Fecha del repostaje <span style="color:#e84545">*</span></label>
+          <input type="date" id="manual-repo-fecha"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Matrícula <span style="color:#e84545">*</span></label>
+          <select id="manual-repo-matricula"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+            <option value="">Selecciona…</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Kilometraje</label>
+          <input type="text" inputmode="numeric" id="manual-repo-km" placeholder="Ej. 123456" maxlength="7"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;"
+            oninput="soloDigitosKm(this)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Nº tarjeta / ref.</label>
+          <input type="text" id="manual-repo-tarjeta" placeholder="Opcional"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Hora de entrega</label>
+          <input type="time" id="manual-hora-entrega"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Hora de devolución</label>
+          <input type="time" id="manual-hora-devolucion"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+      </div>
+
+      <!-- Chofer / conductor que repostó -->
+      <div style="position:relative;">
+        <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Chofer / conductor</label>
+        <input type="text" id="manual-chofer-input" placeholder="Escribe para buscar un conductor…" autocomplete="off"
+          oninput="filtrarChoferManual()" onfocus="filtrarChoferManual()"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        <input type="hidden" id="manual-chofer-valor" value="">
+        <div id="manual-chofer-dropdown" class="manual-resp-dropdown"></div>
+      </div>
+
+      <!-- Responsable que entrega -->
+      <div style="position:relative;">
+        <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Responsable que entrega tarjeta <span style="color:#e84545">*</span></label>
+        <input type="text" id="manual-resp-entrega-input" placeholder="Escribe para buscar un responsable…" autocomplete="off"
+          oninput="filtrarRespManual('entrega')" onfocus="filtrarRespManual('entrega')"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        <input type="hidden" id="manual-resp-entrega-valor" value="">
+        <div id="manual-resp-entrega-dropdown" class="manual-resp-dropdown"></div>
+      </div>
+
+      <!-- Responsable que recibe -->
+      <div style="position:relative;">
+        <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Responsable que recibe tarjeta</label>
+        <input type="text" id="manual-resp-recibe-input" placeholder="Igual que el que entrega si se deja vacío" autocomplete="off"
+          oninput="filtrarRespManual('recibe')" onfocus="filtrarRespManual('recibe')"
+          style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        <input type="hidden" id="manual-resp-recibe-valor" value="">
+        <div id="manual-resp-recibe-dropdown" class="manual-resp-dropdown"></div>
+      </div>
+
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;">
+        <div style="font-size:10px;font-weight:800;color:#92600a;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⛽ Niveles de gasoil</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:0.5px;display:block;margin-bottom:5px;">Antes de repostar</label>
+            <select id="manual-gasoil-antes" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #fde68a;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;color:#1a1a2e;outline:none;background:white;">
+              <option value="">— Sin dato —</option>
+              <option value="0">Vacío (0%)</option>
+              <option value="10">Casi vacío (~10%)</option>
+              <option value="25">1/4 (25%)</option>
+              <option value="50">Mitad (50%)</option>
+              <option value="75">3/4 (75%)</option>
+              <option value="100">Lleno (100%)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:0.5px;display:block;margin-bottom:5px;">Después de repostar</label>
+            <select id="manual-gasoil-despues" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #fde68a;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;color:#1a1a2e;outline:none;background:white;">
+              <option value="">— Sin dato —</option>
+              <option value="0">Vacío (0%)</option>
+              <option value="10">Casi vacío (~10%)</option>
+              <option value="25">1/4 (25%)</option>
+              <option value="50">Mitad (50%)</option>
+              <option value="75">3/4 (75%)</option>
+              <option value="100" selected>Lleno (100%)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:800;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;">🧪 Niveles de AdBlue</div>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;font-weight:700;color:#64748b;white-space:nowrap;">
+            <input type="checkbox" id="manual-sin-adblue" onchange="toggleSinAdblueManual(this.checked)" style="width:13px;height:13px;cursor:pointer;accent-color:#64748b;">
+            Sin depósito
+          </label>
+        </div>
+        <div id="manual-adblue-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:0.5px;display:block;margin-bottom:5px;">Antes de repostar</label>
+            <select id="manual-adblue-antes" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #bfdbfe;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;color:#1a1a2e;outline:none;background:white;">
+              <option value="">— Sin dato —</option>
+              <option value="0">Vacío (0%)</option>
+              <option value="10">Casi vacío (~10%)</option>
+              <option value="25">1/4 (25%)</option>
+              <option value="50">Mitad (50%)</option>
+              <option value="75">3/4 (75%)</option>
+              <option value="100">Lleno (100%)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:0.5px;display:block;margin-bottom:5px;">Después de repostar</label>
+            <select id="manual-adblue-despues" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #bfdbfe;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;color:#1a1a2e;outline:none;background:white;">
+              <option value="">— Sin dato —</option>
+              <option value="0">Vacío (0%)</option>
+              <option value="10">Casi vacío (~10%)</option>
+              <option value="25">1/4 (25%)</option>
+              <option value="50">Mitad (50%)</option>
+              <option value="75">3/4 (75%)</option>
+              <option value="100">Lleno (100%)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Ref. ticket</label>
+          <input type="text" id="manual-repo-ticket-ref" placeholder="Nº de ticket"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Importe € <span style="color:#e84545">*</span></label>
+          <input type="number" id="manual-repo-importe" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+            style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;">
+        </div>
+      </div>
+
+      <div style="background:#f4f6fb;border:1px solid #e2e6ee;border-radius:9px;padding:10px 14px;font-size:11px;color:#667;line-height:1.5;">
+        ℹ️ Este registro se guardará directamente como <strong>completado</strong>. Si no recuerdas los niveles exactos de gasoil/AdBlue de un ticket antiguo, puedes dejarlos en "Sin dato".
+      </div>
+    </div>
+
+    <!-- PIE -->
+    <div style="display:flex;gap:10px;justify-content:flex-end;padding:14px 26px;border-top:1px solid #f0f2f5;flex-shrink:0;">
+      <button onclick="cerrarModalRegistroManual()"
+        style="padding:11px 22px;background:#f4f5f8;color:#667;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.5px;">Cancelar</button>
+      <button onclick="guardarRegistroManual()"
+        style="padding:11px 26px;background:#0f9d8c;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(15,157,140,0.35);"
+        id="btn-guardar-registro-manual">💾 Guardar registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REPOSTAJES PENDIENTES -->
+<div class="modal-overlay" id="modal-repostajes-pendientes">
+  <div style="background:white;border-radius:20px;width:660px;max-width:96vw;max-height:90vh;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);overflow:hidden;display:flex;flex-direction:column;">
+
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:22px 26px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:44px;height:44px;background:#3b82f6;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🧾</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:900;color:#ffffff;letter-spacing:0.3px;">Repostajes pendientes</div>
+        <div style="font-size:11px;color:#6b7a94;margin-top:2px;">Confirma la devolución con los depósitos después de repostar</div>
+      </div>
+      <button onclick="cerrarModalRepostajesPendientes()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;line-height:1;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+
+    <!-- LISTA -->
+    <div id="repostajes-pendientes-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:0;padding:20px 26px;">
+      <div style="text-align:center;padding:40px;color:#8899aa;font-size:13px">⏳ Cargando datos un momento por favor…</div>
+    </div>
+
+    <!-- PIE -->
+    <div style="display:flex;justify-content:flex-end;padding:14px 26px;flex-shrink:0;border-top:1px solid #f0f2f5;">
+      <button onclick="cerrarModalRepostajesPendientes()"
+        style="padding:10px 22px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s;"
+        onmouseover="this.style.background='#e8eaf0'" onmouseout="this.style.background='#f4f5f8'">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INCIDENCIAS ACTIVAS -->
+<div class="modal-overlay" id="modal-incidencias-pendientes">
+  <div style="background:white;border-radius:20px;width:1360px;max-width:97vw;max-height:94vh;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);overflow:hidden;display:flex;flex-direction:column;">
+
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:22px 26px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:44px;height:44px;background:#e84545;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⚠️</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:900;color:#ffffff;letter-spacing:0.5px;">INCIDENCIAS ACTIVAS</div>
+        <div id="incid-pend-subtitulo" style="font-size:11px;color:#6b7a94;margin-top:2px;">Incidencias de flota que aún no se han resuelto</div>
+      </div>
+      <button onclick="cerrarModalIncidenciasPendientes()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;line-height:1;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+
+    <!-- FILTROS -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:16px 26px 0;flex-shrink:0;">
+      <input type="text" id="incid-pend-filtro-matricula" placeholder="🔎 Matrícula…"
+        style="padding:8px 12px;border:1.5px solid #e8eaf0;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:600;color:#1a1a2e;width:150px;"
+        onkeydown="if(event.key==='Enter') cargarIncidenciasPendientesModal()">
+      <input type="date" id="incid-pend-filtro-desde"
+        style="padding:8px 10px;border:1.5px solid #e8eaf0;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:600;color:#1a1a2e;">
+      <span style="font-size:11px;color:#8899aa;font-weight:700;">a</span>
+      <input type="date" id="incid-pend-filtro-hasta"
+        style="padding:8px 10px;border:1.5px solid #e8eaf0;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:600;color:#1a1a2e;">
+      <button onclick="cargarIncidenciasPendientesModal()"
+        style="padding:8px 16px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">🔍 Filtrar</button>
+      <button onclick="limpiarFiltroIncidenciasPendientesModal()"
+        style="padding:8px 14px;background:#f4f5f8;color:#556;border:none;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">✕ Limpiar</button>
+      <div style="flex:1"></div>
+      <button id="btn-toggle-incid-resueltas" onclick="toggleIncidenciasResueltasModal()"
+        style="padding:8px 16px;background:#eafaf1;color:#1a6635;border:1.5px solid #a9dfbf;border-radius:8px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">📋 Ver incidencias resueltas</button>
+    </div>
+
+    <!-- LISTA -->
+    <div id="incidencias-pendientes-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0;padding:16px 26px 20px;">
+      <div style="text-align:center;padding:40px;color:#8899aa;font-size:13px">⏳ Cargando datos un momento por favor…</div>
+    </div>
+
+    <!-- PIE -->
+    <div style="display:flex;justify-content:flex-end;padding:14px 26px;flex-shrink:0;border-top:1px solid #f0f2f5;">
+      <button onclick="cerrarModalIncidenciasPendientes()"
+        style="padding:10px 22px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;transition:background .15s;"
+        onmouseover="this.style.background='#e8eaf0'" onmouseout="this.style.background='#f4f5f8'">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DEVOLUCIÓN DIRECTA DESDE CUADRANTE -->
+<div class="modal-overlay" id="modal-devolucion-directa">
+  <div style="background:white;border-radius:20px;width:580px;max-width:96vw;box-shadow:0 40px 100px rgba(0,0,0,0.5);font-family:Barlow,sans-serif;animation:nv-in 0.25s cubic-bezier(.34,1.56,.64,1);overflow:hidden;">
+    <!-- CABECERA -->
+    <div style="background:#1a1a2e;padding:22px 26px 18px;display:flex;align-items:center;gap:14px;">
+      <div style="width:44px;height:44px;background:#f59e0b;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">⛽</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:17px;font-weight:900;color:#ffffff;letter-spacing:0.3px;">Devolver tarjeta GASOIL</div>
+        <div style="font-size:11px;color:#6b7a94;margin-top:2px;" id="devdir-sub">Confirma los depósitos tras repostar</div>
+      </div>
+      <button onclick="cerrarDevolucionDirecta()"
+        style="width:30px;height:30px;border-radius:8px;border:1.5px solid #2a2a4a;background:transparent;color:#6b7a94;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;line-height:1;"
+        onmouseover="this.style.borderColor='#e84545';this.style.color='#e84545'" onmouseout="this.style.borderColor='#2a2a4a';this.style.color='#6b7a94'">✕</button>
+    </div>
+    <!-- INFO FILA -->
+    <div style="padding:18px 26px 0;display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="background:#f7f8fa;border:1.5px solid #dde1e8;border-radius:9px;padding:10px 14px;flex:1;min-width:120px;">
+        <div style="font-size:9px;font-weight:800;color:#8899aa;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Matrícula</div>
+        <div style="font-size:14px;font-weight:900;color:#1a1a2e;" id="devdir-matricula">—</div>
+      </div>
+      <div style="background:#f7f8fa;border:1.5px solid #dde1e8;border-radius:9px;padding:10px 14px;flex:1;min-width:120px;">
+        <div style="font-size:9px;font-weight:800;color:#8899aa;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Nº Tarjeta</div>
+        <div style="font-size:14px;font-weight:900;color:#1a1a2e;" id="devdir-tarjeta">—</div>
+      </div>
+      <div style="background:#f7f8fa;border:1.5px solid #dde1e8;border-radius:9px;padding:10px 14px;flex:1;min-width:120px;">
+        <div style="font-size:9px;font-weight:800;color:#8899aa;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Chofer</div>
+        <div style="font-size:13px;font-weight:700;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="devdir-chofer">—</div>
+      </div>
+    </div>
+    <!-- ANTES -->
+    <div style="padding:10px 26px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;" id="devdir-antes"></div>
+    <!-- INPUTS -->
+    <div style="padding:16px 26px 22px;">
+      <div style="background:#fffbeb;border:1px solid #fde8a0;border-left:4px solid #e8a23d;padding:14px 16px;border-radius:0 10px 10px 0;">
+        <div style="font-size:10px;font-weight:800;color:#b07a10;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;">⛽ Depósitos después de repostar</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;">
+
+          <!-- GASOIL después: velocímetro -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <label style="font-size:10px;font-weight:700;color:#92600a;letter-spacing:1px;text-transform:uppercase;align-self:flex-start;">Gasoil</label>
+            <div style="background:white;border:1.5px solid #fde68a;border-radius:12px;padding:10px 10px 6px;width:100%;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:border-color .2s,box-shadow .2s;"
+                 onclick="abrirSelectorDevGasoil(event)"
+                 onmouseover="this.style.borderColor='#e8a23d';this.style.boxShadow='0 0 0 3px rgba(232,162,61,0.12)'"
+                 onmouseout="this.style.borderColor='#fde68a';this.style.boxShadow='none'"
+                 title="Pulsa para seleccionar nivel">
+              <svg id="svg-dev-gasoil" viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:130px;display:block;">
+                <defs>
+                  <clipPath id="clip-gauge-dev-gasoil">
+                    <rect x="0" y="0" width="120" height="70"/>
+                  </clipPath>
+                </defs>
+                <path id="arc-bg-dev-gasoil"
+                  d="M 10,60 A 50,50 0 0 1 110,60"
+                  fill="none" stroke="#dde1ea" stroke-width="10" stroke-linecap="round"/>
+                <!-- Arco fantasma "antes" en gris clarito -->
+                <path id="arc-antes-dev-gasoil"
+                  d="M 10,60 A 50,50 0 0 1 110,60"
+                  fill="none" stroke="#c8cdd6" stroke-width="10" stroke-linecap="butt"
+                  pathLength="100" stroke-dasharray="0 100" opacity="0.55"/>
+                <path id="arc-fill-dev-gasoil"
+                  d="M 10,60 A 50,50 0 0 1 110,60"
+                  fill="none" stroke="#dde1ea" stroke-width="10" stroke-linecap="butt"
+                  pathLength="100" stroke-dasharray="0 100"
+                  style="transition:stroke-dasharray 0.4s ease,stroke 0.3s ease,opacity 0.3s ease;opacity:0;"/>
+                <line x1="60" y1="10" x2="60" y2="18" stroke="#e8d8b0" stroke-width="1.5"/>
+                <line x1="17.6" y1="24.6" x2="22.9" y2="31.7" stroke="#e8d8b0" stroke-width="1.5"/>
+                <line x1="102.4" y1="24.6" x2="97.1" y2="31.7" stroke="#e8d8b0" stroke-width="1.5"/>
+                <line id="needle-dev-gasoil" x1="60" y1="60" x2="10" y2="60"
+                  stroke="#556" stroke-width="2" stroke-linecap="round"
+                  style="transform-origin:60px 60px;transform:rotate(0deg);transition:transform 0.4s cubic-bezier(.34,1.2,.64,1);"/>
+                <circle cx="60" cy="60" r="4" fill="#556"/>
+                <circle cx="60" cy="60" r="2" fill="white"/>
+                <text x="6"   y="68" text-anchor="middle" font-size="9" fill="#92600a" font-family="Barlow,sans-serif" font-weight="800">E</text>
+                <text x="114" y="68" text-anchor="middle" font-size="9" fill="#92600a" font-family="Barlow,sans-serif" font-weight="800">F</text>
+                <text id="pct-dev-gasoil" x="60" y="52" text-anchor="middle" font-size="11" fill="#92600a" font-family="Barlow,sans-serif" font-weight="900">—</text>
+              </svg>
+              <div style="font-size:9px;color:#b07a10;font-weight:700;margin-top:2px;">Pulsa para marcar nivel</div>
+            </div>
+            <div id="dropdown-dev-gasoil" style="display:none;position:fixed;z-index:9999;background:white;border:1.5px solid #fde68a;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.15);padding:6px 0;min-width:145px;">
+              <div style="padding:5px 12px 4px;font-size:9px;font-weight:800;color:#b07a10;letter-spacing:1px;border-bottom:1px solid #fde68a;margin-bottom:3px;">NIVEL GASOIL</div>
+              <div onclick="setDevGasoil(0)"   style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Vacío (0%)</div>
+              <div onclick="setDevGasoil(10)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Casi vacío (~10%)</div>
+              <div onclick="setDevGasoil(25)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;"></span>1/4 (25%)</div>
+              <div onclick="setDevGasoil(50)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#f97316;display:inline-block;flex-shrink:0;"></span>Mitad (50%)</div>
+              <div onclick="setDevGasoil(75)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>3/4 (75%)</div>
+              <div onclick="setDevGasoil(100)" style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>Lleno (100%)</div>
+            </div>
+            <input type="hidden" id="devdir-gasoil" value="">
+          </div>
+
+          <!-- ADBLUE después: barra -->
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+            <label style="font-size:10px;font-weight:700;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;align-self:flex-start;">AdBlue</label>
+            <div id="wrap-dev-adblue-gauge" style="width:100%;">
+              <div style="background:white;border:1.5px solid #bfdbfe;border-radius:12px;padding:10px 10px 8px;width:100%;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:border-color .2s,box-shadow .2s;box-sizing:border-box;"
+                   onclick="abrirSelectorDevAdblue(event)"
+                   onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 0 0 3px rgba(59,130,246,0.1)'"
+                   onmouseout="this.style.borderColor='#bfdbfe';this.style.boxShadow='none'"
+                   title="Pulsa para seleccionar nivel">
+                <svg id="svg-dev-adblue" viewBox="0 0 120 70" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:130px;display:block;">
+                  <defs>
+                    <linearGradient id="grad-dev-adblue-fill" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#60a5fa"/>
+                      <stop offset="100%" stop-color="#1d4ed8"/>
+                    </linearGradient>
+                  </defs>
+                  <rect x="12" y="24" width="96" height="22" rx="11" fill="#e8f0fe" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <rect id="fill-antes-dev-adblue" x="12" y="24" width="0" height="22" rx="11" fill="#c8cdd6" opacity="0.55"/>
+                  <rect id="fill-dev-adblue" x="12" y="24" width="0" height="22" rx="11" fill="url(#grad-dev-adblue-fill)" style="transition:width 0.4s cubic-bezier(.34,1.2,.64,1);"/>
+                  <line x1="36" y1="20" x2="36" y2="28" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <line x1="60" y1="18" x2="60" y2="26" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <line x1="84" y1="20" x2="84" y2="28" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <text x="9"   y="55" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="800">E</text>
+                  <text x="111" y="55" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="800">F</text>
+                  <text x="36"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">25%</text>
+                  <text x="60"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">50%</text>
+                  <text x="84"  y="55" text-anchor="middle" font-size="7" fill="#60a5fa" font-family="Barlow,sans-serif" font-weight="700">75%</text>
+                  <rect x="12" y="24" width="96" height="22" rx="11" fill="none" stroke="#bfdbfe" stroke-width="1.5"/>
+                  <text x="60" y="14" text-anchor="middle" font-size="8" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="900" letter-spacing="1">ADBLUE</text>
+                  <text id="pct-dev-adblue" x="60" y="38" text-anchor="middle" font-size="10" fill="#1d4ed8" font-family="Barlow,sans-serif" font-weight="900" style="transition:opacity 0.3s;">—</text>
+                </svg>
+                <div style="font-size:9px;color:#1d4ed8;font-weight:700;margin-top:2px;">Pulsa para marcar nivel</div>
+              </div>
+            </div>
+            <div id="wrap-dev-sin-adblue" style="display:none;width:100%;background:#f1f5f9;border:1.5px dashed #94a3b8;border-radius:12px;padding:14px 10px;text-align:center;">
+              <div style="font-size:18px;margin-bottom:4px;">🚫</div>
+              <div style="font-size:11px;font-weight:800;color:#64748b;letter-spacing:0.5px;">Sin depósito AdBlue</div>
+            </div>
+            <div id="dropdown-dev-adblue" style="display:none;position:fixed;z-index:9999;background:white;border:1.5px solid #bfdbfe;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.15);padding:6px 0;min-width:145px;">
+              <div style="padding:5px 12px 4px;font-size:9px;font-weight:800;color:#1d4ed8;letter-spacing:1px;border-bottom:1px solid #bfdbfe;margin-bottom:3px;">NIVEL ADBLUE</div>
+              <div onclick="setDevAdblue(0)"   style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Vacío (0%)</div>
+              <div onclick="setDevAdblue(10)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>Casi vacío (~10%)</div>
+              <div onclick="setDevAdblue(25)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block;flex-shrink:0;"></span>1/4 (25%)</div>
+              <div onclick="setDevAdblue(50)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#3b82f6;display:inline-block;flex-shrink:0;"></span>Mitad (50%)</div>
+              <div onclick="setDevAdblue(75)"  style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;flex-shrink:0;"></span>3/4 (75%)</div>
+              <div onclick="setDevAdblue(100)" style="padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"><span style="width:10px;height:10px;border-radius:2px;background:#1d4ed8;display:inline-block;flex-shrink:0;"></span>Lleno (100%)</div>
+            </div>
+            <input type="hidden" id="devdir-adblue" value="">
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TICKET: referencia e importe -->
+      <div style="background:#f7f8fa;border:1.5px solid #dde1e8;border-radius:0 10px 10px 0;border-left:4px solid #8899aa;padding:14px 16px;margin-top:12px;">
+        <div style="font-size:10px;font-weight:800;color:#556;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">🧾 Ticket de repostaje</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Referencia ticket <span style="color:#e84545">*</span></label>
+            <input type="text" id="devdir-ticket-ref" placeholder="Nº de ticket"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;transition:border-color .15s;"
+              onfocus="this.style.borderColor='#e8a23d'" onblur="this.style.borderColor='#dde1e8'">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:#8899aa;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:5px;">Importe € <span style="color:#e84545">*</span></label>
+            <input type="number" id="devdir-ticket-importe" placeholder="0.00" min="0" step="0.01" inputmode="decimal"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #dde1e8;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px;font-weight:700;color:#1a1a2e;outline:none;transition:border-color .15s;"
+              onfocus="this.style.borderColor='#e8a23d'" onblur="this.style.borderColor='#dde1e8'">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- PIE -->
+    <div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 26px;border-top:1px solid #f0f2f5;">
+      <button onclick="cerrarDevolucionDirecta()"
+        style="padding:10px 20px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">Cancelar</button>
+      <button id="btn-devdir-confirmar" onclick="confirmarDevolucionDirecta()"
+        style="padding:10px 24px;background:#e84545;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:900;cursor:pointer;transition:background .15s;letter-spacing:0.5px;"
+        onmouseover="this.style.background='#c63030'" onmouseout="this.style.background='#e84545'">✓ Confirmar devolución</button>
+    </div>
+  </div>
+</div>
+
+<!-- DROPDOWN FLOTANTE: BÚSQUEDA DE OPERARIO/CHOFER -->
+<div class="operario-dropdown" id="operario-dropdown">
+  <div class="operario-dropdown-header" id="operario-dropdown-header">Nombre &middot; DNI &middot; N&ordm; usuario</div>
+  <div class="operario-dropdown-list" id="operario-dropdown-list"></div>
+</div>
+
+<!-- Dropdown flotante para el campo chofer del modal de repostaje -->
+<div class="operario-dropdown" id="operario-dropdown-repo">
+  <div class="operario-dropdown-header">Nombre &middot; DNI &middot; N&ordm; usuario</div>
+  <div class="operario-dropdown-list"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config-supabase.js"></script>
+<script src="js/datos-estado.js"></script>
+<script src="js/init-sesion.js"></script>
+<script src="js/cuadrante.js"></script>
+<script src="js/carga-sync.js"></script>
+<script src="js/ordenes-trabajo.js"></script>
+<script src="js/admin-responsables.js"></script>
+<script src="js/admin-vehiculos.js"></script>
+<script src="js/ficha-vehiculo.js"></script>
+<link rel="stylesheet" href="css/ficha-vehiculo.css">
+<script src="js/admin-documentos.js"></script>
+<script src="js/itv-ocr.js"></script>
+<script src="js/admin-conductores.js"></script>
+<script src="js/admin-asignaciones.js"></script>
+<script src="js/historial.js"></script>
+<script src="js/llaves-repostaje.js"></script>
+<script src="js/admin-login-presencia.js"></script>
+<script src="js/utils-toast.js"></script>
+<script src="js/incidencias-repostajes.js"></script>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MODAL NUEVA VERSIÓN DISPONIBLE
+══════════════════════════════════════════════════════════════════════════ -->
+<div id="modal-nueva-version" role="dialog" aria-modal="true">
+  <div class="nv-box">
+    <div class="nv-icon">🚀</div>
+    <div class="nv-title">Nueva versión disponible</div>
+    <div class="nv-version-badge" id="nv-badge">v ···</div>
+    <div class="nv-desc">
+      Se ha publicado una actualización de la aplicación.<br>
+      <strong>Es necesario actualizar para continuar.</strong>
+    </div>
+    <button class="btn-actualizar" onclick="forzarActualizacion()">
+      ⟳ &nbsp; ACTUALIZAR AHORA
+    </button>
+    <div class="nv-footer">La página se recargará automáticamente</div>
+  </div>
+</div>
+
+<script src="js/versiones.js"></script>
+
+<!-- Animación shake para el modal cuando intentan salir sin actualizar -->
+<link rel="stylesheet" href="css/animaciones-version.css">
+
+<script src="js/service-worker-registro.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL: REQUIERE INSTALACIÓN COMO APP
+     Bloquea el acceso si la app no se está usando "instalada"
+     (modo standalone). Pide al usuario que la instale.
+═══════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="css/modal-instalacion.css">
+
+<div id="modal-requiere-instalacion">
+  <div class="ri-box">
+    <div class="ri-icon">📲</div>
+    <div class="ri-title">Instala la app para continuar</div>
+    <div class="ri-desc">Esta aplicación debe usarse instalada en el dispositivo (no desde el navegador) para que todo funcione correctamente.</div>
+
+    <div class="ri-pasos" id="ri-pasos-chrome" style="display:none">
+      <b>Cómo instalarla:</b><br>
+      1. Toca el botón <b>"Instalar App"</b> de abajo.<br>
+      2. Confirma pulsando <b>"Instalar"</b> en el aviso que aparecerá.<br>
+      3. Abre la app desde el icono nuevo en tu pantalla de inicio.
+    </div>
+    <div class="ri-pasos" id="ri-pasos-ios" style="display:none">
+      <b>Cómo instalarla (iPhone / iPad):</b><br>
+      1. Toca el botón <b>Compartir</b> ⬆️ en la barra de Safari.<br>
+      2. Elige <b>"Añadir a pantalla de inicio"</b>.<br>
+      3. Toca <b>"Añadir"</b> y abre la app desde el icono creado.
+    </div>
+    <div class="ri-pasos" id="ri-pasos-generico" style="display:none">
+      <b>Cómo instalarla:</b><br>
+      Busca la opción <b>"Instalar app"</b> o <b>"Añadir a pantalla de inicio"</b> en el menú de tu navegador.
+    </div>
+
+    <button class="btn-instalar" id="btn-instalar-app">⬇️ Instalar App</button>
+    <button class="btn-ya-instalado" id="btn-ya-instalado">Ya la tengo instalada · Recargar</button>
+  </div>
+</div>
+
+<script src="js/instalacion-app.js"></script>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: DEVOLUCIONES PENDIENTES DEL TURNO ANTERIOR
+═══════════════════════════════════════════════════════ -->
+<div id="modal-devol-pendientes">
+  <div class="dp-box">
+    <div class="dp-head">
+      <div class="dp-head-icon">🚛</div>
+      <div>
+        <div class="dp-head-title">Devoluciones sin registrar</div>
+        <div class="dp-head-sub" id="dp-head-sub">Turno anterior</div>
+      </div>
+    </div>
+    <div class="dp-aviso">
+      🚛 Tienes devoluciones sin registrar del turno anterior. Indica la hora aproximada de cada una — si no la recuerdas exactamente, pon una aproximada. Este aviso seguirá apareciendo cada vez que entres hasta que las registres.
+    </div>
+    <div class="dp-lista" id="dp-lista"></div>
+    <div class="dp-foot">
+      <button class="dp-btn-guardar" id="dp-btn-guardar" onclick="guardarDevolPendientes()">💾 Guardar devoluciones</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: SELECCIÓN DE TURNO AL CAMBIAR FECHA
+═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-seleccionar-turno" style="z-index:10400">
+  <div class="modal-box" style="width:360px;text-align:center;padding:32px 28px 26px;">
+    <div style="font-size:44px;margin-bottom:10px">📅</div>
+    <div style="font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:6px">Selecciona el turno</div>
+    <div style="font-size:13px;color:#8899aa;margin-bottom:24px;line-height:1.5" id="modal-selturno-fecha-label">¿Qué cuadrante quieres visualizar?</div>
+    <div style="display:flex;gap:12px;justify-content:center;margin-bottom:8px">
+      <button id="btn-selturno-manana"
+        onclick="elegirTurnoEnModal('MANANA')"
+        style="flex:1;padding:16px 10px;background:#f0f2f5;color:#1a1a2e;border:2px solid #dde1e8;border-radius:12px;font-family:Barlow,sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;"
+        onmouseover="this.style.borderColor='#f39c12';this.style.background='#fffbf0'" onmouseout="this.style.borderColor='#dde1e8';this.style.background='#f0f2f5'">
+        <span style="font-size:26px">🌅</span>
+        <span>Mañana</span>
+      </button>
+      <button id="btn-selturno-tarde"
+        onclick="elegirTurnoEnModal('TARDE')"
+        style="flex:1;padding:16px 10px;background:#f0f2f5;color:#1a1a2e;border:2px solid #dde1e8;border-radius:12px;font-family:Barlow,sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;"
+        onmouseover="this.style.borderColor='#e84545';this.style.background='#fff5f5'" onmouseout="this.style.borderColor='#dde1e8';this.style.background='#f0f2f5'">
+        <span style="font-size:26px">🌆</span>
+        <span>Tarde</span>
+      </button>
+    </div>
+    <button onclick="document.getElementById('modal-seleccionar-turno').classList.remove('open')"
+      style="margin-top:10px;padding:9px 20px;background:transparent;color:#8899aa;border:1.5px solid #dde1e8;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+      ✕ Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: TURNO NO DISPONIBLE AÚN
+═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-confirmar-turno" style="z-index:10300">
+  <div class="modal-box" style="width:380px;text-align:center;padding:36px 32px 28px;">
+    <div style="font-size:52px;margin-bottom:12px">🔒</div>
+    <div style="font-size:17px;font-weight:900;color:#1a1a2e;margin-bottom:10px">Turno no disponible</div>
+    <div style="font-size:13px;color:#556;line-height:1.8;margin-bottom:26px" id="modal-turno-msg"></div>
+    <button onclick="document.getElementById('modal-confirmar-turno').classList.remove('open')"
+      style="width:100%;padding:13px;background:#1a1a2e;color:white;border:none;border-radius:10px;font-family:Barlow,sans-serif;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.5px;transition:background .15s"
+      onmouseover="this.style.background='#2a2a4e'" onmouseout="this.style.background='#1a1a2e'">
+      Entendido
+    </button>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: LOGIN CONFIG
+═══════════════════════════════════════════════════════ -->
+<div id="modal-login-config" class="modal-overlay" style="z-index:25000;display:none;">
+  <div style="background:white;border-radius:16px;padding:32px 28px 26px;width:380px;font-family:Barlow,sans-serif;box-shadow:0 32px 80px rgba(0,0,0,0.45);text-align:center;">
+    <div style="font-size:48px;margin-bottom:10px;">⛔</div>
+    <div style="font-size:16px;font-weight:900;color:#1a1a2e;margin-bottom:4px;">ZONA DE PELIGRO</div>
+    <div style="font-size:10px;font-weight:800;color:#e84545;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">Solo acceso a programadores</div>
+    <div style="background:#fff0f0;border:1px solid #fecaca;border-left:3px solid #e84545;border-radius:8px;padding:10px 14px;margin-bottom:20px;text-align:left;font-size:11px;color:#7f1d1d;font-weight:600;line-height:1.6;">
+      Un cambio incorrecto en esta sección puede dejar el sistema <strong>inoperativo para todos los usuarios</strong>. Continúa solo si sabes lo que estás haciendo.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:6px;text-align:left;">
+      <label style="font-size:10px;font-weight:800;color:#556;letter-spacing:1px;text-transform:uppercase;">Contraseña de Config</label>
+      <input type="text" class="inp-clave" id="inp-config-password" placeholder="• • • • •" maxlength="30"
+        autocomplete="off" data-lpignore="true" data-1p-ignore="true"
+        style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #dde1e8;border-radius:9px;font-family:Barlow,sans-serif;font-size:15px;text-align:center;letter-spacing:4px;outline:none;"
+        onkeydown="if(event.key==='Enter') verificarPasswordConfig()">
+    </div>
+    <div id="config-login-error" style="font-size:11px;color:#e84545;font-weight:700;min-height:18px;margin-bottom:12px;display:none;"></div>
+    <button onclick="verificarPasswordConfig()" style="width:100%;padding:11px;background:#e84545;color:white;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;">Acceder</button>
+    <button onclick="cerrarLoginConfig()" style="width:100%;padding:10px;background:#f4f5f8;color:#556;border:none;border-radius:9px;font-family:Barlow,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODAL: CAMBIO DE CLAVE DE ACCESO
+═══════════════════════════════════════════════════════ -->
+<div id="modal-cambio-clave">
+  <div class="cc-box">
+    <div class="cc-icon">🔑</div>
+    <div class="cc-title">Cambiar clave de acceso</div>
+    <div class="cc-sub">Introduce tu clave actual y la nueva clave</div>
+    <div class="cc-loading" id="cc-loading"><div class="cc-loading-spinner"></div><div class="cc-loading-text" id="cc-loading-text">Comprobando…</div></div>
+    <div class="cc-field">
+      <label>Clave actual</label>
+      <input type="text" class="inp-clave" id="cc-actual" placeholder="••••••" maxlength="20"
+        autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+    </div>
+    <div class="cc-field">
+      <label>Nueva clave</label>
+      <input type="text" class="inp-clave" id="cc-nueva" placeholder="••••••" maxlength="20"
+        autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+    </div>
+    <div class="cc-field">
+      <label>Confirmar nueva clave</label>
+      <input type="text" class="inp-clave" id="cc-confirmar" placeholder="••••••" maxlength="20"
+        autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"
+        onkeydown="if(event.key==='Enter') guardarCambioClave()">
+    </div>
+    <div class="cc-error" id="cc-error"></div>
+    <div class="cc-ok" id="cc-ok">✓ Clave cambiada correctamente</div>
+    <div class="cc-btns">
+      <button class="cc-btn-cancel" onclick="cerrarModalCambioClave()">Cancelar</button>
+      <button class="cc-btn-ok" id="cc-btn-ok" onclick="guardarCambioClave()">🔑 Guardar clave</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/cambio-clave.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════
+     CONFIG LOGIN JS
+═══════════════════════════════════════════════════════ -->
+<script src="js/config-login.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════
+     MÓVIL: elementos inyectados + JS drawer
+═══════════════════════════════════════════════════════ -->
+<script src="js/movil-drawer.js"></script>
+
+<!-- ══ MODAL FICHA VEHÍCULO — hijo directo de body ══ -->
+<!-- ── VISOR DE DOCUMENTOS INLINE ── -->
+<div id="modal-visor-doc">
+  <div class="visor-box">
+    <div class="visor-header">
+      <div class="visor-header-icon">📄</div>
+      <div class="visor-titulo" id="visor-doc-titulo">Documento</div>
+      <!-- Controles PDF.js (solo visibles en PDFs) -->
+      <div id="visor-pdf-controls" style="display:none; align-items:center; gap:6px;">
+        <div class="visor-page-ctrl">
+          <button class="visor-btn zoom-out" onclick="visorZoom(-0.25)" title="Reducir">−</button>
+          <span class="visor-zoom-label" id="visor-zoom-label">100%</span>
+          <button class="visor-btn zoom-in"  onclick="visorZoom(+0.25)" title="Ampliar">+</button>
+        </div>
+        <button class="visor-btn rotate" onclick="rotarVisorDoc()" title="Rotar 90°">↻ Rotar</button>
+      </div>
+      <!-- Controles imagen (solo visibles en imágenes) -->
+      <div id="visor-img-controls" style="display:none; align-items:center; gap:6px;">
+        <button class="visor-btn rotate" onclick="rotarVisorDoc()" title="Rotar 90°">↻ Rotar</button>
+      </div>
+      <button class="visor-btn print" onclick="imprimirVisorDoc()">🖨️ Imprimir</button>
+      <a class="visor-btn dl" id="visor-doc-descargar" href="#" download>⬇ Descargar</a>
+      <button class="visor-btn close" onclick="cerrarVisorDoc()">✕ Cerrar</button>
+    </div>
+    <div class="visor-body" id="visor-body">
+      <!-- Spinner de carga -->
+      <div id="visor-loading">
+        <div class="vl-spinner"></div>
+        <div class="vl-text">Cargando documento…</div>
+      </div>
+      <!-- Contenedor PDF.js (una página por canvas) -->
+      <div id="visor-pdf-container"></div>
+      <!-- Imagen directa -->
+      <img id="visor-doc-img" src="" alt="Documento">
+    </div>
+  </div>
+</div>
+
+<div id="modal-ficha-vehiculo">
+  <div class="fv-box" role="dialog" aria-modal="true" aria-labelledby="fv-titulo">
+    <header class="fv-cabecera" id="fv-cabecera"></header>
+    <div class="fv-cuerpo">
+      <nav class="fv-nav" aria-label="Secciones de la ficha">
+        <div class="fv-nav-ops" id="fv-nav-ops"></div>
+        <div class="fv-km" id="fv-km"></div>
+      </nav>
+      <main class="fv-main">
+        <section class="fv-panel" data-tab="resumen" aria-label="Resumen"></section>
+        <section class="fv-panel" data-tab="seguro" aria-label="Seguro"></section>
+        <section class="fv-panel" data-tab="itv" aria-label="ITV"></section>
+        <section class="fv-panel" data-tab="taco" aria-label="Tacógrafo"></section>
+        <section class="fv-panel" data-tab="docs" aria-label="Documentos"></section>
+        <!-- Averías y Mantenimiento: los pinta js/mantenimiento.js -->
+        <section class="fv-panel" data-tab="averias" id="ficha-panel-averias" aria-label="Averías">
+          <div id="ficha-averias-content" class="mf-panel"></div>
+        </section>
+        <section class="fv-panel" data-tab="mant" id="ficha-panel-mant" aria-label="Mantenimiento">
+          <div id="ficha-mant-content" class="mf-panel"></div>
+        </section>
+        <!-- Gestión (solo administradores): bloquear, restringir, dar de baja -->
+        <section class="fv-panel" data-tab="gestion" aria-label="Gestión"></section>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script src="js/bloqueos-navegador.js"></script>
+
+<!-- Ventana "Acerca de" (al pulsar el logo) — js/acerca-de.js · css/acerca-de.css -->
 <div class="acerca-de-overlay" id="acercaDeModalOverlay">
   <div class="acerca-de-box" role="dialog" aria-modal="true" aria-labelledby="acercaDeNombre">
     <button type="button" class="acerca-cerrar-x" id="btnAcercaDeCerrar" aria-label="Cerrar">✕</button>
     <div class="acerca-cabecera">
-      <div class="acerca-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#f3f4f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/>
-          <circle cx="7.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
-          <circle cx="17.5" cy="18" r="1.6" fill="#f3f4f6" stroke="none"/>
-        </svg>
+      <div class="acerca-logo" style="background:#C93636;border-color:#C93636">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17.5" cy="17.5" r="1.8"/></svg>
       </div>
-      <div class="acerca-nombre" id="acercaDeNombre">GESTIÓN <span>SALIDAS</span></div>
+      <div class="acerca-nombre" id="acercaDeNombre">GESTIÓN <span>DE FLOTA</span></div>
       <div class="acerca-version" id="acercaDeVersion"></div>
     </div>
     <div class="acerca-tabs" role="tablist">
@@ -311,50 +2442,10 @@
     </div>
   </div>
 </div>
-
-<!-- ORDEN DE CARGA (importa). Son scripts normales (no módulos): comparten ámbito global y se ejecutan de
-     arriba abajo. Cada archivo puede usar, EN EL MOMENTO DE CARGAR, solo lo definido en los anteriores
-     (dentro de funciones sí puede usar lo de cualquier archivo, porque se ejecutan más tarde).
-     utilidades.js y usuarios.js van ANTES de auth.js/navegacion-cabecera.js porque esos archivos usan
-     escapeHtml y enganchan abrirModalMiUsuario_ al cargar (antes, al ser un solo script, se "elevaban").
-     Al añadir un .js nuevo: ponlo aquí en su sitio Y en APP_SHELL de service-worker.js. -->
-<script src="js/modal-scroll.js"></script>
-<script src="js/config.js"></script>
-<script src="js/supabase-client.js"></script>
-<script src="js/instalar-app.js"></script>
-<script src="js/permisos.js"></script>
-<script src="js/api.js"></script>
-<script src="js/acciones-supabase.js"></script>
-<script src="js/sesion.js"></script>
-<script src="js/estado.js"></script>
-<script src="js/utilidades.js"></script>
-<script src="js/usuarios.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/navegacion-cabecera.js"></script>
-<script src="js/fechas.js"></script>
-<script src="js/navegacion.js"></script>
-<script src="js/festivos.js"></script>
-<script src="js/emails-agencias.js"></script>
-<script src="js/tiendas.js"></script>
-<script src="js/palets-forzados.js"></script>
-<script src="js/servidores.js"></script>
-<script src="js/cola-avisos.js"></script>
-<script src="js/plantilla.js"></script>
-<script src="js/conteos-calendario.js"></script>
-<script src="js/conteos-dia.js"></script>
-<script src="js/conteos-resumen.js"></script>
-<script src="js/conteos-panel.js"></script>
-<script src="js/avisos-verificacion.js"></script>
-<script src="js/conteos-pdf.js"></script>
-<script src="js/conteos-excel.js"></script>
-<script src="js/conteos-badges.js"></script>
-<script src="js/conteos-impresion.js"></script>
-<script src="js/conteos-filas.js"></script>
-<script src="js/observaciones.js"></script>
-<script src="js/gestor-observaciones.js"></script>
-<script src="js/ui-modal.js"></script>
-<script src="js/actualizaciones.js"></script>
+<link rel="stylesheet" href="css/acerca-de.css">
 <script src="js/changelog.js"></script>
 <script src="js/acerca-de.js"></script>
+<link rel="stylesheet" href="css/mantenimiento.css">
+<script src="js/mantenimiento.js"></script>
 </body>
 </html>
