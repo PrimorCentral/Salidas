@@ -26,7 +26,8 @@ function seccionesAdminPermitidas_() { return ADMIN_SECCIONES.filter(function (s
 const CLAVES_PERMISOS_UI_ = [
   'usuarios', 'notas', 'cierres', 'agencias',
   'tiendas', 'plantilla', 'aviso_tiendas', 'config_hora_aviso_tiendas',
-  'festivos', 'palets_forzados', 'cola_emails', 'ver_cuadrante_completo'
+  'festivos', 'palets_forzados', 'cola_emails', 'ver_cuadrante_completo',
+  'forzar_palets'
 ];
 
 /** Añade/quita la clase 'es-admin' en <body> (compatibilidad con las

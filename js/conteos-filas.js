@@ -326,6 +326,14 @@ function attachCalculoYValidacion(tr) {
 function attachForzarNo(tr) {
   tr.querySelectorAll('input.celda-no').forEach(function (input) {
     input.addEventListener('click', function () {
+      // Forzar palets en una casilla "NO" requiere el permiso
+      // "forzar_palets" (los administradores siempre pueden). El servidor
+      // (guardar_conteo) también lo comprueba, así que esto es solo para
+      // avisar al momento en vez de dejar escribir el número y fallar al guardar.
+      if (!tienePermiso('forzar_palets')) {
+        mostrarModalSinPermiso('NO ESTÁ PERMITIDO MANDAR PALETS DE ESTA NAVE, HABLE CON SU RESPONSABLE');
+        return;
+      }
       appConfirm('FORZAR SALIDA DE PALETS', 'Esta casilla trae "NO" configurado.\nSignifica que esta tienda no debería recibir palets de esta nave\n¿Quieres forzar el envio de palets de esta nave?.',
         function () {
           appPrompt('Número de palets a forzar', 'Ej: 2', function (texto) {

@@ -27,6 +27,7 @@ const CATALOGO_PERMISOS = [
     grupo: 'Gestión general',
     items: [
       { clave: 'notas', etiqueta: 'Notas y observaciones', desc: 'Añadir y quitar notas en la cuadrícula de conteos diarios.' },
+      { clave: 'forzar_palets', etiqueta: 'Forzar palets (casillas "NO")', desc: 'Poner un número de palets en una casilla que trae "NO" (tienda que no debería recibir palets de esa nave). Sin este permiso, al tocar el "NO" sale el aviso de que no está permitido.' },
       { clave: 'cierres', etiqueta: 'Bloquear y desbloquear conteos', desc: 'Bloquear el conteo de una tienda (con una observación) o desbloquearlo en la cuadrícula de conteos.' },
       { clave: 'ver_cuadrante_completo', etiqueta: 'Ver cuadrante completo', desc: 'Ver los conteos de fechas lejanas (más allá de hoy + 1 día) con todos los datos, igual que un administrador, en vez de la versión reducida (solo tiendas y bloqueos, sin límites, celdas de conteo ni plazos de entrega).' },
     ],
