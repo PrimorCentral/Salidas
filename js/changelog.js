@@ -11,7 +11,7 @@ const CHANGELOG_SALIDAS = [
     version: '2.1.11',
     fecha: '2026-10-24',
     cambios: [
-      { tipo: 'mejora', texto: 'Inicio de sesión: se quita el reflejo de luz que cruzaba la pantalla; en el fondo quedan solo las partículas flotantes' }
+      { tipo: 'mejora', texto: 'Inicio de sesión: se quitan el reflejo de luz que cruzaba la pantalla y el del botón Entrar; en el fondo quedan solo las partículas flotantes' }
     ]
   },
   {
