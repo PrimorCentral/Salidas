@@ -367,11 +367,15 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (info && info.tipo === 'ajuste' && seccion.estado !== 'enviado') info.lista = listaCargaEfectiva_();
     // Nadie la ha ajustado todavía: con permiso se enseña lo contado.
     if (!info && puede) info = { tipo: 'contado', lista: listaCargaEfectiva_() };
+    const onEditar = puede ? function () { abrirAjustarCarga_(null, null, true); } : null;
     mostrarModalListaCarga(info, titulo, fechaTexto, {
       revisar: revisar,
       soloLectura: !puede && !(c && c.origen === 'definitivo') && seccion.estado !== 'enviado',
-      onEditar: puede ? function () { abrirAjustarCarga_(null, null, true); } : null
+      onEditar: onEditar
     });
+    // Sin ajustar todavía y con permiso: ventanita encima preguntando si
+    // se quiere ajustar (solo se quita con sus botones o con Escape).
+    if (puede && info && info.tipo === 'contado') mostrarAvisoCargaSinAjustar(onEditar);
   }
   // Modal editable. tipoEnvio: 'prevision'|'definitivo' si se abre en mitad
   // de un envío (entonces alTerminar sigue con el envío tras guardar).

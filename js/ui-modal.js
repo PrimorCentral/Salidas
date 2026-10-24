@@ -410,6 +410,48 @@ function cabeceraModalCarga_(titulo, subtitulo, variante) {
   '</div>';
 }
 
+/**
+ * Ventanita centrada ENCIMA de la lista de carga cuando la carga todavía
+ * no está ajustada y el usuario tiene el permiso «Ajustar carga».
+ * Solo se cierra con sus botones o con Escape (un clic fuera NO la cierra).
+ * "Ver sin ajustar" / Escape: deja la lista de carga abierta debajo.
+ * "Ajustar carga": llama a onAjustar (pasa a editar la carga).
+ */
+function mostrarAvisoCargaSinAjustar(onAjustar) {
+  const previo = document.getElementById('aviso-sin-ajustar-overlay');
+  if (previo) previo.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'aviso-sin-ajustar-overlay';
+  overlay.className = 'modal-overlay confirm-puntual-overlay';
+  overlay.style.display = 'flex';
+  overlay.innerHTML =
+    '<div class="modal-box confirm-puntual-box" role="alertdialog" aria-modal="true" aria-labelledby="aviso-sin-ajustar-titulo">' +
+      '<div class="confirm-puntual-icono">' + ICONO_CAMION_20_ + '</div>' +
+      '<h3 id="aviso-sin-ajustar-titulo">La carga aún no está ajustada</h3>' +
+      '<div class="confirm-puntual-cuerpo">' +
+        '<p>Si no se ajusta, se cargará lo contado.</p>' +
+        '<p class="confirm-puntual-nota">¿Quieres ajustarla ahora?</p>' +
+      '</div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" class="modal-cancel" data-aviso-carga="no">Ver sin ajustar</button>' +
+        '<button type="button" class="modal-confirm" data-aviso-carga="si">Ajustar carga</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  function cerrar() {
+    overlay.remove();
+    document.removeEventListener('keydown', teclas, true);
+  }
+  function teclas(e) {
+    if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); cerrar(); }
+  }
+  document.addEventListener('keydown', teclas, true);
+  // Clic fuera: no hace nada a propósito (solo botones o Escape).
+  overlay.querySelector('[data-aviso-carga="no"]').onclick = cerrar;
+  overlay.querySelector('[data-aviso-carga="si"]').onclick = function () { cerrar(); if (onAjustar) onAjustar(); };
+  setTimeout(function () { const b = overlay.querySelector('[data-aviso-carga="si"]'); if (b) b.focus(); }, 30);
+}
+
 /** Pastilla "Carga ajustada / Previsión enviada / Definitivo enviado a las X h por Y". */
 function estadoCargaHtml_(carga) {
   if (!carga) return '';
