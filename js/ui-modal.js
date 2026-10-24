@@ -461,9 +461,11 @@ function mostrarAvisoCargaSinAjustar(onAjustar) {
 function estadoCargaHtml_(carga) {
   if (!carga) return '';
   if (carga.origen === 'contado') {
-    // Rojo sobre amarillo y centrado, para que se vea bien que falta ajustarla.
-    return '<div class="modal-lista-estado contado" style="display:flex;width:fit-content;margin-left:auto;margin-right:auto;background:#fff3b0;color:var(--danger);border:1px solid #f0d36a;">' +
-      ICONO_AVISO_16_ + 'CARGA SIN AJUSTAR POR UN RESPONSABLE</div>';
+    // Banda grande roja sobre amarillo, a todo el ancho, para que el operario la vea bien.
+    return '<div class="modal-lista-estado contado" style="display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box;justify-content:center;gap:6px;' +
+      'padding:14px 14px 12px;border-radius:12px;font-size:15px;line-height:1.3;font-weight:800;letter-spacing:.02em;text-align:center;' +
+      'background:#fff3b0;color:#c0262d;border:2px solid #e0453a;">' +
+      ICONO_AVISO_20_ + '<span>CARGA SIN AJUSTAR POR UN RESPONSABLE</span></div>';
   }
   const textos = { ajuste: 'Carga ajustada', prevision: 'Previsión enviada', definitivo: 'Definitivo enviado' };
   const clases = { ajuste: ' ajuste', prevision: ' prevision', definitivo: '' };
@@ -657,7 +659,7 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   let cuerpo;
   let tabla = null;
   if (!info) {
-    cuerpo = '<p class="modal-envio-nota">Todavía nadie ha ajustado la carga de esta agrupación. Al enviar se usará lo contado, como hasta ahora.</p>';
+    cuerpo = '<p class="modal-envio-nota">No hay lista de carga guardada para esta agrupación.</p>';
   } else if (!lista) {
     cuerpo = estadoCargaHtml_({ origen: tipo, hora: info.hora, por: info.enviadoPor }) +
       '<p class="modal-envio-nota">Este envío se hizo antes de que la app guardase la lista de carga, así que no hay lista para él. Aparecerá en los próximos envíos.</p>';

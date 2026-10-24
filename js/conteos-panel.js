@@ -365,8 +365,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     // saldría en el email). Previsión/Definitivo: lo que se mandó.
     let info = infoCargaParaModal_();
     if (info && info.tipo === 'ajuste' && seccion.estado !== 'enviado') info.lista = listaCargaEfectiva_();
-    // Nadie la ha ajustado todavía: con permiso se enseña lo contado.
-    if (!info && puede) info = { tipo: 'contado', lista: listaCargaEfectiva_() };
+    // Nadie la ha ajustado todavía: se enseña lo contado (con o sin permiso),
+    // con la etiqueta "CARGA SIN AJUSTAR POR UN RESPONSABLE".
+    if (!info && seccion.estado !== 'enviado') info = { tipo: 'contado', lista: listaCargaEfectiva_() };
     const onEditar = puede ? function () { abrirAjustarCarga_(null, null, true); } : null;
     mostrarModalListaCarga(info, titulo, fechaTexto, {
       revisar: revisar,
