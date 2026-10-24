@@ -201,22 +201,7 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
       });
     }).observe(document.body, { childList: true, subtree: true });
   }
-
-  // Polvo flotando sobre la foto del login (solo decoración).
-  const polvo = document.getElementById('login-polvo');
-  if (polvo) {
-    for (let i = 0; i < 26; i++) {
-      const s = document.createElement('span');
-      const tam = 2 + Math.random() * 4;
-      s.style.width = s.style.height = tam + 'px';
-      s.style.left = (Math.random() * 70) + '%';
-      s.style.setProperty('--dx', (Math.random() * 120 - 60) + 'px');
-      s.style.animationDuration = (14 + Math.random() * 16) + 's';
-      s.style.animationDelay = (-Math.random() * 25) + 's';
-      s.style.opacity = (0.3 + Math.random() * 0.6).toFixed(2);
-      polvo.appendChild(s);
-    }
-  }
+  // Las partículas del fondo del login van en js/login-estaciones.js.
 })();
 document.getElementById('btn-mi-usuario').addEventListener('click', abrirModalMiUsuario_);
 document.getElementById('btn-imprimir-dia').addEventListener('click', function () { imprimirConteoDia_(); });
