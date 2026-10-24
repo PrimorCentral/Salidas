@@ -58,6 +58,26 @@
   }
 
   const tema = TEMAS[estacionDeHoy()];
+
+  // Etiqueta con la estación actual, abajo a la derecha de la foto.
+  const ICONOS = {
+    primavera: '<circle cx="12" cy="12" r="2.2"/><path d="M12 9.8c-1.5-3-1-5.8 0-6.8 1 1 1.5 3.8 0 6.8zM14.1 11.3c2.7-1.9 5.5-2 6.8-1.3-.5 1.3-2.9 2.8-6.8 1.3zM13.3 14c1.2 3.1.6 5.9-.6 6.7-.8-1.2-.9-4 .6-6.7zM10.7 14c-1.5 2.7-1.4 5.5-.6 6.7-1.2-.8-1.8-3.6-.6-6.7zM9.9 11.3c-3.9 1.5-6.3 0-6.8-1.3 1.3-.7 4.1-.6 6.8 1.3z"/>',
+    verano:    '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    otono:     '<path d="M12 3l1.6 3.4 2.6-1.2-.4 3.6 3.6-.6-1.4 2.6 2.4 1.4-3.4 1.6.8 2.6-3.4-.8L12 18l-2.4-2.4-3.4.8.8-2.6-3.4-1.6 2.4-1.4L4.6 8.2l3.6.6-.4-3.6 2.6 1.2z"/><path d="M12 13v8"/>',
+    invierno:  '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M12 5l-2-2M12 5l2-2M12 19l-2 2M12 19l2 2"/>',
+    navidad:   '<path d="M12 2l1.2 2.6 2.8.3-2.1 1.9.6 2.8L12 8.2 9.5 9.6l.6-2.8L8 4.9l2.8-.3z"/><path d="M12 9l-5 7h3l-4 4h12l-4-4h3z"/>'
+  };
+  const NOMBRES = { primavera: 'Primavera', verano: 'Verano', otono: 'Otoño', invierno: 'Invierno', navidad: 'Navidad' };
+  const hero = pantalla.querySelector('.login-hero');
+  if (hero) {
+    const est = estacionDeHoy();
+    const etiqueta = document.createElement('div');
+    etiqueta.className = 'login-estacion login-entra';
+    etiqueta.style.animationDelay = '1.6s';
+    etiqueta.setAttribute('aria-hidden', 'true');
+    etiqueta.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#f2b765" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICONOS[est] + '</svg>' + NOMBRES[est];
+    hero.appendChild(etiqueta);
+  }
   let W = 0, H = 0, ps = [];
   const raton = { x: -999, y: -999 };
 
