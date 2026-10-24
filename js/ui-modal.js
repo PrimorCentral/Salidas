@@ -352,6 +352,12 @@ const ICONO_AVISO_20_ = '<svg width="20" height="20" viewBox="0 0 24 24" fill="n
 const ICONO_AVISO_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
 const ICONO_CHECK_14_ = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 const ICONO_CANDADO_15_ = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+// Camión con un palet de cajas encima (cabecera de los modales de carga).
+const ICONO_PALET_CAMION_20_ = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+  '<rect x="3" y="2.5" width="9" height="5.5" rx="0.5"/><path d="M7.5 2.5v5.5"/>' +
+  '<path d="M2.5 9.5h10M2.5 12h10M3.5 9.5V12M7.5 9.5V12M11.5 9.5V12"/>' +
+  '<path d="M1.5 14h13.5"/><path d="M15 17V9h3.5l3 3.5V17h-1.5M8 17h8"/>' +
+  '<circle cx="6" cy="17.5" r="2"/><circle cx="18" cy="17.5" r="2"/></svg>';
 const ICONO_INFO_16_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>';
 
 const ICONO_LAPIZ_15_ = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
@@ -402,7 +408,7 @@ function prepararModalCarga_() {
 
 function cabeceraModalCarga_(titulo, subtitulo, variante) {
   return '<div class="modal-envio-cabecera">' +
-    '<div class="modal-envio-cabecera-icono' + (variante ? ' ' + variante : '') + '">' + (variante === 'rojo' ? ICONO_AVISO_20_ : ICONO_CAMION_20_) + '</div>' +
+    '<div class="modal-envio-cabecera-icono' + (variante ? ' ' + variante : '') + '">' + (variante === 'rojo' ? ICONO_AVISO_20_ : ICONO_PALET_CAMION_20_) + '</div>' +
     '<div class="modal-envio-cabecera-texto">' +
       '<div class="nombre">' + escapeHtml(titulo) + '</div>' +
       '<div class="fecha">' + escapeHtml(subtitulo) + '</div>' +
@@ -455,7 +461,9 @@ function mostrarAvisoCargaSinAjustar(onAjustar) {
 function estadoCargaHtml_(carga) {
   if (!carga) return '';
   if (carga.origen === 'contado') {
-    return '<div class="modal-lista-estado contado">' + ICONO_INFO_16_ + 'Sin ajustar: se cargará lo contado</div>';
+    // Rojo sobre amarillo y centrado, para que se vea bien que falta ajustarla.
+    return '<div class="modal-lista-estado contado" style="display:flex;width:fit-content;margin-left:auto;margin-right:auto;background:#fff3b0;color:var(--danger);border:1px solid #f0d36a;">' +
+      ICONO_AVISO_16_ + 'CARGA SIN AJUSTAR POR UN RESPONSABLE</div>';
   }
   const textos = { ajuste: 'Carga ajustada', prevision: 'Previsión enviada', definitivo: 'Definitivo enviado' };
   const clases = { ajuste: ' ajuste', prevision: ' prevision', definitivo: '' };
