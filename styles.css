@@ -184,13 +184,7 @@
   }
   @keyframes login-camara { from { transform: scale(1) translate(0,0); } to { transform: scale(1.13) translate(-2.5%,1.5%); } }
   .login-hero, .login-panel { position: relative; z-index: 2; }
-  .login-luz, .login-polvo { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
-  .login-luz::before {
-    content: ''; position: absolute; top: -20%; bottom: -20%; width: 22%; left: -30%;
-    background: linear-gradient(90deg, transparent, rgba(255,220,160,.10), rgba(255,240,210,.18), rgba(255,220,160,.10), transparent);
-    transform: skewX(-18deg); animation: login-barrido 9s ease-in-out 2s infinite;
-  }
-  @keyframes login-barrido { 0% { left: -30%; } 55%, 100% { left: 120%; } }
+  .login-polvo { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
   .login-polvo span {
     position: absolute; bottom: -10px; border-radius: 50%; background: rgba(255,230,190,.55);
     animation: login-sube linear infinite;
@@ -221,14 +215,7 @@
   @keyframes login-panel { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
   .login-panel::before { background: linear-gradient(var(--amber), #f2b765, var(--amber-dark), var(--amber)); background-size: 100% 300%; animation: login-borde 4s linear infinite; }
   @keyframes login-borde { to { background-position: 0 300%; } }
-  /* Botón Entrar: reflejo que pasa de vez en cuando */
-  #btn-login { position: relative; overflow: hidden; }
-  #btn-login::after {
-    content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-    transform: skewX(-20deg); animation: login-brillo 5s ease-in-out 3s infinite;
-  }
-  @keyframes login-brillo { 0% { left: -60%; } 30%, 100% { left: 130%; } }
+  /* Botón Entrar: la flecha se desplaza al pasar el ratón */
   #btn-login .login-flecha { transition: transform .2s; }
   #btn-login:hover .login-flecha { transform: translateX(4px); }
   /* Entrada escalonada de textos al abrir */
