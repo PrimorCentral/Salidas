@@ -425,12 +425,11 @@ function mostrarAvisoCargaSinAjustar(onAjustar) {
   overlay.className = 'modal-overlay confirm-puntual-overlay';
   overlay.style.display = 'flex';
   overlay.innerHTML =
-    '<div class="modal-box confirm-puntual-box" role="alertdialog" aria-modal="true" aria-labelledby="aviso-sin-ajustar-titulo">' +
-      '<div class="confirm-puntual-icono">' + ICONO_CAMION_20_ + '</div>' +
-      '<h3 id="aviso-sin-ajustar-titulo">La carga aún no está ajustada</h3>' +
+    '<div class="modal-box confirm-puntual-box" role="alertdialog" aria-modal="true" aria-labelledby="aviso-sin-ajustar-titulo" style="border-top:5px solid var(--danger);">' +
+      '<div class="confirm-puntual-icono" style="background:#fceded;color:var(--danger);">' + ICONO_AVISO_20_ + '</div>' +
+      '<h3 id="aviso-sin-ajustar-titulo" style="color:var(--danger);">La carga aún no está ajustada</h3>' +
       '<div class="confirm-puntual-cuerpo">' +
-        '<p>Si no se ajusta, se cargará lo contado.</p>' +
-        '<p class="confirm-puntual-nota">¿Quieres ajustarla ahora?</p>' +
+        '<p>¿Quieres ajustarla ahora?</p>' +
       '</div>' +
       '<div class="modal-actions">' +
         '<button type="button" class="modal-cancel" data-aviso-carga="no">Ver sin ajustar</button>' +
@@ -662,7 +661,12 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
         ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
             '<span>El conteo ha cambiado después de fijar la carga. Un responsable con permiso «Ajustar carga» tiene que verificarla.</span></div></div>'
         : '') +
-      statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra);
+      statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) +
+      // Sin camiones de recogida con matrícula: se indica a la izquierda.
+      (camionesValidos_(info.camiones).length === 0
+        ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_CAMION_16_ +
+            '<span>No hay matrículas asignadas</span></div></div>'
+        : '');
     cuerpo = columnasCarga_(cuerpo, tabla.html);
   }
 
