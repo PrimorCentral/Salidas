@@ -23,9 +23,9 @@
     --viernes-suave: #f1ebfb;
     --viernes-borde: #d9c9f3;
     /* Casilla DOMINGO (igual que VIERNES, en verde azulado) */
-    --domingo: #0f7f7a;
-    --domingo-suave: #e3f4f2;
-    --domingo-borde: #b5dfda;
+    --domingo: #b8437a;
+    --domingo-suave: #fbeaf2;
+    --domingo-borde: #efc3d8;
     --danger: #c94f4f;
     --radius: 10px;
     --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -1922,6 +1922,182 @@
   .btn-header-informatica:hover { background: #eef1f5; }
   .btn-header-informatica:disabled { opacity: .55; cursor: not-allowed; }
 
+  /* SOBRE (envíos por email) junto al camioncito: abre un menú con
+     "Enviar previsión", "Enviar definitivo" y "Enviar a informática"
+     (son los mismos botones de antes, con otra pinta). El menú se pinta
+     con posición fija sobre todo (ver abrirMenuEnvios_ en conteos-panel.js). */
+  .envios-wrap { display: inline-flex; flex-shrink: 0; }
+  .envios-wrap[hidden] { display: none; }
+  .btn-menu-envios {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 34px; height: 28px; border-radius: 14px; padding: 0; cursor: pointer;
+    border: 1px solid #f3dfb3; background: #fff; color: var(--amber-dark);
+    transition: background .15s, transform .05s;
+  }
+  .btn-menu-envios:hover, .btn-menu-envios.activo { background: #fdf6ea; }
+  .btn-menu-envios:active { transform: scale(.95); }
+  .menu-envios {
+    position: fixed; z-index: 2000; min-width: 230px; padding: 6px;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(28, 43, 69, .16), 0 2px 6px rgba(28, 43, 69, .08);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .menu-envios[hidden] { display: none; }
+  /* Camioncito y sobre un poco más grandes, sin cambiar el alto de la línea (28px). */
+  .seccion-header-top .btn-lista-carga,
+  .seccion-header-top .btn-menu-envios { width: 40px; }
+  .seccion-header-top .btn-lista-carga svg,
+  .seccion-header-top .btn-menu-envios svg { width: 21px; height: 21px; }
+  .menu-envios .btn-header-prevision,
+  .menu-envios .btn-header-definitivo,
+  .menu-envios .btn-header-informatica {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: none; border: none; border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; font-weight: 700; text-transform: none; letter-spacing: 0;
+    color: var(--ink); cursor: pointer;
+  }
+  .menu-envios .btn-header-prevision svg,
+  .menu-envios .btn-header-definitivo svg { color: var(--amber-dark); flex-shrink: 0; }
+  .menu-envios .btn-header-informatica svg { color: var(--navy); flex-shrink: 0; }
+  .menu-envios .btn-header-prevision:hover,
+  .menu-envios .btn-header-definitivo:hover { background: #fdf6ea; color: var(--ink); }
+  .menu-envios .btn-header-informatica:hover { background: #eef1f5; }
+  .menu-envios button:disabled { opacity: .45; cursor: not-allowed; background: none; }
+  .menu-envios-aviso {
+    margin: 4px 6px 2px; padding: 6px 8px; border-radius: 7px; background: #f6f7f9;
+    color: var(--ink-soft); font-size: 11.5px; font-weight: 600;
+  }
+  .menu-envios-aviso[hidden] { display: none; }
+  /* Menú de descargas (PDF / Excel / PDF especial): mismos botones de antes como opciones. */
+  .btn-menu-descargas { color: var(--navy); border-color: #d6dce8; }
+  .btn-menu-descargas:hover, .btn-menu-descargas.activo { background: #eef1f7; }
+  .menu-envios .menu-item {
+    display: flex; align-items: center; justify-content: flex-start; gap: 10px; width: 100%; height: auto; text-align: left;
+    background: none; border: none; border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .menu-envios .menu-item:hover { background: #eef1f5; }
+  .menu-envios .menu-item:disabled { opacity: .5; cursor: wait; }
+  .menu-envios .menu-item svg { flex-shrink: 0; }
+  /* Segunda línea de la cabecera: fuera si no tiene nada (sin hueco en blanco). */
+  .seccion-header-meta[hidden] { display: none; }
+  .seccion-header-top .verif-wrap { display: inline-flex; flex-shrink: 0; }
+  /* VERIFICAR CONTEO como icono de check (mismo tamaño que camión / sobre). */
+  .seccion-header-top .btn-header-verificar.btn-verif-icono {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; gap: 0;
+    width: 40px; height: 28px; padding: 0; border-radius: 14px; cursor: pointer;
+    border: 1.5px solid #9fd2bd; background: #fff; color: var(--ok); opacity: 1;
+    text-transform: none; letter-spacing: 0; font-size: 0;
+  }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono svg { width: 19px; height: 19px; stroke-width: 3; }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono:hover { background: #e4f3ec; }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono.ok { background: var(--ok); border-color: var(--ok); color: #fff; cursor: default; }
+  .seccion-header-top button.btn-header-verificar.btn-verif-icono.ok { cursor: pointer; }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono.aviso { background: #fdf1de; border-color: #f0c98a; color: var(--amber-dark); }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono.bloqueado { background: #f6f7f9; border-color: #d3d7de; color: #b3b8c2; cursor: not-allowed; }
+  .seccion-header-top .btn-header-verificar.btn-verif-icono:disabled { opacity: .6; cursor: wait; }
+
+  /* CANDADO: conteo bloqueado porque la carga está ajustada. Rojo; el
+     administrador lo pulsa para desbloquear, el resto ve quién lo bloqueó. */
+  .btn-candado-carga {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 34px; height: 28px; border-radius: 14px; padding: 0; cursor: pointer;
+    border: 1px solid #f3c6c6; background: #fceded; color: var(--danger);
+    transition: filter .15s, transform .05s;
+  }
+  .btn-candado-carga[hidden] { display: none; }
+  .btn-candado-carga:hover { filter: brightness(.96); }
+  .btn-candado-carga:active { transform: scale(.95); }
+
+  /* Pestañas "Carga ajustada" / "Ver conteo real sin ajustar" (donde
+     estaban los botones de envío). */
+  .vista-carga-tabs { display: inline-flex; align-items: center; gap: 4px; padding: 3px; border-radius: 20px; background: #f0f2f6; flex-wrap: wrap; }
+  .vista-carga-tabs[hidden] { display: none; }
+  .vista-carga-tab {
+    display: inline-flex; align-items: center; gap: 6px; border: none; background: none; cursor: pointer;
+    padding: 5px 12px; border-radius: 16px; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); white-space: nowrap;
+  }
+  .vista-carga-tab:hover { color: var(--navy); }
+  .vista-carga-tab.activa { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(28, 43, 69, .14); }
+  .vista-carga-num { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #e3e8f1; color: var(--navy); }
+  .vista-carga-tab.activa .vista-carga-num { background: #eef1f7; }
+  .badge-total-palets.es-ajustada { background: var(--navy); color: #fff; }
+
+  /* Aviso encima de la tabla mientras la carga está ajustada. */
+  .aviso-carga-bloqueada {
+    display: flex; align-items: center; gap: 8px; margin: 0 0 10px; padding: 8px 12px; border-radius: 8px;
+    background: #fceded; color: #9b3434; font-size: 12.5px; font-weight: 600; line-height: 1.35;
+  }
+  .aviso-carga-bloqueada[hidden] { display: none; }
+  .aviso-carga-bloqueada svg { flex-shrink: 0; }
+  .aviso-carga-bloqueada { flex-wrap: wrap; font-weight: 500; }
+  .aviso-carga-bloqueada b { font-weight: 800; }
+  .aviso-carga-texto { flex: 1 1 auto; min-width: 0; }
+  .aviso-carga-accion { font-size: 11.5px; font-weight: 700; color: var(--danger); white-space: nowrap; }
+
+  /* Modal del candado (ver mostrarModalCandado_ en conteos-panel.js). */
+  .candado-modal { display: flex; flex-direction: column; gap: 14px; }
+  .candado-modal-cab { display: flex; align-items: center; gap: 12px; }
+  .candado-modal-cab > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .candado-modal-icono {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fceded; color: var(--danger);
+  }
+  .candado-modal-icono svg { width: 20px; height: 20px; }
+  .candado-modal-icono.abierto { background: #eef1f7; color: var(--navy); }
+  .candado-modal-titulo { font-size: 16px; font-weight: 800; color: var(--navy); line-height: 1.25; }
+  .candado-modal-sub { font-size: 12.5px; color: var(--ink-soft); }
+  .candado-modal-ficha { border: 1px solid var(--line); border-radius: 10px; background: #f8f9fb; padding: 4px 14px; }
+  .candado-modal-fila { display: flex; gap: 12px; padding: 7px 0; font-size: 13px; }
+  .candado-modal-fila + .candado-modal-fila { border-top: 1px solid var(--line); }
+  .candado-modal-etq { width: 64px; flex-shrink: 0; color: var(--ink-soft); font-weight: 600; }
+  .candado-modal-val { color: var(--ink); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .candado-modal-puntos { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.45; color: var(--ink); }
+  .candado-modal-nota { font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+
+  /* Desliza para desbloquear (ver activarDeslizador_). Sin animaciones. */
+  .desliza-fila { display: flex; align-items: center; gap: 10px; width: 100%; }
+  .desliza {
+    position: relative; flex: 1 1 auto; min-width: 0; height: 46px; border-radius: 23px;
+    background: #fceded; border: 1px solid #f3c6c6; overflow: hidden; user-select: none; touch-action: none;
+  }
+  .desliza-relleno { position: absolute; left: 0; top: 0; bottom: 0; width: 46px; background: #f6d4d4; border-radius: 23px; }
+  .desliza-texto {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-left: 40px;
+    font-size: 13px; font-weight: 700; color: var(--danger); pointer-events: none; white-space: nowrap;
+  }
+  .modal-actions .desliza-mando, .desliza-mando {
+    position: absolute; left: 4px; top: 4px; width: 38px; height: 38px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; cursor: grab;
+    background: var(--danger); color: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); touch-action: none;
+  }
+  .desliza-mando svg { width: 18px; height: 18px; pointer-events: none; }
+  .desliza.arrastrando .desliza-mando { cursor: grabbing; }
+  .desliza-mando:focus-visible { outline: 3px solid rgba(201, 79, 79, .35); outline-offset: 2px; }
+  .desliza:not(.arrastrando):not(.completo) .desliza-mando,
+  .desliza:not(.arrastrando):not(.completo) .desliza-relleno { transition: transform .2s, width .2s; }
+  .desliza.completo { background: #e4f3ec; border-color: #bfe3cf; }
+  .desliza.completo .desliza-relleno { background: #e4f3ec; }
+  .desliza.completo .desliza-mando { background: var(--ok); }
+  .desliza-fila .modal-cancel { flex-shrink: 0; }
+  .table-wrap[hidden] { display: none; }
+
+  /* Casillas apagadas por el bloqueo (operarios). */
+  .seccion-panel.carga-bloqueada table.conteo input.celda:disabled,
+  .seccion-panel.carga-bloqueada table.conteo input.celda-total-visual { background: #f6f7f9; color: var(--ink-soft); cursor: not-allowed; }
+  .seccion-panel.carga-bloqueada .btn-cerrar-tienda:disabled,
+  .seccion-panel.carga-bloqueada .btn-reabrir:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-header-verificar.bloqueado-carga { opacity: .55; cursor: not-allowed; }
+
+  /* Tabla de la carga ajustada (solo lectura). */
+  table.conteo.conteo-ajustado input.celda:not(.celda-no):not(.celda-otra-agencia),
+  table.conteo.conteo-ajustado input.celda-total-visual { color: var(--ink); -webkit-text-fill-color: var(--ink); cursor: default; opacity: 1; }
+  table.conteo.conteo-ajustado input.celda.celda-ajustada { background: #e6eefb; color: var(--prevision); -webkit-text-fill-color: var(--prevision); border-color: #bcd0f0; font-weight: 800; }
+  table.conteo.conteo-ajustado .btn-cerrar-tienda,
+  table.conteo.conteo-ajustado .btn-reabrir { visibility: hidden; }
+  table.conteo.conteo-ajustado .diff-nota.ajuste { color: var(--prevision); }
+
   /* Botón "GUARDAR CONTEO": ya NO se autoguarda al escribir (ver
      marcarCambiosSinGuardar_ / autoguardarSeccion en el JS). Este botón
      solo aparece destacado (verde, con pulso) cuando hay cambios sin
@@ -2133,7 +2309,7 @@
   /* Casilla DOMINGO: igual que VIERNES. */
   table.conteo th.th-domingo { background: var(--domingo-suave); color: var(--domingo); }
   table.conteo input.celda-domingo { background: var(--domingo-suave); border-color: var(--domingo-borde); color: var(--domingo); font-weight: 800; }
-  table.conteo input.celda-domingo:focus { border-color: var(--domingo); box-shadow: 0 0 0 3px rgba(15,127,122,.14); }
+  table.conteo input.celda-domingo:focus { border-color: var(--domingo); box-shadow: 0 0 0 3px rgba(184,67,122,.14); }
   table.conteo .celda-domingo-excluida {
     width: 52px; margin: 0 auto; padding: 7px 4px; text-align: center; border-radius: 7px; font-weight: 800;
     font-size: 13px; color: #fff; background: #8b9098; border: 1.5px solid #7a7f87; cursor: not-allowed;
