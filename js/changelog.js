@@ -8,6 +8,19 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.12',
+    fecha: '2026-10-26',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Conteo bloqueado con candado: en cuanto se ajusta la carga o se envía la previsión, el conteo queda bloqueado para los operarios (si hay que cambiar algo, se avisa a un responsable). Un responsable lo desbloquea arrastrando el candado hasta el final de la barra (al desbloquear se borra la carga ajustada; la previsión enviada no se deshace). Se vuelve a bloquear si se ajusta la carga o se envía la previsión otra vez' },
+      { tipo: 'nuevo',      texto: 'Con el definitivo enviado, el mismo candado sirve para desbloquearlo el mismo día (sustituye a la papelera «Deshacer envío»)' },
+      { tipo: 'nuevo',      texto: 'Pestañas «Carga ajustada» (o «Carga enviada») y «Ver conteo real sin ajustar» cuando lo que se carga no coincide con lo contado. La carga se ve limpia; los avisos de límite salen en el conteo real' },
+      { tipo: 'mejora',     texto: 'Los envíos (previsión, definitivo e informática) pasan a un sobre junto al camioncito, y el PDF y el Excel a un botón de descarga' },
+      { tipo: 'mejora',     texto: 'Verificar conteo pasa a ser un icono de check: verde cuando está verificado, naranja si hay que volver a verificar' },
+      { tipo: 'mejora',     texto: 'Cabecera más limpia: sin el botón «Guardar conteo» (se guarda solo), sin el «+» de notas ni la X de bloquear tienda (se hace desde Bloqueo y cambios) y sin hueco en blanco cuando no hay nada que mostrar' },
+      { tipo: 'mejora',     texto: 'La columna DOMINGO pasa a color rosa para no confundirse con el verde de verificado' }
+    ]
+  },
+  {
     version: '2.1.11',
     fecha: '2026-10-24',
     cambios: [

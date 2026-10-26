@@ -185,8 +185,8 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     (tienePeso ? '<td>' + celdaExtra('peso', t.peso, '0.01') + '</td>' : '') +
     (tieneCExpress ? '<td>' + celdaExtra('cexpress', t.cexpress, '0.01') + '</td>' : '') +
     (tieneSobrestock ? '<td>' + celdaExtra('sobrestock', t.sobrestock, '0.01') + '</td>' : '') +
-    '<td><button type="button" class="btn-cerrar-tienda" title="Bloquear conteo de esta tienda">' +
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button></td>' +
+    // La X para bloquear la tienda ya no sale aquí: se hace desde "Bloqueo y cambios".
+    '<td></td>' +
     '</tr>';
 }
 
