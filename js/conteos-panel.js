@@ -230,7 +230,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<span class="verif-pastillas"></span>' +
     '<div class="vista-carga-tabs" role="tablist" hidden>' +
       '<button type="button" class="vista-carga-tab" data-vista="ajustada" role="tab">' + SVG_MENU_CAMION_ + '<span class="vista-carga-etiqueta">Carga ajustada</span><span class="vista-carga-num"></span></button>' +
-      '<button type="button" class="vista-carga-tab" data-vista="real" role="tab">' + SVG_OJO_ + '<span>Ver conteo real sin ajustar</span><span class="vista-carga-num"></span></button>' +
+      '<button type="button" class="vista-carga-tab" data-vista="real" role="tab">' + SVG_OJO_ + '<span>Conteo real</span><span class="vista-carga-num"></span></button>' +
     '</div>' +
     '<span class="aviso-carga-no-ajustada" hidden title="Las naves están verificadas, pero un responsable todavía no ha ajustado la carga del camión">' +
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' +
