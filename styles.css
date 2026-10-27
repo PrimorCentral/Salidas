@@ -1107,7 +1107,39 @@
   .plantilla-dias button.dia-especial:hover { background: #fbecd6; }
   .plantilla-dias button.dia-especial.pasado { opacity: .65; }
   .plantilla-dias button.dia-especial.activo { background: var(--amber); border-color: var(--amber-dark); color: #fff; opacity: 1; }
-  .plantilla-dias button.dia-especial-pasados { border-style: dashed; color: var(--ink-soft); font-weight: 500; }
+  /* "Pasados (n)": abre un desplegable con los conteos especiales pasados
+   * (por meses, con buscador), en vez de soltarlos todos en la fila. */
+  .especiales-pasados-wrap { position: relative; display: inline-flex; }
+  .plantilla-dias button.dia-especial-pasados { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .plantilla-dias button.dia-especial-pasados .chev { transition: transform .15s; }
+  .plantilla-dias button.dia-especial-pasados.abierto { border-color: var(--navy); color: var(--navy); }
+  .plantilla-dias button.dia-especial-pasados.abierto .chev { transform: rotate(180deg); }
+  .especiales-pasados-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50; width: 300px;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px;
+    box-shadow: 0 10px 28px rgba(28, 43, 69, .16), 0 2px 6px rgba(28, 43, 69, .08);
+  }
+  .especiales-pasados-menu .ep-buscar {
+    display: flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 8px;
+    padding: 0 9px; color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .especiales-pasados-menu .ep-buscar input { border: none; outline: none; flex: 1; padding: 8px 0; font-size: 12.5px; background: none; }
+  .especiales-pasados-menu .ep-lista { max-height: 320px; overflow-y: auto; }
+  .especiales-pasados-menu .ep-mes[hidden], .especiales-pasados-menu .ep-item[hidden], .especiales-pasados-menu [hidden] { display: none; }
+  .especiales-pasados-menu .ep-mes-titulo { font-size: 10.5px; font-weight: 800; color: var(--ink-soft); letter-spacing: .4px; padding: 9px 8px 4px; }
+  .plantilla-dias .especiales-pasados-menu button.ep-item {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+    border: none; background: none; border-radius: 7px; padding: 7px 8px; font-size: 12.5px; text-align: left;
+  }
+  .plantilla-dias .especiales-pasados-menu button.ep-item span { color: var(--ink-soft); font-weight: 500; }
+  .plantilla-dias .especiales-pasados-menu button.ep-item:hover { background: #f4f6f9; }
+  .plantilla-dias .especiales-pasados-menu button.ep-item.activo { background: #fdf1de; color: var(--amber-dark); }
+  .especiales-pasados-menu .ep-vacio { padding: 12px 8px; font-size: 12px; color: var(--ink-soft); text-align: center; }
+  .plantilla-dias .especiales-pasados-menu button.ep-mas {
+    display: block; width: 100%; margin-top: 4px; border: none; border-top: 1px solid var(--line); border-radius: 0;
+    background: none; padding: 9px 8px 4px; font-size: 12px; color: var(--ink-soft);
+  }
+  .plantilla-dias .especiales-pasados-menu button.ep-mas:hover { color: var(--navy); background: none; }
   .plantilla-dias button.dia-especial-nuevo {
     display: inline-flex; align-items: center; gap: 5px;
     border-style: dashed; border-color: var(--amber); color: var(--amber-dark); background: #fff;
