@@ -15,7 +15,7 @@
  * cambian al insertar/borrar/mover, así que no se puede hacer una
  * actualización optimista local como en "Gestión festivos").
  */
-let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [], especiales: [], verEspecialesPasados: false, puntuales: [] };
+let PLANTILLA_ESTADO = { dias: [], dia: null, secciones: [], especiales: [], verEspecialesPasados: false, pasadosTodos: false, puntuales: [] };
 
 
 /** Busca en el caché local (PLANTILLA_ESTADO.secciones) la tienda con ese
@@ -143,20 +143,28 @@ function pintarDiasPlantilla_() {
   const botonesDias = PLANTILLA_ESTADO.dias.map(function (d) {
     return '<button type="button" class="' + (d === PLANTILLA_ESTADO.dia ? 'activo' : '') + '" data-dia="' + escapeAttr(d) + '">' + escapeHtml(d) + '</button>';
   }).join('');
-  // Días especiales: los de hoy en adelante siempre se ven; los pasados,
-  // solo al pulsar "Pasados" (o si es el que está seleccionado).
+  // Días especiales: los de hoy en adelante siempre se ven en la fila; los
+  // pasados NUNCA se sueltan en la fila (con muchos la ensuciarían): se
+  // eligen en el desplegable "Pasados (n)", y solo el que se está viendo
+  // sale como pestaña mientras está abierto.
   const especiales = PLANTILLA_ESTADO.especiales || [];
   const pasados = especiales.filter(function (e) { return e.pasado; });
   const visibles = especiales.filter(function (e) {
-    return !e.pasado || PLANTILLA_ESTADO.verEspecialesPasados || e.nombre === PLANTILLA_ESTADO.dia;
+    return !e.pasado || e.nombre === PLANTILLA_ESTADO.dia;
   });
   const botonesEspeciales = visibles.map(function (e) {
     return '<button type="button" class="dia-especial' + (e.pasado ? ' pasado' : '') + (e.nombre === PLANTILLA_ESTADO.dia ? ' activo' : '') + '" data-dia="' + escapeAttr(e.nombre) + '" title="Conteo especial del ' + escapeAttr(formatearFechaLarga(e.fecha)) + '">' +
       'ESP. ' + escapeHtml(fechaCortaEspecial_(e.fecha)) + '</button>';
   }).join('');
   const botonPasados = pasados.length
-    ? '<button type="button" class="dia-especial-pasados" id="btn-plantilla-especiales-pasados">' +
-        (PLANTILLA_ESTADO.verEspecialesPasados ? 'Ocultar pasados' : 'Pasados (' + pasados.length + ')') + '</button>'
+    ? '<span class="especiales-pasados-wrap">' +
+        '<button type="button" class="dia-especial-pasados' + (PLANTILLA_ESTADO.verEspecialesPasados ? ' abierto' : '') + '" id="btn-plantilla-especiales-pasados" aria-haspopup="true" aria-expanded="' + (PLANTILLA_ESTADO.verEspecialesPasados ? 'true' : 'false') + '">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>' +
+          'Pasados (' + pasados.length + ')' +
+          '<svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+        '</button>' +
+        (PLANTILLA_ESTADO.verEspecialesPasados ? menuEspecialesPasadosHtml_(pasados) : '') +
+      '</span>'
     : '';
   const botonNuevoEspecial = tienePermiso('plantilla')
     ? '<button type="button" class="dia-especial-nuevo" id="btn-plantilla-nuevo-especial" title="Crear una plantilla especial para una fecha concreta">' +
@@ -166,7 +174,7 @@ function pintarDiasPlantilla_() {
   cont.innerHTML =
     '<div class="plantilla-dias">' + botonesDias +
       (botonesEspeciales || botonNuevoEspecial || botonPasados ? '<span class="plantilla-dias-sep"></span>' : '') +
-      botonesEspeciales + botonPasados + botonNuevoEspecial +
+      botonesEspeciales + botonNuevoEspecial + botonPasados +
     '</div>' +
     (PLANTILLA_ESTADO.dia ? buscadoresPlantillaHtml_() : '') +
     (tienePermiso('plantilla') && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '') +
@@ -180,10 +188,17 @@ function pintarDiasPlantilla_() {
     };
   });
   const btnPasados = document.getElementById('btn-plantilla-especiales-pasados');
-  if (btnPasados) btnPasados.onclick = function () {
+  if (btnPasados) btnPasados.onclick = function (ev) {
+    ev.stopPropagation();
     PLANTILLA_ESTADO.verEspecialesPasados = !PLANTILLA_ESTADO.verEspecialesPasados;
+    PLANTILLA_ESTADO.pasadosTodos = false;
     pintarDiasPlantilla_();
+    if (PLANTILLA_ESTADO.verEspecialesPasados) {
+      const inp = document.getElementById('especiales-pasados-buscar');
+      if (inp) inp.focus();
+    }
   };
+  bindMenuEspecialesPasados_();
   const btnNuevo = document.getElementById('btn-plantilla-nuevo-especial');
   if (btnNuevo) btnNuevo.onclick = abrirModalNuevoDiaEspecial_;
   const btnEliminarEsp = document.getElementById('btn-plantilla-eliminar-especial');
@@ -191,6 +206,101 @@ function pintarDiasPlantilla_() {
   const btnAnadirRuta = document.getElementById('btn-plantilla-anadir-ruta');
   if (btnAnadirRuta) btnAnadirRuta.onclick = anadirRutaPlantilla_;
   if (PLANTILLA_ESTADO.dia) inicializarBuscadoresPlantilla_();
+}
+
+/* ---------------- DESPLEGABLE "PASADOS (n)" ----------------
+ * Lista de conteos especiales ya pasados, del más reciente al más antiguo,
+ * agrupados por meses y con el día de la semana. Arriba un buscador por
+ * fecha ("28/10"). Se ven los 2 meses más recientes; el resto, con "Ver
+ * meses anteriores". Al elegir uno se abre en solo consulta, como antes. */
+function menuEspecialesPasadosHtml_(pasados) {
+  const lista = pasados.slice().sort(function (a, b) { return a.fecha < b.fecha ? 1 : -1; });
+  const meses = [];
+  lista.forEach(function (e) {
+    const clave = String(e.fecha).slice(0, 7);
+    let m = meses[meses.length - 1];
+    if (!m || m.clave !== clave) { m = { clave: clave, items: [] }; meses.push(m); }
+    m.items.push(e);
+  });
+  const MESES_VISIBLES = 2;
+  const ocultos = PLANTILLA_ESTADO.pasadosTodos ? 0 : meses.slice(MESES_VISIBLES).reduce(function (n, m) { return n + m.items.length; }, 0);
+  const html = meses.map(function (m, i) {
+    const p = m.clave.split('-');
+    const titulo = (MESES_ES[Number(p[1]) - 1] || '') + ' ' + p[0];
+    const ocultar = !PLANTILLA_ESTADO.pasadosTodos && i >= MESES_VISIBLES;
+    return '<div class="ep-mes"' + (ocultar ? ' data-ep-extra hidden' : '') + '>' +
+      '<div class="ep-mes-titulo">' + escapeHtml(titulo.toUpperCase()) + '</div>' +
+      m.items.map(function (e) {
+        const d = new Date(e.fecha + 'T12:00:00');
+        return '<button type="button" class="ep-item' + (e.nombre === PLANTILLA_ESTADO.dia ? ' activo' : '') + '" data-ep-dia="' + escapeAttr(e.nombre) + '" data-ep-buscar="' + escapeAttr(fechaCortaEspecial_(e.fecha) + ' ' + String(e.fecha)) + '">' +
+          '<b>ESP. ' + escapeHtml(fechaCortaEspecial_(e.fecha)) + '</b>' +
+          '<span>' + escapeHtml(DIAS_SEMANA_ES[d.getDay()]) + '</span>' +
+        '</button>';
+      }).join('') +
+    '</div>';
+  }).join('');
+  return '<div class="especiales-pasados-menu" role="menu">' +
+    '<div class="ep-buscar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>' +
+      '<input type="text" id="especiales-pasados-buscar" placeholder="Buscar fecha… (ej. 28/10)" autocomplete="off"></div>' +
+    '<div class="ep-lista">' + html + '</div>' +
+    '<div class="ep-vacio" hidden>No hay ningún conteo especial pasado con esa fecha.</div>' +
+    (ocultos ? '<button type="button" class="ep-mas" id="especiales-pasados-mas">Ver meses anteriores (' + ocultos + ')</button>' : '') +
+  '</div>';
+}
+
+function bindMenuEspecialesPasados_() {
+  const menu = document.querySelector('.especiales-pasados-menu');
+  if (!menu) return;
+  menu.addEventListener('click', function (ev) { ev.stopPropagation(); });
+  menu.querySelectorAll('[data-ep-dia]').forEach(function (btn) {
+    btn.onclick = function () {
+      const dia = btn.getAttribute('data-ep-dia');
+      PLANTILLA_ESTADO.verEspecialesPasados = false;
+      if (dia === PLANTILLA_ESTADO.dia) { pintarDiasPlantilla_(); return; }
+      PLANTILLA_ESTADO.dia = dia;
+      pintarDiasPlantilla_();
+      cargarPlantilla_();
+    };
+  });
+  const mas = document.getElementById('especiales-pasados-mas');
+  if (mas) mas.onclick = function () {
+    PLANTILLA_ESTADO.pasadosTodos = true;
+    menu.querySelectorAll('[data-ep-extra]').forEach(function (m) { m.hidden = false; m.removeAttribute('data-ep-extra'); });
+    mas.remove();
+  };
+  // Buscador: filtra por "28/10" o "2026-10-28"; al buscar se mira en
+  // todos los meses (también los de "Ver meses anteriores").
+  const inp = document.getElementById('especiales-pasados-buscar');
+  const vacio = menu.querySelector('.ep-vacio');
+  if (inp) inp.oninput = function () {
+    const q = inp.value.trim().toLowerCase();
+    let alguno = false;
+    menu.querySelectorAll('.ep-mes').forEach(function (m) {
+      let enMes = false;
+      m.querySelectorAll('.ep-item').forEach(function (it) {
+        const ok = !q || it.getAttribute('data-ep-buscar').toLowerCase().indexOf(q) !== -1;
+        it.hidden = !ok;
+        if (ok) enMes = true;
+      });
+      m.hidden = q ? !enMes : m.hasAttribute('data-ep-extra');
+      if (!m.hidden) alguno = true;
+    });
+    if (vacio) vacio.hidden = alguno;
+    if (mas) mas.hidden = !!q;
+  };
+  // Se cierra al pulsar fuera o con Escape.
+  setTimeout(function () {
+    function cerrar() {
+      document.removeEventListener('click', cerrar);
+      document.removeEventListener('keydown', tecla);
+      if (!PLANTILLA_ESTADO.verEspecialesPasados) return;
+      PLANTILLA_ESTADO.verEspecialesPasados = false;
+      pintarDiasPlantilla_();
+    }
+    function tecla(ev) { if (ev.key === 'Escape') cerrar(); }
+    document.addEventListener('click', cerrar);
+    document.addEventListener('keydown', tecla);
+  }, 0);
 }
 
 /* ---------------- DÍAS ESPECIALES ----------------
