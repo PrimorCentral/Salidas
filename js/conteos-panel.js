@@ -232,6 +232,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       '<button type="button" class="vista-carga-tab" data-vista="ajustada" role="tab">' + SVG_MENU_CAMION_ + '<span class="vista-carga-etiqueta">Carga ajustada</span><span class="vista-carga-num"></span></button>' +
       '<button type="button" class="vista-carga-tab" data-vista="real" role="tab">' + SVG_OJO_ + '<span>Ver conteo real sin ajustar</span><span class="vista-carga-num"></span></button>' +
     '</div>' +
+    '<span class="aviso-carga-no-ajustada" hidden title="Las naves están verificadas, pero un responsable todavía no ha ajustado la carga del camión">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' +
+      'CARGA NO AJUSTADA POR UN RESPONSABLE</span>' +
     '</div></div>' +
     (seccion.tieneViernes ? '<span class="badge-total-viernes" title="Palets de VIERNES: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Viernes:&nbsp;<span class="total-viernes-valor">0</span></span>' : '') +
     (seccion.tieneCasillaDomingo ? '<span class="badge-total-domingo" title="Palets de DOMINGO: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Domingo:&nbsp;<span class="total-domingo-valor">0</span></span>' : '') +
@@ -622,6 +625,22 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     // Si el bloqueo ha cambiado, el botón VERIFICAR CONTEO también.
     if (bloqueoPintado_ !== null && bloqueoPintado_ !== bloqueado) pintarVerificaciones_();
     bloqueoPintado_ = bloqueado;
+    pintarAvisoCargaNoAjustada_();
+  }
+
+  // Aviso en rojo "CARGA NO AJUSTADA POR UN RESPONSABLE" (en el sitio de
+  // las pestañas de carga): sale cuando TODAS las naves están verificadas
+  // pero nadie ha guardado la carga del camión (ni ajuste ni previsión),
+  // y aún no se ha enviado el definitivo. Si un administrador desbloqueó
+  // la carga, cuenta como no ajustada.
+  function pintarAvisoCargaNoAjustada_() {
+    const aviso = header.querySelector('.aviso-carga-no-ajustada');
+    if (!aviso) return;
+    const v = seccion.verificaciones || {};
+    const todasVerificadas = NAVES_CONTEO.every(function (n) { return !!v[n.campo]; });
+    const c = seccion.carga;
+    const hayCarga = !!(c && !c.desbloqueada);
+    aviso.hidden = !(todasVerificadas && !hayCarga && seccion.estado !== 'enviado' && !seccion.previsionEnviada);
   }
 
   // Copia de solo lectura de la tabla real con los números de la carga
@@ -1369,6 +1388,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     tableWrap.querySelectorAll('thead th[data-campo]').forEach(function (th) {
       th.classList.toggle('th-verificada', !!v[th.getAttribute('data-campo')]);
     });
+    pintarAvisoCargaNoAjustada_();
 
     const wrap = header.querySelector('.verif-wrap');
     if (!wrap) return;
