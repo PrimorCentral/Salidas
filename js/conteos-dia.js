@@ -166,6 +166,7 @@ function renderContenidoDia(data) {
   const fechaLarga = formatearFechaLarga(data.fecha);
   const topbarFecha = document.getElementById('topbar-fecha');
   if (topbarFecha) topbarFecha.textContent = fechaLarga;
+  pintarEtiquetaConteoEspecial_(data);
 
   if (data.bloqueada) {
     const msg = document.createElement('div');
@@ -180,16 +181,9 @@ function renderContenidoDia(data) {
     return;
   }
 
-  // Conteo especial: esa fecha usa una plantilla propia de "Rutas y tiendas"
-  // en vez de la del día de la semana.
-  if (data.diaEspecial) {
-    const avisoEsp = document.createElement('div');
-    avisoEsp.className = 'aviso-conteo-especial';
-    avisoEsp.innerHTML =
-      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>' +
-      '<span><b>Conteo especial.</b> Este día no usa la plantilla normal del ' + escapeHtml(DIAS_SEMANA_ES[new Date(data.fecha + 'T12:00:00').getDay()]) + ': las rutas y tiendas son las configuradas para esta fecha.</span>';
-    wrap.appendChild(avisoEsp);
-  }
+  // Conteo especial: ya no sale como franja aquí, sino como etiqueta
+  // naranja "CONTEO ESPECIAL" en la barra azul, junto a la fecha (ver
+  // pintarEtiquetaConteoEspecial_).
 
   if (!data.dia) {
     const msg = document.createElement('div');
@@ -372,4 +366,29 @@ function crearNotaCargaChip(texto) {
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
     '<span>' + escapeHtml(texto) + '</span>';
   return div;
+}
+
+
+/** Etiqueta naranja "CONTEO ESPECIAL" en la barra azul, a la derecha de la
+ *  fecha y del botón de imprimir: solo los días con conteo especial (esa
+ *  fecha usa una plantilla propia de "Rutas y tiendas" en vez de la del día
+ *  de la semana). El detalle sale al pasar el ratón. */
+function pintarEtiquetaConteoEspecial_(data) {
+  const fechaWrap = document.getElementById('topbar-fecha-wrap');
+  if (!fechaWrap) return;
+  let etiqueta = document.getElementById('topbar-conteo-especial');
+  if (!etiqueta) {
+    etiqueta = document.createElement('span');
+    etiqueta.id = 'topbar-conteo-especial';
+    etiqueta.className = 'topbar-conteo-especial';
+    etiqueta.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>' +
+      '<span>CONTEO ESPECIAL</span>';
+    fechaWrap.appendChild(etiqueta);
+  }
+  const esEspecial = !!(data && data.diaEspecial && !data.bloqueada);
+  etiqueta.hidden = !esEspecial;
+  etiqueta.title = esEspecial
+    ? 'Este día no usa la plantilla normal del ' + DIAS_SEMANA_ES[new Date(data.fecha + 'T12:00:00').getDay()] + ': las rutas y tiendas son las configuradas para esta fecha.'
+    : '';
 }
