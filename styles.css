@@ -1783,20 +1783,20 @@
     /* Columna del nombre de ANCHO FIJO: así la ubicación y las pestañas
      * empiezan en el mismo sitio en todas las agrupaciones, una debajo de
      * otra, sea el nombre largo o corto (los muy largos pasan a 2 líneas). */
-    display: grid; grid-template-columns: 280px minmax(0, 1fr);
+    display: grid; grid-template-columns: 230px minmax(0, 1fr);
     /* Las dos líneas siempre con el mismo alto (haya pestañas o solo
      * chips), para que todas las cabeceras queden iguales y el nombre no
      * parezca "más arriba" en unas que en otras. */
     grid-auto-rows: minmax(32px, auto);
     column-gap: 16px; row-gap: 4px; align-items: center;
   }
-  @media (max-width: 1100px) {
-    .seccion-header .name-row { grid-template-columns: 240px minmax(0, 1fr); }
-    .seccion-header .name { font-size: 17px; }
-  }
   .seccion-header .name-row-datos { display: flex; align-items: center; gap: 10px; row-gap: 6px; flex-wrap: wrap; min-width: 0; }
-  .seccion-header .name-row > .verif-pastillas { grid-column: 1; grid-row: 2; padding-left: 2px; justify-self: start; }
-  .seccion-header .name-row > .vista-carga-tabs { grid-column: 2; grid-row: 2; justify-self: start; }
+  .seccion-header .name-row > .verif-pastillas { grid-column: 1; grid-row: 2; padding-left: 2px; justify-self: start; align-self: start; margin-top: 3px; }
+  /* Nombre pegado abajo de su línea y chips arriba de la suya: así quedan
+   * juntos (sin el hueco del medio), sin cambiar el alto de la cabecera. */
+  .seccion-header .name-row > .name { align-self: end; }
+  .seccion-header .name-row > .vista-carga-tabs { grid-column: 2; grid-row: 2; justify-self: start; flex-wrap: nowrap; }
+  .seccion-header .name-row > .vista-carga-tabs .vista-carga-tab { padding: 5px 10px; }
   /* Aviso rojo cuando las naves están verificadas y falta ajustar la carga. */
   .seccion-header .name-row > .aviso-carga-no-ajustada {
     grid-column: 2; grid-row: 2; justify-self: start;
@@ -1805,6 +1805,23 @@
     font-size: 12px; font-weight: 800; letter-spacing: .2px; white-space: nowrap;
   }
   .seccion-header .name-row > .aviso-carga-no-ajustada[hidden] { display: none; }
+  /* Se ajusta según el ANCHO REAL de la tarjeta (no de la ventana), para
+   * que las pestañas nunca se partan en dos ni se monten sobre los botones:
+   *  - tarjeta ancha: columna del nombre de 230px (nombre a 18px);
+   *  - algo más estrecha: columna de 215px (nombre a 16px);
+   *  - estrecha: todo en una columna (nombre, datos, chips y pestañas). */
+  .seccion-header { container-type: inline-size; }
+  @container (max-width: 1034px) {
+    .seccion-header .name-row { grid-template-columns: 215px minmax(0, 1fr); }
+    .seccion-header .name-row .name { font-size: 16px; }
+  }
+  @container (max-width: 1019px) {
+    .seccion-header .name-row { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; row-gap: 6px; }
+    .seccion-header .name-row > .verif-pastillas,
+    .seccion-header .name-row > .vista-carga-tabs,
+    .seccion-header .name-row > .aviso-carga-no-ajustada { grid-column: 1; grid-row: auto; }
+    .seccion-header .name-row > .vista-carga-tabs { flex-wrap: wrap; }
+  }
   @media (max-width: 700px) {
     .seccion-header .name-row { grid-template-columns: minmax(0, 1fr); }
     .seccion-header .name-row-datos { margin-top: 6px; }
@@ -1812,7 +1829,7 @@
     .seccion-header .name-row > .vista-carga-tabs,
     .seccion-header .name-row > .aviso-carga-no-ajustada { grid-column: 1; grid-row: auto; white-space: normal; }
   }
-  .seccion-header .name { font-weight: 800; font-size: 19px; line-height: 1.2; letter-spacing: .1px; }
+  .seccion-header .name { font-weight: 800; font-size: 18px; line-height: 1.2; letter-spacing: .1px; }
   .seccion-header .count { color: var(--ink-soft); font-size: 12px; font-weight: 600; flex-shrink: 0; }
   .seccion-header-top .btn-toggle-colapsar {
     display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: auto;
