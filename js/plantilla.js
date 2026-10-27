@@ -3201,6 +3201,10 @@ function dividirNombreRutaPlantilla_(nombreCompleto) {
  *  agrupación configurada (mismo riesgo de desincronización que tenía el
  *  lápiz de "Editar tienda" con el número/nombre de tienda). Por eso este
  *  modal siempre reenvía el nombre de agrupación tal cual estaba. */
+/** Naves / ubicaciones de carga que se ofrecen en el desplegable del
+ *  lápiz de la agrupación (Ubicación y hora de carga). */
+const UBICACIONES_CARGA_ = ['GAITE', 'PTA', 'CARTAMA', 'AMBAS NAVES', 'NAVE RIO', 'ALBINONI'];
+
 function abrirModalEditarRutaPlantilla_(nombreActual) {
   const partes = dividirNombreRutaPlantilla_(nombreActual);
 
@@ -3213,16 +3217,49 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
+  // Ubicación: desplegable con las naves de carga. Si la ruta tiene ahora
+  // otra cosa (p. ej. "AMBAS NAVES" o "GAITE Y PTA MADRUGADA"), sale
+  // también, marcada como "(actual)", para no perderla al guardar.
+  const ubicActual = String(partes.ubicacion || '').trim().toUpperCase();
+  const naves = UBICACIONES_CARGA_.slice();
+  const opcionesUbic = (ubicActual && naves.indexOf(ubicActual) === -1
+      ? '<option value="' + escapeAttr(ubicActual) + '" selected>' + escapeHtml(ubicActual) + ' (actual)</option>'
+      : '') +
+    naves.map(function (n) {
+      return '<option value="' + escapeAttr(n) + '"' + (n === ubicActual ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+    }).join('');
+
+  // Hora: selector de hora. Con una franja ("14:00 - 19:00") se rellena
+  // también el "hasta". Si ahora pone algo que no es una hora (NOCHE,
+  // "-"...), los selectores salen vacíos y, si no se elige ninguna hora,
+  // se deja lo que había.
+  const horaTxt = String(partes.hora || '').trim();
+  const mRango = horaTxt.match(/^(\d{1,2}:\d{2})(?:\s*-\s*(\d{1,2}:\d{2}))?$/);
+  const pad = function (h) { return h ? (h.length === 4 ? '0' + h : h) : ''; };
+  const desde = mRango ? pad(mRango[1]) : '';
+  const hasta = mRango && mRango[2] ? pad(mRango[2]) : '';
+  const horaNoEsHora = horaTxt && horaTxt !== '-' && !mRango;
+
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
     '<div class="modal-campo">' +
       '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
-      '<input type="text" id="modal-ruta-ubicacion" value="' + escapeAttr(partes.ubicacion) + '" placeholder="Ej: GAITE">' +
+      '<select id="modal-ruta-ubicacion">' +
+        (ubicActual ? '' : '<option value="" selected>Selecciona…</option>') +
+        opcionesUbic +
+      '</select>' +
     '</div>' +
     '<div class="modal-campo">' +
       '<label for="modal-ruta-hora">Hora de carga</label>' +
-      '<input type="text" id="modal-ruta-hora" value="' + escapeAttr(partes.hora) + '" placeholder="Ej: 10:00 (déjalo en blanco si no aplica)">' +
+      '<div class="modal-horas">' +
+        '<input type="time" id="modal-ruta-hora" value="' + escapeAttr(desde) + '">' +
+        '<span class="modal-horas-sep">hasta</span>' +
+        '<input type="time" id="modal-ruta-hora-hasta" value="' + escapeAttr(hasta) + '" title="Solo si es una franja (p. ej. 14:00 - 19:00)">' +
+      '</div>' +
+      '<span class="modal-campo-ayuda">«Hasta» solo si carga en una franja de horas. Sin hora, la ruta queda sin hora fija.' +
+        (horaNoEsHora ? ' Ahora pone «' + escapeHtml(horaTxt) + '»: si no eliges hora, se deja así.' : '') +
+      '</span>' +
     '</div>' +
     '<p class="modal-campo-ayuda">El nombre de la agrupación ("' + escapeHtml(partes.nombre) + '") no se puede cambiar aquí: sale de Configuración agencias.</p>';
 
@@ -3235,16 +3272,25 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   document.getElementById('modal-confirm-btn').onclick = function () {
     const inputUbicacion = document.getElementById('modal-ruta-ubicacion');
     const inputHora = document.getElementById('modal-ruta-hora');
+    const inputHasta = document.getElementById('modal-ruta-hora-hasta');
     const ubicacion = inputUbicacion.value.trim();
-    const hora = inputHora.value.trim();
     if (!ubicacion) { inputUbicacion.focus(); return; }
+    // El selector da "08:00"; se guarda como "8:00", igual que el resto
+    // de rutas (p. ej. "GAITE 8:00").
+    const sinCero = function (h) { return String(h || '').trim().replace(/^0(\d:)/, '$1'); };
+    const h1 = sinCero(inputHora.value);
+    const h2 = sinCero(inputHasta.value);
+    if (h2 && !h1) { inputHora.focus(); return; }
+    let hora = h1 ? (h2 ? h1 + ' - ' + h2 : h1) : '';
+    if (!hora && horaNoEsHora) hora = horaTxt;
 
     // Mismo formato que "Añadir ruta nueva": "NOMBRE (UBICACION HORA)",
-    // o "NOMBRE (UBICACION)" si se deja la hora en blanco (hay rutas
-    // reales sin una hora fija, p.ej. "CBL MALAGA (AMBAS NAVES)"). El
-    // nombre de la agrupación se reenvía siempre igual (partes.nombre).
+    // o "NOMBRE (UBICACION)" si no hay hora (hay rutas reales sin una hora
+    // fija, p.ej. "CBL MALAGA (AMBAS NAVES)"). El nombre de la agrupación
+    // se reenvía siempre igual (partes.nombre).
     const nombreCompleto = partes.nombre + ' (' + ubicacion + (hora ? ' ' + hora : '') + ')';
     cerrarModal();
+    if (nombreCompleto === nombreActual) return;
     const mutar = function () {
       const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreActual; });
       if (s) s.nombre = nombreCompleto;
@@ -3353,10 +3399,10 @@ function anadirRutaPlantilla_() {
           '<label for="modal-ruta-ubicacion">Ubicación de carga</label>' +
           '<select id="modal-ruta-ubicacion">' +
             '<option value="">Selecciona…</option>' +
-            '<option value="GAITE">GAITE</option>' +
-            '<option value="CARTAMA">CARTAMA</option>' +
-            '<option value="PTA">PTA</option>' +
-            '<option value="AMBAS NAVES">AMBAS NAVES</option>' +
+            // Mismas naves que el lápiz de la agrupación (UBICACIONES_CARGA_).
+            UBICACIONES_CARGA_.map(function (n) {
+              return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>';
+            }).join('') +
           '</select>' +
         '</div>' +
         '<div class="modal-campo">' +
