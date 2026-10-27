@@ -159,10 +159,12 @@ const SUPABASE_ACCIONES_ = {
   // -- Supabase: resumen de la pantalla de Inicio (estado del conteo de
   // hoy y de mañana) --
   resumenInicio: function () {
-    // v2: el check de cada nave se pone en verde cuando esa nave ha
-    // VERIFICADO su columna (naranja = hay datos sin verificar). La
-    // versión anterior (get_resumen_inicio) se deja intacta en Supabase.
-    return llamarRpcSupabase_('get_resumen_inicio_v2', {});
+    // v3: mismos checks que v2 (verde = la nave ha VERIFICADO su
+    // columna), pero el estado de la ruta sigue el flujo de la carga:
+    // Pendiente / En progreso / Carga sin ajustar / Carga ajustada /
+    // Previsión enviada / Definitivo enviado. Las versiones anteriores
+    // (get_resumen_inicio y _v2) se dejan intactas en Supabase.
+    return llamarRpcSupabase_('get_resumen_inicio_v3', {});
   },
   // -- Supabase: Configuración agencias (Config_Agrupaciones) --
   getAgrupacionesConfig: function () {

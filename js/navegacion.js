@@ -69,8 +69,8 @@ function cambiarVista(vista, seccion) {
  *  del conteo de hoy" / "...de mañana"), pegadas arriba del todo, con una
  *  tabla ruta × 60/PTA/CART. donde cada casilla se marca en verde cuando
  *  esa columna está completa para esa ruta (naranja si está a medias),
- *  más una columna de estado (Completado/En progreso/Pendiente) por ruta,
- *  según esos mismos 3 checks -- no según si ya se ha enviado Definitivo.
+ *  más una columna de estado por ruta (Pendiente / En progreso / Carga
+ *  sin ajustar / Carga ajustada / Previsión enviada / Definitivo enviado).
  *  Todo sobre la foto de portada a página completa (ver
  *  body.vista-inicio-activa en styles.css). */
 
@@ -82,12 +82,24 @@ const INICIO_CAMPOS_ = [
   { clave: 'ptaEstado', etiqueta: 'PTA' },
   { clave: 'cartEstado', etiqueta: 'CART.' }
 ];
-// El estado general de la ruta ya no depende de si se ha enviado
-// Definitivo a la agencia, sino solo de los tres checks (60/PTA/CART.) de
-// arriba: 'completado' cuando los 3 están en verde, 'pendiente' cuando no
-// hay ningún dato escrito todavía y 'progreso' en cualquier caso
-// intermedio (mismo criterio que aplica get_resumen_inicio en el backend).
-const INICIO_ESTADO_TXT_ = { completado: 'Completado', progreso: 'En progreso', pendiente: 'Pendiente' };
+// Estado general de la ruta (get_resumen_inicio_v3 en el backend), de
+// menos a más avanzado:
+//   pendiente   -> no hay ningún dato escrito todavía
+//   progreso    -> falta algún check en verde (60/PTA/CART.)
+//   sin_ajustar -> los 3 checks en verde, carga todavía sin ajustar
+//   ajustada    -> hay carga ajustada guardada
+//   prevision   -> se ha enviado la previsión a la agencia
+//   definitivo  -> se ha enviado el definitivo
+// 'completado' se mantiene por si responde todavía la v2.
+const INICIO_ESTADO_TXT_ = {
+  pendiente: 'Pendiente',
+  progreso: 'En progreso',
+  sin_ajustar: 'Carga sin ajustar',
+  ajustada: 'Carga ajustada',
+  prevision: 'Previsión enviada',
+  definitivo: 'Definitivo enviado',
+  completado: 'Completado'
+};
 
 function renderVistaInicio() {
   const main = document.getElementById('main');
