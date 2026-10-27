@@ -435,7 +435,7 @@
      tabla y la de la tarjeta se quedan siempre fijas arriba. */
   .inicio-tabla-conteo { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
   .inicio-tc-fila {
-    display: grid; grid-template-columns: 1fr repeat(3, 34px) 74px; align-items: center;
+    display: grid; grid-template-columns: 1fr repeat(3, 34px) 104px; align-items: center;
     gap: 3px; padding: 6px 4px; border-bottom: 1px solid var(--line);
   }
   .inicio-tc-fila:last-child { border-bottom: none; }
@@ -494,6 +494,10 @@
   .inicio-pill-completado { background: #e3f3ec; color: var(--ok); }
   .inicio-pill-progreso { background: #fdf1de; color: var(--amber-dark); }
   .inicio-pill-pendiente { background: #eef0f4; color: var(--ink-soft); }
+  .inicio-pill-sin_ajustar { background: #e4eefb; color: #2f5fa8; }
+  .inicio-pill-ajustada { background: #ece6f8; color: #6b46b0; }
+  .inicio-pill-prevision { background: #dff3f5; color: #1f7f8c; }
+  .inicio-pill-definitivo { background: var(--ok); color: #fff; }
 
   /* La insignia de versión, sobre la foto de portada, queda fija en la
      esquina de la pantalla en vez de en el flujo normal (que la dejaría
