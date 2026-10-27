@@ -212,11 +212,21 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   header.innerHTML =
     '<div class="seccion-header-top">' +
     '<div class="icono-agrup">' + iniciales + '</div>' +
+    // Cabecera en dos columnas, igual en todas las agrupaciones (sea el
+    // nombre largo o corto):
+    //   NOMBRE              | ubicación · tiendas · estado
+    //   chips de verificado | pestañas Carga ajustada / Ver conteo real
     '<div class="info"><div class="name-row">' +
-    '<span class="name">' + escapeHtml(partes.titulo) + '</span>' + badgeUbicacion +
+    '<span class="name">' + escapeHtml(partes.titulo) + '</span>' +
+    '<div class="name-row-datos">' + badgeUbicacion +
     '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
     badgeEstado(seccion) +
+    '</div>' +
     '<span class="verif-pastillas"></span>' +
+    '<div class="vista-carga-tabs" role="tablist" hidden>' +
+      '<button type="button" class="vista-carga-tab" data-vista="ajustada" role="tab">' + SVG_MENU_CAMION_ + '<span class="vista-carga-etiqueta">Carga ajustada</span><span class="vista-carga-num"></span></button>' +
+      '<button type="button" class="vista-carga-tab" data-vista="real" role="tab">' + SVG_OJO_ + '<span>Ver conteo real sin ajustar</span><span class="vista-carga-num"></span></button>' +
+    '</div>' +
     '</div></div>' +
     (seccion.tieneViernes ? '<span class="badge-total-viernes" title="Palets de VIERNES: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Viernes:&nbsp;<span class="total-viernes-valor">0</span></span>' : '') +
     (seccion.tieneCasillaDomingo ? '<span class="badge-total-domingo" title="Palets de DOMINGO: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Domingo:&nbsp;<span class="total-domingo-valor">0</span></span>' : '') +
@@ -238,15 +248,6 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     badgePrevision(seccion) +
     // La papelera "Deshacer envío" ya no se muestra tras el definitivo.
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
-    '</div>' +
-    // Donde antes estaban los botones de envío: las pestañas "Carga
-    // ajustada" / "Ver conteo real sin ajustar" (solo salen si hay una
-    // carga ajustada; ver pintarEstadoBloqueo_).
-    '<div class="seccion-header-acciones">' +
-    '<div class="vista-carga-tabs" role="tablist" hidden>' +
-      '<button type="button" class="vista-carga-tab" data-vista="ajustada" role="tab">' + SVG_MENU_CAMION_ + '<span class="vista-carga-etiqueta">Carga ajustada</span><span class="vista-carga-num"></span></button>' +
-      '<button type="button" class="vista-carga-tab" data-vista="real" role="tab">' + SVG_OJO_ + '<span>Ver conteo real sin ajustar</span><span class="vista-carga-num"></span></button>' +
-    '</div>' +
     '</div>' +
     '</div>';
   panel.appendChild(header);
@@ -436,29 +437,28 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (seccion.carga === undefined) return;
     const revisar = Object.keys(tiendasARevisar_()).length > 0;
     actualizarBotonListaCarga_(revisar);
-    const fila = header.querySelector('.name-row');
+    const fila = header.querySelector('.name-row-datos');
     let badge = header.querySelector('.badge-carga-revisar');
     if (revisar && !badge && fila) {
       badge = document.createElement('span');
       badge.className = 'badge badge-carga-revisar';
       badge.title = 'El conteo ha cambiado después de ajustar la carga';
       badge.innerHTML = '<span class="badge-dot"></span>Carga a revisar';
-      const ancla = fila.querySelector('.verif-pastillas');
-      if (ancla) fila.insertBefore(badge, ancla); else fila.appendChild(badge);
+      fila.appendChild(badge);
     } else if (!revisar && badge) {
       badge.remove();
     }
     pintarEstadoBloqueo_();
   }
 
-  // Segunda línea de la cabecera (badges de previsión/solo lectura y
-  // pestañas de carga): se oculta si no tiene nada, para no dejar hueco.
+  // Línea de badges de previsión / solo lectura: se oculta si no tiene
+  // nada, para no dejar hueco. (Las pestañas de carga ya van en la
+  // cabecera, debajo de la ubicación.)
   function actualizarFilaMeta_() {
     const meta = header.querySelector('.seccion-header-meta');
     if (!meta) return;
     const badges = header.querySelector('.seccion-header-badges');
-    const tabs = header.querySelector('.vista-carga-tabs');
-    meta.hidden = !((badges && badges.children.length) || (tabs && !tabs.hidden));
+    meta.hidden = !(badges && badges.children.length);
   }
 
   /* ---------------- CARGA AJUSTADA = CONTEO BLOQUEADO ----------------
