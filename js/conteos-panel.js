@@ -679,6 +679,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     tabla.querySelectorAll('.diff-nota').forEach(function (n) { n.textContent = ''; n.className = 'diff-nota'; });
     vistaAjustadaWrap.innerHTML = '';
     vistaAjustadaWrap.appendChild(tabla);
+    // Las cabeceras de ruta ("8P MAX. POR RUTA ... — 10/8") venían copiadas
+    // de la tabla real, con la suma de lo contado. Se recalculan aquí con
+    // los TOTAL ya ajustados, para que el chip diga lo que de verdad se
+    // carga en esa ruta (y su color: rojo solo si la carga ajustada se pasa).
+    attachValidacionGrupos(vistaAjustadaWrap);
   }
 
   // Candado: el administrador desbloquea (con confirmación); el resto solo
