@@ -3213,7 +3213,10 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
   document.getElementById('modal-box').classList.remove('peligro');
   document.getElementById('modal-box').classList.remove('usuario-form');
   document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Ubicación y hora de carga — ' + partes.nombre;
+  // Título en dos líneas: qué se modifica y, debajo, la agrupación.
+  document.getElementById('modal-title').innerHTML =
+    'Modificación ubicación y hora carga' +
+    '<span class="modal-titulo-sub">' + escapeHtml(partes.nombre) + '</span>';
   document.getElementById('modal-text').style.display = 'none';
   document.getElementById('modal-textarea').style.display = 'none';
 
@@ -3260,8 +3263,7 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
       '<span class="modal-campo-ayuda">«Hasta» solo si carga en una franja de horas. Sin hora, la ruta queda sin hora fija.' +
         (horaNoEsHora ? ' Ahora pone «' + escapeHtml(horaTxt) + '»: si no eliges hora, se deja así.' : '') +
       '</span>' +
-    '</div>' +
-    '<p class="modal-campo-ayuda">El nombre de la agrupación ("' + escapeHtml(partes.nombre) + '") no se puede cambiar aquí: sale de Configuración agencias.</p>';
+    '</div>';
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
