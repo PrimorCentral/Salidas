@@ -494,8 +494,8 @@
   .inicio-pill-completado { background: #e3f3ec; color: var(--ok); }
   .inicio-pill-progreso { background: #fdf1de; color: var(--amber-dark); }
   .inicio-pill-pendiente { background: #eef0f4; color: var(--ink-soft); }
-  .inicio-pill-sin_ajustar { background: #e4eefb; color: #2f5fa8; }
-  .inicio-pill-ajustada { background: #ece6f8; color: #6b46b0; }
+  .inicio-pill-sin_ajustar { background: #fbe4e4; color: #c0392b; }
+  .inicio-pill-ajustada { background: #e4eefb; color: #2f5fa8; }
   .inicio-pill-prevision { background: #dff3f5; color: #1f7f8c; }
   .inicio-pill-definitivo { background: var(--ok); color: #fff; }
 
