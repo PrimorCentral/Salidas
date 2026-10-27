@@ -436,23 +436,28 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
   return { filas: filasPdf, grupoPorFila: grupoPorFilaPdf, esRutaPorFila: esRutaPorFilaPdf };
 }
 
-function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filasInfo) {
+/** "escala" (1 = tamaño normal) encoge letras, rellenos y alto de filas
+ *  para que la tabla entera quepa en un A4 apaisado (ver
+ *  generarPdfEspecialSeccion). */
+function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filasInfo, escala) {
+  const e = escala || 1;
   const anchoPagina = doc.internal.pageSize.getWidth();
+  const M = PDF_ESP_MARGEN_MM_;
 
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(140, 148, 158);
-  doc.text('Generado el ' + fechaGeneracion, 14, 10);
+  doc.text('Generado el ' + fechaGeneracion, M, M);
   doc.setTextColor(0, 0, 0);
 
   // Título (agrupación) a la izquierda y el día/fecha a la derecha, en la
   // misma línea.
   doc.setFontSize(15);
   doc.setTextColor(28, 43, 69);
-  doc.text(partes.titulo + (partes.ubicacion ? ' · ' + partes.ubicacion : ''), 14, 18);
+  doc.text(partes.titulo + (partes.ubicacion ? ' · ' + partes.ubicacion : ''), M, M + 8);
 
   doc.setFontSize(11);
   doc.setTextColor(90, 100, 114);
-  doc.text((dia || '') + ' · ' + formatearFechaLarga(fecha), anchoPagina - 14, 18, { align: 'right' });
+  doc.text((dia || '') + ' · ' + formatearFechaLarga(fecha), anchoPagina - M, M + 8, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
   const grupoPorFila = filasInfo.grupoPorFila;
@@ -467,20 +472,20 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
   }
 
   doc.autoTable({
-    startY: 24,
+    startY: M + 13,
     theme: 'plain',
     head: [['LÍMITE\nCAMIÓN', 'NAVE\nCARGA', 'AGENCIA', 'LÍMITE', 'TIENDA', '60', 'PTA', 'CART.', 'TOTAL', 'TOTAL\nRUTA', 'FIRMA RES.\nTARDE', 'FIRMA RES.\nNOCHE', 'CONFIRMACIÓN\nRECOGIDA', 'ZONA/\nPASILLO']],
     body: filasInfo.filas,
-    styles: { fontSize: 7.5, cellPadding: 2.5, valign: 'middle', halign: 'center', lineColor: [190, 196, 205], lineWidth: 0.15, fillColor: [255, 255, 255] },
-    headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center', fontSize: 7 },
-    bodyStyles: { halign: 'center', minCellHeight: 9 },
+    styles: { fontSize: 7.5 * e, cellPadding: 2.5 * e, valign: 'middle', halign: 'center', lineColor: [190, 196, 205], lineWidth: 0.15, fillColor: [255, 255, 255] },
+    headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center', fontSize: 7 * Math.max(e, 0.85) },
+    bodyStyles: { halign: 'center', minCellHeight: 9 * e },
     columnStyles: {
       1: { fontStyle: 'bold' },
       2: { fontStyle: 'bold' },
-      4: { fontStyle: 'bold', fontSize: 9, halign: 'left' },
-      8: { fontStyle: 'bold', fontSize: 11 },
-      9: { fontStyle: 'bold', fontSize: 13 },
-      14: { cellWidth: 30 }
+      4: { fontStyle: 'bold', fontSize: 9 * e, halign: 'left' },
+      8: { fontStyle: 'bold', fontSize: 11 * e },
+      9: { fontStyle: 'bold', fontSize: 13 * e },
+      13: { cellWidth: 26 }
     },
     // Todo el cuerpo en blanco (sin sombreado alternado): las rutas se
     // separan solo con el borde grueso de abajo. Con "theme: 'plain'" se
@@ -501,12 +506,18 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
         doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
       }
     },
-    margin: { bottom: 10 },
+    margin: { top: M, left: M, right: M, bottom: M },
     rowPageBreak: 'avoid'
   });
 
   return doc.lastAutoTable.finalY;
 }
+
+const PDF_ESP_MARGEN_MM_ = 10; // margen del folio A4 en el PDF Control responsables
+// Escalas que se prueban, de más grande a más pequeña, hasta que la tabla
+// entera quepa en un A4 apaisado. Si ni con la más pequeña cabe (agrupación
+// enorme), se usa esa y la tabla sigue en una 2ª hoja A4.
+const PDF_ESP_ESCALAS_ = [1, 0.93, 0.86, 0.8, 0.74, 0.68, 0.63, 0.58, 0.54, 0.5];
 
 function generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -520,12 +531,21 @@ function generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap) {
   const fechaGeneracion = Utilities_formatearFechaHora_(ahora);
   const filasInfo = leerFilasPdfEspecialSeccion_(tableWrap, partes.titulo);
 
-  const docMedida = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, 2000);
-  const alturaContenido = dibujarPdfEspecialSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filasInfo);
+  // SIEMPRE un folio A4 apaisado de verdad (297 x 210 mm, con sus márgenes),
+  // para que al imprimir salga a tamaño real. Antes la hoja se alargaba lo
+  // que hiciera falta y al imprimir en A4 se encogía o se cortaba. Ahora se
+  // mide en un lienzo muy alto con cada escala y se usa la primera con la
+  // que la tabla entera cabe en el alto del A4.
+  const altoUtil = PDF_ALTO_A4_MM_ - PDF_ESP_MARGEN_MM_;
+  let escala = PDF_ESP_ESCALAS_[PDF_ESP_ESCALAS_.length - 1];
+  for (let i = 0; i < PDF_ESP_ESCALAS_.length; i++) {
+    const docMedida = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, 2000);
+    const alto = dibujarPdfEspecialSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filasInfo, PDF_ESP_ESCALAS_[i]);
+    if (alto <= altoUtil) { escala = PDF_ESP_ESCALAS_[i]; break; }
+  }
 
-  const alturaPagina = Math.max(PDF_ALTO_A4_MM_, alturaContenido + 14);
-  const doc = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, alturaPagina);
-  dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filasInfo);
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+  dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filasInfo, escala);
 
   const nombreArchivo = 'Control_responsables_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
   doc.save(nombreArchivo);
