@@ -1775,7 +1775,23 @@
     display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700;
   }
   .seccion-header-top .info { flex: 1 1 auto; min-width: 120px; }
-  .seccion-header .name-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  /* Cabecera de la agrupación en dos columnas (igual en todas):
+   *   NOMBRE              | ubicación · tiendas · estado
+   *   chips de verificado | pestañas "Carga ajustada / Ver conteo real"
+   * La 2ª línea solo ocupa sitio si tiene algo (chips o pestañas). */
+  .seccion-header .name-row {
+    display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+    column-gap: 14px; align-items: center;
+  }
+  .seccion-header .name-row-datos { display: flex; align-items: center; gap: 10px; row-gap: 6px; flex-wrap: wrap; min-width: 0; }
+  .seccion-header .name-row > .verif-pastillas { grid-column: 1; grid-row: 2; margin-top: 8px; padding-left: 2px; justify-self: start; }
+  .seccion-header .name-row > .vista-carga-tabs { grid-column: 2; grid-row: 2; margin-top: 8px; justify-self: start; }
+  @media (max-width: 700px) {
+    .seccion-header .name-row { grid-template-columns: minmax(0, 1fr); }
+    .seccion-header .name-row-datos { margin-top: 6px; }
+    .seccion-header .name-row > .verif-pastillas,
+    .seccion-header .name-row > .vista-carga-tabs { grid-column: 1; grid-row: auto; }
+  }
   .seccion-header .name { font-weight: 800; font-size: 16px; line-height: 1.25; letter-spacing: .1px; }
   .seccion-header .count { color: var(--ink-soft); font-size: 12px; font-weight: 600; flex-shrink: 0; }
   .seccion-header-top .btn-toggle-colapsar {
