@@ -269,14 +269,14 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
 
 /**
  * PDF ESPECIAL: mismo formato que la plantilla Excel de reparto en camión
- * (columnas LÍMITE CAMIÓN / NAVE CARGA / AGENCIA / LÍMITE / TIENDA / NAVE 60 / PTA /
+ * (columnas LÍMITE CAMIÓN / NAVE CARGA / LÍMITE / TIENDA / NAVE 60 / PTA /
  * CÁRTAMA / TOTAL / TOTAL RUTA / FIRMA RES. TARDE / FIRMA RES.
  * NOCHE / CONFIRMACIÓN RECOGIDA / ZONA-PASILLO), pensado para imprimir y
  * rellenar a mano en el momento del reparto.
  *
  * Igual que en pantalla, las tiendas que comparten camión/ruta (la misma
  * anotación "8P MAX. POR RUTA" de las columnas K:L del Excel — en la app,
- * mismo "data-nota-grupo") se agrupan visualmente: LÍMITE CAMIÓN, AGENCIA,
+ * mismo "data-nota-grupo") se agrupan visualmente: LÍMITE CAMIÓN,
  * NAVE CARGA, TOTAL RUTA y los campos de firma se pintan en UNA sola celda que
  * abarca todas las filas de esa ruta (como una celda combinada), en vez de
  * repetirse en cada tienda. Una tienda sin ruta compartida forma su propio
@@ -285,7 +285,8 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
  * - LÍMITE CAMIÓN sale del número de la anotación de la ruta (ej. "8P MAX.
  *   POR RUTA" -> 8) o, si la tienda va sola, de su propia nota ("8P MAX. -
  *   CARGA EN GAITE" -> 8). Sin número ("SIN LIMITE...") o sin nota: SIN LÍMITE.
- * - AGENCIA es el nombre de la agrupación (ej. "SEYLOTRANS MEDIO DIA").
+ * - Ya no hay columna AGENCIA: el nombre de la agrupación sale en el título.
+ * - TOTAL RUTA de una tienda suelta (que no es ruta) sale rayada (campo nulo).
  * - TOTAL RUTA es la suma en vivo del TOTAL de todas las tiendas de esa
  *   ruta (misma suma que ya se ve en pantalla en el chip de la
  *   fila-cabecera del grupo).
@@ -353,7 +354,7 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
   });
 
   // 2) Cada grupo se convierte en sus filas de tabla del PDF: la primera
-  // fila lleva las celdas "de ruta" (LÍMITE CAMIÓN, NAVE CARGA, AGENCIA, TOTAL
+  // fila lleva las celdas "de ruta" (LÍMITE CAMIÓN, NAVE CARGA, TOTAL
   // RUTA, firmas, ZONA/PASILLO) con rowSpan = nº de tiendas del grupo; las
   // siguientes filas del mismo grupo NO repiten esas columnas (quedan
   // cubiertas por la celda combinada de la primera).
@@ -416,11 +417,16 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
       if (esPrimera) {
         fila.push(celdaGrupo(limiteCamionTexto));
         fila.push(celdaGrupo(grupo.naveCarga));
-        fila.push(celdaGrupo(agenciaNombre));
+        // (Sin columna AGENCIA: ya sale en el título de la hoja.)
       }
       fila.push.apply(fila, celdasPropias);
       if (esPrimera) {
-        fila.push(celdaGrupo(totalRuta));
+        // Tienda suelta (no es una ruta): su TOTAL RUTA no lleva dato y se
+        // raya entera (_nulo), para que se vea que es un campo vacío a
+        // propósito y no un hueco para rellenar.
+        const celdaTotalRuta = celdaGrupo(totalRuta);
+        if (celdaTotalRuta && !grupo.esRuta) celdaTotalRuta._nulo = true;
+        fila.push(celdaTotalRuta);
         fila.push(celdaGrupo('')); // FIRMA RES. TARDE
         fila.push(celdaGrupo('')); // FIRMA RES. NOCHE
         fila.push(celdaGrupo('')); // CONFIRMACIÓN RECOGIDA
@@ -474,18 +480,28 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
   doc.autoTable({
     startY: M + 13,
     theme: 'plain',
-    head: [['LÍMITE\nCAMIÓN', 'NAVE\nCARGA', 'AGENCIA', 'LÍMITE', 'TIENDA', '60', 'PTA', 'CART.', 'TOTAL', 'TOTAL\nRUTA', 'FIRMA RES.\nTARDE', 'FIRMA RES.\nNOCHE', 'CONFIRMACIÓN\nRECOGIDA', 'ZONA/\nPASILLO']],
+    head: [['LÍMITE\nCAMIÓN', 'NAVE\nCARGA', 'LÍMITE', 'TIENDA', '60', 'PTA', 'CART.', 'TOTAL', 'TOTAL\nRUTA', 'FIRMA RES.\nTARDE', 'FIRMA RES.\nNOCHE', 'CONFIRMACIÓN\nRECOGIDA', 'ZONA/\nPASILLO']],
     body: filasInfo.filas,
     styles: { fontSize: 7.5 * e, cellPadding: 2.5 * e, valign: 'middle', halign: 'center', lineColor: [190, 196, 205], lineWidth: 0.15, fillColor: [255, 255, 255] },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center', fontSize: 7 * Math.max(e, 0.85) },
     bodyStyles: { halign: 'center', minCellHeight: 9 * e },
+    // Anchos fijos (suman los 277 mm útiles del A4 apaisado): las columnas
+    // de datos, justas; el sitio que deja la antigua columna AGENCIA va a
+    // las 4 columnas que se rellenan a mano (firmas, recogida y zona).
     columnStyles: {
-      1: { fontStyle: 'bold' },
-      2: { fontStyle: 'bold' },
-      4: { fontStyle: 'bold', fontSize: 9 * e, halign: 'left' },
-      8: { fontStyle: 'bold', fontSize: 11 * e },
-      9: { fontStyle: 'bold', fontSize: 13 * e },
-      13: { cellWidth: 26 }
+      0: { cellWidth: 18 },                                                // LÍMITE CAMIÓN
+      1: { cellWidth: 16, fontStyle: 'bold' },                             // NAVE CARGA
+      2: { cellWidth: 13 },                                                // LÍMITE
+      3: { cellWidth: 46, fontStyle: 'bold', fontSize: 9 * e, halign: 'left' }, // TIENDA
+      4: { cellWidth: 10 },                                                // 60
+      5: { cellWidth: 10 },                                                // PTA
+      6: { cellWidth: 12 },                                                // CART.
+      7: { cellWidth: 15, fontStyle: 'bold', fontSize: 11 * e },           // TOTAL
+      8: { cellWidth: 16, fontStyle: 'bold', fontSize: 13 * e },           // TOTAL RUTA
+      9: { cellWidth: 31 },                                                // FIRMA RES. TARDE
+      10: { cellWidth: 31 },                                               // FIRMA RES. NOCHE
+      11: { cellWidth: 31 },                                               // CONFIRMACIÓN RECOGIDA
+      12: { cellWidth: 28 }                                                // ZONA/PASILLO
     },
     // Todo el cuerpo en blanco (sin sombreado alternado): las rutas se
     // separan solo con el borde grueso de abajo. Con "theme: 'plain'" se
@@ -495,6 +511,7 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
     // siguiente. Las tiendas sueltas no llevan borde grueso entre ellas.
     didDrawCell: function (data) {
       if (data.section !== 'body') return;
+      if (data.cell.raw && data.cell.raw._nulo) rayarCeldaPdf_(doc, data.cell);
       const i = data.row.index;
       const ultimaFilaCelda = i + (data.cell.rowSpan || 1) - 1;
       doc.setDrawColor(0, 0, 0);
@@ -511,6 +528,19 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
   });
 
   return doc.lastAutoTable.finalY;
+}
+
+/** Raya en diagonal toda la celda (campo que no lleva dato). */
+function rayarCeldaPdf_(doc, cell) {
+  const x = cell.x, y = cell.y, w = cell.width, h = cell.height, paso = 2.2;
+  doc.setDrawColor(150, 156, 166);
+  doc.setLineWidth(0.2);
+  for (let t = -h; t < w; t += paso) {
+    let x0 = x + t, y0 = y + h, x1 = x + t + h, y1 = y;
+    if (x0 < x) { y0 -= (x - x0); x0 = x; }
+    if (x1 > x + w) { y1 += (x1 - (x + w)); x1 = x + w; }
+    if (x1 > x0) doc.line(x0, y0, x1, y1);
+  }
 }
 
 const PDF_ESP_MARGEN_MM_ = 10; // margen del folio A4 en el PDF Control responsables
