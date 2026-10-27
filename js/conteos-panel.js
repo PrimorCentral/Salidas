@@ -184,10 +184,15 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     ((seccion.puedeInformatica !== undefined ? seccion.puedeInformatica : seccion.editable) !== false
       ? '<button type="button" class="btn-header-informatica" title="Enviar la previsión de carga solo a transporte@primor.eu (no bloquea el conteo, se puede volver a enviar)">' + SVG_MENU_INFORMATICA_ + '<span>Enviar a informática</span></button>'
       : '');
-  const htmlMenuEnvios_ = htmlBotonesEnvio_
+  // El sobre también enseña lo que ya se ha enviado (previsión en azul,
+  // definitivo en verde, con una marca ✓ y el detalle arriba del menú),
+  // así que se pinta aunque ya no quede ningún envío por hacer.
+  const htmlMenuEnvios_ = (htmlBotonesEnvio_ || seccion.previsionEnviada || seccion.estado === 'enviado')
     ? '<span class="envios-wrap">' +
-        '<button type="button" class="btn-menu-envios" title="Enviar por email" aria-label="Enviar por email" aria-haspopup="true" aria-expanded="false">' + SVG_SOBRE_ + '</button>' +
-        '<div class="menu-envios" role="menu" hidden>' + htmlBotonesEnvio_ +
+        '<button type="button" class="btn-menu-envios btn-menu-email" title="Enviar por email" aria-label="Enviar por email" aria-haspopup="true" aria-expanded="false">' + SVG_SOBRE_ + '<span class="sobre-marca" hidden>✓</span></button>' +
+        '<div class="menu-envios" role="menu" hidden>' +
+          '<div class="menu-envios-estado" hidden></div>' +
+          htmlBotonesEnvio_ +
           '<div class="menu-envios-aviso" hidden>Guardando el conteo…</div>' +
         '</div>' +
       '</span>'
@@ -220,7 +225,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<span class="name">' + escapeHtml(partes.titulo) + '</span>' +
     '<div class="name-row-datos">' + badgeUbicacion +
     '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
-    badgeEstado(seccion) +
+    badgeEstadoCabecera_(seccion) +
     '</div>' +
     '<span class="verif-pastillas"></span>' +
     '<div class="vista-carga-tabs" role="tablist" hidden>' +
@@ -245,7 +250,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '</div>' +
     '<div class="seccion-header-meta">' +
     '<div class="seccion-header-badges">' +
-    badgePrevision(seccion) +
+    // "Previsión enviada" ya no va aquí: se ve en el sobre (ver pintarEstadoSobre_).
     // La papelera "Deshacer envío" ya no se muestra tras el definitivo.
     (!editable && seccion.estado !== 'enviado' ? '<span class="badge badge-solo-lectura">Solo lectura</span>' : '') +
     '</div>' +
@@ -1080,8 +1085,45 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       aviso.hidden = !Array.prototype.some.call(botones, function (b) { return b.disabled; });
       aviso.textContent = hayCambiosSinGuardar ? 'Guardando el conteo…' : 'Todavía no hay conteo guardado';
     }
-    wrap.hidden = botones.length === 0;
-    if (!botones.length && MENU_ENVIOS_ABIERTO_ && MENU_ENVIOS_ABIERTO_.menu === menu) cerrarMenuEnvios_();
+    const hayEnviado = !!(seccion.previsionEnviada || seccion.estado === 'enviado');
+    wrap.hidden = botones.length === 0 && !hayEnviado;
+    if (wrap.hidden && MENU_ENVIOS_ABIERTO_ && MENU_ENVIOS_ABIERTO_.menu === menu) cerrarMenuEnvios_();
+    pintarEstadoSobre_(menu);
+  }
+  // Estado de los envíos en el sobre: azul si se envió la previsión, verde
+  // si se envió el definitivo (manda sobre la previsión), con la marca ✓;
+  // quién y cuándo, en el título (al pasar el ratón) y arriba del menú.
+  function pintarEstadoSobre_(menu) {
+    const btn = header.querySelector('.btn-menu-email');
+    if (!btn) return;
+    const marca = btn.querySelector('.sobre-marca');
+    const caja = menu ? menu.querySelector('.menu-envios-estado') : null;
+    const c = seccion.carga;
+    const porPrev = (c && c.origen === 'prevision' && c.por) ? nombreLegible_(c.por) : (seccion.previsionEnviadaPor || '');
+    const lineas = [];
+    if (seccion.estado === 'enviado') {
+      lineas.push({ clase: 'definitivo', titulo: 'Definitivo enviado', detalle: [seccion.enviadoPor, seccion.horaEnvio].filter(Boolean).join(' · ') });
+    }
+    if (seccion.previsionEnviada) {
+      lineas.push({ clase: 'prevision', titulo: 'Previsión enviada', detalle: [porPrev, seccion.previsionEnviada].filter(Boolean).join(' · ') });
+    }
+    btn.classList.remove('sobre-prevision', 'sobre-definitivo');
+    if (!lineas.length) {
+      if (marca) marca.hidden = true;
+      if (caja) { caja.hidden = true; caja.innerHTML = ''; }
+      btn.title = 'Enviar por email';
+      return;
+    }
+    btn.classList.add('sobre-' + lineas[0].clase);
+    if (marca) marca.hidden = false;
+    btn.title = lineas.map(function (l) { return l.titulo + (l.detalle ? ' por ' + l.detalle : ''); }).join('\n');
+    if (caja) {
+      caja.hidden = false;
+      caja.innerHTML = lineas.map(function (l) {
+        return '<div class="menu-envios-estado-linea ' + l.clase + '"><strong>' + escapeHtml(l.titulo) + '</strong>' +
+          (l.detalle ? '<span>por ' + escapeHtml(l.detalle) + '</span>' : '') + '</div>';
+      }).join('');
+    }
   }
   function marcarCambiosSinGuardar_() {
     hayCambiosSinGuardar = true;
@@ -1826,16 +1868,8 @@ if (callback) callback(true, mensaje);
       seccion.previsionEnviada = (resultado && resultado.previsionEnviada) || seccion.previsionEnviada || '';
       seccion.previsionEnviadaPor = (resultado && resultado.enviadoPor) || seccion.previsionEnviadaPor || '';
 
-      const badgeExistente = header.querySelector('.badge-prevision');
-      if (badgeExistente) badgeExistente.remove();
-      const wrapTmp = document.createElement('div');
-      wrapTmp.innerHTML = badgePrevision(seccion);
-      const nuevoBadge = wrapTmp.firstElementChild;
-      if (nuevoBadge) {
-        const badges = header.querySelector('.seccion-header-badges');
-        if (badges) badges.insertBefore(nuevoBadge, badges.firstChild);
-        else header.appendChild(nuevoBadge);
-      }
+      // El aviso de "Previsión enviada" se pinta en el sobre
+      // (actualizarMenuEnvios_ -> pintarEstadoSobre_).
 
       const btnPrevisionEl = header.querySelector('.btn-header-prevision');
       if (btnPrevisionEl) btnPrevisionEl.remove();
@@ -1868,7 +1902,7 @@ if (callback) callback(true, mensaje);
     if (badgeEstadoExistente) badgeEstadoExistente.remove();
 
     const wrapTmp = document.createElement('div');
-    wrapTmp.innerHTML = badgeEstado(seccion);
+    wrapTmp.innerHTML = badgeEstadoCabecera_(seccion);
     const nuevoBadgeEstado = wrapTmp.firstElementChild;
     const countEl = header.querySelector('.name-row .count');
     if (nuevoBadgeEstado && countEl) countEl.insertAdjacentElement('afterend', nuevoBadgeEstado);
@@ -2124,4 +2158,12 @@ function mostrarModalConfirmarVerificacion_(seccion, fecha, nave, nombresVacias,
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirmar(); };
+}
+
+
+/** Badge de estado de la cabecera de la agrupación: "En progreso" como
+ *  siempre; "Definitivo enviado" ya no sale aquí, se ve en el sobre del
+ *  email (en verde, con quién y cuándo). */
+function badgeEstadoCabecera_(seccion) {
+  return seccion.estado === 'enviado' ? '' : badgeEstado(seccion);
 }
