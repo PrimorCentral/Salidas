@@ -8,6 +8,24 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.13',
+    fecha: '2026-10-27',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Pantalla de inicio: la columna Estado sigue todo el camino de la carga: En progreso (falta algún check en verde), Carga sin ajustar (los 3 checks en verde), Carga ajustada, Previsión enviada y Definitivo enviado, cada uno con su color. El texto del estado se ve un poco más grande' },
+      { tipo: 'nuevo',      texto: 'Aviso en rojo «CARGA NO AJUSTADA POR UN RESPONSABLE» en la cabecera cuando las 3 naves están verificadas y todavía no se ha ajustado la carga' },
+      { tipo: 'mejora',     texto: 'La previsión y el definitivo enviados se ven en el sobre del email (azul la previsión, verde el definitivo, con una marca ✓); quién lo envió y a qué hora sale al pasar el ratón y al abrir el menú. Desaparecen de la cabecera los avisos «Previsión enviada por» y «Definitivo enviado por»' },
+      { tipo: 'mejora',     texto: 'Cabeceras de las agrupaciones ordenadas e iguales en todas: el nombre más grande, con los checks de las naves justo debajo; ubicación, tiendas, estado y las pestañas de carga en un bloque alineado en el centro, y los botones a la derecha. Todas miden lo mismo y los nombres largos ya no se cortan' },
+      { tipo: 'mejora',     texto: 'La pestaña de la carga pone siempre «Carga ajustada», también después de enviar la previsión o el definitivo (antes cambiaba a «Carga enviada»)' },
+      { tipo: 'correccion', texto: 'Con la carga ajustada, el aviso de cada ruta («8P MAX. POR RUTA … x/8») cuenta los palets que se cargan y no los contados (antes salía pasada aunque no lo estuviera)' },
+      { tipo: 'correccion', texto: 'El PDF especial respeta la pestaña que se está viendo: desde «Carga ajustada» sale la carga ajustada y desde «Ver conteo real sin ajustar», lo contado' },
+      { tipo: 'mejora',     texto: 'El PDF especial pasa a llamarse «PDF Control responsables» y sale siempre en un folio A4 apaisado con sus márgenes (se ajusta para que quepa entero en una hoja)' },
+      { tipo: 'mejora',     texto: 'PDF Control responsables: nueva columna NAVE CARGA (sale de la anotación «CARGA EN …»), sin las columnas SOBRAN y AGENCIA (la agencia ya va en el título) y más sitio para las firmas, la recogida y la zona. La fecha va a la derecha del título' },
+      { tipo: 'mejora',     texto: 'PDF Control responsables: cada ruta se separa con un borde grueso; las tiendas sueltas llevan TOTAL RUTA rayado (no lleva dato) y su LÍMITE CAMIÓN sale de su propia nota (p. ej. «8P MAX.»). TOTAL, TOTAL RUTA y NAVE CARGA, con letra más grande' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: los conteos especiales ya pasados no llenan la fila de días; se consultan en «Pasados», agrupados por meses y con buscador por fecha' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: al editar la ubicación y hora de carga de una agrupación (y al añadir una ruta nueva), la ubicación se elige en un desplegable (GAITE, PTA, CARTAMA, AMBAS NAVES, NAVE RIO, ALBINONI) y la hora con un selector de hora (con «hasta» para las franjas)' }
+    ]
+  },
+  {
     version: '2.1.12',
     fecha: '2026-10-26',
     cambios: [

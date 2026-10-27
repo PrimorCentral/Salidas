@@ -598,7 +598,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (tabs) {
       tabs.hidden = !hayVista;
       const etiqueta = tabs.querySelector('[data-vista="ajustada"] .vista-carga-etiqueta');
-      if (etiqueta) etiqueta.textContent = esCargaEnviada_() ? 'Carga enviada' : 'Carga ajustada';
+      // Siempre "Carga ajustada" (antes ponía "Carga enviada" tras enviar la previsión o el definitivo).
+      if (etiqueta) etiqueta.textContent = 'Carga ajustada';
       tabs.querySelectorAll('.vista-carga-tab').forEach(function (t) {
         const activa = (t.getAttribute('data-vista') === 'real') === verReal;
         t.classList.toggle('activa', activa);
