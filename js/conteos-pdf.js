@@ -527,6 +527,6 @@ function generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap) {
   const doc = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, alturaPagina);
   dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filasInfo);
 
-  const nombreArchivo = 'Especial_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
+  const nombreArchivo = 'Control_responsables_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
   doc.save(nombreArchivo);
 }

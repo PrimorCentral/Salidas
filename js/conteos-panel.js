@@ -202,7 +202,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         '<button type="button" class="btn-pdf-seccion menu-item" title="Generar PDF de esta agrupación">' + SVG_DOC_('#e0342a', 'PDF', 7.5) + '<span>PDF</span></button>' +
         '<button type="button" class="btn-excel-seccion menu-item" title="Exportar a Excel esta agrupación">' + SVG_DOC_('#1d6f42', 'XLS', 7.5) + '<span>Excel</span></button>' +
         (seccion.tienePdfEspecial
-          ? '<button type="button" class="btn-pdf-especial-seccion menu-item" title="Generar PDF especial (formato de reparto en camión) de esta agrupación">' + SVG_DOC_('var(--prevision)', 'PDF+', 6) + '<span>PDF especial (reparto en camión)</span></button>'
+          ? '<button type="button" class="btn-pdf-especial-seccion menu-item" title="Generar el PDF Control responsables (reparto en camión) de esta agrupación">' + SVG_DOC_('var(--prevision)', 'PDF+', 6) + '<span>PDF Control responsables</span></button>'
           : '') +
       '</div>' +
     '</span>';
@@ -1650,7 +1650,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   if (btnPdfEspecial) {
     btnPdfEspecial.onclick = function (e) {
       e.stopPropagation();
-      generarPdfEspecialSeccion(seccion, dia, fecha, tableWrap);
+      // Se exporta lo que se está viendo: si está abierta la pestaña
+      // "Carga ajustada" (o "Carga enviada"), sale la carga con sus
+      // números ajustados; si está "Ver conteo real sin ajustar", lo contado.
+      const conAjuste = !vistaAjustadaWrap.hidden && !!vistaAjustadaWrap.querySelector('table.conteo');
+      generarPdfEspecialSeccion(seccion, dia, fecha, conAjuste ? vistaAjustadaWrap : tableWrap);
     };
   }
 
