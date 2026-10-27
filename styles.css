@@ -1988,6 +1988,31 @@
     color: var(--ink-soft); font-size: 11.5px; font-weight: 600;
   }
   .menu-envios-aviso[hidden] { display: none; }
+  /* Sobre del email con lo ya enviado: azul = previsión enviada, verde =
+   * definitivo enviado, con una marca ✓ en la esquina. Quién y cuándo, al
+   * pasar el ratón y arriba del menú (sustituye a los badges de antes). */
+  .btn-menu-email { position: relative; }
+  .btn-menu-email.sobre-prevision { background: #e8f0fc; border-color: #a9c3ea; color: var(--prevision); }
+  .btn-menu-email.sobre-prevision:hover, .btn-menu-email.sobre-prevision.activo { background: #dbe7fa; }
+  .btn-menu-email.sobre-definitivo { background: #e3f3ec; border-color: #a6d6bf; color: var(--ok); }
+  .btn-menu-email.sobre-definitivo:hover, .btn-menu-email.sobre-definitivo.activo { background: #d4ece1; }
+  .sobre-marca {
+    position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; border: 2px solid #fff;
+    font-size: 9px; font-weight: 900; line-height: 1; color: #fff; background: var(--prevision);
+    pointer-events: none;
+  }
+  .sobre-definitivo .sobre-marca { background: var(--ok); }
+  .sobre-marca[hidden] { display: none; }
+  .menu-envios-estado { display: flex; flex-direction: column; gap: 4px; margin: 2px 2px 4px; }
+  .menu-envios-estado[hidden] { display: none; }
+  .menu-envios-estado-linea {
+    display: flex; flex-direction: column; gap: 1px; padding: 7px 10px; border-radius: 8px;
+    font-size: 12px; line-height: 1.35;
+  }
+  .menu-envios-estado-linea strong { font-size: 12.5px; font-weight: 800; }
+  .menu-envios-estado-linea.prevision { background: #e8f0fc; color: #24508f; }
+  .menu-envios-estado-linea.definitivo { background: #e3f3ec; color: #22684f; }
   /* Menú de descargas (PDF / Excel / PDF especial): mismos botones de antes como opciones. */
   .btn-menu-descargas { color: var(--navy); border-color: #d6dce8; }
   .btn-menu-descargas:hover, .btn-menu-descargas.activo { background: #eef1f7; }
