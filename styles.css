@@ -1520,6 +1520,8 @@
   }
   .modal-campo select:focus { border-color: var(--navy-soft); outline: none; }
   /* Hora de carga: "desde" y, si es una franja, "hasta" en la misma línea. */
+  /* Segunda línea del título del modal (p. ej. el nombre de la agrupación). */
+  .modal-titulo-sub { display: block; margin-top: 3px; font-size: 13px; font-weight: 700; color: var(--ink-soft); letter-spacing: .2px; }
   .modal-horas { display: flex; align-items: center; gap: 8px; }
   .modal-horas input { flex: 1; }
   .modal-horas-sep { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
