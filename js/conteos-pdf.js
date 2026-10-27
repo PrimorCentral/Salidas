@@ -490,14 +490,16 @@ function dibujarPdfEspecialSeccion_(doc, partes, dia, fecha, fechaGeneracion, se
     // las 4 columnas que se rellenan a mano (firmas, recogida y zona).
     columnStyles: {
       0: { cellWidth: 18 },                                                // LÍMITE CAMIÓN
-      1: { cellWidth: 16, fontStyle: 'bold' },                             // NAVE CARGA
+      1: { cellWidth: 16, fontStyle: 'bold', fontSize: 8.5 * e },         // NAVE CARGA
       2: { cellWidth: 13 },                                                // LÍMITE
       3: { cellWidth: 46, fontStyle: 'bold', fontSize: 9 * e, halign: 'left' }, // TIENDA
       4: { cellWidth: 10 },                                                // 60
       5: { cellWidth: 10 },                                                // PTA
       6: { cellWidth: 12 },                                                // CART.
-      7: { cellWidth: 15, fontStyle: 'bold', fontSize: 11 * e },           // TOTAL
-      8: { cellWidth: 16, fontStyle: 'bold', fontSize: 13 * e },           // TOTAL RUTA
+      // TOTAL y TOTAL RUTA más grandes, con menos relleno arriba/abajo para
+      // que la fila no crezca (el alto lo marca minCellHeight).
+      7: { cellWidth: 15, fontStyle: 'bold', fontSize: 12 * e, cellPadding: { top: 0.5 * e, bottom: 0.5 * e, left: 1, right: 1 } }, // TOTAL
+      8: { cellWidth: 16, fontStyle: 'bold', fontSize: 14 * e, cellPadding: { top: 0.5 * e, bottom: 0.5 * e, left: 1, right: 1 } }, // TOTAL RUTA
       9: { cellWidth: 31 },                                                // FIRMA RES. TARDE
       10: { cellWidth: 31 },                                               // FIRMA RES. NOCHE
       11: { cellWidth: 31 },                                               // CONFIRMACIÓN RECOGIDA
