@@ -1660,7 +1660,20 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       // Requiere el permiso "Enviar a informática"
       // (el backend lo vuelve a comprobar en enviar_informatica_agencia).
       if (!tienePermiso('enviar_informatica')) { mostrarModalSinPermiso(); return; }
-      mostrarModalEnviarAgencia(calcularResumenEnvio(), function (callback) {
+      // El email a informática lleva la carga ajustada (el servidor la toma
+      // de la carga vigente), así que el total del modal también.
+      const resumenInf = calcularResumenEnvio();
+      const guardadosInf = ajustesGuardados_();
+      const contadosInf = {};
+      filasCargaActuales_().forEach(function (f) { if (!f.cerrada) contadosInf[f.nombre] = f.contados; });
+      Object.keys(guardadosInf).forEach(function (nombre) {
+        resumenInf.totalPalets += guardadosInf[nombre] - (contadosInf[nombre] || 0);
+      });
+      resumenInf.excedidas = (resumenInf.excedidas || []).map(function (ex) {
+        if (!Object.prototype.hasOwnProperty.call(guardadosInf, ex.nombre)) return ex;
+        return Object.assign({}, ex, { carga: guardadosInf[ex.nombre], total: guardadosInf[ex.nombre] + ex.otros });
+      }).filter(function (ex) { return ex.total > ex.limite; });
+      mostrarModalEnviarAgencia(resumenInf, function (callback) {
         enviarSeccion('informatica', callback);
       }, 'informatica');
     };
