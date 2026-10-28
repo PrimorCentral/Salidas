@@ -3498,6 +3498,23 @@
   table.admin-tabla th.admin-col-palets { text-align: center; }
   table.admin-tabla td.admin-col-tienda { white-space: normal; min-width: 160px; }
 
+  /* ---- Administración > Registro de actividad ---- */
+  .admin-filtro-select {
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--ink); background: #f9fafb; height: 32px;
+  }
+  table.admin-tabla-actividad td { vertical-align: top; }
+  table.admin-tabla-actividad td.ra-detalle { white-space: normal; min-width: 260px; }
+  .ra-contexto { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .ra-seccion {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    padding: 2px 7px; border-radius: 999px; margin-right: 4px; background: #eef1f7; color: var(--navy);
+  }
+  .ra-sec-conteos  { background: #e6f0fb; color: #1d4f8c; }
+  .ra-sec-bloqueos { background: #fdecea; color: #a1281c; }
+  .ra-sec-usuarios { background: #efe9fb; color: #5b3aa0; }
+  .ra-sec-tiendas  { background: #e8f6ee; color: #1f7a45; }
+  .ra-sec-agencias { background: #fff3e0; color: #9a5a00; }
+
   /* ---- Administración > Servidores ---- */
   .servidores-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 6px; }
   .servidor-card {
