@@ -262,7 +262,7 @@ function tituloEstadoMenuRapido_(seccion) {
   }
 }
 
-let MENU_RAPIDO_ESTADO = { secciones: [], filtro: '' };
+let MENU_RAPIDO_ESTADO = { secciones: [], filtro: '', texto: '' };
 
 function renderMenuRapido(data) {
   MENU_RAPIDO_ESTADO.secciones = data.secciones || [];

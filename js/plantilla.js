@@ -3472,6 +3472,7 @@ function renderShellPrincipal() {
           '<div class="menu-rapido-buscar">' +
             '<span class="emoji">🔍</span>' +
             '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…">' +
+            '<button type="button" class="menu-rapido-limpiar" id="menu-rapido-limpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda" hidden>×</button>' +
           '</div>' +
           '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
         '</div>' +
@@ -3501,13 +3502,30 @@ function renderShellPrincipal() {
     document.getElementById('calendar-panel').classList.toggle('colapsado', ESTADO.calendarioColapsado);
   };
 
+  // El panel se vuelve a pintar al volver a esta vista: el buscador recupera
+  // lo que hubiera escrito, para que no salga vacío con la lista filtrada.
+  const inputBuscarMenu = document.getElementById('menu-rapido-buscar-input');
+  const btnLimpiarMenu = document.getElementById('menu-rapido-limpiar');
+  inputBuscarMenu.value = MENU_RAPIDO_ESTADO.texto || '';
+  btnLimpiarMenu.hidden = !inputBuscarMenu.value;
   let temporizadorBusquedaMenuRapido_ = null;
-  document.getElementById('menu-rapido-buscar-input').addEventListener('input', function (e) {
+  inputBuscarMenu.addEventListener('input', function (e) {
     clearTimeout(temporizadorBusquedaMenuRapido_);
     const valor = e.target.value;
+    MENU_RAPIDO_ESTADO.texto = valor;
+    btnLimpiarMenu.hidden = !valor;
     temporizadorBusquedaMenuRapido_ = setTimeout(function () {
       MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(valor.trim());
       pintarMenuRapido_();
     }, 150);
   });
+  btnLimpiarMenu.onclick = function () {
+    clearTimeout(temporizadorBusquedaMenuRapido_);
+    inputBuscarMenu.value = '';
+    MENU_RAPIDO_ESTADO.texto = '';
+    MENU_RAPIDO_ESTADO.filtro = '';
+    btnLimpiarMenu.hidden = true;
+    pintarMenuRapido_();
+    inputBuscarMenu.focus();
+  };
 }
