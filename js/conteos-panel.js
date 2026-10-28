@@ -902,6 +902,19 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           seccion.carga = carga || null;
           // Carga recién guardada: se vuelve a ver la carga ajustada (si la hay).
           delete VISTA_CONTEO_REAL_[fecha + '|' + seccion.nombre];
+          // Al ajustar la carga, el servidor deja la agrupación verificada
+          // (60/PTA/CART.) por quien la ajusta y cierra los avisos de
+          // "cambiado tras verificar". Se refleja ya en pantalla sin esperar
+          // al autorefresco.
+          const ahoraVerif = new Date();
+          const horaVerif = pad2(ahoraVerif.getHours()) + ':' + pad2(ahoraVerif.getMinutes());
+          seccion.verificaciones = seccion.verificaciones || {};
+          NAVES_CONTEO.forEach(function (n) {
+            seccion.verificaciones[n.campo] = { usuario: SESSION_USUARIO || '', nombre: SESSION_NOMBRE || SESSION_USUARIO || '', hora: horaVerif };
+          });
+          seccion.cambiosVerif = {};
+          panel._firma = '';
+          pintarVerificaciones_();
           actualizarEstadoCarga_();
           done(true);
         })
@@ -1372,7 +1385,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         const ver = v[n.campo];
         const cam = !ver && seccion.cambiosVerif[n.campo];
         if (ver) return '<span class="verif-pastilla ok" title="' + escapeAttr(n.nave + ' verificado por ' + (ver.nombre || ver.usuario || '') + ' a las ' + (ver.hora || '')) + '">' + SVG_CHECK_VERIF_ + escapeHtml(n.etiqueta) + '</span>';
-        if (cam) return '<span class="verif-pastilla modificada" title="' + escapeAttr(textoCambiosVerif_(n, cam)) + '">' + SVG_AVISO_VERIF_ + escapeHtml(n.etiqueta) + ' cambiado tras verificar</span>';
+        if (cam) return '<span class="verif-pastilla modificada" title="' + escapeAttr(textoCambiosVerif_(n, cam)) + '">' + SVG_AVISO_VERIF_ + escapeHtml(n.etiqueta) + '</span>';
         return '<span class="verif-pastilla" title="' + escapeAttr(n.nave + ': sin verificar') + '">' + escapeHtml(n.etiqueta) + '</span>';
       }).join('');
     }
