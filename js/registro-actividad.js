@@ -12,7 +12,10 @@
  * entre una y otra) se juntan en una sola línea "antes → después".
  * Se guardan 6 meses.
  */
-let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, usuario: '', seccion: '', texto: '', datos: null };
+let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, usuario: '', seccion: '', texto: '', datos: null, pagina: 1 };
+
+// Registros por página (para que la lista no se haga eterna).
+const ACTIVIDAD_POR_PAGINA_ = 30;
 
 const SECCIONES_ACTIVIDAD_ = ['Conteos', 'Envíos y desbloqueos', 'Bloqueos y cambios', 'Plantilla', 'Usuarios', 'Emails tiendas', 'Emails agencias'];
 
@@ -59,14 +62,14 @@ function renderAdminRegistroActividad() {
   document.getElementById('btn-admin-actividad-buscar').onclick = function () { cargarRegistroActividad_(); };
   document.getElementById('admin-actividad-desde').addEventListener('change', function (e) { if (e.target.value) st.desde = e.target.value; });
   document.getElementById('admin-actividad-hasta').addEventListener('change', function (e) { if (e.target.value) st.hasta = e.target.value; });
-  document.getElementById('admin-actividad-usuario').addEventListener('change', function (e) { st.usuario = e.target.value; pintarRegistroActividad_(); });
-  document.getElementById('admin-actividad-seccion').addEventListener('change', function (e) { st.seccion = e.target.value; pintarRegistroActividad_(); });
+  document.getElementById('admin-actividad-usuario').addEventListener('change', function (e) { st.usuario = e.target.value; st.pagina = 1; pintarRegistroActividad_(); });
+  document.getElementById('admin-actividad-seccion').addEventListener('change', function (e) { st.seccion = e.target.value; st.pagina = 1; pintarRegistroActividad_(); });
 
   let temporizador = null;
   document.getElementById('admin-actividad-buscar').addEventListener('input', function (e) {
     clearTimeout(temporizador);
     const valor = e.target.value;
-    temporizador = setTimeout(function () { st.texto = valor.trim(); pintarRegistroActividad_(); }, 200);
+    temporizador = setTimeout(function () { st.texto = valor.trim(); st.pagina = 1; pintarRegistroActividad_(); }, 200);
   });
 
   // No se busca sola al entrar: si ya había resultados de una búsqueda
@@ -106,6 +109,7 @@ function cargarRegistroActividad_(esRefrescoManual) {
       quitarGiro();
       if (!enRegistroActividad_()) return;
       st.datos = datos || [];
+      st.pagina = 1;
       pintarRegistroActividad_();
     })
     .catch(function (err) {
@@ -170,12 +174,19 @@ function pintarRegistroActividad_() {
   }
 
   const variosDias = st.desde !== st.hasta;
+  const totalPaginas = Math.max(1, Math.ceil(items.length / ACTIVIDAD_POR_PAGINA_));
+  if (!st.pagina || st.pagina < 1) st.pagina = 1;
+  if (st.pagina > totalPaginas) st.pagina = totalPaginas;
+  const inicio = (st.pagina - 1) * ACTIVIDAD_POR_PAGINA_;
+  const pagina = items.slice(inicio, inicio + ACTIVIDAD_POR_PAGINA_);
+
   cont.innerHTML =
     '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' registro' : ' registros') +
+      (totalPaginas > 1 ? ' · mostrando ' + (inicio + 1) + '–' + (inicio + pagina.length) : '') +
       (datos.length >= 3000 ? ' · se muestran los 3000 más recientes, acota las fechas para ver el resto' : '') + '</div>' +
-    '<div class="admin-tabla-wrap"><table class="admin-tabla admin-tabla-actividad">' +
+    '<div class="admin-tabla-wrap ra-tabla-scroll"><table class="admin-tabla admin-tabla-actividad">' +
       '<thead><tr><th>Cuándo</th><th>Usuario</th><th>Acción</th><th>Día / agrupación</th><th>Tienda / elemento</th><th>Fecha</th><th>Detalle</th></tr></thead>' +
-      '<tbody>' + items.map(function (it) {
+      '<tbody>' + pagina.map(function (it) {
         const cuando = (variosDias ? formatearFechaCorta_(it.dia) + ' ' : '') + it.hora + (it.hora_fin ? '–' + it.hora_fin : '');
         return '<tr>' +
           '<td>' + escapeHtml(cuando) + '</td>' +
@@ -190,5 +201,32 @@ function pintarRegistroActividad_() {
         '</tr>';
       }).join('') +
       '</tbody>' +
-    '</table></div>';
+    '</table></div>' +
+    htmlPaginacionActividad_(st.pagina, totalPaginas);
+
+  cont.querySelectorAll('[data-ra-pagina]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      st.pagina = parseInt(btn.getAttribute('data-ra-pagina'), 10) || 1;
+      pintarRegistroActividad_();
+      // Volver arriba de la tabla al cambiar de página.
+      const wrap = cont.querySelector('.ra-tabla-scroll');
+      if (wrap) wrap.scrollTop = 0;
+    });
+  });
+}
+
+/** Botones « ‹ Página X de Y › ». Sin nada si cabe todo en una página. */
+function htmlPaginacionActividad_(actual, total) {
+  if (total <= 1) return '';
+  function boton(texto, destino, titulo, deshabilitado) {
+    return '<button type="button" class="ra-pag-btn"' + (deshabilitado ? ' disabled' : ' data-ra-pagina="' + destino + '"') +
+      ' title="' + titulo + '">' + texto + '</button>';
+  }
+  return '<div class="ra-paginacion">' +
+    boton('«', 1, 'Primera página', actual === 1) +
+    boton('‹ Anterior', actual - 1, 'Página anterior', actual === 1) +
+    '<span class="ra-pag-info">Página ' + actual + ' de ' + total + '</span>' +
+    boton('Siguiente ›', actual + 1, 'Página siguiente', actual === total) +
+    boton('»', total, 'Última página', actual === total) +
+  '</div>';
 }
