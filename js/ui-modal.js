@@ -650,7 +650,9 @@ function tituloCamionCortoHtml_(camion, idx, n) {
 }
 
 /** Fichas de los camiones para la columna izquierda de los modales de
- *  carga: matrícula, remolque y palets que lleva (de MAX_PALETS_CAMION). */
+ *  carga: matrícula, remolque y palets que lleva. No se pone "de 33"
+ *  porque no se sabe la capacidad de cada camión; solo se avisa en rojo
+ *  si pasa del máximo que puede llevar cualquiera (MAX_PALETS_CAMION). */
 function fichasCamionesHtml_(camiones, paletsCamion) {
   if (!camiones || !camiones.length) return '';
   return '<div class="carga-fichas-camion">' + camiones.map(function (c, i) {
@@ -658,7 +660,7 @@ function fichasCamionesHtml_(camiones, paletsCamion) {
     const pasado = p > MAX_PALETS_CAMION;
     return '<div class="carga-ficha-camion">' +
       '<div class="cab"><span>' + ICONO_CAMION_16_ + 'CAMIÓN' + (camiones.length >= 2 ? ' ' + (i + 1) : '') + '</span>' +
-        '<span class="palets' + (pasado ? ' pasado' : '') + '">' + p + ' de ' + MAX_PALETS_CAMION + ' palets</span></div>' +
+        '<span class="palets' + (pasado ? ' pasado' : '') + '">' + p + ' palets' + (pasado ? ' · más de ' + MAX_PALETS_CAMION : '') + '</span></div>' +
       '<div class="datos"><div><span class="lbl">Matrícula</span><b>' + escapeHtml(c.matricula || '—') + '</b></div>' +
         '<div><span class="lbl">Remolque</span><b>' + escapeHtml(c.remolque || '—') + '</b></div></div>' +
     '</div>';
