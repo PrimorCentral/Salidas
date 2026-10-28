@@ -622,7 +622,7 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
     cuerpo = filas.map(function (f) { return filaHtml(f); }).join('');
   } else {
     cuerpo = agr.grupos.map(function (g) {
-      return '<tr class="fila-camion' + (g.idx < 0 ? ' sin-camion' : '') + '"><td colspan="3">' + tituloCamionHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
+      return '<tr class="fila-camion' + (g.idx < 0 ? ' sin-camion' : '') + '"><td colspan="3">' + tituloCamionCortoHtml_(g.camion, g.idx, agr.n) + '</td></tr>' +
         g.items.map(function (it) { return filaHtml(it.f, it.cargar, it.sobra, it.parte); }).join('') +
         (agr.n >= 2 && g.idx >= 0
           ? '<tr class="fila-subtotal-camion"><td>Subtotal camión ' + (g.idx + 1) + '</td><td class="num">' + g.cargar + '</td><td class="num">' + (g.sobra || '—') + '</td></tr>'
@@ -634,7 +634,35 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
     '<tbody>' + cuerpo + '</tbody>' +
     '<tfoot><tr><td>Total palets' + (camiones.length >= 2 ? ' (' + camiones.length + ' camiones)' : '') + '</td><td class="num">' + totCargar + '</td><td class="num">' + totSobra + '</td></tr></tfoot>' +
   '</table></div>';
-  return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra, camiones: camiones };
+  const paletsCamion = camiones.map(function (c, i) {
+    const g = agr ? agr.grupos.filter(function (x) { return x.idx === i; })[0] : null;
+    return g ? g.cargar : 0;
+  });
+  return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra, camiones: camiones, paletsCamion: paletsCamion };
+}
+
+/** Franja corta de la tabla en pantalla: "CAMIÓN 2 · 2210 MBX" (la
+ *  matrícula completa, el remolque y los palets van en la ficha de la
+ *  izquierda, ver fichasCamionesHtml_). */
+function tituloCamionCortoHtml_(camion, idx, n) {
+  if (idx < 0) return '<b>SIN CAMIÓN ASIGNADO</b>';
+  return '<b>CAMIÓN' + (n >= 2 ? ' ' + (idx + 1) : '') + '</b> · ' + escapeHtml(camion.matricula || '');
+}
+
+/** Fichas de los camiones para la columna izquierda de los modales de
+ *  carga: matrícula, remolque y palets que lleva (de MAX_PALETS_CAMION). */
+function fichasCamionesHtml_(camiones, paletsCamion) {
+  if (!camiones || !camiones.length) return '';
+  return '<div class="carga-fichas-camion">' + camiones.map(function (c, i) {
+    const p = (paletsCamion && paletsCamion[i]) || 0;
+    const pasado = p > MAX_PALETS_CAMION;
+    return '<div class="carga-ficha-camion">' +
+      '<div class="cab"><span>' + ICONO_CAMION_16_ + 'CAMIÓN' + (camiones.length >= 2 ? ' ' + (i + 1) : '') + '</span>' +
+        '<span class="palets' + (pasado ? ' pasado' : '') + '">' + p + ' de ' + MAX_PALETS_CAMION + ' palets</span></div>' +
+      '<div class="datos"><div><span class="lbl">Matrícula</span><b>' + escapeHtml(c.matricula || '—') + '</b></div>' +
+        '<div><span class="lbl">Remolque</span><b>' + escapeHtml(c.remolque || '—') + '</b></div></div>' +
+    '</div>';
+  }).join('') + '</div>';
 }
 
 
@@ -674,11 +702,11 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
             '<span>El conteo ha cambiado después de fijar la carga. Un responsable con permiso «Ajustar carga» tiene que verificarla.</span></div></div>'
         : '') +
       statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) +
-      // Sin camiones de recogida con matrícula: se indica a la izquierda.
-      (camionesValidos_(info.camiones).length === 0
+      // Camiones con su matrícula a la izquierda; si no hay, se avisa.
+      (tabla.camiones.length === 0
         ? '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_CAMION_16_ +
             '<span>No hay matrículas asignadas</span></div></div>'
-        : '');
+        : fichasCamionesHtml_(tabla.camiones, tabla.paletsCamion));
     cuerpo = columnasCarga_(cuerpo, tabla.html);
   }
 
@@ -1226,6 +1254,7 @@ function mostrarModalCargaCorrecta(datos) {
     columnasCarga_(
     estadoCargaHtml_(datos.carga) +
     statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) +
+    fichasCamionesHtml_(tabla.camiones, tabla.paletsCamion) +
     '<div class="modal-envio-aviso modal-carga-info"><div class="modal-envio-aviso-titulo">' + ICONO_INFO_16_ +
       '<span>Esta es la carga que irá en el email de ' + etiqueta.toLowerCase() + '.</span></div></div>',
     tabla.html);
@@ -1255,7 +1284,8 @@ function mostrarModalCargaPendiente(datos) {
     columnasCarga_(
     '<div class="modal-envio-aviso modal-envio-alerta"><div class="modal-envio-aviso-titulo">' + ICONO_AVISO_16_ +
       '<span>El conteo ha cambiado después de fijar la carga. Avisa a un responsable con permiso «Ajustar carga» para que la verifique.</span></div></div>' +
-    statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra), tabla.html);
+    statsCargaHtml_(tabla.totContados, tabla.totCargar, tabla.totSobra) +
+    fichasCamionesHtml_(tabla.camiones, tabla.paletsCamion), tabla.html);
   document.getElementById('modal-actions').innerHTML = '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
