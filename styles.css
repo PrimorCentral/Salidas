@@ -1725,6 +1725,12 @@
   .menu-rapido-buscar input {
     border: none; outline: none; font-size: 12.5px; flex: 1 1 auto; min-width: 0; color: var(--ink); background: none;
   }
+  .menu-rapido-limpiar {
+    border: none; background: #e3e6ec; color: var(--ink-soft); width: 18px; height: 18px; border-radius: 50%;
+    font-size: 13px; line-height: 18px; padding: 0; flex-shrink: 0; cursor: pointer; text-align: center;
+  }
+  .menu-rapido-limpiar:hover { background: #d3d8e0; color: var(--ink); }
+  .menu-rapido-limpiar[hidden] { display: none; }
   .menu-rapido-sin-resultados { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
   .menu-rapido-body { display: flex; flex-direction: column; gap: 4px; }
   .menu-rapido-vacio { color: var(--ink-soft); font-size: 12.5px; padding: 4px 2px; }
