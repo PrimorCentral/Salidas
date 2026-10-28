@@ -847,14 +847,44 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     // con la etiqueta "CARGA SIN AJUSTAR POR UN RESPONSABLE".
     if (!info && seccion.estado !== 'enviado') info = { tipo: 'contado', lista: listaCargaEfectiva_() };
     const onEditar = puede ? function () { abrirAjustarCarga_(null, null, true); } : null;
+    // Definitivo ya enviado: con el permiso "Ajustar carga" se puede poner
+    // o cambiar la matrícula/remolque (sin tocar palets).
+    const onMatriculas = (c && c.origen === 'definitivo' && tienePermiso('ajustar_carga'))
+      ? function (camiones) { abrirMatriculasDefinitivo_(camiones); } : null;
     mostrarModalListaCarga(info, titulo, fechaTexto, {
       revisar: revisar,
       soloLectura: !puede && !(c && c.origen === 'definitivo') && seccion.estado !== 'enviado',
-      onEditar: onEditar
+      onEditar: onEditar,
+      onMatriculas: onMatriculas
     });
     // Sin ajustar todavía y con permiso: ventanita encima preguntando si
     // se quiere ajustar (solo se quita con sus botones o con Escape).
     if (puede && info && info.tipo === 'contado') mostrarAvisoCargaSinAjustar(onEditar);
+  }
+  // Matrícula/remolque con el definitivo ya enviado. Al guardar o cancelar
+  // se vuelve a la lista de carga.
+  function abrirMatriculasDefinitivo_(camiones) {
+    mostrarModalMatriculasDefinitivo({
+      titulo: parsearNombreAgrupacion(seccion.nombre).titulo,
+      fechaTexto: formatearFechaLarga(fecha),
+      camiones: camiones,
+      onCancelar: function () { abrirCarga_(); },
+      onGuardar: function (lista) {
+        mostrarModalCargando('Guardando la matrícula…');
+        llamarApi_('guardarMatriculasDefinitivo', [dia, seccion.nombre, fecha, lista])
+          .then(function (carga) {
+            if (carga) seccion.carga = carga;
+            actualizarEstadoCarga_();
+            mostrarToast('Matrícula guardada');
+            abrirCarga_();
+          })
+          .catch(function (err) {
+            cerrarModal();
+            if (err && /permiso/i.test(err.message || '')) mostrarModalSinPermiso();
+            else mostrarErrorServidor(err);
+          });
+      }
+    });
   }
   // Modal editable. tipoEnvio: 'prevision'|'definitivo' si se abre en mitad
   // de un envío (entonces alTerminar sigue con el envío tras guardar).

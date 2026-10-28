@@ -105,6 +105,12 @@ const SUPABASE_ACCIONES_ = {
   // Candado de la cabecera (solo administradores): desbloquea el conteo
   // bloqueado por la carga ajustada o la previsión enviada. Borra la carga
   // ajustada si la hay y devuelve la carga vigente (con desbloqueada: true).
+  // Matrícula/remolque de los camiones con el definitivo ya enviado (no toca palets).
+  guardarMatriculasDefinitivo: function (args) {
+    return llamarRpcSupabase_('guardar_matriculas_definitivo', {
+      p_dia: args[0], p_nombre_ruta: args[1], p_fecha: args[2], p_camiones: args[3]
+    });
+  },
   desbloquearCarga: function (args) {
     const dia = args[0], nombreAgrupacion = args[1], fecha = args[2];
     return llamarRpcSupabase_('desbloquear_carga', { p_dia: dia, p_nombre_ruta: nombreAgrupacion, p_fecha: fecha });

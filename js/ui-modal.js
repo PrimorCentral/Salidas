@@ -646,6 +646,8 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
  *   revisar:     { 'NOMBRE TIENDA': {antes, ahora} } tiendas cuyo conteo cambió
  *   soloLectura: muestra la banda "Solo lectura" (usuario sin permiso)
  *   onEditar:    si viene, lápiz al lado de la X para pasar a editar la carga
+ *   onMatriculas: si viene (definitivo ya enviado y permiso «Ajustar carga»),
+ *                 botón para poner o cambiar matrícula y remolque
  * info.tipo 'contado': nadie ha ajustado todavía; se enseña lo contado.
  */
 function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
@@ -687,11 +689,17 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>' +
+    (tabla && extra.onMatriculas
+      ? '<button class="modal-cancel modal-btn-matricula" id="modal-matriculas-btn" title="Poner o cambiar la matrícula y el remolque (los palets no se tocan)">' + ICONO_CAMION_16_ +
+          '<span>' + (camionesValidos_(info.camiones).length ? 'Cambiar matrícula' : 'Poner matrícula') + '</span></button>'
+      : '') +
     (tabla ? '<button class="modal-whatsapp" id="modal-whatsapp-btn" title="Compartir por WhatsApp">' + ICONO_COMPARTIR_16_ + '<span>WhatsApp</span></button>' : '') +
     (tabla ? '<button class="modal-confirm" id="modal-confirm-btn">Imprimir</button>' : '');
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   if (extra.onEditar) ponerLapizModal_(false, extra.onEditar);
+  const btnMatriculas = document.getElementById('modal-matriculas-btn');
+  if (btnMatriculas) btnMatriculas.onclick = function () { extra.onMatriculas(info.camiones || []); };
   if (tabla) {
     const tipoTexto = tipo === 'definitivo' ? 'Definitivo' : (tipo === 'ajuste' ? 'Carga ajustada' : (tipo === 'contado' ? 'Lo contado' : 'Previsión'));
     document.getElementById('modal-confirm-btn').onclick = function () {
@@ -701,6 +709,77 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
       compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, tabla.filas, tabla.totCargar, tabla.totSobra, tabla.camiones);
     };
   }
+}
+
+/**
+ * Modal "Matrícula del camión" con el definitivo ya enviado: solo matrícula
+ * (obligatoria) y remolque de cada camión. No se pueden añadir ni quitar
+ * camiones ni tocar palets (el reparto ya se envió). Sin camiones, se pone
+ * uno y todas las tiendas van en él.
+ *
+ * datos: { titulo, fechaTexto, camiones: [{matricula, remolque, ...}],
+ *          onGuardar: function(lista [{matricula, remolque}]), onCancelar }
+ */
+function mostrarModalMatriculasDefinitivo(datos) {
+  const custom = prepararModalCarga_();
+  document.getElementById('modal-box').classList.remove('ancho');
+  document.getElementById('modal-box').classList.add('medio');
+  const actuales = (Array.isArray(datos.camiones) && datos.camiones.length) ? datos.camiones : [{ matricula: '', remolque: '' }];
+  const lista = actuales.map(function (c) { return { matricula: (c && c.matricula) || '', remolque: (c && c.remolque) || '' }; });
+  function normalizar(t) {
+    return String(t || '').toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 15);
+  }
+
+  custom.innerHTML =
+    cabeceraModalCarga_('Matrícula del camión', datos.titulo + ' · Definitivo · ' + datos.fechaTexto, '') +
+    '<p class="modal-envio-nota" style="margin:4px 0 12px;">El definitivo ya está enviado: aquí solo se pone o se cambia la matrícula y el remolque. Los palets y el reparto de tiendas no cambian.</p>' +
+    '<div class="modal-camiones"><div class="modal-camiones-lista">' +
+      lista.map(function (c, k) {
+        return '<div class="modal-camion" data-k="' + k + '">' +
+          '<span class="modal-camion-num">' + (k + 1) + '</span>' +
+          '<label class="modal-camion-campo"><span>Matrícula</span><input type="text" class="cam-matricula" data-k="' + k + '" maxlength="15" autocomplete="off" placeholder="Matrícula" value="' + escapeHtml(c.matricula) + '"></label>' +
+          '<label class="modal-camion-campo"><span>Remolque</span><input type="text" class="cam-remolque" data-k="' + k + '" maxlength="15" autocomplete="off" placeholder="Remolque" value="' + escapeHtml(c.remolque) + '"></label>' +
+        '</div>';
+      }).join('') +
+    '</div><div class="modal-camiones-aviso"></div></div>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar matrícula</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+
+  custom.querySelectorAll('input.cam-matricula, input.cam-remolque').forEach(function (inp) {
+    inp.oninput = function () {
+      const pos = inp.selectionStart;
+      const limpio = normalizar(inp.value);
+      if (limpio !== inp.value) { inp.value = limpio; try { inp.setSelectionRange(pos, pos); } catch (e) { /* nada */ } }
+      const k = Number(inp.getAttribute('data-k'));
+      if (inp.classList.contains('cam-matricula')) lista[k].matricula = limpio; else lista[k].remolque = limpio;
+      inp.classList.remove('pasado');
+    };
+  });
+  document.getElementById('modal-cancel-btn').onclick = function () {
+    if (datos.onCancelar) datos.onCancelar(); else cerrarModal();
+  };
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const aviso = custom.querySelector('.modal-camiones-aviso');
+    for (let k = 0; k < lista.length; k++) {
+      lista[k].matricula = lista[k].matricula.trim();
+      lista[k].remolque = lista[k].remolque.trim();
+      if (!lista[k].matricula) {
+        const inp = custom.querySelector('input.cam-matricula[data-k="' + k + '"]');
+        if (inp) { inp.classList.add('pasado'); inp.focus(); }
+        aviso.textContent = 'Falta la matrícula' + (lista.length > 1 ? ' del camión ' + (k + 1) : '') + '.';
+        return;
+      }
+    }
+    datos.onGuardar(lista);
+  };
+  setTimeout(function () {
+    const primero = custom.querySelector('input.cam-matricula');
+    if (primero) primero.focus();
+  }, 50);
 }
 
 /**
