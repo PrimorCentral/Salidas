@@ -28,7 +28,10 @@ const ADMIN_SECCIONES = [
   { id: 'usuarios', label: 'Usuarios', permiso: 'usuarios' },
   { id: 'servidores', label: 'Servidores', permiso: null },
   { id: 'cola-emails', label: 'Cola de avisos a tiendas', permiso: 'cola_emails' },
-  { id: 'simulacion-aviso-tiendas', label: 'Simulación envío tiendas', permiso: 'aviso_tiendas' }
+  { id: 'simulacion-aviso-tiendas', label: 'Simulación envío tiendas', permiso: 'aviso_tiendas' },
+  // Solo administradores: "registro_actividad" no está en CATALOGO_PERMISOS,
+  // así que no se le puede dar a un operario (tienePermiso deja pasar al admin).
+  { id: 'registro-actividad', label: 'Registro de actividad', permiso: 'registro_actividad' }
   // futuras secciones de Administración van aquí
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };

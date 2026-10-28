@@ -594,6 +594,10 @@ const SUPABASE_ACCIONES_ = {
   eliminarExcepcionTienda: function (args) {
     return llamarRpcSupabase_('eliminar_excepcion_tienda', { p_id: args[0] });
   },
+  // -- Supabase: Administración: Registro de actividad (solo admin) --
+  getRegistroActividad: function (args) {
+    return llamarRpcSupabase_('get_registro_actividad', { p_desde: args[0], p_hasta: args[1] });
+  },
   // -- Supabase: Administración: Palets forzados --
   getPaletsForzadosAdmin: function (args) {
     const fechaIni = args[0], fechaFin = args[1];

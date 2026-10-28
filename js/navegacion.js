@@ -273,4 +273,5 @@ function renderSeccionAdminActiva() {
   else if (ESTADO_ADMIN.seccionActiva === 'servidores') renderAdminServidores();
   else if (ESTADO_ADMIN.seccionActiva === 'cola-emails') renderAdminColaEmails();
   else if (ESTADO_ADMIN.seccionActiva === 'simulacion-aviso-tiendas') renderSimulacionAvisoTiendas();
+  else if (ESTADO_ADMIN.seccionActiva === 'registro-actividad') renderAdminRegistroActividad();
 }
