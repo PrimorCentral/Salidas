@@ -641,12 +641,13 @@ function tablaCargaFija_(lista, revisar, marcarAjustadas, camiones) {
   return { html: html, filas: filas, totContados: totContados, totCargar: totCargar, totSobra: totSobra, camiones: camiones, paletsCamion: paletsCamion };
 }
 
-/** Franja corta de la tabla en pantalla: "CAMIÓN 2 · 2210 MBX" (la
- *  matrícula completa, el remolque y los palets van en la ficha de la
- *  izquierda, ver fichasCamionesHtml_). */
+/** Franja de la tabla en pantalla: "CAMIÓN 2 · Matrícula 2210 MBX ·
+ *  Remolque R 0973 BFH" (el remolque solo si lo hay). Los palets van en la
+ *  ficha de la izquierda (fichasCamionesHtml_). */
 function tituloCamionCortoHtml_(camion, idx, n) {
   if (idx < 0) return '<b>SIN CAMIÓN ASIGNADO</b>';
-  return '<b>CAMIÓN' + (n >= 2 ? ' ' + (idx + 1) : '') + '</b> · ' + escapeHtml(camion.matricula || '');
+  return '<b>CAMIÓN' + (n >= 2 ? ' ' + (idx + 1) : '') + '</b> · Matrícula ' + escapeHtml(camion.matricula || '') +
+    (camion.remolque ? ' · Remolque ' + escapeHtml(camion.remolque) : '');
 }
 
 /** Fichas de los camiones para la columna izquierda de los modales de
