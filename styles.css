@@ -1186,7 +1186,7 @@
      en la fila de días (misma línea que LUNES/MARTES...), que es "sticky",
      así que se mantienen visibles al hacer scroll. Solo aparecen cuando
      hay un día seleccionado y solo buscan entre lo que hay en ESE día. */
-  .plantilla-buscadores { display: flex; gap: 8px; flex: 1 1 340px; max-width: 640px; margin: 0 auto; flex-wrap: wrap; }
+  .plantilla-buscadores { display: flex; gap: 8px; flex: 1 1 300px; max-width: 420px; margin: 0 0 0 auto; flex-wrap: wrap; }
   .plantilla-buscador-wrap { position: relative; flex: 1 1 200px; min-width: 160px; }
   .plantilla-buscador {
     display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px;
@@ -1216,6 +1216,12 @@
     background: #eef1f7; border-radius: 6px; padding: 2px 7px;
   }
   .plantilla-buscador-vacio { padding: 10px 12px; font-size: 13px; color: var(--ink-soft); }
+  /* Títulos "Agrupaciones" / "Tiendas" dentro del desplegable del buscador único. */
+  .plantilla-buscador-grupo {
+    position: sticky; top: 0; z-index: 1;
+    padding: 6px 12px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--ink-soft); background: #f6f8fb; border-bottom: 1px solid var(--line);
+  }
   @media (max-width: 640px) {
     .plantilla-buscadores { flex-basis: 100%; max-width: none; margin: 0; }
     .plantilla-buscador-wrap { flex-basis: 100%; min-width: 0; }
