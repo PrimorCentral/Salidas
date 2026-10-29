@@ -2161,10 +2161,12 @@ function mostrarModalCandado_(opts) {
 }
 
 /** Barra "desliza para desbloquear": arrastrar el mando (ratón o dedo)
- *  hasta el final llama a onCompleto. Sin animaciones (en algunos PCs no
+ *  hasta el final llama a onCompleto. iconoCompleto (opcional): icono del
+ *  mando al terminar (por defecto, el candado abierto). puedeCompletar
+ *  (opcional): si devuelve false al llegar al final, el mando vuelve. Sin animaciones (en algunos PCs no
  *  se ven): el mando sigue al puntero y, si se suelta antes, vuelve. Con
  *  teclado: flecha derecha avanza a pasos, flecha izquierda retrocede. */
-function activarDeslizador_(barra, onCompleto) {
+function activarDeslizador_(barra, onCompleto, iconoCompleto, puedeCompletar) {
   const mando = barra.querySelector('.desliza-mando');
   const relleno = barra.querySelector('.desliza-relleno');
   const texto = barra.querySelector('.desliza-texto');
@@ -2182,14 +2184,14 @@ function activarDeslizador_(barra, onCompleto) {
     hecho = true;
     poner(max);
     barra.classList.add('completo');
-    mando.innerHTML = SVG_CANDADO_ABIERTO_;
+    mando.innerHTML = iconoCompleto || SVG_CANDADO_ABIERTO_;
     setTimeout(onCompleto, 120);
   }
   function soltar() {
     if (inicio === null || hecho) return;
     inicio = null;
     barra.classList.remove('arrastrando');
-    if (x >= max * 0.95) completar(); else poner(0);
+    if (x >= max * 0.95 && (!puedeCompletar || puedeCompletar())) completar(); else poner(0);
   }
   mando.addEventListener('pointerdown', function (e) {
     if (hecho) return;
@@ -2209,7 +2211,10 @@ function activarDeslizador_(barra, onCompleto) {
   mando.addEventListener('keydown', function (e) {
     if (hecho) return;
     medir();
-    if (e.key === 'ArrowRight') { e.preventDefault(); poner(x + max / 5); if (x >= max) completar(); }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault(); poner(x + max / 5);
+      if (x >= max) { if (!puedeCompletar || puedeCompletar()) completar(); else poner(0); }
+    }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); poner(x - max / 5); }
   });
   medir();

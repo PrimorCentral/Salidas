@@ -456,10 +456,10 @@ function abrirModalNuevoDiaEspecial_() {
 function confirmarEliminarDiaEspecial_(nombre) {
   const e = especialPlantilla_(nombre);
   if (!e) return;
-  appConfirm(
-    'Eliminar conteo especial',
-    '¿Seguro que quieres eliminar el conteo especial del ' + formatearFechaLarga(e.fecha) + '? Ese día volverá a usar la plantilla normal de ' + diaNormalDeFecha_(e.fecha) + '.',
-    function () {
+  appConfirmDeslizando({
+    titulo: 'Eliminar conteo especial',
+    texto: '¿Seguro que quieres eliminar el conteo especial del ' + formatearFechaLarga(e.fecha) + '? Ese día volverá a usar la plantilla normal de ' + diaNormalDeFecha_(e.fecha) + '.',
+    onConfirmar: function () {
       llamarApi_('eliminarDiaEspecial', [nombre])
         .then(function () {
           mostrarToast('Conteo especial eliminado');
@@ -471,9 +471,8 @@ function confirmarEliminarDiaEspecial_(nombre) {
           if (listaEl) listaEl.innerHTML = '<div class="festivos-vacio">Elige un día arriba para ver y editar sus rutas.</div>';
         })
         .catch(mostrarErrorServidor);
-    },
-    true
-  );
+    }
+  });
 }
 
 /** HTML del buscador de "Rutas y tiendas": uno solo para agrupaciones y
@@ -734,9 +733,49 @@ function dividirNombreTiendaPlantilla_(nombre) {
 function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
   const bloqueado = campo === 'c60' ? t.bloqueo60 : (campo === 'pta' ? t.bloqueoPta : t.bloqueoCart);
   const titulo = bloqueado
-    ? 'Quitar el bloqueo "NO" de ' + etiqueta + ' en esta tienda'
-    : 'Bloquear la casilla ' + etiqueta + ' en los conteos';
-  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' + etiqueta + '</button>';
+    ? etiqueta + ' bloqueada para esta tienda (sale "NO" en el conteo). Pulsa para desbloquear'
+    : etiqueta + ' carga para esta tienda. Pulsa para bloquearla en los conteos';
+  const candado = bloqueado
+    ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+    : '';
+  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' + candado + etiqueta + '</button>';
+}
+
+/** Franja bajo la cabecera de cada ruta con los interruptores de la
+ *  ruta (PESO, C.EXPRESS, SOBRESTOCK, VIERNES, DOMINGO, PDF ESPECIAL).
+ *  Antes iban mezclados con los botones de acción (Orden retirada,
+ *  Grupos de palets, Añadir tienda); ahora van aparte, con un check
+ *  cuando están activos. Sin permiso de edición se ven, pero no se pulsan. */
+function opcionesRutaPlantillaHtml_(s) {
+  const editable = puedeEditarPlantilla_();
+  const nombre = escapeAttr(s.nombre);
+  const check = '<svg class="chk" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const chip = function (clase, atributo, activo, etiqueta, tituloOn, tituloOff) {
+    return '<button type="button" class="plantilla-chip ' + clase + (activo ? ' activo' : '') + '" data-toggle-' + atributo + '="' + nombre + '" data-' + atributo + '-activo="' + (activo ? '1' : '0') + '" title="' + escapeAttr(activo ? tituloOn : tituloOff) + '"' + (editable ? '' : ' disabled') + '>' +
+      (activo ? check : '') + etiqueta + '</button>';
+  };
+  return '<div class="plantilla-ruta-opciones">' +
+    '<span class="plantilla-ruta-opciones-label">Activar en esta ruta:</span>' +
+    chip('chip-azul', 'peso', s.tienePeso, 'PESO', 'Quitar la casilla PESO de esta ruta', 'Activar la casilla PESO en el conteo de esta ruta') +
+    chip('chip-azul', 'cexpress', s.tieneCExpress, 'C.EXPRESS', 'Quitar la casilla C.EXPRESS de esta ruta', 'Activar la casilla C.EXPRESS en el conteo de esta ruta') +
+    chip('chip-azul', 'sobrestock', s.tieneSobrestock, 'SOBRESTOCK', 'Quitar la casilla SOBRESTOCK de esta ruta', 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') +
+    chip('chip-viernes', 'viernes', s.tieneViernes, 'VIERNES', 'Quitar la casilla VIERNES de esta ruta', 'Activar la casilla VIERNES en el conteo de esta ruta (suma al total de la tienda, no a la carga)') +
+    chip('chip-domingo', 'domingo', s.tieneCasillaDomingo, 'DOMINGO', 'Quitar la casilla DOMINGO de esta ruta', 'Activar la casilla DOMINGO en el conteo de esta ruta (suma al total de la tienda, no a la carga)') +
+    chip('chip-azul', 'pdfespecial', s.tienePdfEspecial, 'PDF ESPECIAL', 'Quitar el PDF ESPECIAL de esta ruta', 'Activar el PDF ESPECIAL para esta ruta') +
+  '</div>';
+}
+
+/** Fila de títulos encima de las tiendas de una ruta, para que se sepa
+ *  qué es cada número (límite de palets y número de tienda) y qué
+ *  significan los colores de los botones de nave. */
+function cabeceraTiendasPlantillaHtml_() {
+  return '<div class="plantilla-tiendas-cabecera">' +
+    '<span class="plantilla-tienda-asa-hueco"></span>' +
+    '<span class="col-lim">Límite palets</span>' +
+    '<span class="col-num">Nº tienda</span>' +
+    '<span class="col-nombre">Tienda</span>' +
+    '<span class="col-leyenda">Naves: <i class="ley-carga"></i>carga <i class="ley-bloq"></i>bloqueada (pulsa para cambiar)</span>' +
+  '</div>';
 }
 
 function pintarPlantilla_() {
@@ -924,12 +963,8 @@ function pintarPlantilla_() {
           (puntualesEntran.length ? '<span class="plantilla-ruta-contador puntual">+' + puntualesEntran.length + ' puntual' + (puntualesEntran.length === 1 ? '' : 'es') + '</span>' : '') +
           '<div class="plantilla-ruta-spacer"></div>' +
           (puedeEditarPlantilla_() ? (
-            '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
-            '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
-            '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
-            '<button type="button" class="plantilla-ruta-viernes' + (s.tieneViernes ? ' activo' : '') + '" data-toggle-viernes="' + escapeAttr(s.nombre) + '" data-viernes-activo="' + (s.tieneViernes ? '1' : '0') + '" title="' + (s.tieneViernes ? 'Quitar la casilla VIERNES de esta ruta' : 'Activar la casilla VIERNES en el conteo de esta ruta (suma al total de la tienda, no a la carga)') + '">VIERNES</button>' +
-            '<button type="button" class="plantilla-ruta-domingo' + (s.tieneCasillaDomingo ? ' activo' : '') + '" data-toggle-domingo="' + escapeAttr(s.nombre) + '" data-domingo-activo="' + (s.tieneCasillaDomingo ? '1' : '0') + '" title="' + (s.tieneCasillaDomingo ? 'Quitar la casilla DOMINGO de esta ruta' : 'Activar la casilla DOMINGO en el conteo de esta ruta (suma al total de la tienda, no a la carga)') + '">DOMINGO</button>' +
-            '<button type="button" class="plantilla-ruta-pdfespecial' + (s.tienePdfEspecial ? ' activo' : '') + '" data-toggle-pdfespecial="' + escapeAttr(s.nombre) + '" data-pdfespecial-activo="' + (s.tienePdfEspecial ? '1' : '0') + '" title="' + (s.tienePdfEspecial ? 'Quitar el PDF ESPECIAL de esta ruta' : 'Activar el PDF ESPECIAL para esta ruta') + '">PDF ESPECIAL</button>' +
+            '<button type="button" class="plantilla-ruta-nota-carga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '" title="Añadir una nota de carga a esta ruta">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Nota de carga</button>' +
             '<button type="button" class="plantilla-ruta-orden' + (s.ordenRetirada && s.ordenRetirada.length ? ' activo' : '') + '" data-orden-ruta="' + escapeAttr(s.nombre) + '" title="' + (s.ordenRetirada && s.ordenRetirada.length ? 'Editar el orden de retirada (' + s.ordenRetirada.length + ' tienda(s))' : 'Configurar el orden en que se quitan los palets de esta ruta') + '">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
               'Orden retirada' + (s.ordenRetirada && s.ordenRetirada.length ? ' (' + s.ordenRetirada.length + ')' : '') +
@@ -947,14 +982,11 @@ function pintarPlantilla_() {
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
         '</div>' +
-        (notasCargaHtml || puedeEditarPlantilla_() ? (
-          '<div class="plantilla-notascarga">' +
-            notasCargaHtml +
-            (puedeEditarPlantilla_() ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
-              '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir nota de carga</button>' : '') +
-          '</div>'
-        ) : '') +
-        '<div class="plantilla-tiendas">' + (tiendasHtml || '<div class="festivos-item-vacio">Sin tiendas todavía.</div>') + '</div>' +
+        opcionesRutaPlantillaHtml_(s) +
+        (notasCargaHtml ? '<div class="plantilla-notascarga">' + notasCargaHtml + '</div>' : '') +
+        '<div class="plantilla-tiendas">' +
+          (tiendasHtml ? cabeceraTiendasPlantillaHtml_() + tiendasHtml : '<div class="festivos-item-vacio">Sin tiendas todavía.</div>') +
+        '</div>' +
       '</div>'
     );
   }).join('');
@@ -1389,12 +1421,11 @@ function confirmarEliminarTiendaPlantilla_(row) {
     .then(function (resultado) {
       const dias = (resultado && resultado.dias) || [];
       if (!dias.length) {
-        appConfirm(
-          'Eliminar tienda',
-          '¿Seguro que quieres eliminar esta tienda de la plantilla? Esta acción no se puede deshacer.',
-          function () { eliminarTiendaPlantilla_(row); },
-          true
-        );
+        appConfirmDeslizando({
+          titulo: 'Eliminar tienda',
+          texto: '¿Seguro que quieres eliminar esta tienda de la plantilla? Esta acción no se puede deshacer.',
+          onConfirmar: function () { eliminarTiendaPlantilla_(row); }
+        });
         return;
       }
       mostrarModalEliminarTiendaVariosDias_(row, dias);
@@ -1406,31 +1437,19 @@ function confirmarEliminarTiendaPlantilla_(row) {
  *  aparece en otros días: cancelar, borrar solo el día actual, o borrar
  *  de golpe en todos los días donde aparezca. */
 function mostrarModalEliminarTiendaVariosDias_(row, dias) {
-  document.getElementById('modal-box').classList.remove('ancho');
-  document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-box').classList.add('medio');
-  document.getElementById('modal-box').classList.remove('peligro');
-  document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Esta tienda aparece en más días';
-  document.getElementById('modal-text').style.display = 'none';
-  document.getElementById('modal-textarea').style.display = 'none';
-
-  const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
-  custom.innerHTML =
-    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta misma tienda también está en: <b>' +
-      dias.map(escapeHtml).join(', ') +
-      '</b>. Si borras solo aquí, seguirá existiendo con normalidad en esos otros días (no se queda huérfana). Usa "Borrar en todos" solo si quieres quitarla por completo de la plantilla.</p>';
-
-  const actions = document.getElementById('modal-actions');
-  actions.innerHTML =
-    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-borrar-aqui-btn">Borrar solo aquí</button>' +
-    '<button class="modal-confirm danger" id="modal-borrar-todos-btn">Borrar en todos (' + (dias.length + 1) + ' días)</button>';
-  document.getElementById('modal-overlay').style.display = 'flex';
-  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  document.getElementById('modal-borrar-aqui-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row); };
-  document.getElementById('modal-borrar-todos-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantillaTodosDias_(row); };
+  appConfirmDeslizando({
+    titulo: 'Esta tienda aparece en más días',
+    texto: 'Esta misma tienda también está en: ' + dias.join(', ') + '. Si la borras solo aquí, seguirá existiendo con normalidad en esos otros días. Borra en todos solo si quieres quitarla por completo de la plantilla.',
+    opciones: [
+      { valor: 'aqui', etiqueta: 'Borrar solo en ' + PLANTILLA_ESTADO.dia },
+      { valor: 'todos', etiqueta: 'Borrar en todos (' + (dias.length + 1) + ' días)' }
+    ],
+    opcionInicial: 'aqui',
+    onConfirmar: function (opcion) {
+      if (opcion === 'todos') eliminarTiendaPlantillaTodosDias_(row);
+      else eliminarTiendaPlantilla_(row);
+    }
+  });
 }
 
 /** Modal con 2 opciones cuando la tienda que se va a borrar tiene
@@ -1438,29 +1457,16 @@ function mostrarModalEliminarTiendaVariosDias_(row, dias) {
  *  para siempre) o conservarlos (la tienda se oculta de la plantilla,
  *  pero su histórico sigue intacto y consultable en esos días). */
 function mostrarModalEliminarTiendaConHistorico_(row, nConteos) {
-  document.getElementById('modal-box').classList.remove('ancho');
-  document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-box').classList.add('medio');
-  document.getElementById('modal-box').classList.remove('peligro');
-  document.getElementById('modal-title').style.display = '';
-  document.getElementById('modal-title').textContent = 'Esta tienda tiene conteos guardados';
-  document.getElementById('modal-text').style.display = 'none';
-  document.getElementById('modal-textarea').style.display = 'none';
-
-  const custom = document.getElementById('modal-custom');
-  custom.style.display = 'block';
-  custom.innerHTML =
-    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta tienda tiene ' + nConteos + ' conteo(s) guardado(s) de días anteriores. ¿Qué quieres hacer con ese histórico?</p>';
-
-  const actions = document.getElementById('modal-actions');
-  actions.innerHTML =
-    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-conservar-btn">Conservar histórico (ocultar tienda)</button>' +
-    '<button class="modal-confirm danger" id="modal-borrar-hist-btn">Borrar también el histórico</button>';
-  document.getElementById('modal-overlay').style.display = 'flex';
-  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  document.getElementById('modal-conservar-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row, 'conservar_historico'); };
-  document.getElementById('modal-borrar-hist-btn').onclick = function () { cerrarModal(); eliminarTiendaPlantilla_(row, 'borrar_historico'); };
+  appConfirmDeslizando({
+    titulo: 'Esta tienda tiene conteos guardados',
+    texto: 'Esta tienda tiene ' + nConteos + ' conteo(s) guardado(s) de días anteriores. ¿Qué quieres hacer con ese histórico?',
+    opciones: [
+      { valor: 'conservar_historico', etiqueta: 'Conservar histórico (ocultar tienda)' },
+      { valor: 'borrar_historico', etiqueta: 'Borrar también el histórico' }
+    ],
+    opcionInicial: 'conservar_historico',
+    onConfirmar: function (opcion) { eliminarTiendaPlantilla_(row, opcion); }
+  });
 }
 
 function eliminarTiendaPlantilla_(row, modo) {
@@ -1915,10 +1921,10 @@ function guardarNotaCargaPlantilla_(row, idSeguro) {
 }
 
 function confirmarEliminarNotaCargaPlantilla_(row) {
-  appConfirm(
-    'Eliminar nota de carga',
-    '¿Seguro que quieres eliminar esta nota de carga? Esta acción no se puede deshacer.',
-    function () {
+  appConfirmDeslizando({
+    titulo: 'Eliminar nota de carga',
+    texto: '¿Seguro que quieres eliminar esta nota de carga? Esta acción no se puede deshacer.',
+    onConfirmar: function () {
       const r = Number(row);
       const mutar = function () {
         const info = buscarNotaCargaPlantilla_(r);
@@ -1927,9 +1933,8 @@ function confirmarEliminarNotaCargaPlantilla_(row) {
         desplazarRowsPlantillaDesde_(r + 1, -1);
       };
       guardarPlantillaOptimista_(mutar, 'eliminarNotaCargaPlantilla', [PLANTILLA_ESTADO.dia, r], 'Eliminada');
-    },
-    true
-  );
+    }
+  });
 }
 
 function abrirModalAnadirNotaCargaPlantilla_(nombreRuta) {
@@ -3314,12 +3319,12 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
 }
 
 function confirmarEliminarRutaPlantilla_(nombreRuta) {
-  appConfirm(
-    'Eliminar ruta completa',
-    '¿Seguro que quieres eliminar la ruta "' + nombreRuta + '" y TODAS sus tiendas de ' + PLANTILLA_ESTADO.dia + '? Esta acción no se puede deshacer.',
-    function () { eliminarRutaPlantilla_(nombreRuta); },
-    true
-  );
+  appConfirmDeslizando({
+    titulo: 'Eliminar ruta completa',
+    texto: '¿Seguro que quieres eliminar la ruta "' + nombreRuta + '" y TODAS sus tiendas de ' + PLANTILLA_ESTADO.dia + '? Esta acción no se puede deshacer.',
+    textoBarra: 'Desliza para eliminar la ruta',
+    onConfirmar: function () { eliminarRutaPlantilla_(nombreRuta); }
+  });
 }
 function eliminarRutaPlantilla_(nombreRuta) {
   // Borra un bloque de filas completo (título + notas + tiendas); se pide

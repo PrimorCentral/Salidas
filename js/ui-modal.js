@@ -37,6 +37,81 @@ function appConfirm(titulo, texto, onConfirm, peligro) {
   document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirm(); };
 }
 
+const SVG_PAPELERA_DESLIZA_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/><path d="M10 11v6M14 11v6"/></svg>';
+const SVG_CHECK_DESLIZA_ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+/**
+ * Confirmación de borrado "deslizando", igual que al desbloquear un
+ * conteo: en vez de un botón Eliminar, hay que arrastrar la papelera
+ * hasta el final de la barra (si se suelta antes, vuelve).
+ * opts = {
+ *   titulo, texto,
+ *   opciones: [{ valor, etiqueta }]  (opcional: se elige una antes de deslizar),
+ *   opcionInicial,                   (valor marcado al abrir, opcional)
+ *   textoBarra,                      (por defecto "Desliza para eliminar")
+ *   onConfirmar: function (valorElegido)
+ * }
+ */
+function appConfirmDeslizando(opts) {
+  const box = document.getElementById('modal-box');
+  ['ancho', 'usuario-form', 'gestor-obs'].forEach(function (c) { box.classList.remove(c); });
+  box.classList.add('medio');
+  box.classList.add('peligro');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = opts.titulo;
+  document.getElementById('modal-text').textContent = opts.texto || '';
+  document.getElementById('modal-text').style.display = opts.texto ? 'block' : 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const opciones = opts.opciones || [];
+  let elegida = opts.opcionInicial != null ? opts.opcionInicial : null;
+  const custom = document.getElementById('modal-custom');
+  if (opciones.length) {
+    custom.style.display = 'block';
+    custom.innerHTML =
+      '<div class="gestor-tipo-pills' + (opciones.length === 2 ? ' gestor-pills-2' : '') + ' desliza-opciones">' +
+        opciones.map(function (o) {
+          return '<button type="button" class="gestor-tipo-pill' + (o.valor === elegida ? ' activa' : '') + '" data-opcion-borrar="' + escapeAttr(o.valor) + '">' + escapeHtml(o.etiqueta) + '</button>';
+        }).join('') +
+      '</div>' +
+      '<div class="desliza-aviso" id="desliza-aviso" style="display:none;">Elige una opción antes de deslizar.</div>';
+    custom.querySelectorAll('[data-opcion-borrar]').forEach(function (btn) {
+      btn.onclick = function () {
+        elegida = btn.getAttribute('data-opcion-borrar');
+        custom.querySelectorAll('[data-opcion-borrar]').forEach(function (b) { b.classList.toggle('activa', b === btn); });
+        document.getElementById('desliza-aviso').style.display = 'none';
+      };
+    });
+  } else {
+    custom.style.display = 'none';
+    custom.innerHTML = '';
+  }
+
+  const textoBarra = opts.textoBarra || 'Desliza para eliminar';
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<div class="desliza-fila">' +
+      '<div class="desliza desliza-borrar" role="slider" aria-label="' + escapeAttr(textoBarra) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
+        '<span class="desliza-relleno"></span>' +
+        '<span class="desliza-texto">' + escapeHtml(textoBarra) + ' &#8594;</span>' +
+        '<span class="desliza-mando" tabindex="0" title="Arrastra hasta el final para eliminar">' + SVG_PAPELERA_DESLIZA_ + '</span>' +
+      '</div>' +
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '</div>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  activarDeslizador_(
+    actions.querySelector('.desliza'),
+    function () { cerrarModal(); opts.onConfirmar(elegida); },
+    SVG_CHECK_DESLIZA_,
+    function () {
+      if (!opciones.length || elegida != null) return true;
+      document.getElementById('desliza-aviso').style.display = '';
+      return false;
+    }
+  );
+}
+
 function appPrompt(titulo, placeholder, onSubmit, mayusculas) {
   // mayusculas (opcional, por defecto true): si es true, lo que se escriba
   // en el textarea se convierte a mayúsculas automáticamente mientras se
