@@ -12,7 +12,7 @@
  * entre una y otra) se juntan en una sola línea "antes → después".
  * Se guardan 6 meses.
  */
-let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, rango: 'hoy', usuarios: [], secciones: [], verbos: [], texto: '', datos: null, pagina: 1, agruparMovimientos: false, menuAbierto: null, busca: { usuarios: '', secciones: '', verbos: '' } };
+let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, rango: null, usuarios: [], secciones: [], verbos: [], texto: '', datos: null, pagina: 1, agruparMovimientos: false, menuAbierto: null, busca: { usuarios: '', secciones: '', verbos: '' } };
 
 // Registros por página (para que la lista no se haga eterna).
 const ACTIVIDAD_POR_PAGINA_ = 30;
@@ -42,7 +42,8 @@ function renderAdminRegistroActividad() {
   const cont = document.getElementById('admin-contenido');
   if (!cont) return;
   const st = ADMIN_ACTIVIDAD_ESTADO;
-  if (!st.desde || !st.hasta) { const f = fechasDeRangoActividad_(st.rango || 'hoy'); st.desde = f[0]; st.hasta = f[1]; }
+  // Al entrar no hay ningún periodo marcado: se busca al pulsar uno.
+  if (!st.desde || !st.hasta) { const f = fechasDeRangoActividad_('hoy'); st.desde = f[0]; st.hasta = f[1]; }
 
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -155,7 +156,7 @@ function pintarPeriodoActividad_() {
   const el = document.getElementById('ra-periodo-texto');
   if (!el) return;
   const st = ADMIN_ACTIVIDAD_ESTADO;
-  if (st.rango === 'custom') { el.textContent = ''; return; }
+  if (!st.rango || st.rango === 'custom' || !st.datos) { el.textContent = ''; return; }
   el.textContent = st.desde === st.hasta
     ? formatearFechaLarga(st.desde)
     : 'del ' + formatearFechaCorta_(st.desde) + ' al ' + formatearFechaCorta_(st.hasta);
