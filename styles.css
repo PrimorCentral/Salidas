@@ -1273,7 +1273,7 @@
   .plantilla-tienda-guardar:disabled { opacity: .3; cursor: default; background: none !important; color: var(--ink-soft) !important; }
   .plantilla-tiendas { display: flex; flex-direction: column; }
   .plantilla-tienda {
-    display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-top: 1px solid var(--line);
   }
   .plantilla-tienda:first-child { border-top: none; }
   /* Límite, número y nombre ahora son de solo lectura en la fila (se
@@ -1281,7 +1281,7 @@
      mismo aspecto de "chip" de antes para no perder la referencia visual
      rápida, pero sin aspecto de campo editable. */
   .plantilla-tienda .lim {
-    width: 48px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    width: 84px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
   /* Límite propio de ese día (override), distinto del general que viene de
@@ -1291,7 +1291,7 @@
     background: #fdf6ea; border-color: var(--amber-dark, #b8860b); color: var(--amber-dark, #b8860b); font-weight: 700;
   }
   .plantilla-tienda .numero {
-    width: 56px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    width: 72px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
   .plantilla-tienda .nombre {
@@ -1360,12 +1360,12 @@
   /* Fila de títulos encima de las tiendas. Los anchos coinciden con los
      de .lim y .numero de las filas para que queden alineados. */
   .plantilla-tiendas-cabecera {
-    display: flex; align-items: flex-end; gap: 6px; padding: 6px 10px 4px; background: #fbfbfc;
+    display: flex; align-items: center; gap: 8px; padding: 9px 10px 7px; background: #fbfbfc; white-space: nowrap;
     border-bottom: 1px solid var(--line);
     font-size: 10px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; line-height: 1.15;
   }
-  .plantilla-tiendas-cabecera .col-lim { width: 48px; flex-shrink: 0; text-align: center; }
-  .plantilla-tiendas-cabecera .col-num { width: 56px; flex-shrink: 0; text-align: center; }
+  .plantilla-tiendas-cabecera .col-lim { width: 84px; flex-shrink: 0; text-align: center; }
+  .plantilla-tiendas-cabecera .col-num { width: 72px; flex-shrink: 0; text-align: center; }
   .plantilla-tiendas-cabecera .col-nombre { flex: 1 1 auto; padding-left: 8px; }
   .plantilla-tiendas-cabecera .col-leyenda {
     flex-shrink: 0; text-transform: none; letter-spacing: 0; font-weight: 600; display: flex; align-items: center; gap: 4px;
@@ -1442,7 +1442,7 @@
      candado = bloqueada ("NO" en el conteo). Sin permiso se ven igual
      (para saber qué está bloqueado), pero no se pueden pulsar. */
   .plantilla-tienda-bloqueo {
-    display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 42px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 58px;
     background: #e6f4ee; border: 1px solid #a9d6c3; color: var(--ok); font-weight: 700;
     font-size: 9.5px; padding: 4px 6px; border-radius: 6px; white-space: nowrap; letter-spacing: .02em;
   }
@@ -2298,6 +2298,10 @@
   .desliza-opciones { margin-top: 4px; }
   .desliza-opciones .gestor-tipo-pill { padding: 10px 8px; font-size: 12px; }
   .desliza-aviso { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--danger); }
+  .desliza.bloqueada { background: #f3f4f6; border-color: #dfe2e7; }
+  .desliza.bloqueada .desliza-relleno { background: #f3f4f6; }
+  .desliza.bloqueada .desliza-texto { color: var(--ink-soft); }
+  .desliza.bloqueada .desliza-mando { background: #b5bcc7; cursor: not-allowed; box-shadow: none; }
 
   /* Papeleras de "Rutas y tiendas" (ruta, tienda y nota de carga) en rojo. */
   .plantilla-ruta-borrar, .plantilla-tienda-borrar { color: var(--danger); }
