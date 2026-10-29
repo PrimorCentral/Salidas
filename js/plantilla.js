@@ -98,6 +98,7 @@ function renderConfigPlantilla() {
     '<div class="vista-card">' +
       '<div class="vista-card-header">' +
         '<h2>Rutas y tiendas</h2>' +
+        '<div class="vista-card-header-acciones" id="plantilla-header-acciones"></div>' +
       '</div>' +
       '<p>Configuración de todas las rutas y tiendas de cada hoja de conteo por días.</p>' +
       '<div class="emails-config-solo-lectura">' +
@@ -177,8 +178,14 @@ function pintarDiasPlantilla_() {
       botonesEspeciales + botonNuevoEspecial + botonPasados +
     '</div>' +
     (PLANTILLA_ESTADO.dia ? buscadoresPlantillaHtml_() : '') +
-    (tienePermiso('plantilla') && PLANTILLA_ESTADO.dia ? botonAnadirRutaPlantillaHtml_() : '') +
     avisoDiaEspecialPlantillaHtml_();
+  // "Añadir ruta nueva" va arriba a la derecha de la tarjeta, junto al
+  // título (como los botones de acción del resto de pantallas), y no en
+  // la fila de días, que así queda solo para días y buscador.
+  const accionesHeader = document.getElementById('plantilla-header-acciones');
+  if (accionesHeader) {
+    accionesHeader.innerHTML = (puedeEditarPlantilla_() && PLANTILLA_ESTADO.dia) ? botonAnadirRutaPlantillaHtml_() : '';
+  }
   cont.querySelectorAll('.plantilla-dias button[data-dia]').forEach(function (btn) {
     btn.onclick = function () {
       if (btn.getAttribute('data-dia') === PLANTILLA_ESTADO.dia) return;
@@ -322,6 +329,16 @@ function fechaCortaEspecial_(fecha) {
   return p.length === 3 ? p[2] + '/' + p[1] : String(fecha || '');
 }
 
+/** true si se puede editar el día que se está viendo en "Rutas y tiendas":
+ *  hace falta permiso de plantilla y, además, que no sea un conteo
+ *  especial ya pasado (esos quedan solo para consulta, para no cambiar
+ *  lo que ya se usó ese día). */
+function puedeEditarPlantilla_() {
+  if (!tienePermiso('plantilla')) return false;
+  const e = especialPlantilla_(PLANTILLA_ESTADO.dia);
+  return !(e && e.pasado);
+}
+
 /** Franja informativa bajo la fila de días cuando el seleccionado es especial. */
 function avisoDiaEspecialPlantillaHtml_() {
   const e = especialPlantilla_(PLANTILLA_ESTADO.dia);
@@ -330,8 +347,10 @@ function avisoDiaEspecialPlantillaHtml_() {
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>' +
     '<span><b>Conteo especial</b> del ' + escapeHtml(formatearFechaLarga(e.fecha)) +
       (e.diaBase ? ' · copiado de ' + escapeHtml(e.diaBase) : '') +
-      '. Lo que cambies aquí solo afecta a ese día.</span>' +
-    (tienePermiso('plantilla') && !e.pasado
+      (e.pasado
+        ? '. Ya ha pasado: solo se puede consultar, no editar.</span>'
+        : '. Lo que cambies aquí solo afecta a ese día.</span>') +
+    (puedeEditarPlantilla_() && !e.pasado
       ? '<button type="button" class="plantilla-aviso-especial-eliminar" id="btn-plantilla-eliminar-especial">Eliminar conteo especial</button>'
       : '') +
   '</div>';
@@ -457,15 +476,14 @@ function confirmarEliminarDiaEspecial_(nombre) {
   );
 }
 
-/** HTML de los dos buscadores de "Rutas y tiendas" (agrupación y tienda):
- *  viven juntos en la fila de días (misma línea que LUNES/MARTES...), que
- *  es "sticky", así que se mantienen visibles al hacer scroll. Cada uno
- *  busca SOLO dentro del día seleccionado. */
+/** HTML del buscador de "Rutas y tiendas": uno solo para agrupaciones y
+ *  tiendas. Vive en la fila de días (misma línea que LUNES/MARTES...), que
+ *  es "sticky", así que se mantiene visible al hacer scroll. Busca SOLO
+ *  dentro del día seleccionado. */
 function buscadoresPlantillaHtml_() {
   return (
     '<div class="plantilla-buscadores">' +
-      buscadorInputPlantillaHtml_('plantilla-buscador-wrap', 'plantilla-buscador-input', 'plantilla-buscador-resultados', 'Buscar agrupación…') +
-      buscadorInputPlantillaHtml_('plantilla-buscador-tienda-wrap', 'plantilla-buscador-tienda-input', 'plantilla-buscador-tienda-resultados', 'Buscar tienda…') +
+      buscadorInputPlantillaHtml_('plantilla-buscador-wrap', 'plantilla-buscador-input', 'plantilla-buscador-resultados', 'Buscar agrupación o tienda…') +
     '</div>'
   );
 }
@@ -560,13 +578,12 @@ function inicializarBuscadoresPlantilla_() {
     document.addEventListener('click', cerrarDesplegablesBuscadorPlantilla_);
   }
 
+  // Un solo buscador: primero las agrupaciones que coinciden y debajo las
+  // tiendas (con su agrupación a la derecha).
   inicializarBuscadorGenericoPlantilla_('plantilla-buscador-input', 'plantilla-buscador-resultados', function (q) {
-    return PLANTILLA_ESTADO.secciones
+    const agrupaciones = PLANTILLA_ESTADO.secciones
       .filter(function (s) { return normalizarBusquedaPlantilla_(s.nombre).indexOf(q) !== -1; })
-      .slice(0, 8);
-  }, pintarResultadosBuscadorAgrupacionPlantilla_);
-
-  inicializarBuscadorGenericoPlantilla_('plantilla-buscador-tienda-input', 'plantilla-buscador-tienda-resultados', function (q) {
+      .slice(0, 6);
     const encontradas = [];
     PLANTILLA_ESTADO.secciones.forEach(function (s) {
       s.tiendas.forEach(function (t) {
@@ -581,8 +598,8 @@ function inicializarBuscadoresPlantilla_() {
         encontradas.push({ tienda: t, ruta: s.nombre });
       });
     });
-    return encontradas.slice(0, 8);
-  }, pintarResultadosBuscadorTiendaPlantilla_);
+    return { agrupaciones: agrupaciones, tiendas: encontradas.slice(0, 8) };
+  }, pintarResultadosBuscadorPlantilla_);
 }
 
 /** Base común de un buscador con desplegable: al escribir, filtra con
@@ -608,49 +625,43 @@ function inicializarBuscadorGenericoPlantilla_(inputId, resultadosId, filtroFn, 
   });
 }
 
-/** Pinta la lista desplegable de coincidencias del buscador de agrupaciones
- *  (siempre del día activo). */
-function pintarResultadosBuscadorAgrupacionPlantilla_(secciones, resultadosEl) {
-  if (!secciones.length) {
+/** Pinta el desplegable del buscador único de "Rutas y tiendas":
+ *  agrupaciones (con su nº de tiendas) y debajo tiendas (con su ruta).
+ *  res: { agrupaciones: [...secciones], tiendas: [{ tienda, ruta, puntualId }] } */
+function pintarResultadosBuscadorPlantilla_(res, resultadosEl) {
+  const secciones = res.agrupaciones || [];
+  const encontradas = res.tiendas || [];
+  if (!secciones.length && !encontradas.length) {
     resultadosEl.innerHTML = '<div class="plantilla-buscador-vacio">Sin coincidencias.</div>';
     resultadosEl.style.display = 'block';
     return;
   }
-  resultadosEl.innerHTML = secciones.map(function (s) {
+  const htmlAgrupaciones = secciones.map(function (s) {
     const titulo = parsearNombreAgrupacion(s.nombre).titulo;
     return '<button type="button" class="plantilla-buscador-item" data-ruta="' + escapeAttr(s.nombre) + '">' +
       '<span class="nombre">' + escapeHtml(titulo) + '</span>' +
       '<span class="dia-tag">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
     '</button>';
   }).join('');
-  resultadosEl.style.display = 'block';
-  resultadosEl.querySelectorAll('.plantilla-buscador-item').forEach(function (btn) {
-    btn.onclick = function () { irAAgrupacionPlantilla_(btn.getAttribute('data-ruta'), resultadosEl); };
-  });
-}
-
-/** Pinta la lista desplegable de coincidencias del buscador de tiendas,
- *  con el nombre de la ruta a la que pertenece cada una a la derecha. */
-function pintarResultadosBuscadorTiendaPlantilla_(encontradas, resultadosEl) {
-  if (!encontradas.length) {
-    resultadosEl.innerHTML = '<div class="plantilla-buscador-vacio">Sin coincidencias.</div>';
-    resultadosEl.style.display = 'block';
-    return;
-  }
-  resultadosEl.innerHTML = encontradas.map(function (it) {
+  const htmlTiendas = encontradas.map(function (it) {
     const tituloRuta = parsearNombreAgrupacion(it.ruta).titulo;
     return '<button type="button" class="plantilla-buscador-item" data-tienda-row="' + it.tienda.row + '"' + (it.puntualId ? ' data-puntual-id="' + escapeAttr(it.puntualId) + '"' : '') + '>' +
       '<span class="nombre">' + escapeHtml(it.tienda.nombre) + '</span>' +
       '<span class="dia-tag">' + escapeHtml(tituloRuta) + (it.puntualId ? ' · puntual' : '') + '</span>' +
     '</button>';
   }).join('');
+  resultadosEl.innerHTML =
+    (htmlAgrupaciones ? '<div class="plantilla-buscador-grupo">Agrupaciones</div>' + htmlAgrupaciones : '') +
+    (htmlTiendas ? '<div class="plantilla-buscador-grupo">Tiendas</div>' + htmlTiendas : '');
   resultadosEl.style.display = 'block';
   resultadosEl.querySelectorAll('.plantilla-buscador-item').forEach(function (btn) {
     btn.onclick = function () {
+      const ruta = btn.getAttribute('data-ruta');
+      if (ruta) { irAAgrupacionPlantilla_(ruta, resultadosEl); return; }
       const puntualId = btn.getAttribute('data-puntual-id');
       if (puntualId) {
         resultadosEl.style.display = 'none';
-        const input = document.getElementById('plantilla-buscador-tienda-input');
+        const input = document.getElementById('plantilla-buscador-input');
         if (input) { input.value = ''; input.blur(); }
         resaltarFilaPlantilla_(document.querySelector('.plantilla-tienda[data-puntual-id="' + CSS.escape(puntualId) + '"]'));
         return;
@@ -673,7 +684,7 @@ function irAAgrupacionPlantilla_(nombreRuta, resultadosEl) {
  *  "row" físico, único dentro del día). */
 function irATiendaPlantilla_(row, resultadosEl) {
   resultadosEl.style.display = 'none';
-  const input = document.getElementById('plantilla-buscador-tienda-input');
+  const input = document.getElementById('plantilla-buscador-input');
   if (input) { input.value = ''; input.blur(); }
   resaltarTiendaPlantilla_(row);
 }
@@ -725,7 +736,7 @@ function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
   const titulo = bloqueado
     ? 'Quitar el bloqueo "NO" de ' + etiqueta + ' en esta tienda'
     : 'Bloquear la casilla ' + etiqueta + ' en los conteos';
-  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' + etiqueta + '</button>';
+  return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' + etiqueta + '</button>';
 }
 
 function pintarPlantilla_() {
@@ -783,7 +794,7 @@ function pintarPlantilla_() {
         '<div class="plantilla-tienda' + (ti === 0 ? ' primera' : '') + (tieneNota ? ' con-nota' : '') + (puntualSale ? (puntualSale.modo === 'doble' ? ' sale-puntual doble' : ' sale-puntual') : '') + '" data-tienda-row="' + t.row + '">' +
           // Asa para arrastrar la tienda dentro de su ruta (sustituye a las
           // antiguas flechas subir/bajar). Solo con permiso de plantilla.
-          (tienePermiso('plantilla') && (s.tiendas.length + puntualesEntran.length) > 1
+          (puedeEditarPlantilla_() && (s.tiendas.length + puntualesEntran.length) > 1
             ? '<span class="plantilla-tienda-asa" data-asa-row="' + t.row + '" title="Arrastrar para cambiar de posición">' +
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>' +
               '</span>'
@@ -800,9 +811,9 @@ function pintarPlantilla_() {
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
             botonBloqueoPlantillaHtml_(t, 'cart', 'CART.')) +
           '</div>' +
-          '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-grupo="' + (t.notaGrupoId ? '1' : '0') + '" title="' + (t.notaGrupoId ? 'Pertenece a un grupo de palets: edítalo desde Grupos de palets' : (tieneNota ? 'Editar comentario' : 'Añadir comentario')) + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>' +
+          '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-grupo="' + (t.notaGrupoId ? '1' : '0') + '" title="' + (t.notaGrupoId ? 'Pertenece a un grupo de palets: edítalo desde Grupos de palets' : (tieneNota ? 'Editar comentario' : 'Añadir comentario')) + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
-          (tienePermiso('plantilla') ? (
+          (puedeEditarPlantilla_() ? (
             '<button type="button" class="plantilla-tienda-mover" data-mover-tienda="' + t.row + '" title="Mover a otra agrupación">' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + t.row + '" title="Límite de palets de esta tienda">' +
@@ -833,7 +844,7 @@ function pintarPlantilla_() {
         : '';
       piezasPuntuales.push({ pos: Number(p.pos) || 0, html:
         '<div class="plantilla-tienda entra-puntual' + (p.grupoId ? ' con-nota' : '') + '" data-puntual-id="' + escapeAttr(p.id) + '">' +
-          (tienePermiso('plantilla')
+          (puedeEditarPlantilla_()
             ? '<span class="plantilla-tienda-asa" data-asa-puntual="' + escapeAttr(p.id) + '" title="Arrastrar para cambiar de posición (solo este día)">' +
                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>' +
               '</span>'
@@ -851,16 +862,16 @@ function pintarPlantilla_() {
                 botonBloqueoPlantillaHtml_(tOrigen, 'cart', 'CART.') +
               '</div>'
             : '') +
-          (tienePermiso('plantilla')
+          (puedeEditarPlantilla_()
             ? '<button type="button" class="plantilla-tienda-nota' + (p.grupoId ? ' con-dato' : '') + '" data-grupo-puntual="' + escapeAttr(p.id) + '" title="Grupo de palets de esta tienda este día"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>'
             : '') +
           // Lápiz: límite de palets solo para este día (es la misma fila de
           // la tienda en el conteo especial, así que no toca ningún otro día).
-          ((tOrigen && tienePermiso('plantilla'))
+          ((tOrigen && puedeEditarPlantilla_())
             ? '<button type="button" class="plantilla-tienda-editar" data-editar-tienda="' + tOrigen.row + '" title="Límite de palets de esta tienda este día">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
             : '') +
-          (tienePermiso('plantilla')
+          (puedeEditarPlantilla_()
             ? '<button type="button" class="plantilla-tienda-quitar-puntual" data-quitar-puntual="' + escapeAttr(p.id) + '" data-puntual-tienda="' + escapeAttr(p.tienda) + '" data-puntual-origen="' + escapeAttr(p.origen) + '" title="Quitar el cambio puntual: vuelve a salir por su agrupación">Quitar</button>'
             : '') +
           grupoPuntualHtml +
@@ -884,8 +895,8 @@ function pintarPlantilla_() {
       const idn = 'nc' + si + '_' + ni;
       return (
         '<div class="plantilla-notacarga-item">' +
-          '<input type="text" id="' + idn + '" value="' + escapeAttr(n.texto) + '" ' + (tienePermiso('plantilla') ? '' : 'disabled') + '>' +
-          (tienePermiso('plantilla') ? (
+          '<input type="text" id="' + idn + '" value="' + escapeAttr(n.texto) + '" ' + (puedeEditarPlantilla_() ? '' : 'disabled') + '>' +
+          (puedeEditarPlantilla_() ? (
             '<button type="button" class="plantilla-tienda-guardar" data-guardar-notacarga="' + n.row + '" data-id="' + idn + '" title="Guardar" disabled>' +
               '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>' +
             '<button type="button" class="plantilla-tienda-borrar" data-borrar-notacarga="' + n.row + '" title="Eliminar nota de carga">' +
@@ -905,14 +916,14 @@ function pintarPlantilla_() {
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
           '<span class="plantilla-ruta-nombre-texto">' + escapeHtml(s.nombre) + '</span>' +
-          (tienePermiso('plantilla')
+          (puedeEditarPlantilla_()
             ? '<button type="button" class="plantilla-ruta-editar" data-editar-ruta="' + escapeAttr(s.nombre) + '" title="Editar ubicación y hora de carga">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>'
             : '') +
           '<span class="plantilla-ruta-contador">' + s.tiendas.length + (s.tiendas.length === 1 ? ' tienda' : ' tiendas') + '</span>' +
           (puntualesEntran.length ? '<span class="plantilla-ruta-contador puntual">+' + puntualesEntran.length + ' puntual' + (puntualesEntran.length === 1 ? '' : 'es') + '</span>' : '') +
           '<div class="plantilla-ruta-spacer"></div>' +
-          (tienePermiso('plantilla') ? (
+          (puedeEditarPlantilla_() ? (
             '<button type="button" class="plantilla-ruta-peso' + (s.tienePeso ? ' activo' : '') + '" data-toggle-peso="' + escapeAttr(s.nombre) + '" data-peso-activo="' + (s.tienePeso ? '1' : '0') + '" title="' + (s.tienePeso ? 'Quitar la casilla PESO de esta ruta' : 'Activar la casilla PESO en el conteo de esta ruta') + '">PESO</button>' +
             '<button type="button" class="plantilla-ruta-cexpress' + (s.tieneCExpress ? ' activo' : '') + '" data-toggle-cexpress="' + escapeAttr(s.nombre) + '" data-cexpress-activo="' + (s.tieneCExpress ? '1' : '0') + '" title="' + (s.tieneCExpress ? 'Quitar la casilla C.EXPRESS de esta ruta' : 'Activar la casilla C.EXPRESS en el conteo de esta ruta') + '">C.EXPRESS</button>' +
             '<button type="button" class="plantilla-ruta-sobrestock' + (s.tieneSobrestock ? ' activo' : '') + '" data-toggle-sobrestock="' + escapeAttr(s.nombre) + '" data-sobrestock-activo="' + (s.tieneSobrestock ? '1' : '0') + '" title="' + (s.tieneSobrestock ? 'Quitar la casilla SOBRESTOCK de esta ruta' : 'Activar la casilla SOBRESTOCK en el conteo de esta ruta') + '">SOBRESTOCK</button>' +
@@ -936,10 +947,10 @@ function pintarPlantilla_() {
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
           ) : '') +
         '</div>' +
-        (notasCargaHtml || tienePermiso('plantilla') ? (
+        (notasCargaHtml || puedeEditarPlantilla_() ? (
           '<div class="plantilla-notascarga">' +
             notasCargaHtml +
-            (tienePermiso('plantilla') ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
+            (puedeEditarPlantilla_() ? '<button type="button" class="plantilla-anadir-notacarga" data-anadir-notacarga="' + escapeAttr(s.nombre) + '">' +
               '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir nota de carga</button>' : '') +
           '</div>'
         ) : '') +
@@ -1163,7 +1174,7 @@ function botonViernesTiendaPlantillaHtml_(t) {
   const titulo = incluida
     ? 'Esta tienda lleva VIERNES. Pulsa para excluirla'
     : 'Esta tienda NO lleva VIERNES. Pulsa para incluirla';
-  return '<button type="button" class="plantilla-tienda-viernes' + (incluida ? ' activo' : '') + '" data-viernes-row="' + t.row + '" data-viernes-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>VIE</button>';
+  return '<button type="button" class="plantilla-tienda-viernes' + (incluida ? ' activo' : '') + '" data-viernes-row="' + t.row + '" data-viernes-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>VIE</button>';
 }
 
 /** Incluye o excluye una tienda concreta de la casilla VIERNES de su ruta.
@@ -1217,7 +1228,7 @@ function botonDomingoTiendaPlantillaHtml_(t) {
   const titulo = incluida
     ? 'Esta tienda lleva DOMINGO. Pulsa para excluirla'
     : 'Esta tienda NO lleva DOMINGO. Pulsa para incluirla';
-  return '<button type="button" class="plantilla-tienda-domingo' + (incluida ? ' activo' : '') + '" data-domingo-row="' + t.row + '" data-domingo-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (tienePermiso('plantilla') ? '' : ' disabled') + '>DOM</button>';
+  return '<button type="button" class="plantilla-tienda-domingo' + (incluida ? ' activo' : '') + '" data-domingo-row="' + t.row + '" data-domingo-incluida="' + (incluida ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>DOM</button>';
 }
 
 /** Incluye o excluye una tienda concreta de la casilla DOMINGO de su ruta.
