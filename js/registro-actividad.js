@@ -12,7 +12,7 @@
  * entre una y otra) se juntan en una sola línea "antes → después".
  * Se guardan 6 meses.
  */
-let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, usuario: '', seccion: '', texto: '', datos: null, pagina: 1 };
+let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, usuario: '', seccion: '', texto: '', datos: null, pagina: 1, agruparMovimientos: false };
 
 // Registros por página (para que la lista no se haga eterna).
 const ACTIVIDAD_POR_PAGINA_ = 30;
@@ -146,6 +146,146 @@ function claseSeccionActividad_(seccion) {
   }
 }
 
+/* ---- Presentación de cada registro: "qué hizo" y "dónde", en frases ---- */
+
+/** Verbo (con su color) y resto de la frase de "Qué hizo" a partir de la
+ *  acción guardada en la base de datos (p. ej. "Añadida nota"). */
+function queHizoActividad_(it) {
+  const elem = it.elemento && it.elemento !== 'Toda la agrupación' && it.elemento !== 'Todo el día' ? it.elemento : '';
+  const tipoNota = it.contexto ? 'nota de agrupación' : 'nota del día';
+  const fijo = {
+    'Añadida nota': ['Añadió', 'add', tipoNota],
+    'Eliminada nota': ['Eliminó', 'del', tipoNota],
+    'Editada nota': ['Cambió', 'edit', tipoNota],
+    'Añadido cambio puntual': ['Añadió', 'add', 'cambio puntual' + (elem ? ' de ' + elem : '')],
+    'Eliminado cambio puntual': ['Quitó', 'del', 'cambio puntual' + (elem ? ' de ' + elem : '')],
+    'Editado conteo': ['Cambió', 'edit', 'conteo' + (elem ? ' de ' + elem : '')],
+    'Editado conteo (casilla compartida)': ['Cambió', 'edit', 'conteo' + (elem ? ' de ' + elem : '') + ' (casilla compartida)'],
+    'Ajustada la carga (conteo bloqueado)': ['Ajustó', 'warn', 'la carga (el conteo queda bloqueado)'],
+    'Desbloqueado conteo (carga ajustada)': ['Desbloqueó', 'warn', 'el conteo (se borra la carga ajustada)'],
+    'Enviado definitivo (conteo bloqueado)': ['Envió', 'send', 'el definitivo'],
+    'Enviada previsión': ['Envió', 'send', 'la previsión'],
+    'Matrícula tras el definitivo': ['Cambió', 'edit', 'matrícula después del definitivo'],
+    'Editada tienda en plantilla': ['Cambió', 'edit', 'tienda' + (elem ? ' ' + elem : '')],
+    'Editada agrupación en plantilla': ['Cambió', 'edit', 'la agrupación'],
+    'Movida tienda': ['Movió', 'edit', 'tienda' + (elem ? ' ' + elem : '')]
+  }[it.accion];
+  if (fijo) return { verbo: fijo[0], clase: fijo[1], resto: fijo[2] };
+  // Acciones sin frase propia: se saca el verbo de la primera palabra.
+  const a = String(it.accion || '');
+  const reglas = [
+    [/^(Añadid|Cread|Dad)[oa]s?\b/i, 'Añadió', 'add'],
+    [/^(Eliminad|Borrad|Quitad)[oa]s?\b/i, 'Eliminó', 'del'],
+    [/^(Editad|Cambiad|Modificad)[oa]s?\b/i, 'Cambió', 'edit'],
+    [/^Movid[oa]s?\b/i, 'Movió', 'edit'],
+    [/^Enviad[oa]s?\b/i, 'Envió', 'send'],
+    [/^(Bloquead)[oa]s?\b/i, 'Bloqueó', 'warn'],
+    [/^(Desbloquead)[oa]s?\b/i, 'Desbloqueó', 'warn']
+  ];
+  for (let i = 0; i < reglas.length; i++) {
+    const m = a.match(reglas[i][0]);
+    if (m) return { verbo: reglas[i][1], clase: reglas[i][2], resto: (a.slice(m[0].length).trim() + (elem ? ' ' + elem : '')).trim() };
+  }
+  return { verbo: '', clase: '', resto: a + (elem ? ' · ' + elem : '') };
+}
+
+/** "TXT NORTE (PTA 11:00)" -> "TXT NORTE · PTA 11:00" */
+function agrupacionLegibleActividad_(nombre) {
+  const p = parsearNombreAgrupacion(nombre || '');
+  return p.titulo + (p.ubicacion ? ' · ' + p.ubicacion : '');
+}
+
+const DIAS_CORTOS_ACTIVIDAD_ = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function fechaCortaConDiaActividad_(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return DIAS_CORTOS_ACTIVIDAD_[d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+/** "Dónde": qué conteo (o qué pantalla) se vio afectado y, debajo, la
+ *  agrupación o el elemento concreto. */
+function dondeActividad_(it) {
+  const esEspecial = /^ESPECIAL/i.test(it.dia_plantilla || '');
+  if (it.seccion === 'Plantilla') {
+    const dia = esEspecial
+      ? 'conteo especial del ' + String(it.dia_plantilla).replace(/^ESPECIAL\s*/i, '')
+      : 'plantilla del ' + String(it.dia_plantilla || '').toLowerCase();
+    return { linea: 'Rutas y tiendas · ' + dia, sub: it.contexto ? agrupacionLegibleActividad_(it.contexto) : '' };
+  }
+  if (it.seccion === 'Usuarios' || it.seccion === 'Emails tiendas' || it.seccion === 'Emails agencias') {
+    return { linea: it.seccion, sub: it.elemento || '' };
+  }
+  const linea = it.fecha_ref
+    ? (esEspecial ? 'Conteo especial del ' : 'Conteo del ') + fechaCortaConDiaActividad_(it.fecha_ref)
+    : (it.dia_plantilla ? 'Conteo del ' + String(it.dia_plantilla).toLowerCase() : '—');
+  let sub = '';
+  if (it.contexto) sub = agrupacionLegibleActividad_(it.contexto);
+  else if (it.elemento === 'Todo el día') sub = 'Nota general (todas las agrupaciones)';
+  return { linea: linea, sub: sub };
+}
+
+/** Junta en una sola línea "Movió" cuando la misma persona añade una nota
+ *  y en menos de un minuto elimina la misma nota en otro sitio del mismo
+ *  conteo (p. ej. pasar una nota del día a una agrupación). */
+function agruparMovimientosActividad_(items) {
+  const usados = {};
+  const out = [];
+  const segundos = function (it) {
+    const p = String(it.hora || '0:0:0').split(':').map(Number);
+    return (p[0] || 0) * 3600 + (p[1] || 0) * 60 + (p[2] || 0);
+  };
+  items.forEach(function (it, i) {
+    if (usados[i]) return;
+    if (it.accion === 'Añadida nota' || it.accion === 'Eliminada nota') {
+      const opuesta = it.accion === 'Añadida nota' ? 'Eliminada nota' : 'Añadida nota';
+      for (let j = i + 1; j < items.length && j < i + 6; j++) {
+        const o = items[j];
+        if (usados[j] || o.accion !== opuesta || o.usuario !== it.usuario || o.dia !== it.dia ||
+            o.fecha_ref !== it.fecha_ref || (o.detalle || '') !== (it.detalle || '') ||
+            Math.abs(segundos(o) - segundos(it)) > 60) continue;
+        const anadida = it.accion === 'Añadida nota' ? it : o;
+        const eliminada = it.accion === 'Añadida nota' ? o : it;
+        if ((anadida.contexto || '') === (eliminada.contexto || '')) continue;
+        usados[j] = true;
+        const desde = eliminada.contexto ? parsearNombreAgrupacion(eliminada.contexto).titulo : 'Nota general';
+        const hacia = anadida.contexto ? parsearNombreAgrupacion(anadida.contexto).titulo : 'Nota general';
+        out.push(Object.assign({}, anadida, {
+          hora: segundos(anadida) < segundos(eliminada) ? anadida.hora : eliminada.hora,
+          _movimiento: { desde: desde, hacia: hacia, deDia: !eliminada.contexto, aDia: !anadida.contexto }
+        }));
+        return;
+      }
+    }
+    out.push(it);
+  });
+  return out;
+}
+
+function filaActividadHtml_(it) {
+  const cuando = it.hora + (it.hora_fin ? '–' + it.hora_fin : '');
+  let q, d;
+  if (it._movimiento) {
+    const mv = it._movimiento;
+    q = { verbo: 'Movió', clase: 'move', resto: mv.deDia ? 'nota del día a una agrupación' : (mv.aDia ? 'nota de agrupación a nota del día' : 'nota a otra agrupación') };
+    d = { linea: dondeActividad_(it).linea, sub: mv.desde + ' → ' + mv.hacia };
+  } else {
+    q = queHizoActividad_(it);
+    d = dondeActividad_(it);
+  }
+  const esNota = /nota/i.test(it.accion || '');
+  const detalle = it.detalle ? (esNota ? '«' + it.detalle + '»' : it.detalle) : '';
+  return '<tr>' +
+    '<td class="ra-hora">' + escapeHtml(cuando) + '</td>' +
+    '<td class="ra-quien">' + escapeHtml(it.nombre || '—') + '</td>' +
+    '<td class="ra-que">' +
+      (q.verbo ? '<span class="ra-verbo ra-v-' + q.clase + '">' + escapeHtml(q.verbo) + '</span>' : '') +
+      escapeHtml(q.resto) +
+      (detalle ? '<div class="ra-sub">' + escapeHtml(detalle) + '</div>' : '') +
+    '</td>' +
+    '<td class="ra-donde">' + escapeHtml(d.linea) + (d.sub ? '<div class="ra-sub">' + escapeHtml(d.sub) + '</div>' : '') + '</td>' +
+    '<td class="ra-sec"><span class="ra-seccion ' + claseSeccionActividad_(it.seccion) + '">' + escapeHtml(it.seccion) + '</span></td>' +
+  '</tr>';
+}
+
 function pintarRegistroActividad_() {
   const cont = document.getElementById('admin-actividad-resultado');
   if (!cont) return;
@@ -164,7 +304,9 @@ function pintarRegistroActividad_() {
     return true;
   });
 
-  if (!items.length) {
+  const lista = st.agruparMovimientos ? agruparMovimientosActividad_(items) : items;
+
+  if (!lista.length) {
     cont.innerHTML =
       '<div class="emails-config-vacio">' +
         '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>' +
@@ -173,36 +315,48 @@ function pintarRegistroActividad_() {
     return;
   }
 
-  const variosDias = st.desde !== st.hasta;
-  const totalPaginas = Math.max(1, Math.ceil(items.length / ACTIVIDAD_POR_PAGINA_));
+  const totalPaginas = Math.max(1, Math.ceil(lista.length / ACTIVIDAD_POR_PAGINA_));
   if (!st.pagina || st.pagina < 1) st.pagina = 1;
   if (st.pagina > totalPaginas) st.pagina = totalPaginas;
   const inicio = (st.pagina - 1) * ACTIVIDAD_POR_PAGINA_;
-  const pagina = items.slice(inicio, inicio + ACTIVIDAD_POR_PAGINA_);
+  const pagina = lista.slice(inicio, inicio + ACTIVIDAD_POR_PAGINA_);
+
+  // Cuántas acciones hay de cada día (en todo el resultado, no solo en la
+  // página), para ponerlo en la cabecera de cada día.
+  const porDia = {};
+  lista.forEach(function (it) { porDia[it.dia] = (porDia[it.dia] || 0) + 1; });
+
+  let filas = '';
+  let diaActual = null;
+  pagina.forEach(function (it) {
+    if (it.dia !== diaActual) {
+      diaActual = it.dia;
+      const largo = formatearFechaLarga(it.dia);
+      filas += '<tr class="ra-fila-dia"><td colspan="5"><span>' + escapeHtml(largo.charAt(0).toUpperCase() + largo.slice(1)) + '</span>' +
+        '<span class="ra-fila-dia-n">' + porDia[it.dia] + (porDia[it.dia] === 1 ? ' acción' : ' acciones') + '</span></td></tr>';
+    }
+    filas += filaActividadHtml_(it);
+  });
 
   cont.innerHTML =
-    '<div class="admin-resumen">' + items.length + (items.length === 1 ? ' registro' : ' registros') +
-      (totalPaginas > 1 ? ' · mostrando ' + (inicio + 1) + '–' + (inicio + pagina.length) : '') +
-      (datos.length >= 3000 ? ' · se muestran los 3000 más recientes, acota las fechas para ver el resto' : '') + '</div>' +
+    '<div class="admin-resumen ra-resumen">' +
+      '<span>' + lista.length + (lista.length === 1 ? ' registro' : ' registros') +
+        (totalPaginas > 1 ? ' · mostrando ' + (inicio + 1) + '–' + (inicio + pagina.length) : '') +
+        (datos.length >= 3000 ? ' · se muestran los 3000 más recientes, acota las fechas para ver el resto' : '') + '</span>' +
+      '<label class="ra-agrupar" title="Junta en una línea cuando una nota se pasa de un sitio a otro (se añade en uno y se borra en otro en menos de un minuto)">' +
+        '<input type="checkbox" id="ra-agrupar-mov"' + (st.agruparMovimientos ? ' checked' : '') + '> Agrupar movimientos de notas</label>' +
+    '</div>' +
     '<div class="admin-tabla-wrap ra-tabla-scroll"><table class="admin-tabla admin-tabla-actividad">' +
-      '<thead><tr><th>Cuándo</th><th>Usuario</th><th>Acción</th><th>Día / agrupación</th><th>Tienda / elemento</th><th>Fecha</th><th>Detalle</th></tr></thead>' +
-      '<tbody>' + pagina.map(function (it) {
-        const cuando = (variosDias ? formatearFechaCorta_(it.dia) + ' ' : '') + it.hora + (it.hora_fin ? '–' + it.hora_fin : '');
-        return '<tr>' +
-          '<td>' + escapeHtml(cuando) + '</td>' +
-          '<td>' + escapeHtml(it.nombre || '—') + '</td>' +
-          '<td><span class="ra-seccion ' + claseSeccionActividad_(it.seccion) + '">' + escapeHtml(it.seccion) + '</span> ' + escapeHtml(it.accion) + '</td>' +
-          '<td class="ra-agrupacion">' +
-            (it.dia_plantilla ? '<div class="ra-dia">' + escapeHtml(it.dia_plantilla) + '</div>' : '') +
-            (it.contexto ? escapeHtml(it.contexto) : (it.dia_plantilla ? '' : '—')) + '</td>' +
-          '<td class="admin-col-tienda">' + escapeHtml(it.elemento || '—') + '</td>' +
-          '<td>' + (it.fecha_ref ? escapeHtml(formatearFechaCorta_(it.fecha_ref)) : '—') + '</td>' +
-          '<td class="ra-detalle">' + escapeHtml(it.detalle || '') + '</td>' +
-        '</tr>';
-      }).join('') +
-      '</tbody>' +
+      '<thead><tr><th>Hora</th><th>Quién</th><th>Qué hizo</th><th>Dónde</th><th>Sección</th></tr></thead>' +
+      '<tbody>' + filas + '</tbody>' +
     '</table></div>' +
     htmlPaginacionActividad_(st.pagina, totalPaginas);
+
+  document.getElementById('ra-agrupar-mov').addEventListener('change', function (e) {
+    st.agruparMovimientos = e.target.checked;
+    st.pagina = 1;
+    pintarRegistroActividad_();
+  });
 
   cont.querySelectorAll('[data-ra-pagina]').forEach(function (btn) {
     btn.addEventListener('click', function () {
