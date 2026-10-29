@@ -1281,7 +1281,7 @@
      mismo aspecto de "chip" de antes para no perder la referencia visual
      rápida, pero sin aspecto de campo editable. */
   .plantilla-tienda .lim {
-    width: 40px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    width: 48px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
   /* Límite propio de ese día (override), distinto del general que viene de
@@ -1291,7 +1291,7 @@
     background: #fdf6ea; border-color: var(--amber-dark, #b8860b); color: var(--amber-dark, #b8860b); font-weight: 700;
   }
   .plantilla-tienda .numero {
-    width: 46px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
+    width: 56px; flex-shrink: 0; text-align: center; border: 1px solid var(--line); border-radius: 6px;
     padding: 5px 4px; font-size: 12.5px; background: #f6f7f9; color: var(--ink);
   }
   .plantilla-tienda .nombre {
@@ -1320,12 +1320,63 @@
   .plantilla-ruta-flechas button:last-child { border-radius: 0 0 4px 4px; }
   .plantilla-ruta-flechas button:disabled { opacity: .35; }
   .plantilla-ruta-flechas button:hover:not(:disabled) { background: #e1e5eb; }
+  /* "Añadir tienda": botón azul relleno (la acción principal de la ruta).
+     Orden retirada y Grupos de palets, cuando están configurados, se
+     marcan con un fondo suave (no relleno) para no confundirse con él. */
   .plantilla-ruta-anadir-tienda {
-    flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--navy); font-weight: 700;
+    flex-shrink: 0; background: var(--prevision); border: 1px solid var(--prevision); color: #fff; font-weight: 700;
+    font-size: 11.5px; display: flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 7px;
+    white-space: nowrap;
+  }
+  .plantilla-ruta-anadir-tienda:hover { background: #2f62ad; border-color: #2f62ad; }
+  /* "+ Nota de carga" en la línea de la cabecera de la ruta. */
+  .plantilla-ruta-nota-carga {
+    flex-shrink: 0; background: none; border: 1px dashed #c3cad5; color: var(--navy); font-weight: 700;
     font-size: 11.5px; display: flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 7px;
     white-space: nowrap;
   }
-  .plantilla-ruta-anadir-tienda:hover { background: #eef1f7; }
+  .plantilla-ruta-nota-carga:hover { background: #eef1f7; border-style: solid; }
+
+  /* Franja de interruptores de la ruta (PESO, C.EXPRESS, SOBRESTOCK,
+     VIERNES, DOMINGO, PDF ESPECIAL), bajo la cabecera. */
+  .plantilla-ruta-opciones {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 7px 10px 8px 34px; background: #fbfbfc; border-bottom: 1px solid var(--line);
+  }
+  .plantilla-ruta-opciones-label { font-size: 11px; color: var(--ink-soft); font-weight: 600; margin-right: 2px; }
+  .plantilla-chip {
+    --chip-c: var(--prevision); --chip-bg: #eaf1fb; --chip-borde: #b9cfee;
+    display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+    background: #fff; border: 1px solid var(--line); color: var(--ink-soft);
+    font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  }
+  .plantilla-chip.chip-viernes { --chip-c: var(--viernes); --chip-bg: var(--viernes-suave); --chip-borde: var(--viernes-borde); }
+  .plantilla-chip.chip-domingo { --chip-c: var(--domingo); --chip-bg: var(--domingo-suave); --chip-borde: var(--domingo-borde); }
+  .plantilla-chip:hover:not(:disabled) { border-color: var(--chip-borde); color: var(--chip-c); }
+  .plantilla-chip.activo { background: var(--chip-bg); border-color: var(--chip-borde); color: var(--chip-c); }
+  .plantilla-chip:disabled { cursor: default; }
+  .plantilla-chip:disabled:not(.activo) { opacity: .55; }
+
+  /* Fila de títulos encima de las tiendas. Los anchos coinciden con los
+     de .lim y .numero de las filas para que queden alineados. */
+  .plantilla-tiendas-cabecera {
+    display: flex; align-items: flex-end; gap: 6px; padding: 6px 10px 4px; background: #fbfbfc;
+    border-bottom: 1px solid var(--line);
+    font-size: 10px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .03em; line-height: 1.15;
+  }
+  .plantilla-tiendas-cabecera .col-lim { width: 48px; flex-shrink: 0; text-align: center; }
+  .plantilla-tiendas-cabecera .col-num { width: 56px; flex-shrink: 0; text-align: center; }
+  .plantilla-tiendas-cabecera .col-nombre { flex: 1 1 auto; padding-left: 8px; }
+  .plantilla-tiendas-cabecera .col-leyenda {
+    flex-shrink: 0; text-transform: none; letter-spacing: 0; font-weight: 600; display: flex; align-items: center; gap: 4px;
+  }
+  .plantilla-tiendas-cabecera .col-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 4px; }
+  .plantilla-tiendas-cabecera .ley-carga { background: #e6f4ee; border: 1px solid #a9d6c3; }
+  .plantilla-tiendas-cabecera .ley-bloq { background: var(--danger); }
+  .plantilla-tiendas-cabecera + .plantilla-tienda { border-top: none; }
+  @media (max-width: 700px) {
+    .plantilla-tiendas-cabecera .col-leyenda { display: none; }
+  }
   .plantilla-ruta-peso {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
     font-size: 11.5px; padding: 5px 9px; border-radius: 7px; white-space: nowrap; letter-spacing: .02em;
@@ -1387,12 +1438,16 @@
   .plantilla-tienda-domingo.activo { background: var(--domingo); color: #fff; border-color: var(--domingo); text-decoration: none; }
   .plantilla-tienda-domingo.activo:hover:not(:disabled) { filter: brightness(1.08); }
   .plantilla-tienda-bloqueos { display: flex; gap: 3px; flex-shrink: 0; }
+  /* Botones de nave 60/PTA/CART.: verde suave = esa nave carga; rojo con
+     candado = bloqueada ("NO" en el conteo). Sin permiso se ven igual
+     (para saber qué está bloqueado), pero no se pueden pulsar. */
   .plantilla-tienda-bloqueo {
-    background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 42px;
+    background: #e6f4ee; border: 1px solid #a9d6c3; color: var(--ok); font-weight: 700;
     font-size: 9.5px; padding: 4px 6px; border-radius: 6px; white-space: nowrap; letter-spacing: .02em;
   }
-  .plantilla-tienda-bloqueo:hover:not(:disabled) { background: #eef1f7; }
-  .plantilla-tienda-bloqueo:disabled { opacity: .35; cursor: default; }
+  .plantilla-tienda-bloqueo:hover:not(:disabled) { background: #d6ede3; }
+  .plantilla-tienda-bloqueo:disabled { cursor: default; }
   .plantilla-tienda-bloqueo.activo { background: var(--danger); color: #fff; border-color: var(--danger); }
   .plantilla-tienda-bloqueo.activo:hover:not(:disabled) { background: #b23f3f; }
 
@@ -1440,7 +1495,7 @@
     display: flex; align-items: center; gap: 4px;
   }
   .plantilla-ruta-orden:hover { background: #eef1f7; }
-  .plantilla-ruta-orden.activo { background: var(--amber-dark); color: #fff; border-color: var(--amber-dark); }
+  .plantilla-ruta-orden.activo { background: #fdf3e3; color: var(--amber-dark); border-color: #efcf9f; }
   .plantilla-ruta-orden.activo:hover { filter: brightness(1.08); }
   .plantilla-ruta-grupos {
     flex-shrink: 0; background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 700;
@@ -1448,7 +1503,7 @@
     display: flex; align-items: center; gap: 4px;
   }
   .plantilla-ruta-grupos:hover { background: #eef1f7; }
-  .plantilla-ruta-grupos.activo { background: var(--prevision); color: #fff; border-color: var(--prevision); }
+  .plantilla-ruta-grupos.activo { background: #eaf1fb; color: var(--prevision); border-color: #b9cfee; }
   .plantilla-ruta-grupos.activo:hover { filter: brightness(1.08); }
 
   /* Modal de "Orden de retirada" a nivel de ruta: dos columnas — tiendas
@@ -2236,6 +2291,16 @@
   .desliza.completo .desliza-relleno { background: #e4f3ec; }
   .desliza.completo .desliza-mando { background: var(--ok); }
   .desliza-fila .modal-cancel { flex-shrink: 0; }
+  /* Variante para eliminar (papelera): al llegar al final se queda en rojo. */
+  .desliza.desliza-borrar.completo { background: #fceded; border-color: #f3c6c6; }
+  .desliza.desliza-borrar.completo .desliza-relleno { background: #f6d4d4; }
+  .desliza.desliza-borrar.completo .desliza-mando { background: var(--danger); }
+  .desliza-opciones { margin-top: 4px; }
+  .desliza-opciones .gestor-tipo-pill { padding: 10px 8px; font-size: 12px; }
+  .desliza-aviso { margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--danger); }
+
+  /* Papeleras de "Rutas y tiendas" (ruta, tienda y nota de carga) en rojo. */
+  .plantilla-ruta-borrar, .plantilla-tienda-borrar { color: var(--danger); }
   .table-wrap[hidden] { display: none; }
 
   /* Casillas apagadas por el bloqueo (operarios). */
