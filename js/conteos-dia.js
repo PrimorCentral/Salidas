@@ -222,9 +222,7 @@ function renderContenidoDia(data) {
   cont.appendChild(wrap);
 
   document.getElementById('btn-nota-dia').onclick = function () {
-    appPrompt('Nota del día', 'Escribe una observación general para este día…', function (texto) {
-      guardarObservacionYRecargar({ fecha: ESTADO.fecha, dia: data.dia || '', agrupacion: '', tienda: '', tipo: 'nota', texto: texto });
-    });
+    abrirModalAnadirObservacionDia_(data);
   };
 
   renderResumenDia(data);
@@ -391,4 +389,107 @@ function pintarEtiquetaConteoEspecial_(data) {
   etiqueta.title = esEspecial
     ? 'Este día no usa la plantilla normal del ' + DIAS_SEMANA_ES[new Date(data.fecha + 'T12:00:00').getDay()] + ': las rutas y tiendas son las configuradas para esta fecha.'
     : '';
+}
+
+/**
+ * Botón "Añadir" de "Observaciones importantes" (sidebar derecho del
+ * conteo diario). Antes guardaba directamente una nota general del día;
+ * ahora pregunta primero dónde va la observación:
+ *  - "Observación del día": la nota general de siempre (agrupacion vacía).
+ *  - "Observación de agrupación": la misma nota de ese día pero ligada a
+ *    una agrupación (igual que la "Nota de agrupación" del Gestor de
+ *    observaciones), con un desplegable de las agrupaciones del día.
+ * No hay ninguna opción marcada al abrir: hay que elegir una para guardar.
+ * Ambas se guardan solo para la fecha que se está viendo.
+ */
+function abrirModalAnadirObservacionDia_(data) {
+  const secciones = (data && data.secciones) || [];
+  let tipo = null;
+
+  const box = document.getElementById('modal-box');
+  ['ancho', 'medio', 'peligro', 'usuario-form', 'gestor-obs'].forEach(function (c) { box.classList.remove(c); });
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Añadir observación importante';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const opcionesAgrupacion = secciones.map(function (s) {
+    return '<option value="' + escapeAttr(s.nombre) + '">' + escapeHtml(parsearNombreAgrupacion(s.nombre).titulo) + '</option>';
+  }).join('');
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="gestor-form">' +
+      '<div class="gestor-campo">' +
+        '<label>¿Dónde quieres añadirla?</label>' +
+        '<div class="gestor-tipo-pills gestor-pills-2">' +
+          '<button type="button" class="gestor-tipo-pill" data-tipo-obs="dia">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
+            'Observación del día</button>' +
+          '<button type="button" class="gestor-tipo-pill" data-tipo-obs="agrupacion"' + (secciones.length ? '' : ' disabled title="No hay agrupaciones este día"') + '>' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' +
+            'Observación de agrupación</button>' +
+        '</div>' +
+        '<div class="gestor-campo-ayuda" id="obs-dia-tipo-error" style="display:none;color:#b42318;margin-top:6px;">Elige si es del día o de agrupación.</div>' +
+      '</div>' +
+      '<div class="gestor-campo modal-campo" id="obs-dia-agrupacion-campo" style="display:none;">' +
+        '<label for="obs-dia-agrupacion">Agrupación</label>' +
+        '<select id="obs-dia-agrupacion"><option value="">Selecciona una agrupación…</option>' + opcionesAgrupacion + '</select>' +
+        '<div class="gestor-campo-ayuda" id="obs-dia-agrupacion-error" style="display:none;color:#b42318;margin-top:6px;">Selecciona una agrupación.</div>' +
+      '</div>' +
+      '<div class="gestor-campo">' +
+        '<label for="obs-dia-texto">Observación</label>' +
+        '<textarea id="obs-dia-texto" placeholder="Escribe la observación…"></textarea>' +
+      '</div>' +
+    '</div>';
+
+  const textarea = document.getElementById('obs-dia-texto');
+  textarea.oninput = function (e) {
+    const el = e.target;
+    const inicio = el.selectionStart, fin = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(inicio, fin);
+  };
+
+  const pills = custom.querySelectorAll('[data-tipo-obs]');
+  pills.forEach(function (pill) {
+    pill.onclick = function () {
+      tipo = pill.getAttribute('data-tipo-obs');
+      pills.forEach(function (p) { p.classList.toggle('activa', p === pill); });
+      document.getElementById('obs-dia-tipo-error').style.display = 'none';
+      document.getElementById('obs-dia-agrupacion-campo').style.display = tipo === 'agrupacion' ? '' : 'none';
+      textarea.placeholder = tipo === 'agrupacion'
+        ? 'Escribe la observación para esta agrupación…'
+        : 'Escribe una observación general para este día…';
+      if (tipo === 'agrupacion') document.getElementById('obs-dia-agrupacion').focus();
+      else textarea.focus();
+    };
+  });
+  document.getElementById('obs-dia-agrupacion').onchange = function () {
+    document.getElementById('obs-dia-agrupacion-error').style.display = 'none';
+  };
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    if (!tipo) { document.getElementById('obs-dia-tipo-error').style.display = ''; return; }
+    let agrupacion = '';
+    if (tipo === 'agrupacion') {
+      agrupacion = document.getElementById('obs-dia-agrupacion').value;
+      if (!agrupacion) {
+        document.getElementById('obs-dia-agrupacion-error').style.display = '';
+        document.getElementById('obs-dia-agrupacion').focus();
+        return;
+      }
+    }
+    const texto = textarea.value.trim();
+    if (!texto) { textarea.focus(); return; }
+    cerrarModal();
+    guardarObservacionYRecargar({ fecha: ESTADO.fecha, dia: data.dia || '', agrupacion: agrupacion, tienda: '', tipo: 'nota', texto: texto });
+  };
 }
