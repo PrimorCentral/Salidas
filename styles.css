@@ -3598,6 +3598,9 @@
   .admin-filtro-select {
     border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--ink); background: #f9fafb; height: 32px;
   }
+  /* separate (no collapse): con collapse, las filas pegadas (sticky) dejan
+     asomar un par de píxeles de lo que pasa por debajo. */
+  table.admin-tabla-actividad { border-collapse: separate; border-spacing: 0; }
   table.admin-tabla-actividad td { vertical-align: top; }
   table.admin-tabla-actividad td.ra-detalle { white-space: normal; min-width: 260px; }
   table.admin-tabla-actividad td.ra-agrupacion { white-space: normal; min-width: 170px; }
@@ -3635,7 +3638,7 @@
   .ra-v-move { background: #e3f4f7; color: #0f6b7a; }
   table.admin-tabla-actividad tr.ra-fila-dia td {
     background: #f3f5f9; font-weight: 800; color: var(--navy); font-size: 12.5px; padding: 7px 12px;
-    position: sticky; top: 34px; z-index: 1; border-bottom: 1px solid var(--line);
+    position: sticky; top: 31px; z-index: 1; border-bottom: 1px solid var(--line);
   }
   .ra-fila-dia td { display: table-cell; }
   .ra-fila-dia-n { float: right; font-weight: 600; color: var(--ink-soft); font-size: 11.5px; }
@@ -3748,8 +3751,12 @@
   .ra-agrupar { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); cursor: pointer; font-weight: 600; }
   /* La tabla tiene su propio scroll para que la cabecera (Cuándo, Usuario...)
      se quede fija arriba al bajar. */
-  .admin-tabla-wrap.ra-tabla-scroll { overflow: auto; max-height: calc(100vh - var(--topbar-h) - 290px); min-height: 260px; }
-  .admin-tabla-wrap.ra-tabla-scroll table.admin-tabla th { z-index: 2; box-shadow: inset 0 -1px 0 var(--line); }
+  /* La página no tiene scroll: solo se desplaza la tabla por dentro. Su
+     alto lo calcula ajustarAlturaTablaActividad_ (js/registro-actividad.js)
+     para que quepa justo hasta el final de la pantalla, con la paginación
+     debajo. La cabecera de la tabla y la de cada día se quedan fijas. */
+  .admin-tabla-wrap.ra-tabla-scroll { overflow: auto; max-height: 60vh; min-height: 200px; }
+  .admin-tabla-wrap.ra-tabla-scroll table.admin-tabla th { z-index: 2; top: 0; box-shadow: inset 0 -1px 0 var(--line); }
   .ra-paginacion { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
   .ra-pag-btn {
     background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy); border-radius: 8px;
