@@ -278,11 +278,15 @@ function aplanarDatosFestivos_(datosDias) {
   const lista = [];
   (datosDias || []).forEach(function (data) {
     if (!data) return;
+    // Las notas que crea solo un cambio puntual (excepcionId) no se enseñan
+    // aparte: ya las representa la tarjeta del propio cambio puntual.
     (data.notasGenerales || []).forEach(function (n) {
+      if (n.excepcionId) return;
       lista.push({ fecha: data.fecha, tag: 'Nota del día', tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: '', automatica: !!n.excepcionId });
     });
     (data.secciones || []).forEach(function (seccion) {
       (seccion.notas || []).forEach(function (n) {
+        if (n.excepcionId) return;
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: seccion.nombre, automatica: !!n.excepcionId });
       });
       (seccion.tiendas || []).forEach(function (t) {
@@ -474,7 +478,7 @@ function quitarDeCacheFestivos_(id) {
     }
     (data.secciones || []).forEach(function (seccion) {
       if (seccion.notas) {
-        seccion.notas = seccion.notas.filter(function (n) { return n.id !== id; });
+        seccion.notas = seccion.notas.filter(function (n) { return n.id !== id && n.excepcionId !== id; });
       }
       (seccion.tiendas || []).forEach(function (t) {
         if (t.cerrada && t.cierreId === id) {
