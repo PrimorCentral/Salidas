@@ -80,6 +80,12 @@ function appConfirmDeslizando(opts) {
         elegida = btn.getAttribute('data-opcion-borrar');
         custom.querySelectorAll('[data-opcion-borrar]').forEach(function (b) { b.classList.toggle('activa', b === btn); });
         document.getElementById('desliza-aviso').style.display = 'none';
+        const barra = document.querySelector('#modal-actions .desliza');
+        if (barra) {
+          barra.classList.remove('bloqueada');
+          barra.removeAttribute('aria-disabled');
+          barra.querySelector('.desliza-texto').innerHTML = escapeHtml(textoBarra) + ' &#8594;';
+        }
       };
     });
   } else {
@@ -88,12 +94,15 @@ function appConfirmDeslizando(opts) {
   }
 
   const textoBarra = opts.textoBarra || 'Desliza para eliminar';
+  // Con opciones y ninguna marcada, la barra sale bloqueada (gris) hasta
+  // que se elige una: así no se puede borrar sin decidir qué borrar.
+  const sinElegir = opciones.length > 0 && elegida == null;
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
     '<div class="desliza-fila">' +
-      '<div class="desliza desliza-borrar" role="slider" aria-label="' + escapeAttr(textoBarra) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
+      '<div class="desliza desliza-borrar' + (sinElegir ? ' bloqueada' : '') + '" role="slider" aria-label="' + escapeAttr(textoBarra) + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"' + (sinElegir ? ' aria-disabled="true"' : '') + '>' +
         '<span class="desliza-relleno"></span>' +
-        '<span class="desliza-texto">' + escapeHtml(textoBarra) + ' &#8594;</span>' +
+        '<span class="desliza-texto">' + (sinElegir ? 'Elige una opción para poder eliminar' : escapeHtml(textoBarra) + ' &#8594;') + '</span>' +
         '<span class="desliza-mando" tabindex="0" title="Arrastra hasta el final para eliminar">' + SVG_PAPELERA_DESLIZA_ + '</span>' +
       '</div>' +
       '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +

@@ -1444,7 +1444,6 @@ function mostrarModalEliminarTiendaVariosDias_(row, dias) {
       { valor: 'aqui', etiqueta: 'Borrar solo en ' + PLANTILLA_ESTADO.dia },
       { valor: 'todos', etiqueta: 'Borrar en todos (' + (dias.length + 1) + ' días)' }
     ],
-    opcionInicial: 'aqui',
     onConfirmar: function (opcion) {
       if (opcion === 'todos') eliminarTiendaPlantillaTodosDias_(row);
       else eliminarTiendaPlantilla_(row);
@@ -1464,7 +1463,6 @@ function mostrarModalEliminarTiendaConHistorico_(row, nConteos) {
       { valor: 'conservar_historico', etiqueta: 'Conservar histórico (ocultar tienda)' },
       { valor: 'borrar_historico', etiqueta: 'Borrar también el histórico' }
     ],
-    opcionInicial: 'conservar_historico',
     onConfirmar: function (opcion) { eliminarTiendaPlantilla_(row, opcion); }
   });
 }

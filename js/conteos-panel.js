@@ -2195,6 +2195,8 @@ function activarDeslizador_(barra, onCompleto, iconoCompleto, puedeCompletar) {
   }
   mando.addEventListener('pointerdown', function (e) {
     if (hecho) return;
+    // Barra bloqueada (p. ej. falta elegir una opción): no se puede arrastrar.
+    if (barra.classList.contains('bloqueada')) { e.preventDefault(); if (puedeCompletar) puedeCompletar(); return; }
     e.preventDefault();
     medir();
     inicio = e.clientX - x;
@@ -2209,7 +2211,7 @@ function activarDeslizador_(barra, onCompleto, iconoCompleto, puedeCompletar) {
   mando.addEventListener('pointercancel', soltar);
   mando.addEventListener('lostpointercapture', soltar);
   mando.addEventListener('keydown', function (e) {
-    if (hecho) return;
+    if (hecho || barra.classList.contains('bloqueada')) return;
     medir();
     if (e.key === 'ArrowRight') {
       e.preventDefault(); poner(x + max / 5);
