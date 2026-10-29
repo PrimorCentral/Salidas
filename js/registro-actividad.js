@@ -579,6 +579,7 @@ function pintarRegistroActividad_() {
     htmlPaginacionActividad_(st.pagina, totalPaginas);
 
   enlazarFiltrosActivosActividad_(cont);
+  ajustarAlturaTablaActividad_();
   document.getElementById('ra-agrupar-mov').addEventListener('change', function (e) {
     st.agruparMovimientos = e.target.checked;
     st.pagina = 1;
@@ -622,6 +623,23 @@ function enlazarFiltrosActivosActividad_(cont) {
     pintarRegistroActividad_();
   };
 }
+
+/** Alto de la tabla para que todo quepa en la pantalla sin scroll de
+ *  página: desde donde empieza la tabla hasta el final de la ventana,
+ *  dejando sitio para la paginación y el margen de abajo. */
+function ajustarAlturaTablaActividad_() {
+  const wrap = document.querySelector('#admin-actividad-resultado .ra-tabla-scroll');
+  if (!wrap) return;
+  const pag = document.querySelector('#admin-actividad-resultado .ra-paginacion');
+  const altoPag = pag ? pag.offsetHeight + 12 : 0;
+  const arriba = wrap.getBoundingClientRect().top + window.scrollY;
+  const margenAbajo = 56; // padding de la tarjeta y de la página (con un pequeño margen)
+  const disponible = window.innerHeight - arriba - altoPag - margenAbajo;
+  wrap.style.maxHeight = Math.max(200, Math.floor(disponible)) + 'px';
+}
+window.addEventListener('resize', function () {
+  if (typeof enRegistroActividad_ === 'function' && enRegistroActividad_()) ajustarAlturaTablaActividad_();
+});
 
 /** Botones « ‹ Página X de Y › ». Sin nada si cabe todo en una página. */
 function htmlPaginacionActividad_(actual, total) {
