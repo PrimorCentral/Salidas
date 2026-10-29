@@ -26,10 +26,13 @@ function abrirGestorObservaciones(fechaInicial) {
   // fechaInicial (opcional): 'yyyy-MM-dd'. Se usa cuando se abre el gestor
   // desde el botón "+" de un día concreto en "Gestión festivos", para que
   // el formulario ya salga con esa fecha puesta en vez de la de hoy.
+  // Desde el botón general "Añadir bloqueo / observación" se abre SIN
+  // fecha y SIN tipo elegidos (hay que elegirlos). Desde el "+" de un día
+  // concreto, la fecha ya viene puesta (es la de ese día).
   const fecha = (typeof fechaInicial === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaInicial))
     ? fechaInicial
-    : ESTADO.fecha;
-  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: 'general', seleccion: null, cargaId: 0 };
+    : null;
+  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: null, seleccion: null, cargaId: 0, guardando: false };
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
@@ -53,7 +56,13 @@ function abrirGestorObservaciones(fechaInicial) {
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = guardarDesdeGestorObs_;
 
-  cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
+  // El botón Guardar solo se enciende cuando todo lo necesario está
+  // rellenado. Se revisa tras cualquier cambio dentro del formulario.
+  ['input', 'change', 'click'].forEach(function (ev) {
+    custom.addEventListener(ev, function () { setTimeout(actualizarBotonGuardarGestor_, 0); });
+  });
+  actualizarFormularioSegunTipo_();
+  if (GESTOR_OBS.fecha) cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
 }
 
 function crearFormularioGestorObs_() {
@@ -67,12 +76,15 @@ function crearFormularioGestorObs_() {
     '<div class="gestor-col gestor-col-izq">' +
     '<div class="gestor-campo">' +
       '<label>Fecha</label>' +
-      '<input type="date" id="gestor-fecha" value="' + GESTOR_OBS.fecha + '">' +
+      '<div class="gestor-fecha-wrap' + (GESTOR_OBS.fecha ? '' : ' vacia') + '" id="gestor-fecha-wrap">' +
+        '<input type="date" id="gestor-fecha" value="' + (GESTOR_OBS.fecha || '') + '">' +
+        '<span class="gestor-fecha-placeholder">Selecciona una fecha</span>' +
+      '</div>' +
     '</div>' +
     '<div class="gestor-campo">' +
       '<label>Tipo</label>' +
       '<div class="gestor-tipo-pills gestor-tipo-principal">' +
-        '<button type="button" class="gestor-tipo-pill activa" data-tipo="general">' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="general">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>' +
           'Nota del día</button>' +
         '<button type="button" class="gestor-tipo-pill" data-tipo="agrupacion">' +
@@ -155,7 +167,13 @@ function crearFormularioGestorObs_() {
     '</div>';
 
   wrap.querySelector('#gestor-fecha').addEventListener('change', function (e) {
-    if (!e.target.value) return;
+    wrap.querySelector('#gestor-fecha-wrap').classList.toggle('vacia', !e.target.value);
+    if (!e.target.value) {
+      GESTOR_OBS.fecha = null;
+      GESTOR_OBS.datosDia = null;
+      actualizarBotonGuardarGestor_();
+      return;
+    }
     GESTOR_OBS.fecha = e.target.value;
     GESTOR_OBS.datosDia = null;
     GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
@@ -334,7 +352,12 @@ function actualizarFormularioSegunTipo_() {
   const vacioDer = document.getElementById('gestor-der-vacio');
   if (vacioDer) vacioDer.style.display = 'none';
 
-  if (GESTOR_OBS.tipo === 'general') {
+  if (!GESTOR_OBS.tipo) {
+    // Aún no se ha elegido tipo: solo se ven Fecha y Tipo.
+    campoBusqueda.style.display = 'none';
+    ayuda.style.display = 'none';
+    if (campoTexto) campoTexto.style.display = 'none';
+  } else if (GESTOR_OBS.tipo === 'general') {
     campoBusqueda.style.display = 'none';
     ayuda.style.display = 'none';
     textoLabel.textContent = 'Nota';
@@ -540,10 +563,36 @@ function actualizarSeccionModoGestorObs_() {
   }
 }
 
-/** Actualiza el texto del botón "Guardar" para reflejar cuántos cierres se van a crear (si es más de uno). */
+/** true si el formulario tiene todo lo necesario para guardar según el
+ *  tipo: fecha (con sus datos ya cargados), tipo y, además:
+ *  - Nota del día: la nota.
+ *  - Nota de agrupación: la agrupación y la nota.
+ *  - Bloquear conteo: al menos una tienda y la observación.
+ *  - Cambio puntual: tiendas, agrupación destino y, si es doble salida,
+ *    al menos una nave para la destino. */
+function formularioGestorObsCompleto_() {
+  if (!GESTOR_OBS.fecha || !GESTOR_OBS.tipo || !GESTOR_OBS.datosDia) return false;
+  const sel = GESTOR_OBS.seleccion;
+  if (GESTOR_OBS.tipo === 'cambio') {
+    if (!sel || !(sel.origenes && sel.origenes.length) || !sel.destino) return false;
+    if (sel.modo === 'doble' && !(sel.campos && sel.campos.length)) return false;
+    return true;
+  }
+  const textoEl = document.getElementById('gestor-texto');
+  const texto = textoEl ? textoEl.value.trim() : '';
+  if (!texto) return false;
+  if (GESTOR_OBS.tipo === 'agrupacion') return !!(sel && sel.agrupacion);
+  if (GESTOR_OBS.tipo === 'cierre') return !!(sel && sel.length);
+  return true;
+}
+
+/** Actualiza el botón "Guardar": texto (cuántos bloqueos/cambios se van a
+ *  crear, si es más de uno) y encendido/apagado según el formulario. */
 function actualizarBotonGuardarGestor_() {
   const btn = document.getElementById('modal-confirm-btn');
-  if (!btn) return;
+  if (!btn || GESTOR_OBS.guardando) return;
+  btn.disabled = !formularioGestorObsCompleto_();
+  btn.title = btn.disabled ? 'Rellena todos los campos para poder guardar' : '';
   const sel = GESTOR_OBS.seleccion;
   if (GESTOR_OBS.tipo === 'cambio') {
     const nc = sel && sel.origenes ? sel.origenes.length : 0;
@@ -677,13 +726,14 @@ function cargarDatosDiaGestorObs_(fecha) {
       if (pillCierre) pillCierre.disabled = sinDia;
       if (aviso) aviso.style.display = sinDia ? 'block' : 'none';
 
-      if (sinDia && GESTOR_OBS.tipo !== 'general') {
+      if (sinDia && GESTOR_OBS.tipo && GESTOR_OBS.tipo !== 'general') {
         GESTOR_OBS.tipo = 'general';
         document.querySelectorAll('.gestor-tipo-pill[data-tipo]').forEach(function (b) {
           b.classList.toggle('activa', b.getAttribute('data-tipo') === 'general');
         });
       }
       actualizarFormularioSegunTipo_();
+      actualizarBotonGuardarGestor_();
     } catch (e) {
       mostrarError('Error al procesar los datos recibidos: ' + (e && e.message ? e.message : e));
     }
@@ -801,6 +851,11 @@ function renderResultadosBusquedaGestorObs_(query) {
   if (!cont) return;
   posicionarResultadosGestorObs_();
 
+  if (!GESTOR_OBS.fecha) {
+    cont.innerHTML = '<div class="gestor-busqueda-vacio">Elige primero una fecha</div>';
+    cont.style.display = 'block';
+    return;
+  }
   if (!GESTOR_OBS.datosDia) {
     cont.innerHTML = '<div class="gestor-busqueda-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div>';
     cont.style.display = 'block';
@@ -952,6 +1007,8 @@ function guardarObservacionPromise_(obs) {
 function guardarDesdeGestorObs_() {
   const fecha = GESTOR_OBS.fecha;
   if (!fecha) { mostrarToast('Elige una fecha', true); return; }
+  if (!GESTOR_OBS.tipo) { mostrarToast('Elige el tipo', true); return; }
+  if (!formularioGestorObsCompleto_()) { mostrarToast('Rellena todos los campos', true); return; }
 
   if (GESTOR_OBS.tipo === 'cambio') {
     guardarCambioPuntualDesdeGestor_();
@@ -980,6 +1037,7 @@ function guardarDesdeGestorObs_() {
   }
 
   const btnGuardar = document.getElementById('modal-confirm-btn');
+  GESTOR_OBS.guardando = true;
   if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
 
   // Se guardan una a una (no en paralelo) para no saturar el backend de
@@ -1009,6 +1067,7 @@ function guardarDesdeGestorObs_() {
       }
     })
     .catch(function (err) {
+      GESTOR_OBS.guardando = false;
       if (btnGuardar) { btnGuardar.disabled = false; btnGuardar.textContent = 'Guardar'; }
       mostrarErrorServidor(err);
     });
@@ -1033,6 +1092,7 @@ function guardarCambioPuntualDesdeGestor_() {
   }
 
   const btnGuardar = document.getElementById('modal-confirm-btn');
+  GESTOR_OBS.guardando = true;
   if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
 
   // Uno por tienda, en serie (no en paralelo), igual que los bloqueos.
@@ -1074,6 +1134,7 @@ function guardarCambioPuntualDesdeGestor_() {
       refrescar();
     })
     .catch(function (err) {
+      GESTOR_OBS.guardando = false;
       if (btnGuardar) { btnGuardar.disabled = false; actualizarBotonGuardarGestor_(); }
       if (guardadosOk > 0) {
         // Quita de la selección las que ya se guardaron, para poder
