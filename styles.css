@@ -662,13 +662,14 @@
     display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative;
   }
   .festivos-dia-col.es-hoy .festivos-dia-col-header { background: #fffaf1; border-color: var(--amber); }
+  /* "+" de cada día en Bloqueos y cambios: en azul para que destaque. */
   .festivos-dia-col-add {
-    position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 6px;
-    border: 1px solid var(--line); background: #fff; color: var(--ink-soft); cursor: pointer; padding: 0;
+    position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 6px;
+    border: 1px solid var(--prevision); background: var(--prevision); color: #fff; cursor: pointer; padding: 0;
     display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s, border-color .15s;
   }
-  .festivos-dia-col-add:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
-  .festivos-dia-col.es-hoy .festivos-dia-col-add { background: #fff; }
+  .festivos-dia-col-add:hover { background: #2f62ad; border-color: #2f62ad; color: #fff; }
+  .festivos-dia-col.es-hoy .festivos-dia-col-add { background: var(--prevision); }
   .festivos-dia-col-badge {
     width: 40px; height: 40px; border-radius: 9px; background: var(--navy); color: #fff;
     display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
@@ -4385,3 +4386,17 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     background: #e9c48f; color: #5b3a0c; border-radius: 8px; padding: 1px 5px; margin-left: 2px;
   }
   .grupos2-chip.puntual { border-color: #e9c48f; }
+
+/* Gestor de observaciones: campo Fecha vacío con el texto "Selecciona una
+   fecha" en lugar del dd/mm/aaaa del navegador (al pulsar en él, se ve
+   el campo normal para escribirla o elegirla en el calendario). */
+.gestor-fecha-wrap { position: relative; }
+.gestor-fecha-placeholder {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: #9aa3b0; font-size: 14px; pointer-events: none; display: none;
+}
+.modal-box.gestor-obs .gestor-fecha-placeholder { font-size: 15px; }
+.gestor-fecha-wrap.vacia .gestor-fecha-placeholder { display: block; }
+.gestor-fecha-wrap.vacia input[type="date"]:not(:focus) { color: transparent; }
+.gestor-fecha-wrap.vacia input[type="date"]:not(:focus)::-webkit-datetime-edit { color: transparent; }
+.gestor-fecha-wrap.vacia:focus-within .gestor-fecha-placeholder { display: none; }
