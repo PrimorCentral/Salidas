@@ -575,6 +575,16 @@ const SUPABASE_ACCIONES_ = {
       p_texto: String(args[1] == null ? '' : args[1]).toUpperCase()
     });
   },
+  // Editar una nota cambiando también dónde sale: del día (agrupación vacía)
+  // o de una agrupación concreta. args: [id, texto, agrupacion, dia]
+  editarNotaObservacion: function (args) {
+    return llamarRpcSupabase_('editar_nota_observacion', {
+      p_id: args[0],
+      p_texto: String(args[1] == null ? '' : args[1]).toUpperCase(),
+      p_agrupacion: args[2] || '',
+      p_dia: args[3] || ''
+    });
+  },
   eliminarObservacion: function (args) {
     return llamarRpcSupabase_('eliminar_observacion', { p_id: args[0] });
   },

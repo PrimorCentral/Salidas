@@ -393,6 +393,7 @@ function queHizoActividad_(it) {
     'Añadida nota': ['Añadió', 'add', tipoNota],
     'Eliminada nota': ['Eliminó', 'del', tipoNota],
     'Editada nota': ['Cambió', 'edit', tipoNota],
+    'Movida nota': ['Movió', 'move', 'nota a otro sitio'],
     'Añadido cambio puntual': ['Añadió', 'add', 'cambio puntual' + (elem ? ' de ' + elem : '')],
     'Eliminado cambio puntual': ['Quitó', 'del', 'cambio puntual' + (elem ? ' de ' + elem : '')],
     'Editado conteo': ['Cambió', 'edit', 'conteo' + (elem ? ' de ' + elem : '')],

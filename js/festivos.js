@@ -279,11 +279,11 @@ function aplanarDatosFestivos_(datosDias) {
   (datosDias || []).forEach(function (data) {
     if (!data) return;
     (data.notasGenerales || []).forEach(function (n) {
-      lista.push({ fecha: data.fecha, tag: 'Nota del día', tipo: n.tipo, texto: n.texto, id: n.id });
+      lista.push({ fecha: data.fecha, tag: 'Nota del día', tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: '', automatica: !!n.excepcionId });
     });
     (data.secciones || []).forEach(function (seccion) {
       (seccion.notas || []).forEach(function (n) {
-        lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id });
+        lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: seccion.nombre, automatica: !!n.excepcionId });
       });
       (seccion.tiendas || []).forEach(function (t) {
         if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'CONTEO BLOQUEADO', id: t.cierreId });
@@ -402,7 +402,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
           // Lápiz para editar el texto: solo notas y bloqueos (los cambios
           // puntuales se editan volviendo a crearlos, su texto es automático).
           const editBtn = (it.id && it.tipo !== 'cambio')
-            ? '<button type="button" class="festivos-edit" data-id="' + escapeAttr(it.id) + '" title="Editar texto">' +
+            ? '<button type="button" class="festivos-edit" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo || '') + '" data-fecha="' + escapeAttr(it.fecha) + '" data-agrupacion="' + escapeAttr(it.agrupacion || '') + '" title="' + (it.tipo === 'cierre' ? 'Editar texto' : 'Editar nota') + '">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
             : '';
           return '<div class="' + clase + '">' +
@@ -442,7 +442,13 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     btn.onclick = function () {
       const cont = btn.closest('.festivos-item');
       const actual = cont ? cont.querySelector('.festivos-item-texto').textContent : '';
-      editarObservacionDesdeFestivos_(btn.getAttribute('data-id'), actual);
+      // Las notas se editan con la ventana que deja cambiar el tipo (del
+      // día / de agrupación); los bloqueos, solo el texto como siempre.
+      if (btn.getAttribute('data-tipo') === 'nota') {
+        editarNotaDesdeFestivos_(btn.getAttribute('data-id'), actual, btn.getAttribute('data-agrupacion'), btn.getAttribute('data-fecha'));
+      } else {
+        editarObservacionDesdeFestivos_(btn.getAttribute('data-id'), actual);
+      }
     };
   });
 
@@ -509,6 +515,184 @@ function editarObservacionDesdeFestivos_(id, textoActual) {
     area.value = textoActual || '';
     setTimeout(function () { area.focus(); area.setSelectionRange(area.value.length, area.value.length); }, 60);
   }
+}
+
+/** Datos (de getConteoDia) de una fecha del caché de Bloqueos y cambios. */
+function datosDiaCacheFestivos_(fecha) {
+  return (FESTIVOS_ESTADO.datosCache || []).find(function (d) { return d && d.fecha === fecha; }) || null;
+}
+
+/** Agrupación de ese día cuyo nombre aparece en el texto de la nota (la
+ *  más larga que coincida, para no quedarse con "TXT" si pone "TXT NORTE").
+ *  Si no aparece ninguna, devuelve ''. */
+function agrupacionDesdeTextoFestivos_(texto, secciones) {
+  const norm = function (x) { return String(x || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); };
+  const t = norm(texto);
+  let mejor = '', largo = 0;
+  (secciones || []).forEach(function (s) {
+    const completo = norm(s.nombre);
+    const titulo = norm(parsearNombreAgrupacion(s.nombre).titulo);
+    const coincide = (completo && t.indexOf(completo) !== -1) ? completo.length
+      : (titulo && titulo.length >= 3 && t.indexOf(titulo) !== -1 ? titulo.length : 0);
+    if (coincide > largo) { largo = coincide; mejor = s.nombre; }
+  });
+  return mejor;
+}
+
+/** Lápiz de una NOTA en Bloqueos y cambios: deja cambiar el texto y
+ *  también el tipo (nota del día ↔ nota de agrupación, o pasarla a otra
+ *  agrupación). Al pasar a "de agrupación", si en el texto aparece el
+ *  nombre de una agrupación de ese día, viene ya elegida (se puede cambiar). */
+function editarNotaDesdeFestivos_(id, textoActual, agrupacionActual, fecha) {
+  const datos = datosDiaCacheFestivos_(fecha);
+  const secciones = (datos && datos.secciones) || [];
+  const dia = (datos && datos.dia) || '';
+  let tipo = agrupacionActual ? 'agrupacion' : 'dia';
+  let agrupacion = agrupacionActual || '';
+  const fechaTxt = fechaCortaConDiaFestivos_(fecha);
+
+  const box = document.getElementById('modal-box');
+  ['ancho', 'usuario-form', 'peligro', 'gestor-obs'].forEach(function (c) { box.classList.remove(c); });
+  box.classList.add('medio');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Editar observación';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="gestor-form">' +
+      '<div class="gestor-campo">' +
+        '<label>Tipo</label>' +
+        '<div class="gestor-tipo-pills gestor-pills-2">' +
+          '<button type="button" class="gestor-tipo-pill" data-edit-tipo="dia">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>' +
+            'Nota del día</button>' +
+          '<button type="button" class="gestor-tipo-pill" data-edit-tipo="agrupacion"' + (secciones.length ? '' : ' disabled title="Ese día no tiene agrupaciones"') + '>' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>' +
+            'Nota de agrupación</button>' +
+        '</div>' +
+        '<div class="gestor-campo-ayuda" id="edit-nota-ayuda" style="margin-top:6px;"></div>' +
+      '</div>' +
+      '<div class="gestor-campo modal-campo" id="edit-nota-agr-campo">' +
+        '<label for="edit-nota-agr">Agrupación</label>' +
+        '<select id="edit-nota-agr"><option value="">Selecciona una agrupación…</option>' +
+          secciones.map(function (s) {
+            return '<option value="' + escapeAttr(s.nombre) + '">' + escapeHtml(s.nombre) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<div class="gestor-campo-ayuda" id="edit-nota-agr-ayuda" style="margin-top:6px;"></div>' +
+      '</div>' +
+      '<div class="gestor-campo">' +
+        '<label for="edit-nota-texto">Nota</label>' +
+        '<textarea id="edit-nota-texto"></textarea>' +
+      '</div>' +
+    '</div>';
+
+  const area = document.getElementById('edit-nota-texto');
+  area.value = textoActual || '';
+  area.oninput = function (e) {
+    const el = e.target, ini = el.selectionStart, fin = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(ini, fin);
+    refrescar();
+  };
+  const select = document.getElementById('edit-nota-agr');
+
+  function refrescar() {
+    custom.querySelectorAll('[data-edit-tipo]').forEach(function (b) { b.classList.toggle('activa', b.getAttribute('data-edit-tipo') === tipo); });
+    document.getElementById('edit-nota-agr-campo').style.display = tipo === 'agrupacion' ? '' : 'none';
+    document.getElementById('edit-nota-ayuda').textContent = tipo === 'agrupacion'
+      ? 'Solo sale en la agrupación que elijas, en el conteo del ' + fechaTxt + '.'
+      : 'Sale en todas las agrupaciones del conteo del ' + fechaTxt + '.';
+    select.value = agrupacion;
+    const btn = document.getElementById('modal-confirm-btn');
+    if (btn) {
+      const ok = area.value.trim() && (tipo === 'dia' || agrupacion);
+      btn.disabled = !ok;
+      btn.title = ok ? '' : (tipo === 'agrupacion' && !agrupacion ? 'Elige la agrupación' : 'Escribe la nota');
+    }
+  }
+
+  custom.querySelectorAll('[data-edit-tipo]').forEach(function (b) {
+    b.onclick = function () {
+      if (b.disabled) return;
+      tipo = b.getAttribute('data-edit-tipo');
+      const ayudaAgr = document.getElementById('edit-nota-agr-ayuda');
+      ayudaAgr.textContent = '';
+      if (tipo === 'agrupacion' && !agrupacion) {
+        // Opción A: si el texto nombra una agrupación de ese día, se elige
+        // sola (se puede cambiar en el desplegable).
+        agrupacion = agrupacionDesdeTextoFestivos_(area.value, secciones);
+        if (agrupacion) ayudaAgr.textContent = 'Elegida porque aparece en el texto de la nota. Puedes cambiarla.';
+      }
+      if (tipo === 'dia') agrupacion = '';
+      refrescar();
+    };
+  });
+  select.onchange = function () {
+    agrupacion = select.value;
+    document.getElementById('edit-nota-agr-ayuda').textContent = '';
+    refrescar();
+  };
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    const nuevo = area.value.trim().toUpperCase();
+    if (!nuevo || (tipo === 'agrupacion' && !agrupacion)) return;
+    const agrFinal = tipo === 'agrupacion' ? agrupacion : '';
+    if (nuevo === textoActual && agrFinal === (agrupacionActual || '')) { cerrarModal(); return; }
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const llamada = agrFinal === (agrupacionActual || '')
+      ? llamarApi_('editarObservacion', [id, nuevo])
+      : llamarApi_('editarNotaObservacion', [id, nuevo, agrFinal, dia]);
+    llamada
+      .then(function () {
+        cerrarModal();
+        moverNotaEnCacheFestivos_(id, nuevo, agrFinal, fecha);
+        aplicarFiltrosFestivos_();
+        mostrarToast('Observación actualizada');
+        if (document.getElementById('calendar-body')) cargarCalendario();
+        if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      })
+      .catch(function (err) {
+        btn.disabled = false; btn.textContent = 'Guardar';
+        mostrarErrorServidor(err);
+      });
+  };
+
+  refrescar();
+  setTimeout(function () { area.focus(); area.setSelectionRange(area.value.length, area.value.length); }, 60);
+}
+
+/** 'jue 29/10' */
+function fechaCortaConDiaFestivos_(fecha) {
+  const d = new Date(fecha + 'T12:00:00');
+  return ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getDay()] + ' ' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+/** En el caché: pone el texto nuevo y mueve la nota a "notas del día" o a
+ *  las notas de la agrupación indicada. */
+function moverNotaEnCacheFestivos_(id, texto, agrupacion, fecha) {
+  const data = datosDiaCacheFestivos_(fecha);
+  if (!data) { cambiarTextoEnCacheFestivos_(id, texto); return; }
+  let nota = null;
+  data.notasGenerales = (data.notasGenerales || []).filter(function (n) { if (n.id === id) { nota = n; return false; } return true; });
+  (data.secciones || []).forEach(function (s) {
+    s.notas = (s.notas || []).filter(function (n) { if (n.id === id) { nota = n; return false; } return true; });
+  });
+  if (!nota) return;
+  nota.texto = texto;
+  if (!agrupacion) { data.notasGenerales.push(nota); return; }
+  const destino = (data.secciones || []).find(function (s) { return s.nombre === agrupacion; });
+  if (destino) (destino.notas = destino.notas || []).push(nota);
 }
 
 /** Cambia en el caché local el texto de la nota/bloqueo con ese id. */

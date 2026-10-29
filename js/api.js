@@ -15,6 +15,7 @@ const METODOS_REMOTOS_ = {
   enviarInformaticaAgencia: 'enviarInformaticaAgencia',
   guardarObservacion: 'guardarObservacion',
   editarObservacion: 'editarObservacion',
+  editarNotaObservacion: 'editarNotaObservacion',
   eliminarObservacion: 'eliminarObservacion',
   getAgrupacionesConfig: 'getAgrupacionesConfig',
   crearAgrupacionConfig: 'crearAgrupacionConfig',
