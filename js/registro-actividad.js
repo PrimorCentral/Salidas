@@ -12,19 +12,37 @@
  * entre una y otra) se juntan en una sola línea "antes → después".
  * Se guardan 6 meses.
  */
-let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, usuario: '', seccion: '', texto: '', datos: null, pagina: 1, agruparMovimientos: false };
+let ADMIN_ACTIVIDAD_ESTADO = { desde: null, hasta: null, rango: 'hoy', usuarios: [], secciones: [], verbos: [], texto: '', datos: null, pagina: 1, agruparMovimientos: false, menuAbierto: null, busca: { usuarios: '', secciones: '', verbos: '' } };
 
 // Registros por página (para que la lista no se haga eterna).
 const ACTIVIDAD_POR_PAGINA_ = 30;
 
 const SECCIONES_ACTIVIDAD_ = ['Conteos', 'Envíos y desbloqueos', 'Bloqueos y cambios', 'Plantilla', 'Usuarios', 'Emails tiendas', 'Emails agencias'];
 
+// Periodos rápidos del filtro de fechas.
+const RANGOS_ACTIVIDAD_ = [
+  { id: 'hoy', texto: 'Hoy' },
+  { id: 'ayer', texto: 'Ayer' },
+  { id: '7d', texto: 'Últimos 7 días' },
+  { id: 'mes', texto: 'Este mes' },
+  { id: 'custom', texto: 'Elegir fechas' }
+];
+// Tipos de acción (el verbo de "Qué hizo"), para filtrar por ellos.
+const VERBOS_ACTIVIDAD_ = ['Añadió', 'Eliminó', 'Cambió', 'Movió', 'Ajustó', 'Envió', 'Desbloqueó', 'Quitó', 'Bloqueó'];
+
+function fechasDeRangoActividad_(rango) {
+  const hoy = hoyStr();
+  if (rango === 'ayer') { const a = sumarDias_(hoy, -1); return [a, a]; }
+  if (rango === '7d') return [sumarDias_(hoy, -6), hoy];
+  if (rango === 'mes') return [hoy.slice(0, 8) + '01', hoy];
+  return [hoy, hoy];
+}
+
 function renderAdminRegistroActividad() {
   const cont = document.getElementById('admin-contenido');
   if (!cont) return;
   const st = ADMIN_ACTIVIDAD_ESTADO;
-  if (!st.desde) st.desde = hoyStr();
-  if (!st.hasta) st.hasta = hoyStr();
+  if (!st.desde || !st.hasta) { const f = fechasDeRangoActividad_(st.rango || 'hoy'); st.desde = f[0]; st.hasta = f[1]; }
 
   cont.innerHTML =
     '<div class="vista-card">' +
@@ -37,21 +55,35 @@ function renderAdminRegistroActividad() {
         '</div>' +
       '</div>' +
       '<p>Quién ha hecho qué en la app: conteos, envíos y desbloqueos, bloqueos y cambios, plantilla (rutas y tiendas), usuarios, emails de tiendas y de agencias. Es un histórico de solo lectura y se guardan los últimos 6 meses.</p>' +
-      '<div class="admin-filtros">' +
-        '<div class="admin-filtro-campo"><label>Desde</label><input type="date" id="admin-actividad-desde" value="' + st.desde + '"></div>' +
-        '<div class="admin-filtro-campo"><label>Hasta</label><input type="date" id="admin-actividad-hasta" value="' + st.hasta + '"></div>' +
-        '<button type="button" class="btn-admin-buscar" id="btn-admin-actividad-buscar">Buscar</button>' +
-        '<div class="admin-filtro-campo"><label>Usuario</label><select id="admin-actividad-usuario" class="admin-filtro-select"><option value="">Todos</option></select></div>' +
-        '<div class="admin-filtro-campo"><label>Sección</label><select id="admin-actividad-seccion" class="admin-filtro-select"><option value="">Todas</option>' +
-          SECCIONES_ACTIVIDAD_.map(function (s) {
-            return '<option value="' + escapeHtml(s) + '"' + (st.seccion === s ? ' selected' : '') + '>' + escapeHtml(s) + '</option>';
+      '<div class="ra-filtros">' +
+        // Fila 1: periodo
+        '<div class="ra-filtro-fila">' +
+          '<span class="ra-filtro-etq">Periodo</span>' +
+          '<div class="ra-chips" id="ra-rangos">' +
+            RANGOS_ACTIVIDAD_.map(function (r) {
+              return '<button type="button" class="ra-chip' + (st.rango === r.id ? ' activo' : '') + '" data-ra-rango="' + r.id + '">' + escapeHtml(r.texto) + '</button>';
+            }).join('') +
+          '</div>' +
+          '<div class="ra-fechas" id="ra-fechas"' + (st.rango === 'custom' ? '' : ' hidden') + '>' +
+            '<input type="date" id="admin-actividad-desde" value="' + st.desde + '" title="Desde">' +
+            '<span>a</span>' +
+            '<input type="date" id="admin-actividad-hasta" value="' + st.hasta + '" title="Hasta">' +
+            '<button type="button" class="btn-admin-buscar" id="btn-admin-actividad-buscar">Buscar</button>' +
+          '</div>' +
+          '<span class="ra-periodo-texto" id="ra-periodo-texto"></span>' +
+        '</div>' +
+        // Fila 2: usuarios, sección y acción (varios en cada uno) + buscador
+        '<div class="ra-filtro-fila">' +
+          '<span class="ra-filtro-etq">Filtrar</span>' +
+          ['usuarios', 'secciones', 'verbos'].map(function (clave) {
+            return '<div class="ra-multi" id="ra-multi-' + clave + '">' +
+              '<button type="button" class="ra-multi-btn" id="ra-multi-' + clave + '-btn" data-ra-multi="' + clave + '"></button>' +
+              '<div class="ra-multi-menu" id="ra-multi-' + clave + '-menu" hidden></div>' +
+            '</div>';
           }).join('') +
-        '</select></div>' +
-        '<div class="admin-filtro-campo admin-filtro-busqueda">' +
-          '<label>Buscar</label>' +
-          '<div class="emails-config-busqueda">' +
+          '<div class="emails-config-busqueda ra-buscar">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-            '<input type="text" id="admin-actividad-buscar" placeholder="Tienda, agrupación, texto…" value="' + escapeHtml(st.texto) + '">' +
+            '<input type="text" id="admin-actividad-buscar" placeholder="Buscar tienda, agrupación, matrícula, texto de una nota…" value="' + escapeHtml(st.texto) + '">' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -62,8 +94,45 @@ function renderAdminRegistroActividad() {
   document.getElementById('btn-admin-actividad-buscar').onclick = function () { cargarRegistroActividad_(); };
   document.getElementById('admin-actividad-desde').addEventListener('change', function (e) { if (e.target.value) st.desde = e.target.value; });
   document.getElementById('admin-actividad-hasta').addEventListener('change', function (e) { if (e.target.value) st.hasta = e.target.value; });
-  document.getElementById('admin-actividad-usuario').addEventListener('change', function (e) { st.usuario = e.target.value; st.pagina = 1; pintarRegistroActividad_(); });
-  document.getElementById('admin-actividad-seccion').addEventListener('change', function (e) { st.seccion = e.target.value; st.pagina = 1; pintarRegistroActividad_(); });
+
+  // Periodo: los rápidos buscan al momento; "Elegir fechas" enseña los
+  // dos campos de fecha y espera a que se pulse Buscar.
+  document.querySelectorAll('[data-ra-rango]').forEach(function (btn) {
+    btn.onclick = function () {
+      st.rango = btn.getAttribute('data-ra-rango');
+      document.querySelectorAll('[data-ra-rango]').forEach(function (b) { b.classList.toggle('activo', b === btn); });
+      document.getElementById('ra-fechas').hidden = st.rango !== 'custom';
+      if (st.rango === 'custom') { document.getElementById('admin-actividad-desde').focus(); return; }
+      const f = fechasDeRangoActividad_(st.rango);
+      st.desde = f[0]; st.hasta = f[1];
+      document.getElementById('admin-actividad-desde').value = st.desde;
+      document.getElementById('admin-actividad-hasta').value = st.hasta;
+      cargarRegistroActividad_();
+    };
+  });
+
+  // Desplegables de usuarios, sección y acción (varios a la vez en cada uno).
+  document.querySelectorAll('[data-ra-multi]').forEach(function (btn) {
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      const clave = btn.getAttribute('data-ra-multi');
+      st.menuAbierto = st.menuAbierto === clave ? null : clave;
+      pintarFiltrosActividad_();
+      if (st.menuAbierto) { const inp = document.getElementById('ra-multi-buscar'); if (inp) inp.focus(); }
+    };
+  });
+  if (!window.RA_CLICK_FUERA_LISTO_) {
+    window.RA_CLICK_FUERA_LISTO_ = true;
+    document.addEventListener('click', function (e) {
+      const est = ADMIN_ACTIVIDAD_ESTADO;
+      if (!est.menuAbierto) return;
+      const caja = document.getElementById('ra-multi-' + est.menuAbierto);
+      if (caja && !caja.contains(e.target)) {
+        est.menuAbierto = null;
+        pintarFiltrosActividad_();
+      }
+    });
+  }
 
   let temporizador = null;
   document.getElementById('admin-actividad-buscar').addEventListener('input', function (e) {
@@ -72,11 +141,191 @@ function renderAdminRegistroActividad() {
     temporizador = setTimeout(function () { st.texto = valor.trim(); st.pagina = 1; pintarRegistroActividad_(); }, 200);
   });
 
+  pintarPeriodoActividad_();
+  pintarFiltrosActividad_();
   // No se busca sola al entrar: si ya había resultados de una búsqueda
   // anterior en esta sesión se muestran tal cual; si no, se espera a que
-  // pulsen "Buscar".
+  // se elija un periodo (o se pulse Buscar).
   if (st.datos) pintarRegistroActividad_();
   else mostrarPromptRegistroActividad_();
+}
+
+/** Texto con las fechas del periodo elegido, junto a los botones. */
+function pintarPeriodoActividad_() {
+  const el = document.getElementById('ra-periodo-texto');
+  if (!el) return;
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  if (st.rango === 'custom') { el.textContent = ''; return; }
+  el.textContent = st.desde === st.hasta
+    ? formatearFechaLarga(st.desde)
+    : 'del ' + formatearFechaCorta_(st.desde) + ' al ' + formatearFechaCorta_(st.hasta);
+}
+
+/** Verbo de un registro (para el filtro "Acción"). */
+function verboActividad_(it) {
+  return it._movimiento ? 'Movió' : (queHizoActividad_(it).verbo || 'Otros');
+}
+
+/** Pasa los filtros salvo el que se indica en "excepto" (para contar
+ *  cuántos registros hay en cada opción de ese filtro). */
+function pasaFiltrosActividad_(it, excepto) {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  if (excepto !== 'usuarios' && st.usuarios.length && st.usuarios.indexOf(it.nombre || '—') === -1) return false;
+  if (excepto !== 'secciones' && st.secciones.length && st.secciones.indexOf(it.seccion) === -1) return false;
+  if (excepto !== 'verbos' && st.verbos.length && st.verbos.indexOf(verboActividad_(it)) === -1) return false;
+  if (st.texto) {
+    const todo = [it.elemento, it.contexto, it.dia_plantilla, it.detalle, it.accion, it.nombre].join(' ').toLowerCase();
+    if (todo.indexOf(st.texto.toLowerCase()) === -1) return false;
+  }
+  return true;
+}
+
+/** Registros del periodo ya preparados (con movimientos agrupados si toca). */
+function baseActividad_() {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  const datos = st.datos || [];
+  return st.agruparMovimientos ? agruparMovimientosActividad_(datos) : datos;
+}
+
+const CONFIG_MULTI_ACTIVIDAD_ = {
+  usuarios:  { todos: 'Todos los usuarios', buscar: 'Buscar usuario…', vacio: 'Ningún usuario coincide',
+               icono: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
+  secciones: { todos: 'Todas las secciones', buscar: 'Buscar sección…', vacio: 'Ninguna sección coincide',
+               icono: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>' },
+  verbos:    { todos: 'Todas las acciones', buscar: 'Buscar acción…', vacio: 'Ninguna acción coincide',
+               icono: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>' }
+};
+
+/** Opciones de cada desplegable y cuántos registros tiene cada una
+ *  (contando el resto de filtros puestos). */
+function opcionesMultiActividad_(clave) {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  const base = baseActividad_();
+  const cuenta = {};
+  const valorDe = clave === 'usuarios' ? function (it) { return it.nombre || '—'; }
+    : clave === 'secciones' ? function (it) { return it.seccion; }
+    : verboActividad_;
+  base.forEach(function (it) { if (pasaFiltrosActividad_(it, clave)) { const v = valorDe(it); cuenta[v] = (cuenta[v] || 0) + 1; } });
+  let valores;
+  if (clave === 'secciones') valores = SECCIONES_ACTIVIDAD_.slice();
+  else if (clave === 'verbos') {
+    const vistos = {};
+    base.forEach(function (it) { vistos[verboActividad_(it)] = true; });
+    valores = VERBOS_ACTIVIDAD_.filter(function (v) { return vistos[v]; });
+    if (vistos.Otros) valores.push('Otros');
+  } else {
+    const vistos = {};
+    (st.datos || []).forEach(function (it) { vistos[it.nombre || '—'] = true; });
+    valores = Object.keys(vistos).sort(function (a, b) { return a.localeCompare(b, 'es'); });
+  }
+  st[clave].forEach(function (v) { if (valores.indexOf(v) === -1) valores.push(v); });
+  return valores.map(function (v) { return { valor: v, n: cuenta[v] || 0 }; });
+}
+
+/** Marca de color de cada opción (sección o tipo de acción). */
+function marcaOpcionActividad_(clave, valor) {
+  if (clave === 'secciones') return '<span class="ra-multi-dot ' + claseSeccionActividad_(valor) + '"></span>';
+  if (clave === 'verbos') return '<span class="ra-multi-dot ra-v-' + claseVerboActividad_(valor) + '"></span>';
+  return '';
+}
+
+/** Pinta los tres desplegables (Usuarios, Sección y Acción): el botón con
+ *  lo elegido y, el que esté abierto, su menú con buscador y casillas. */
+function pintarFiltrosActividad_() {
+  ['usuarios', 'secciones', 'verbos'].forEach(pintarMultiActividad_);
+}
+
+function pintarMultiActividad_(clave) {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  const cfg = CONFIG_MULTI_ACTIVIDAD_[clave];
+  const btn = document.getElementById('ra-multi-' + clave + '-btn');
+  const menu = document.getElementById('ra-multi-' + clave + '-menu');
+  if (!btn || !menu) return;
+  const sel = st[clave];
+  const corto = function (v) {
+    if (clave !== 'usuarios') return v;
+    const p = String(v).split(/\s+/);
+    return p.length > 2 ? p[0] + ' ' + p[p.length - 2] : v;
+  };
+  btn.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + cfg.icono + '</svg>' +
+    '<span>' + (sel.length === 0 ? cfg.todos
+      : sel.length === 1 ? escapeHtml(corto(sel[0]))
+      : escapeHtml(corto(sel[0])) + ' y ' + (sel.length - 1) + ' más') + '</span>' +
+    (sel.length ? '<span class="ra-multi-num">' + sel.length + '</span>' : '') +
+    '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  btn.classList.toggle('con-seleccion', sel.length > 0);
+  btn.classList.toggle('abierto', st.menuAbierto === clave);
+
+  const abierto = st.menuAbierto === clave;
+  menu.hidden = !abierto;
+  if (!abierto) { menu.innerHTML = ''; return; }
+
+  const q = normalizarBusquedaActividad_(st.busca[clave]);
+  const opciones = opcionesMultiActividad_(clave).filter(function (o) { return !q || normalizarBusquedaActividad_(o.valor).indexOf(q) !== -1; });
+
+  menu.innerHTML =
+    '<div class="ra-multi-buscar"><input type="text" id="ra-multi-buscar" placeholder="' + escapeAttr(cfg.buscar) + '" value="' + escapeAttr(st.busca[clave]) + '"></div>' +
+    '<div class="ra-multi-lista">' +
+      (opciones.length ? opciones.map(function (o) {
+        const marcado = sel.indexOf(o.valor) !== -1;
+        return '<label class="ra-multi-item' + (o.n || marcado ? '' : ' vacio') + '"><input type="checkbox" data-ra-opcion="' + escapeAttr(o.valor) + '"' + (marcado ? ' checked' : '') + '>' +
+          marcaOpcionActividad_(clave, o.valor) +
+          '<span class="nombre">' + escapeHtml(o.valor) + '</span><span class="ra-chip-n">' + o.n + '</span></label>';
+      }).join('') : '<div class="ra-filtro-vacio" style="padding:10px 12px;">' + (st.datos ? cfg.vacio : 'Elige antes un periodo') + '</div>') +
+    '</div>' +
+    '<div class="ra-multi-pie">' +
+      '<button type="button" id="ra-multi-limpiar"' + (sel.length ? '' : ' disabled') + '>Quitar selección</button>' +
+      '<button type="button" id="ra-multi-cerrar" class="principal">Listo</button>' +
+    '</div>';
+
+  const inp = document.getElementById('ra-multi-buscar');
+  inp.addEventListener('input', function () {
+    st.busca[clave] = inp.value;
+    const pos = inp.selectionStart;
+    pintarMultiActividad_(clave);
+    const nuevo = document.getElementById('ra-multi-buscar');
+    if (nuevo) { nuevo.focus(); nuevo.setSelectionRange(pos, pos); }
+  });
+  menu.querySelectorAll('[data-ra-opcion]').forEach(function (chk) {
+    chk.onchange = function () {
+      const v = chk.getAttribute('data-ra-opcion');
+      const pos = sel.indexOf(v);
+      if (chk.checked && pos === -1) sel.push(v);
+      if (!chk.checked && pos !== -1) sel.splice(pos, 1);
+      st.pagina = 1;
+      pintarRegistroActividad_();
+    };
+  });
+  document.getElementById('ra-multi-limpiar').onclick = function () { st[clave] = []; st.pagina = 1; pintarRegistroActividad_(); };
+  document.getElementById('ra-multi-cerrar').onclick = function () { st.menuAbierto = null; st.busca[clave] = ''; pintarMultiActividad_(clave); };
+}
+
+function claseVerboActividad_(v) {
+  return { 'Añadió': 'add', 'Eliminó': 'del', 'Quitó': 'del', 'Cambió': 'edit', 'Movió': 'move', 'Ajustó': 'warn', 'Desbloqueó': 'warn', 'Bloqueó': 'warn', 'Envió': 'send' }[v] || 'otro';
+}
+
+function normalizarBusquedaActividad_(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Línea con los filtros que están puestos, cada uno con su × para
+ *  quitarlo, y un "Quitar todos". */
+function htmlFiltrosActivosActividad_() {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  const pills = [];
+  st.usuarios.forEach(function (u) { pills.push(['usuarios', u, u]); });
+  st.secciones.forEach(function (s) { pills.push(['secciones', s, s]); });
+  st.verbos.forEach(function (v) { pills.push(['verbos', v, v]); });
+  if (st.texto) pills.push(['texto', st.texto, '«' + st.texto + '»']);
+  if (!pills.length) return '';
+  return '<div class="ra-activos">' +
+    '<span class="ra-filtro-etq">Filtrando por</span>' +
+    pills.map(function (p) {
+      return '<span class="ra-activo">' + escapeHtml(p[2]) + '<button type="button" data-ra-quitar="' + p[0] + '" data-ra-valor="' + escapeAttr(p[1]) + '" title="Quitar este filtro">×</button></span>';
+    }).join('') +
+    '<button type="button" class="ra-activos-limpiar" id="ra-quitar-todos">Quitar todos</button>' +
+  '</div>';
 }
 
 function mostrarPromptRegistroActividad_() {
@@ -85,7 +334,7 @@ function mostrarPromptRegistroActividad_() {
   cont.innerHTML =
     '<div class="emails-config-vacio">' +
       '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-      'Elige el rango de fechas y pulsa "Buscar" para consultar el registro.' +
+      'Elige un periodo (Hoy, Ayer, Últimos 7 días…) para consultar el registro.' +
     '</div>';
 }
 
@@ -117,20 +366,6 @@ function cargarRegistroActividad_(esRefrescoManual) {
       mostrarErrorServidor(err);
       if (resultadoEl) resultadoEl.innerHTML = '<div class="emails-config-vacio">No se ha podido cargar el registro.</div>';
     });
-}
-
-/** Rellena el desplegable de usuarios con los que salen en los datos. */
-function rellenarUsuariosActividad_() {
-  const sel = document.getElementById('admin-actividad-usuario');
-  if (!sel) return;
-  const st = ADMIN_ACTIVIDAD_ESTADO;
-  const vistos = {};
-  (st.datos || []).forEach(function (it) { vistos[it.nombre || '—'] = true; });
-  const nombres = Object.keys(vistos).sort(function (a, b) { return a.localeCompare(b, 'es'); });
-  if (st.usuario && !vistos[st.usuario]) nombres.unshift(st.usuario);
-  sel.innerHTML = '<option value="">Todos</option>' + nombres.map(function (n) {
-    return '<option value="' + escapeHtml(n) + '"' + (st.usuario === n ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
-  }).join('');
 }
 
 function claseSeccionActividad_(seccion) {
@@ -290,28 +525,18 @@ function pintarRegistroActividad_() {
   const cont = document.getElementById('admin-actividad-resultado');
   if (!cont) return;
   const st = ADMIN_ACTIVIDAD_ESTADO;
-  rellenarUsuariosActividad_();
+  pintarFiltrosActividad_();
+  pintarPeriodoActividad_();
   const datos = st.datos || [];
-  const texto = st.texto.toLowerCase();
-
-  const items = datos.filter(function (it) {
-    if (st.usuario && (it.nombre || '—') !== st.usuario) return false;
-    if (st.seccion && it.seccion !== st.seccion) return false;
-    if (texto) {
-      const todo = [it.elemento, it.contexto, it.dia_plantilla, it.detalle, it.accion, it.nombre].join(' ').toLowerCase();
-      if (todo.indexOf(texto) === -1) return false;
-    }
-    return true;
-  });
-
-  const lista = st.agruparMovimientos ? agruparMovimientosActividad_(items) : items;
+  const lista = baseActividad_().filter(function (it) { return pasaFiltrosActividad_(it); });
 
   if (!lista.length) {
-    cont.innerHTML =
+    cont.innerHTML = htmlFiltrosActivosActividad_() +
       '<div class="emails-config-vacio">' +
         '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>' +
         (datos.length ? 'Ningún registro coincide con los filtros.' : 'No hay actividad registrada en esas fechas.') +
       '</div>';
+    enlazarFiltrosActivosActividad_(cont);
     return;
   }
 
@@ -339,6 +564,7 @@ function pintarRegistroActividad_() {
   });
 
   cont.innerHTML =
+    htmlFiltrosActivosActividad_() +
     '<div class="admin-resumen ra-resumen">' +
       '<span>' + lista.length + (lista.length === 1 ? ' registro' : ' registros') +
         (totalPaginas > 1 ? ' · mostrando ' + (inicio + 1) + '–' + (inicio + pagina.length) : '') +
@@ -352,6 +578,7 @@ function pintarRegistroActividad_() {
     '</table></div>' +
     htmlPaginacionActividad_(st.pagina, totalPaginas);
 
+  enlazarFiltrosActivosActividad_(cont);
   document.getElementById('ra-agrupar-mov').addEventListener('change', function (e) {
     st.agruparMovimientos = e.target.checked;
     st.pagina = 1;
@@ -367,6 +594,33 @@ function pintarRegistroActividad_() {
       if (wrap) wrap.scrollTop = 0;
     });
   });
+}
+
+function enlazarFiltrosActivosActividad_(cont) {
+  const st = ADMIN_ACTIVIDAD_ESTADO;
+  cont.querySelectorAll('[data-ra-quitar]').forEach(function (b) {
+    b.onclick = function () {
+      const clave = b.getAttribute('data-ra-quitar');
+      const valor = b.getAttribute('data-ra-valor');
+      if (clave === 'texto') {
+        st.texto = '';
+        const inp = document.getElementById('admin-actividad-buscar');
+        if (inp) inp.value = '';
+      } else {
+        st[clave] = st[clave].filter(function (x) { return x !== valor; });
+      }
+      st.pagina = 1;
+      pintarRegistroActividad_();
+    };
+  });
+  const todos = document.getElementById('ra-quitar-todos');
+  if (todos) todos.onclick = function () {
+    st.usuarios = []; st.secciones = []; st.verbos = []; st.texto = '';
+    const inp = document.getElementById('admin-actividad-buscar');
+    if (inp) inp.value = '';
+    st.pagina = 1;
+    pintarRegistroActividad_();
+  };
 }
 
 /** Botones « ‹ Página X de Y › ». Sin nada si cabe todo en una página. */
