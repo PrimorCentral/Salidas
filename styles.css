@@ -3613,6 +3613,34 @@
   .ra-sec-envios   { background: #fdf3d6; color: #8a6200; }
   .ra-sec-tiendas  { background: #e8f6ee; color: #1f7a45; }
   .ra-sec-agencias { background: #fff3e0; color: #9a5a00; }
+  /* Filas del registro: hora con segundos, quién, qué hizo (verbo de
+     color + texto), dónde (conteo y agrupación) y sección. Cada día lleva
+     su propia fila de cabecera. */
+  table.admin-tabla-actividad tbody tr:nth-child(even) { background: none; }
+  table.admin-tabla-actividad td.ra-hora { font-variant-numeric: tabular-nums; color: var(--ink-soft); font-weight: 600; }
+  table.admin-tabla-actividad td.ra-quien { white-space: normal; min-width: 140px; }
+  table.admin-tabla-actividad td.ra-que { white-space: normal; min-width: 280px; }
+  table.admin-tabla-actividad td.ra-donde { white-space: normal; min-width: 220px; }
+  table.admin-tabla-actividad td.ra-sec { width: 1%; }
+  .ra-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .ra-verbo {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-right: 6px;
+    background: #eef1f7; color: var(--navy);
+  }
+  .ra-v-add  { background: #e4f3ec; color: #1f7a45; }
+  .ra-v-del  { background: #fdecea; color: #a1281c; }
+  .ra-v-edit { background: #e6f0fb; color: #1d4f8c; }
+  .ra-v-warn { background: #fdf3d6; color: #8a6200; }
+  .ra-v-send { background: #efe9fb; color: #5b3aa0; }
+  .ra-v-move { background: #e3f4f7; color: #0f6b7a; }
+  table.admin-tabla-actividad tr.ra-fila-dia td {
+    background: #f3f5f9; font-weight: 800; color: var(--navy); font-size: 12.5px; padding: 7px 12px;
+    position: sticky; top: 34px; z-index: 1; border-bottom: 1px solid var(--line);
+  }
+  .ra-fila-dia td { display: table-cell; }
+  .ra-fila-dia-n { float: right; font-weight: 600; color: var(--ink-soft); font-size: 11.5px; }
+  .ra-resumen { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .ra-agrupar { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); cursor: pointer; font-weight: 600; }
   /* La tabla tiene su propio scroll para que la cabecera (Cuándo, Usuario...)
      se quede fija arriba al bajar. */
   .admin-tabla-wrap.ra-tabla-scroll { overflow: auto; max-height: calc(100vh - var(--topbar-h) - 290px); min-height: 260px; }
