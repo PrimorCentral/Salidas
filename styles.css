@@ -2284,6 +2284,19 @@
   .aviso-carga-bloqueada b { font-weight: 800; }
   .aviso-carga-texto { flex: 1 1 auto; min-width: 0; }
   .aviso-carga-accion { font-size: 11.5px; font-weight: 700; color: var(--danger); white-space: nowrap; }
+  /* Aviso: otra persona cambió la misma casilla (ver avisarConflictosConteo_). */
+  .conflictos-conteo { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 4px 0 6px; }
+  .conflictos-conteo th { text-align: left; color: var(--ink-soft); font-size: 11.5px; text-transform: uppercase; letter-spacing: .3px; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  .conflictos-conteo td { padding: 10px 6px; border-top: 1px solid #f0f0f0; vertical-align: middle; }
+  .conflictos-conteo tbody tr:first-child td { border-top: none; }
+  .conflictos-conteo .cc-tienda { font-weight: 700; }
+  .conflictos-conteo .cc-num { font-size: 16px; }
+  .conflictos-conteo .cc-tuyo { color: #1d4ed8; }
+  .conflictos-conteo .cc-quien { font-size: 11.5px; color: var(--ink-soft); }
+  .conflictos-conteo .cc-accion { text-align: right; }
+  .conflictos-conteo .cc-dejar { border: 1px solid #d1d5db; background: #fff; border-radius: 7px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .conflictos-conteo .cc-dejar:disabled { opacity: .7; cursor: default; }
+
   /* Mientras otra persona tiene abierta la ventana de "Ajustar carga". */
   .aviso-carga-bloqueada.ajustando { background: #eef2fb; color: #1f3a6b; }
   .aviso-carga-bloqueada.ajustando .aviso-carga-accion { color: #1f3a6b; }
