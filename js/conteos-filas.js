@@ -429,6 +429,11 @@ function recogerFilas(tableWrap) {
   const filas = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-grupo-header')) return; // tiendas cerradas y fila-resumen del grupo no se guardan
+    // Tienda que hoy sale por otra agrupación (cambio puntual): su fila aquí
+    // no tiene casillas y su conteo se guarda desde la agrupación de
+    // destino. Si no se salta, al no encontrar las casillas el guardado
+    // fallaba y el botón de verificar se quedaba cargando para siempre.
+    if (tr.classList.contains('fila-sale-excepcion')) return;
     // "row" es ahora el UUID de tiendas_ruta (antes era el nº de fila de
     // la hoja de Google Sheets), así que NO se convierte con Number().
     const row = tr.getAttribute('data-row');
