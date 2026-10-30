@@ -819,12 +819,15 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     return c ? { tipo: c.origen, hora: c.hora, enviadoPor: c.por, lista: c.lista, camiones: c.camiones || null } : null;
   }
   // Camiones (matrícula, remolque y tiendas) de la carga vigente, si la hay.
+  // Sin carga todavía: la matrícula puesta sin ajustar (seccion.matriculas).
   function camionesCarga_() {
     const c = seccion.carga;
-    return (c && Array.isArray(c.camiones)) ? c.camiones : null;
+    if (c) return Array.isArray(c.camiones) ? c.camiones : null;
+    return Array.isArray(seccion.matriculas) ? seccion.matriculas : null;
   }
-  // Click en el camioncito (servidor nuevo).
-  function abrirCarga_() {
+  // Click en el camioncito (servidor nuevo). sinAviso: no sacar la ventanita
+  // de "¿ajustar ahora?" (al volver de poner la matrícula).
+  function abrirCarga_(sinAviso) {
     const titulo = parsearNombreAgrupacion(seccion.nombre).titulo;
     const fechaTexto = formatearFechaLarga(fecha);
     const c = seccion.carga;
@@ -845,12 +848,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (info && info.tipo === 'ajuste' && seccion.estado !== 'enviado') info.lista = listaCargaEfectiva_();
     // Nadie la ha ajustado todavía: se enseña lo contado (con o sin permiso),
     // con la etiqueta "CARGA SIN AJUSTAR POR UN RESPONSABLE".
-    if (!info && seccion.estado !== 'enviado') info = { tipo: 'contado', lista: listaCargaEfectiva_() };
+    if (!info && seccion.estado !== 'enviado') info = { tipo: 'contado', lista: listaCargaEfectiva_(), camiones: camionesCarga_() };
     const onEditar = puede ? function () { abrirAjustarCarga_(null, null, true); } : null;
-    // Definitivo ya enviado: con el permiso "Ajustar carga" se puede poner
-    // o cambiar la matrícula/remolque (sin tocar palets).
-    const onMatriculas = (c && c.origen === 'definitivo' && tienePermiso('ajustar_carga'))
-      ? function (camiones) { abrirMatriculasDefinitivo_(camiones); } : null;
+    // Con el permiso "Ajustar carga" se puede poner o cambiar la
+    // matrícula/remolque en cualquier momento (sin ajustar la carga, sin
+    // tocar palets y sin bloquear el conteo), también con el definitivo enviado.
+    const onMatriculas = (info && tienePermiso('ajustar_carga') && ((c && c.origen === 'definitivo') || puede))
+      ? function (camiones) { abrirMatriculas_(camiones, info.tipo); } : null;
     mostrarModalListaCarga(info, titulo, fechaTexto, {
       revisar: revisar,
       soloLectura: !puede && !(c && c.origen === 'definitivo') && seccion.estado !== 'enviado',
@@ -859,24 +863,29 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     });
     // Sin ajustar todavía y con permiso: ventanita encima preguntando si
     // se quiere ajustar (solo se quita con sus botones o con Escape).
-    if (puede && info && info.tipo === 'contado') mostrarAvisoCargaSinAjustar(onEditar);
+    if (puede && info && info.tipo === 'contado' && !sinAviso) mostrarAvisoCargaSinAjustar(onEditar);
   }
-  // Matrícula/remolque con el definitivo ya enviado. Al guardar o cancelar
-  // se vuelve a la lista de carga.
-  function abrirMatriculasDefinitivo_(camiones) {
+  // Matrícula/remolque sin ajustar la carga (o con el definitivo ya
+  // enviado). Al guardar o cancelar se vuelve a la lista de carga.
+  function abrirMatriculas_(camiones, tipo) {
     mostrarModalMatriculasDefinitivo({
       titulo: parsearNombreAgrupacion(seccion.nombre).titulo,
       fechaTexto: formatearFechaLarga(fecha),
       camiones: camiones,
-      onCancelar: function () { abrirCarga_(); },
+      tipo: tipo,
+      onCancelar: function () { abrirCarga_(true); },
       onGuardar: function (lista) {
         mostrarModalCargando('Guardando la matrícula…');
-        llamarApi_('guardarMatriculasDefinitivo', [dia, seccion.nombre, fecha, lista])
-          .then(function (carga) {
-            if (carga) seccion.carga = carga;
+        llamarApi_('guardarMatriculasCarga', [dia, seccion.nombre, fecha, lista])
+          .then(function (res) {
+            if (res) {
+              seccion.carga = res.carga || null;
+              seccion.matriculas = res.matriculas || null;
+            }
+            panel._firma = '';
             actualizarEstadoCarga_();
             mostrarToast('Matrícula guardada');
-            abrirCarga_();
+            abrirCarga_(true);
           })
           .catch(function (err) {
             cerrarModal();
@@ -930,6 +939,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       llamarApi_('guardarCargaAjustada', [dia, seccion.nombre, fecha, cargas, camiones || []])
         .then(function (carga) {
           seccion.carga = carga || null;
+          // La matrícula puesta sin ajustar ya va dentro de la carga.
+          seccion.matriculas = null;
           // Carga recién guardada: se vuelve a ver la carga ajustada (si la hay).
           delete VISTA_CONTEO_REAL_[fecha + '|' + seccion.nombre];
           // Al ajustar la carga, el servidor deja la agrupación verificada
@@ -1979,6 +1990,8 @@ if (callback) callback(true, mensaje);
       // Los camiones que salieron en el email (el servidor los toma de la carga vigente).
       camiones: (resultado && resultado.camiones !== undefined) ? resultado.camiones : camionesCarga_()
     };
+    // La matrícula puesta sin ajustar ya va dentro del envío.
+    seccion.matriculas = null;
   }
 
   /**

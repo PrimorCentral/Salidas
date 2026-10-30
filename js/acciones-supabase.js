@@ -31,7 +31,9 @@ const SUPABASE_ACCIONES_ = {
     // hay ninguna). Si el servidor todavía no la manda (versión antigua de
     // get_conteo_dia_completo), seccion.carga se queda sin definir y el
     // camioncito funciona como antes (ver htmlBotonListaCarga_).
-    function unir_(data, verifs, cambios, cargas) {
+    // Y las matrículas puestas sin ajustar la carga (seccion.matriculas =
+    // [{matricula, remolque, ...}] o null), si el servidor ya las manda.
+    function unir_(data, verifs, cambios, cargas, matriculas) {
       verifs = verifs || {};
       cambios = cambios || {};
       if (data && data.secciones) {
@@ -39,13 +41,14 @@ const SUPABASE_ACCIONES_ = {
           s.verificaciones = verifs[s.nombre] || {};
           s.cambiosVerif = cambios[s.nombre] || {};
           if (cargas) s.carga = cargas[s.nombre] || null;
+          if (matriculas) s.matriculas = matriculas[s.nombre] || null;
         });
       }
       return data;
     }
     return llamarRpcSupabase_('get_conteo_dia_completo', { p_fecha: fecha })
       .then(function (res) {
-        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas);
+        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas, res && res.matriculas);
       })
       .catch(function (err) {
         if (!err || err.code !== 'PGRST202') throw err;
@@ -108,6 +111,14 @@ const SUPABASE_ACCIONES_ = {
   // Matrícula/remolque de los camiones con el definitivo ya enviado (no toca palets).
   guardarMatriculasDefinitivo: function (args) {
     return llamarRpcSupabase_('guardar_matriculas_definitivo', {
+      p_dia: args[0], p_nombre_ruta: args[1], p_fecha: args[2], p_camiones: args[3]
+    });
+  },
+  // Matrícula/remolque en cualquier momento (sin ajustar la carga ni
+  // bloquear el conteo; con el definitivo enviado, como la de arriba).
+  // Devuelve { carga, matriculas }.
+  guardarMatriculasCarga: function (args) {
+    return llamarRpcSupabase_('guardar_matriculas_carga', {
       p_dia: args[0], p_nombre_ruta: args[1], p_fecha: args[2], p_camiones: args[3]
     });
   },

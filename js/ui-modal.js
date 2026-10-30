@@ -865,8 +865,8 @@ function fichasCamionesHtml_(camiones, paletsCamion) {
  *   revisar:     { 'NOMBRE TIENDA': {antes, ahora} } tiendas cuyo conteo cambió
  *   soloLectura: muestra la banda "Solo lectura" (usuario sin permiso)
  *   onEditar:    si viene, lápiz al lado de la X para pasar a editar la carga
- *   onMatriculas: si viene (definitivo ya enviado y permiso «Ajustar carga»),
- *                 botón para poner o cambiar matrícula y remolque
+ *   onMatriculas: si viene (permiso «Ajustar carga»), botón para poner o
+ *                 cambiar matrícula y remolque sin ajustar la carga
  * info.tipo 'contado': nadie ha ajustado todavía; se enseña lo contado.
  */
 function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
@@ -931,12 +931,13 @@ function mostrarModalListaCarga(info, titulo, fechaTexto, extra) {
 }
 
 /**
- * Modal "Matrícula del camión" con el definitivo ya enviado: solo matrícula
- * (obligatoria) y remolque de cada camión. No se pueden añadir ni quitar
- * camiones ni tocar palets (el reparto ya se envió). Sin camiones, se pone
- * uno y todas las tiendas van en él.
+ * Modal "Matrícula del camión": solo matrícula (obligatoria) y remolque de
+ * cada camión, sin ajustar la carga. No se pueden añadir ni quitar camiones
+ * ni tocar palets (eso es «Ajustar carga»). Sin camiones, se pone uno y
+ * todas las tiendas van en él. Vale antes y después del definitivo.
  *
  * datos: { titulo, fechaTexto, camiones: [{matricula, remolque, ...}],
+ *          tipo: 'contado'|'ajuste'|'prevision'|'definitivo' (por defecto definitivo),
  *          onGuardar: function(lista [{matricula, remolque}]), onCancelar }
  */
 function mostrarModalMatriculasDefinitivo(datos) {
@@ -949,9 +950,16 @@ function mostrarModalMatriculasDefinitivo(datos) {
     return String(t || '').toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 15);
   }
 
+  const tipo = datos.tipo || 'definitivo';
+  const tipoTexto = { definitivo: 'Definitivo', prevision: 'Previsión', ajuste: 'Carga ajustada', contado: 'Lo contado' }[tipo] || '';
+  const nota = tipo === 'definitivo'
+    ? 'El definitivo ya está enviado: aquí solo se pone o se cambia la matrícula y el remolque. Los palets y el reparto de tiendas no cambian.'
+    : 'Aquí solo se pone o se cambia la matrícula y el remolque, sin ajustar la carga: los palets no cambian y el conteo no se bloquea.' +
+      (lista.length > 1 ? '' : ' Para repartir las tiendas en varios camiones, usa «Ajustar carga».');
+
   custom.innerHTML =
-    cabeceraModalCarga_('Matrícula del camión', datos.titulo + ' · Definitivo · ' + datos.fechaTexto, '') +
-    '<p class="modal-envio-nota" style="margin:4px 0 12px;">El definitivo ya está enviado: aquí solo se pone o se cambia la matrícula y el remolque. Los palets y el reparto de tiendas no cambian.</p>' +
+    cabeceraModalCarga_('Matrícula del camión', datos.titulo + (tipoTexto ? ' · ' + tipoTexto : '') + ' · ' + datos.fechaTexto, '') +
+    '<p class="modal-envio-nota" style="margin:4px 0 12px;">' + escapeHtml(nota) + '</p>' +
     '<div class="modal-camiones"><div class="modal-camiones-lista">' +
       lista.map(function (c, k) {
         return '<div class="modal-camion" data-k="' + k + '">' +
