@@ -1240,7 +1240,33 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   function autoguardarSeccion(onDone) {
     if (!editable) { if (onDone) onDone(false); return; } // por si acaso: no se guarda nada de una agrupación no editable
     if (!hayCambiosSinGuardar) { marcarTodoGuardado_(); if (onDone) onDone(true); return; }
-    const filas = recogerFilas(tableWrap);
+    const tituloAgr_ = parsearNombreAgrupacion(seccion.nombre).titulo;
+    const avisarNoGuardado_ = function (err) {
+      const msg = textoDeError_(err);
+      if (msg === '') return; // sesión caducada: ya se avisa al volver al login
+      mostrarErrorFijo({
+        titulo: 'No se ha guardado el conteo',
+        donde: tituloAgr_ + ' · ' + formatearFechaLarga(fecha),
+        queHaPasado: 'Los números que has escrito siguen en pantalla, pero NO están guardados.',
+        pasos: [
+          'Pulsa «Guardar conteo» para intentarlo otra vez.',
+          'Si vuelve a fallar, no recargues ni cierres la página: perderías lo escrito.',
+          'Avisa a un responsable.'
+        ],
+        error: err
+      });
+    };
+    let filas;
+    try {
+      filas = recogerFilas(tableWrap);
+    } catch (err) {
+      // Fallo del programa al leer la tabla: se avisa en vez de no hacer nada.
+      console.error(err);
+      marcarCambiosSinGuardar_();
+      avisarNoGuardado_(err);
+      if (onDone) onDone(false);
+      return;
+    }
     marcarGuardando(panel, true);
     guardandoAhora_ = true;
     if (btnGuardarConteo) btnGuardarConteo.disabled = true;
@@ -1258,7 +1284,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         guardandoAhora_ = false;
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
         marcarCambiosSinGuardar_(); // el guardado falló: sigue habiendo cambios sin guardar
-        mostrarErrorServidor(err);
+        avisarNoGuardado_(err);
         if (onDone) onDone(false);
       });
   }
@@ -1487,12 +1513,37 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (!editable || bloqueadoParaMi_()) return;
     const n = naveDeCampo_(campo);
     const btn = header.querySelector('.btn-header-verificar');
+    // Por si algo falla por el camino: el botón vuelve a estar disponible
+    // y se avisa de que la verificación no se ha hecho.
+    const fallo_ = function (err) {
+      if (btn) btn.disabled = false;
+      const msg = textoDeError_(err);
+      if (msg === '') return; // sesión caducada: ya se avisa al volver al login
+      mostrarErrorFijo({
+        titulo: 'No se ha verificado ' + n.etiqueta + ' (' + n.nave + ')',
+        donde: parsearNombreAgrupacion(seccion.nombre).titulo + ' · ' + formatearFechaLarga(fecha),
+        queHaPasado: 'La columna ' + n.etiqueta + ' sigue sin verificar.',
+        pasos: [
+          'Vuelve a pulsar el botón de verificar.',
+          'Si vuelve a fallar, avisa a un responsable.'
+        ],
+        error: err
+      });
+    };
     if (btn) btn.disabled = true;
-    vaciasDeCampo_(campo).inputs.forEach(function (input) {
-      input.value = '0';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    try {
+      vaciasDeCampo_(campo).inputs.forEach(function (input) {
+        input.value = '0';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    } catch (err) {
+      console.error(err);
+      fallo_(err);
+      return;
+    }
     autoguardarSeccion(function (ok) {
+      // Si no se ha podido guardar, el aviso de "no se ha guardado" ya ha
+      // salido: solo se libera el botón.
       if (!ok) { if (btn) btn.disabled = false; return; }
       llamarApi_('verificarConteo', [dia, seccion.nombre, fecha, campo])
         .then(function (res) {
@@ -1502,10 +1553,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           pintarVerificaciones_();
           mostrarToast(n.etiqueta + ' verificado en ' + parsearNombreAgrupacion(seccion.nombre).titulo);
         })
-        .catch(function (err) {
-          if (btn) btn.disabled = false;
-          mostrarErrorServidor(err);
-        });
+        .catch(fallo_);
     });
   }
 

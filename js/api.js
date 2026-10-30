@@ -99,7 +99,22 @@ function llamarRpcSupabase_(nombreFuncion, argsExtra) {
     return Promise.reject(new Error('Supabase no está configurado todavía.'));
   }
   const params = Object.assign({ p_token: SESSION_TOKEN }, argsExtra || {});
-  return supabaseClient.rpc(nombreFuncion, params).then(function (resp) {
+  // Si el servidor no contesta en 30 s (red caída, wifi del almacén...), se
+  // corta la llamada y se da error, para que ningún botón se quede
+  // cargando para siempre sin avisar.
+  let consulta = supabaseClient.rpc(nombreFuncion, params);
+  let temporizador = null;
+  let cortada = false;
+  if (typeof AbortController === 'function' && consulta && typeof consulta.abortSignal === 'function') {
+    const ctrl = new AbortController();
+    consulta = consulta.abortSignal(ctrl.signal);
+    temporizador = setTimeout(function () { cortada = true; ctrl.abort(); }, 30000);
+  }
+  return Promise.resolve(consulta).then(function (resp) {
+    if (temporizador) clearTimeout(temporizador);
+    if (cortada) {
+      throw new Error('El servidor no ha respondido. Comprueba la conexión a internet y vuelve a intentarlo.');
+    }
     if (resp.error) {
       if (resp.error.message && resp.error.message.indexOf('Sesión caducada') !== -1) {
         volverALogin_();
@@ -108,5 +123,9 @@ function llamarRpcSupabase_(nombreFuncion, argsExtra) {
       throw resp.error;
     }
     return resp.data;
+  }, function (err) {
+    if (temporizador) clearTimeout(temporizador);
+    if (cortada) throw new Error('El servidor no ha respondido. Comprueba la conexión a internet y vuelve a intentarlo.');
+    throw err;
   });
 }

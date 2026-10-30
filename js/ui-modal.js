@@ -7,6 +7,110 @@ function mostrarToast(msg, esError) {
   setTimeout(function () { t.className = t.className.replace('show', ''); }, 3200);
 }
 
+/** Aviso de error que NO se va solo (a diferencia del toast, que dura 3 s
+ *  y se puede pasar por alto): un recuadro en mitad de la pantalla, con el
+ *  fondo oscurecido y el botón "Entendido". Se usa cuando algo importante
+ *  no se ha hecho (guardar, verificar...) para que el usuario se entere.
+ *
+ *  opts = {
+ *    titulo:    qué no se ha hecho ("No se ha guardado el conteo"),
+ *    donde:     a qué afecta (agrupación, nave...), opcional,
+ *    queHaPasado: frase corta explicando la situación,
+ *    pasos:     lista de lo que tiene que hacer el usuario,
+ *    error:     el error original (sale aparte, en pequeño, para informática)
+ *  } */
+function mostrarErrorFijo(opts) {
+  opts = opts || {};
+  let caja = document.getElementById('error-fijo');
+  if (!caja) {
+    caja = document.createElement('div');
+    caja.id = 'error-fijo';
+    caja.setAttribute('role', 'alertdialog');
+    caja.setAttribute('aria-modal', 'true');
+    document.body.appendChild(caja);
+  }
+  const causa = causaLegibleDeError_(opts.error);
+  const tecnico = textoDeError_(opts.error);
+  const pasos = (opts.pasos || []).filter(Boolean);
+  caja.innerHTML =
+    '<div class="error-fijo-caja">' +
+      '<div class="error-fijo-cabecera">' +
+        '<div class="error-fijo-icono">!</div>' +
+        '<div>' +
+          '<div class="error-fijo-titulo">' + escapeHtml(opts.titulo || 'Ha fallado algo') + '</div>' +
+          (opts.donde ? '<div class="error-fijo-donde">' + escapeHtml(opts.donde) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="error-fijo-cuerpo">' +
+        (opts.queHaPasado ? '<p class="error-fijo-texto">' + escapeHtml(opts.queHaPasado) + '</p>' : '') +
+        (causa ? '<p class="error-fijo-causa"><strong>Motivo:</strong> ' + escapeHtml(causa) + '</p>' : '') +
+        (pasos.length
+          ? '<div class="error-fijo-subtitulo">Qué hacer</div><ol class="error-fijo-pasos">' +
+              pasos.map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('') +
+            '</ol>'
+          : '') +
+        (tecnico && tecnico !== causa ? '<div class="error-fijo-tecnico">Detalle técnico: ' + escapeHtml(tecnico) + '</div>' : '') +
+      '</div>' +
+      '<div class="error-fijo-pie"><button type="button" class="error-fijo-cerrar">Entendido</button></div>' +
+    '</div>';
+  const btnCerrar = caja.querySelector('.error-fijo-cerrar');
+  btnCerrar.onclick = function () { caja.remove(); };
+  btnCerrar.focus();
+}
+
+/** Texto original de un error, venga de donde venga. */
+function textoDeError_(err) {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  return err.message || err.details || String(err);
+}
+
+/** Traduce los errores técnicos más habituales a una frase que entienda
+ *  cualquiera. Los mensajes que ya vienen en castellano desde el servidor
+ *  (p.ej. "La contraseña no puede ser igual que el usuario") se dejan tal
+ *  cual. Si es un fallo del programa, se dice así, sin tecnicismos. */
+function causaLegibleDeError_(err) {
+  const msg = textoDeError_(err);
+  if (!msg) return '';
+  if (/Failed to fetch|NetworkError|Load failed|ERR_INTERNET|network/i.test(msg)) {
+    return 'No hay conexión con el servidor (puede que se haya ido internet o el wifi).';
+  }
+  if (/servidor no ha respondido/i.test(msg)) return msg;
+  if (/Cannot read|undefined|null|is not a function|is not defined|TypeError|ReferenceError/i.test(msg)) {
+    return 'Error interno de la app.';
+  }
+  return msg;
+}
+
+// RED DE SEGURIDAD: si en cualquier parte de la app salta un error que
+// nadie ha recogido (un fallo del programa, no del servidor), en vez de
+// quedarse algo cargando sin decir nada se avisa en pantalla.
+(function () {
+  let ultimoAviso = 0;
+  function avisar_(err) {
+    const msg = textoDeError_(err);
+    if (msg === '') return; // error ya avisado por su cuenta (p.ej. sesión caducada)
+    // Errores que no son de la app (extensiones del navegador, avisos
+    // internos del navegador sin importancia): no se enseñan.
+    if (/^Script error\.?$/i.test(msg) || /ResizeObserver loop/i.test(msg)) return;
+    const ahora = Date.now();
+    if (ahora - ultimoAviso < 5000) return; // no encadenar avisos iguales
+    ultimoAviso = ahora;
+    mostrarErrorFijo({
+      titulo: 'Ha fallado algo en la app',
+      queHaPasado: 'Lo último que has hecho puede que no se haya completado (por ejemplo, guardar o verificar un conteo).',
+      pasos: [
+        'Comprueba en pantalla si los datos se han quedado bien.',
+        'Si algo no está como debería, vuelve a hacerlo.',
+        'Si vuelve a salir este aviso, no recargues la página y avisa a un responsable.'
+      ],
+      error: err
+    });
+  }
+  window.addEventListener('error', function (e) { avisar_(e.error || e.message); });
+  window.addEventListener('unhandledrejection', function (e) { avisar_(e.reason); });
+})();
+
 function mostrarErrorServidor(err) {
   // Si el mensaje viene vacío es porque el error ya se avisó por su cuenta
   // (p.ej. "Sesión caducada" -- ver llamarRpcSupabase_/volverALogin_): no
