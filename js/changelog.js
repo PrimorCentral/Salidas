@@ -8,6 +8,16 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.15',
+    fecha: '2026-10-30',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Lista de carga (camioncito): con el permiso «Ajustar carga» se puede poner o cambiar la matrícula y el remolque en cualquier momento, sin ajustar la carga. Los palets no cambian y el conteo no se bloquea. Esa matrícula sale después en el email de la previsión y del definitivo, al imprimir y en el WhatsApp. Para repartir las tiendas en varios camiones se sigue usando «Ajustar carga»' },
+      { tipo: 'mejora',     texto: 'Cuando falla algo importante (guardar el conteo, verificar…) sale un aviso claro en mitad de la pantalla, con qué ha pasado y qué hacer, en vez de quedarse cargando sin avisar. Si el servidor no contesta en 30 segundos, se avisa también' },
+      { tipo: 'mejora',     texto: 'Usuarios: un operario puede tener la contraseña igual que su usuario (la regla de que no puede ser igual solo se aplica a los administradores)' },
+      { tipo: 'correccion', texto: 'Verificar una nave se quedaba cargando sin terminar nunca en las agrupaciones con una tienda que ese día sale por otra agrupación (cambio puntual), como ONTIME ANDALUCÍA o TXT ANDALUCÍA. Ya se puede verificar con normalidad' }
+    ]
+  },
+  {
     version: '2.1.13',
     fecha: '2026-10-27',
     cambios: [
