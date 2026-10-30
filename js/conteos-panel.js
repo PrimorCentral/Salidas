@@ -1001,7 +1001,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         const input = tr.querySelector('input[data-campo="' + campo + '"]');
         if (!input || input.getAttribute('data-forzado') === '1') return;
         const v = t[campo] === null || t[campo] === undefined ? '' : String(t[campo]);
-        if (v === 'NO' || input.value === 'NO' || input.value === v) return;
+        if (v === 'NO' || input.value === 'NO') return;
+        input.setAttribute('data-original', v); // es lo que hay en el servidor
+        if (input.value === v) return;
         input.value = v;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       });
@@ -1391,6 +1393,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (btnGuardarConteo) btnGuardarConteo.disabled = true;
     llamarApi_('guardarConteo', [dia, filas, fecha, seccion.nombre])
       .then(function () {
+        confirmarOriginalesConteo_(filas);
         marcarGuardando(panel, false);
         guardandoAhora_ = false;
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
@@ -1438,6 +1441,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }, true);
 
   actualizarBotonesEnvio_(); // estado inicial: envío apagado hasta el primer "Guardar conteo" de esta sesión
+  marcarOriginalesConteo_(tableWrap); // lo que hay ahora es lo guardado en el servidor
   actualizarEstadoCarga_(); // estado inicial del camioncito (ya con la tabla pintada)
 
   /** Recalcula EN VIVO (sin esperar a guardar ni a recargar) si esta

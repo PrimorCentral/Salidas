@@ -425,8 +425,27 @@ function attachValidacionGrupos(tableWrap) {
   });
 }
 
+// Casillas que se guardan en el conteo (mismo nombre que espera
+// guardar_conteo en el servidor).
+const CAMPOS_CONTEO_GUARDABLES_ = ['c60', 'pta', 'cart', 'pdte', 'peso', 'cexpress', 'sobrestock', 'viernes', 'casillaDomingo'];
+
+/** Apunta en cada casilla (data-original) el valor que tiene ahora, que es
+ *  el que hay guardado en el servidor. Al guardar solo se mandan como
+ *  "cambiadas" las que el usuario haya tocado desde entonces: así una
+ *  pantalla sin refrescar no borra lo que hayan metido otros en las
+ *  casillas que no ha tocado. */
+function marcarOriginalesConteo_(tableWrap) {
+  tableWrap.querySelectorAll('table.conteo tbody input.celda[data-campo]').forEach(function (input) {
+    if (CAMPOS_CONTEO_GUARDABLES_.indexOf(input.getAttribute('data-campo')) === -1) return;
+    input.setAttribute('data-original', input.value);
+  });
+}
+
 function recogerFilas(tableWrap) {
   const filas = [];
+  // Lo que se manda como cambiado, para apuntarlo como "original" cuando el
+  // servidor confirme que se ha guardado (ver confirmarOriginalesConteo_).
+  const enviados = [];
   tableWrap.querySelectorAll('table.conteo tbody tr').forEach(function (tr) {
     if (tr.classList.contains('fila-cerrada') || tr.classList.contains('fila-grupo-header')) return; // tiendas cerradas y fila-resumen del grupo no se guardan
     // Tienda que hoy sale por otra agrupación (cambio puntual): su fila aquí
@@ -490,7 +509,24 @@ function recogerFilas(tableWrap) {
     // casilla DOMINGO activada y la tienda no está excluida).
     const casillaDomingo = get('casillaDomingo');
     if (casillaDomingo !== undefined) fila.casillaDomingo = casillaDomingo;
+    // Casillas que este usuario ha cambiado: el servidor solo toca esas.
+    fila.cambiados = [];
+    CAMPOS_CONTEO_GUARDABLES_.forEach(function (campo) {
+      const input = tr.querySelector('input[data-campo="' + campo + '"]');
+      if (!input) return;
+      if (!input.hasAttribute('data-original') || input.value !== input.getAttribute('data-original')) {
+        fila.cambiados.push(campo);
+        enviados.push({ input: input, valor: input.value });
+      }
+    });
     filas.push(fila);
   });
+  // No viaja al servidor (JSON no incluye propiedades extra de un array).
+  filas.enviados = enviados;
   return filas;
+}
+
+/** Tras guardar bien: lo que se mandó pasa a ser el valor "original". */
+function confirmarOriginalesConteo_(filas) {
+  (filas && filas.enviados || []).forEach(function (e) { e.input.setAttribute('data-original', e.valor); });
 }
