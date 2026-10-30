@@ -520,8 +520,25 @@ const SUPABASE_ACCIONES_ = {
     return llamarRpcSupabase_('anadir_nota_carga_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_texto: texto });
   },
   eliminarRutaPlantilla: function (args) {
-    const dia = args[0], nombreRuta = args[1];
-    return llamarRpcSupabase_('eliminar_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta });
+    const dia = args[0], nombreRuta = args[1], conteos = args[2];
+    const params = { p_dia: dia, p_nombre_ruta: nombreRuta };
+    // 'mover' | 'borrar': qué hacer con los palets ya contados (de hoy en
+    // adelante) de esa agrupación. Sin él, el servidor no deja eliminarla
+    // si tiene palets contados.
+    if (conteos) params.p_conteos = conteos;
+    return llamarRpcSupabase_('eliminar_ruta_plantilla', params);
+  },
+  getConteosEliminarRuta: function (args) {
+    return llamarRpcSupabase_('get_conteos_eliminar_ruta', { p_dia: args[0], p_nombre_ruta: args[1] });
+  },
+  getConteosEnEspera: function (args) {
+    return llamarRpcSupabase_('get_conteos_en_espera', { p_dia: args[0] });
+  },
+  recuperarConteosEnEspera: function (args) {
+    return llamarRpcSupabase_('recuperar_conteos_en_espera', { p_ids: args[0] });
+  },
+  descartarConteosEnEspera: function (args) {
+    return llamarRpcSupabase_('descartar_conteos_en_espera', { p_ids: args[0] });
   },
   editarNotaCargaPlantilla: function (args) {
     const dia = args[0], row = args[1], texto = args[2];

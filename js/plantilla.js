@@ -518,7 +518,9 @@ function cargarPlantilla_(opts) {
     llamarApi_('getPlantillaDia', [diaPedido]),
     especialPlantilla_(diaPedido)
       ? llamarApi_('getCambiosPuntualesDiaEspecial', [diaPedido]).catch(function () { return []; })
-      : Promise.resolve([])
+      : Promise.resolve([]),
+    // Palets "en espera" de agrupaciones eliminadas (si falla, se pinta igual).
+    llamarApi_('getConteosEnEspera', [diaPedido]).catch(function () { return []; })
   ])
     .then(function (res) {
       const resultado = res[0];
@@ -526,6 +528,7 @@ function cargarPlantilla_(opts) {
       if (PLANTILLA_ESTADO.dia !== diaPedido) return; // se cambió de día mientras cargaba
       PLANTILLA_ESTADO.secciones = (resultado && resultado.secciones) || [];
       PLANTILLA_ESTADO.puntuales = res[1] || [];
+      PLANTILLA_ESTADO.enEspera = res[2] || [];
       pintarPlantilla_();
       if (silencioso) window.scrollTo(0, scrollY);
     })
@@ -784,11 +787,12 @@ function pintarPlantilla_() {
   if (!listaEl) return;
 
   if (!PLANTILLA_ESTADO.secciones.length) {
-    listaEl.innerHTML = '<div class="festivos-vacio">Sin rutas configuradas para este día.</div>';
+    listaEl.innerHTML = avisoConteosEnEsperaHtml_() + '<div class="festivos-vacio">Sin rutas configuradas para este día.</div>';
+    engancharAvisoConteosEnEspera_();
     return;
   }
 
-  listaEl.innerHTML = PLANTILLA_ESTADO.secciones.map(function (s, si) {
+  listaEl.innerHTML = avisoConteosEnEsperaHtml_() + PLANTILLA_ESTADO.secciones.map(function (s, si) {
     let piezasTiendas = [];
     // Tiendas que ese día ENTRAN en esta agrupación por un cambio puntual
     // (solo en conteos especiales). Se intercalan entre las tiendas según
@@ -1008,6 +1012,7 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-borrar-notacarga]').forEach(function (btn) {
     btn.onclick = function () { confirmarEliminarNotaCargaPlantilla_(btn.getAttribute('data-borrar-notacarga')); };
   });
+  engancharAvisoConteosEnEspera_();
   listaEl.querySelectorAll('[data-anadir-notacarga]').forEach(function (btn) {
     btn.onclick = function () { abrirModalAnadirNotaCargaPlantilla_(btn.getAttribute('data-anadir-notacarga')); };
   });
@@ -3317,20 +3322,190 @@ function abrirModalEditarRutaPlantilla_(nombreActual) {
 }
 
 function confirmarEliminarRutaPlantilla_(nombreRuta) {
+  // Antes de preguntar, se mira si la agrupación ya tiene palets contados
+  // (de hoy en adelante y sin enviar). Si los tiene, hay que decidir qué
+  // hacer con ellos: si no, la agrupación seguiría saliendo en el conteo
+  // diario aunque ya no esté en "Rutas y tiendas".
+  const textoBase = '¿Seguro que quieres eliminar la ruta "' + nombreRuta + '" y TODAS sus tiendas de ' + PLANTILLA_ESTADO.dia + '? Esta acción no se puede deshacer.';
+  llamarApi_('getConteosEliminarRuta', [PLANTILLA_ESTADO.dia, nombreRuta])
+    .then(function (pendientes) {
+      pendientes = pendientes || [];
+      if (!pendientes.length) {
+        appConfirmDeslizando({
+          titulo: 'Eliminar ruta completa',
+          texto: textoBase,
+          textoBarra: 'Desliza para eliminar la ruta',
+          onConfirmar: function () { eliminarRutaPlantilla_(nombreRuta); }
+        });
+        return;
+      }
+      confirmarEliminarRutaConConteos_(nombreRuta, textoBase, pendientes);
+    })
+    .catch(mostrarErrorServidor);
+}
+
+/** Ventana de eliminar cuando la agrupación ya tiene palets contados:
+ *  lista lo contado y hay que elegir "Pasar los palets" (a la agrupación
+ *  donde está esa tienda ese día; si no está en ninguna, quedan en espera)
+ *  o "Borrar los palets". Cancelar = no eliminar todavía. */
+function confirmarEliminarRutaConConteos_(nombreRuta, textoBase, pendientes) {
+  const hayDestino = pendientes.some(function (p) { return !!p.destino; });
+  const sinDestino = pendientes.some(function (p) { return !p.destino; });
+  const fechas = {};
+  pendientes.forEach(function (p) { fechas[p.fecha] = true; });
+  const variasFechas = Object.keys(fechas).length > 1 || !especialPlantilla_(PLANTILLA_ESTADO.dia);
+
   appConfirmDeslizando({
     titulo: 'Eliminar ruta completa',
-    texto: '¿Seguro que quieres eliminar la ruta "' + nombreRuta + '" y TODAS sus tiendas de ' + PLANTILLA_ESTADO.dia + '? Esta acción no se puede deshacer.',
+    texto: textoBase,
     textoBarra: 'Desliza para eliminar la ruta',
-    onConfirmar: function () { eliminarRutaPlantilla_(nombreRuta); }
+    opciones: [
+      { valor: 'mover', etiqueta: hayDestino ? 'Pasar los palets' : 'Dejar los palets en espera' },
+      { valor: 'borrar', etiqueta: 'Borrar los palets' }
+    ],
+    onConfirmar: function (elegida) { eliminarRutaPlantilla_(nombreRuta, elegida); }
   });
+
+  const filas = pendientes.map(function (p) {
+    return '<li>' +
+      '<div class="elim-conteos-fila">' +
+        '<span class="elim-conteos-tienda">' + escapeHtml(p.tienda) +
+          (variasFechas ? ' <span class="elim-conteos-fecha">' + escapeHtml(formatearFechaCorta(p.fecha)) + '</span>' : '') +
+        '</span>' +
+        '<span class="elim-conteos-valores">' + escapeHtml(p.valores) + '</span>' +
+      '</div>' +
+      '<div class="elim-conteos-destino">' +
+        (p.destino
+          ? 'Se pasarían a ' + escapeHtml(p.destino)
+          : 'No está en otra agrupación ese día: quedarían en espera') +
+      '</div>' +
+    '</li>';
+  }).join('');
+
+  const custom = document.getElementById('modal-custom');
+  custom.insertAdjacentHTML('afterbegin',
+    '<div class="elim-conteos-aviso">' +
+      '<div class="elim-conteos-titulo">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>' +
+        'Esta agrupación ya tiene palets contados' +
+      '</div>' +
+      '<ul class="elim-conteos-lista">' + filas + '</ul>' +
+      (sinDestino && hayDestino
+        ? '<div class="elim-conteos-nota">Los que quedan en espera se pueden recuperar aquí cuando metas la tienda en otra agrupación de ese día.</div>'
+        : '') +
+      (!hayDestino
+        ? '<div class="elim-conteos-nota">Cuando metas la tienda en otra agrupación de ese día, aquí te saldrá la opción de pasarle los palets.</div>'
+        : '') +
+    '</div>' +
+    '<div class="elim-conteos-pregunta">¿Qué hacemos con esos palets?</div>');
 }
-function eliminarRutaPlantilla_(nombreRuta) {
+
+function eliminarRutaPlantilla_(nombreRuta, conteos) {
   // Borra un bloque de filas completo (título + notas + tiendas); se pide
   // la plantilla otra vez, en modo "silencioso" (sin loader ni salto de
   // scroll) para que no se sienta como una recarga completa.
-  llamarApi_('eliminarRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta])
-    .then(function () { mostrarToast('Ruta eliminada'); cargarPlantilla_({ silencioso: true }); })
+  llamarApi_('eliminarRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, conteos || null])
+    .then(function (res) {
+      res = res || {};
+      const partes = [];
+      if (res.movidas) partes.push(res.movidas + (res.movidas === 1 ? ' tienda con palets pasada' : ' tiendas con palets pasadas') + ' a su otra agrupación');
+      if (res.enEspera) partes.push(res.enEspera + (res.enEspera === 1 ? ' en espera' : ' en espera'));
+      if (res.borradas) partes.push('palets borrados de ' + res.borradas + (res.borradas === 1 ? ' tienda' : ' tiendas'));
+      mostrarToast('Ruta eliminada' + (partes.length ? ' · ' + partes.join(' · ') : ''));
+      if (res.conflictos && res.conflictos.length) avisoChoquePaletsPlantilla_(res.conflictos);
+      cargarPlantilla_({ silencioso: true });
+    })
     .catch(mostrarErrorServidor);
+}
+
+/** Aviso (con "Entendido") cuando al pasar palets la tienda de destino ya
+ *  tenía otro número en esa casilla: se ha dejado el del destino. */
+function avisoChoquePaletsPlantilla_(conflictos) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('ancho', 'usuario-form', 'peligro', 'gestor-obs');
+  box.classList.add('medio');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Revisa estos palets';
+  document.getElementById('modal-text').textContent = 'En estas tiendas la agrupación de destino ya tenía otro número en la misma casilla. Se ha dejado el que ya tenía; si no es correcto, cámbialo en el conteo diario.';
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML = '<ul class="elim-conteos-lista elim-conteos-choques">' +
+    conflictos.map(function (c) { return '<li>' + escapeHtml(c) + '</li>'; }).join('') + '</ul>';
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML = '<button class="modal-confirm" id="modal-confirm-btn">Entendido</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-confirm-btn').onclick = cerrarModal;
+}
+
+/** Franja con los palets que se quedaron "en espera" al eliminar una
+ *  agrupación (la tienda no estaba en otra agrupación ese día). Si la
+ *  tienda ya está en otra agrupación, se ofrece pasárselos. */
+function avisoConteosEnEsperaHtml_() {
+  const lista = PLANTILLA_ESTADO.enEspera || [];
+  if (!lista.length) return '';
+  const puede = puedeEditarPlantilla_();
+  const conDestino = lista.filter(function (e) { return !!e.destino; });
+  const filas = lista.map(function (e) {
+    return '<li>' +
+      '<b>' + escapeHtml(e.tienda) + '</b> · ' + escapeHtml(formatearFechaCorta(e.fecha)) + ' · ' + escapeHtml(e.valores) +
+      ' <span class="espera-origen">(de ' + escapeHtml(e.rutaOrigen || '?') + ')</span>' +
+      (e.destino
+        ? ' → <span class="espera-destino">' + escapeHtml(e.destino) + '</span>'
+        : ' <span class="espera-sin">· la tienda no está en ninguna agrupación ese día</span>') +
+    '</li>';
+  }).join('');
+  return '<div class="plantilla-aviso-espera">' +
+    '<div class="plantilla-aviso-espera-titulo">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
+      'Palets en espera' +
+    '</div>' +
+    '<div class="plantilla-aviso-espera-texto">Son de una agrupación que se eliminó y no salen en el conteo diario hasta que se pasen a otra agrupación.</div>' +
+    '<ul>' + filas + '</ul>' +
+    (puede
+      ? '<div class="plantilla-aviso-espera-acciones">' +
+          (conDestino.length
+            ? '<button type="button" class="espera-pasar" id="btn-espera-pasar">Pasar ' + (conDestino.length === 1 ? 'los palets' : 'los palets de las ' + conDestino.length + ' tiendas') + '</button>'
+            : '') +
+          '<button type="button" class="espera-descartar" id="btn-espera-descartar">Descartar</button>' +
+        '</div>'
+      : '') +
+  '</div>';
+}
+
+function engancharAvisoConteosEnEspera_() {
+  const lista = PLANTILLA_ESTADO.enEspera || [];
+  const btnPasar = document.getElementById('btn-espera-pasar');
+  if (btnPasar) {
+    btnPasar.onclick = function () {
+      const ids = lista.filter(function (e) { return !!e.destino; }).map(function (e) { return e.id; });
+      btnPasar.disabled = true;
+      llamarApi_('recuperarConteosEnEspera', [ids])
+        .then(function (res) {
+          res = res || {};
+          mostrarToast(res.recuperadas ? 'Palets pasados a su agrupación' : 'No se ha podido pasar ningún palet', !res.recuperadas);
+          if (res.conflictos && res.conflictos.length) avisoChoquePaletsPlantilla_(res.conflictos);
+          cargarPlantilla_({ silencioso: true });
+        })
+        .catch(function (err) { btnPasar.disabled = false; mostrarErrorServidor(err); });
+    };
+  }
+  const btnDescartar = document.getElementById('btn-espera-descartar');
+  if (btnDescartar) {
+    btnDescartar.onclick = function () {
+      appConfirmDeslizando({
+        titulo: 'Descartar palets en espera',
+        texto: 'Se borran los palets en espera de este día (' + lista.length + (lista.length === 1 ? ' tienda' : ' tiendas') + '). Habrá que volver a contarlos si hacen falta.',
+        textoBarra: 'Desliza para descartar',
+        onConfirmar: function () {
+          llamarApi_('descartarConteosEnEspera', [lista.map(function (e) { return e.id; })])
+            .then(function () { mostrarToast('Palets en espera descartados'); cargarPlantilla_({ silencioso: true }); })
+            .catch(mostrarErrorServidor);
+        }
+      });
+    };
+  }
 }
 
 /** Misma normalización que la función SQL "_clave_agrupacion" del backend:
