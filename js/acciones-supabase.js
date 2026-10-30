@@ -33,7 +33,10 @@ const SUPABASE_ACCIONES_ = {
     // camioncito funciona como antes (ver htmlBotonListaCarga_).
     // Y las matrículas puestas sin ajustar la carga (seccion.matriculas =
     // [{matricula, remolque, ...}] o null), si el servidor ya las manda.
-    function unir_(data, verifs, cambios, cargas, matriculas) {
+    // Y quién está ajustando AHORA la carga de cada agrupación
+    // (seccion.ajusteEnCurso = { por, desde, mio } o null): mientras otra
+    // persona la ajusta, el conteo de esa agrupación está bloqueado.
+    function unir_(data, verifs, cambios, cargas, matriculas, ajustes) {
       verifs = verifs || {};
       cambios = cambios || {};
       if (data && data.secciones) {
@@ -42,13 +45,14 @@ const SUPABASE_ACCIONES_ = {
           s.cambiosVerif = cambios[s.nombre] || {};
           if (cargas) s.carga = cargas[s.nombre] || null;
           if (matriculas) s.matriculas = matriculas[s.nombre] || null;
+          if (ajustes) s.ajusteEnCurso = ajustes[s.nombre] || null;
         });
       }
       return data;
     }
     return llamarRpcSupabase_('get_conteo_dia_completo', { p_fecha: fecha })
       .then(function (res) {
-        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas, res && res.matriculas);
+        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas, res && res.matriculas, res && res.ajustes);
       })
       .catch(function (err) {
         if (!err || err.code !== 'PGRST202') throw err;
@@ -58,6 +62,14 @@ const SUPABASE_ACCIONES_ = {
           llamarRpcSupabase_('get_cambios_tras_verificar_dia', { p_fecha: fecha }).catch(function () { return {}; })
         ]).then(function (r) { return unir_(r[0], r[1], r[2]); });
       });
+  },
+  // -- Ajuste de carga en curso: mientras está abierta la ventana de
+  // "Ajustar carga", nadie más puede meter palets en esa agrupación. --
+  empezarAjusteCarga: function (args) {
+    return llamarRpcSupabase_('empezar_ajuste_carga', { p_dia: args[0], p_nombre_agrupacion: args[1], p_fecha: args[2] });
+  },
+  terminarAjusteCarga: function (args) {
+    return llamarRpcSupabase_('terminar_ajuste_carga', { p_dia: args[0], p_nombre_agrupacion: args[1], p_fecha: args[2] });
   },
   // -- Supabase: Verificar conteo por nave (60 / PTA / CART.) --
   verificarConteo: function (args) {

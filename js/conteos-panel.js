@@ -72,7 +72,55 @@ setInterval(function () {
 
 const SVG_SOBRE_ = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
 const SVG_CANDADO_CARGA_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-const SVG_MENU_PREVISION_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>';
+const SVG_CAMION_AJUSTANDO_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="7" width="13" height="10" rx="1.5"/><path d="M14 10h4l3 3v4h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>';
+
+/* ---------------- AJUSTE DE CARGA EN CURSO ----------------
+ * Mientras alguien tiene abierta la ventana de "Ajustar carga" de una
+ * agrupación, el servidor no deja meter palets en ella a nadie más. Aquí se
+ * mantiene vivo ese bloqueo ("latido" cada 30 s; si se pierde, el servidor
+ * lo quita solo a los 2 min) y se suelta en cuanto se cierra la ventana. */
+let AJUSTE_CARGA_ACTIVO_ = null;
+function vigilarAjusteCarga_(dia, nombre, fecha) {
+  pararAjusteCarga_();
+  const a = { dia: dia, nombre: nombre, fecha: fecha };
+  a.latido = setInterval(function () {
+    llamarApi_('empezarAjusteCarga', [dia, nombre, fecha]).catch(function () {});
+  }, 30000);
+  // Se suelta al cerrarse la ventana (guardar, cancelar, X o Escape).
+  a.vigia = setInterval(function () {
+    const ov = document.getElementById('modal-overlay');
+    if (!ov || ov.style.display === 'none') pararAjusteCarga_();
+  }, 1000);
+  AJUSTE_CARGA_ACTIVO_ = a;
+}
+function pararAjusteCarga_() {
+  const a = AJUSTE_CARGA_ACTIVO_;
+  if (!a) return;
+  AJUSTE_CARGA_ACTIVO_ = null;
+  clearInterval(a.latido);
+  clearInterval(a.vigia);
+  llamarApi_('terminarAjusteCarga', [a.dia, a.nombre, a.fecha]).catch(function () {});
+}
+/** Otra persona ya tiene abierta la ventana de ajustar esta carga. */
+function mostrarAvisoAjusteCargaOcupado_(nombreAgrupacion, res) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('ancho', 'peligro', 'usuario-form', 'gestor-obs');
+  box.classList.add('medio');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Ya están ajustando esta carga';
+  document.getElementById('modal-text').style.display = 'block';
+  document.getElementById('modal-text').textContent = nombreLegible_(res.por || 'Otra persona') + ' está ajustando la carga de ' +
+    parsearNombreAgrupacion(nombreAgrupacion).titulo + (res.desde ? ' desde las ' + res.desde : '') + '. Cuando termine podrás abrirla tú.';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'none';
+  custom.innerHTML = '';
+  document.getElementById('modal-actions').innerHTML = '<button class="modal-confirm" id="modal-confirm-btn">Entendido</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-confirm-btn').onclick = cerrarModal;
+}
+
+const SVG_MENU_PREVISION_ ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>';
 const SVG_MENU_DEFINITIVO_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
 const SVG_MENU_INFORMATICA_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
 const SVG_MENU_CAMION_ = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>';
@@ -504,7 +552,13 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     return (seccion.carga && seccion.carga.origen === 'prevision') ? 'Previsión enviada' : 'Carga ajustada';
   }
   function bloqueadoParaMi_() {
-    return editable && !esAdmin() && hayCargaAjustada_();
+    return editable && ((!esAdmin() && hayCargaAjustada_()) || ajusteAjeno_());
+  }
+  // Otra persona tiene ahora abierta la ventana de "Ajustar carga" de esta
+  // agrupación: nadie más puede meter palets (el servidor también lo
+  // rechaza) hasta que la guarde o la cancele.
+  function ajusteAjeno_() {
+    return !!(seccion.ajusteEnCurso && !seccion.ajusteEnCurso.mio);
   }
   function quienAjusto_() {
     const c = seccion.carga || {};
@@ -580,7 +634,16 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     }
 
     // Aviso encima de la tabla.
-    if (hay && editable) {
+    if (editable && ajusteAjeno_()) {
+      const aj = seccion.ajusteEnCurso;
+      avisoBloqueo.hidden = false;
+      avisoBloqueo.classList.add('ajustando');
+      avisoBloqueo.innerHTML = SVG_CAMION_AJUSTANDO_ +
+        '<span class="aviso-carga-texto"><b>Conteo bloqueado</b> · ' + escapeHtml(nombreLegible_(aj.por || '')) +
+        ' está ajustando la carga' + (aj.desde ? ' (desde las ' + escapeHtml(aj.desde) + ')' : '') + '. No se pueden meter palets.</span>' +
+        '<span class="aviso-carga-accion">Avisa a un responsable</span>';
+    } else if (hay && editable) {
+      avisoBloqueo.classList.remove('ajustando');
       const quien = quienAjusto_();
       avisoBloqueo.hidden = false;
       const c = seccion.carga || {};
@@ -589,6 +652,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         (c.por ? ' por ' + escapeHtml(nombreLegible_(c.por)) : '') + (c.hora ? ' a las ' + escapeHtml(c.hora) : '') + '</span>' +
         '<span class="aviso-carga-accion">' + (esAdmin() ? 'Pulsa el candado para desbloquearlo' : 'Avisa a un responsable') + '</span>';
     } else {
+      avisoBloqueo.classList.remove('ajustando');
       avisoBloqueo.hidden = true;
       avisoBloqueo.innerHTML = '';
     }
@@ -899,7 +963,51 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   // de un envío (entonces alTerminar sigue con el envío tras guardar).
   // desdeLapiz: se ha entrado con el lápiz de la vista de solo lectura;
   // al guardar o cancelar se vuelve a esa vista.
+  // Antes de abrir la ventana de ajustar: se "coge" la agrupación en el
+  // servidor (mientras esté abierta nadie más puede meter palets) y se
+  // traen los números actuales del servidor para que la carga salga con
+  // todo lo contado. Si otra persona ya la está ajustando, se avisa.
   function abrirAjustarCarga_(tipoEnvio, alTerminar, desdeLapiz) {
+    mostrarModalCargando('Preparando la carga…');
+    llamarApi_('empezarAjusteCarga', [dia, seccion.nombre, fecha])
+      .then(function (res) {
+        if (res && res.ocupado) { mostrarAvisoAjusteCargaOcupado_(seccion.nombre, res); return; }
+        vigilarAjusteCarga_(dia, seccion.nombre, fecha);
+        // Lo que tenga sin guardar quien ajusta se guarda primero.
+        autoguardarSeccion(function (ok) {
+          if (!ok) { pararAjusteCarga_(); return; }
+          llamarApi_('getConteoDia', [fecha])
+            .then(function (data) {
+              const sec = data && data.secciones && data.secciones.find(function (x) { return x.nombre === seccion.nombre; });
+              if (sec) actualizarCasillasDesdeServidor_(sec);
+            })
+            .catch(function () { /* si falla, se ajusta con lo que hay en pantalla */ })
+            .then(function () { abrirAjustarCargaDirecto_(tipoEnvio, alTerminar, desdeLapiz); });
+        });
+      })
+      .catch(function (err) {
+        cerrarModal();
+        if (err && /permiso/i.test(err.message || '')) mostrarModalSinPermiso();
+        else mostrarErrorServidor(err);
+      });
+  }
+  // Pone en la tabla los números que tiene ahora el servidor (lo que hayan
+  // metido otros mientras esta pantalla no se refrescaba).
+  function actualizarCasillasDesdeServidor_(sec) {
+    (sec.tiendas || []).forEach(function (t) {
+      const tr = tableWrap.querySelector('tr[data-row="' + t.row + '"]');
+      if (!tr) return;
+      ['c60', 'pta', 'cart', 'viernes', 'casillaDomingo'].forEach(function (campo) {
+        const input = tr.querySelector('input[data-campo="' + campo + '"]');
+        if (!input || input.getAttribute('data-forzado') === '1') return;
+        const v = t[campo] === null || t[campo] === undefined ? '' : String(t[campo]);
+        if (v === 'NO' || input.value === 'NO' || input.value === v) return;
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+  }
+  function abrirAjustarCargaDirecto_(tipoEnvio, alTerminar, desdeLapiz) {
     const ajustes = ajustesGuardados_();
     const revisar = tiendasARevisar_();
     const filas = filasCargaActuales_().map(function (f) {
@@ -2107,6 +2215,9 @@ if (callback) callback(true, mensaje);
     // ventana realmente tiene el foco en este instante; los cambios sin
     // guardar o un guardado en curso sí protegen siempre, foco o no.
     if (MENU_ENVIOS_ABIERTO_ && (MENU_ENVIOS_ABIERTO_.menu === menuEnvios || MENU_ENVIOS_ABIERTO_.menu === menuDescargas)) return true;
+    // Se está ajustando la carga de esta agrupación desde aquí: no rehacer
+    // el panel mientras la ventana está abierta.
+    if (AJUSTE_CARGA_ACTIVO_ && AJUSTE_CARGA_ACTIVO_.nombre === seccion.nombre && AJUSTE_CARGA_ACTIVO_.fecha === fecha) return true;
     return hayCambiosSinGuardar || guardandoAhora_ || (document.hasFocus() && panel.contains(document.activeElement));
   };
 

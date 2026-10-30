@@ -594,13 +594,16 @@ function prepararModalCarga_() {
   return custom;
 }
 
-function cabeceraModalCarga_(titulo, subtitulo, variante) {
-  return '<div class="modal-envio-cabecera">' +
+// extraHtml (opcional): algo más en la cabecera, centrado en el hueco que
+// queda a la derecha del título (p. ej. la etiqueta "MODO EDICIÓN").
+function cabeceraModalCarga_(titulo, subtitulo, variante, extraHtml) {
+  return '<div class="modal-envio-cabecera' + (extraHtml ? ' con-extra' : '') + '">' +
     '<div class="modal-envio-cabecera-icono' + (variante ? ' ' + variante : '') + '">' + (variante === 'rojo' ? ICONO_AVISO_20_ : ICONO_PALET_CAMION_20_) + '</div>' +
     '<div class="modal-envio-cabecera-texto">' +
       '<div class="nombre">' + escapeHtml(titulo) + '</div>' +
       '<div class="fecha">' + escapeHtml(subtitulo) + '</div>' +
     '</div>' +
+    (extraHtml || '') +
   '</div>';
 }
 
@@ -1079,7 +1082,8 @@ function mostrarModalAjustarCarga(datos) {
 
   custom.innerHTML =
     cabeceraModalCarga_(revisar ? 'Verificar carga del camión' : 'Ajustar carga del camión',
-      datos.titulo + ' · ' + (enEnvio ? etiquetaTipo + ' · ' : '') + datos.fechaTexto, revisar ? 'rojo' : '') +
+      datos.titulo + ' · ' + (enEnvio ? etiquetaTipo + ' · ' : '') + datos.fechaTexto, revisar ? 'rojo' : '',
+      datos.desdeLapiz ? '<div class="modal-modo-edicion en-cabecera">' + ICONO_LAPIZ_12_ + 'Modo edición</div>' : '') +
     columnasCarga_(
     estadoCargaHtml_(datos.carga) +
     '<div class="modal-carga-stats"></div>' +
@@ -1089,7 +1093,6 @@ function mostrarModalAjustarCarga(datos) {
           '. La carga no se ha tocado: revísala y pulsa «' + (enEnvio ? 'Verificar y continuar' : 'Verificar carga') + '».</span></div></div>'
       : '') +
     '<div class="modal-carga-pasadas"></div>' +
-    (datos.desdeLapiz ? '<div class="modal-modo-edicion">' + ICONO_LAPIZ_12_ + 'Modo edición</div>' : '') +
     '<div class="modal-camiones">' +
       '<div class="modal-camiones-cab"><span class="modal-camiones-titulo">' + ICONO_CAMION_16_ + 'Camiones</span>' +
         '<span class="modal-camiones-ayuda">Matrícula y remolque (opcional) · máx. ' + MAX_PALETS_CAMION + ' palets por camión</span></div>' +
