@@ -389,7 +389,8 @@ function abrirModalUsuario_(usuarioExistente) {
       const inputPassword = document.getElementById('modal-usuario-password');
       const password = inputPassword.value;
       if (!password || password.length < 3) { inputPassword.focus(); return; }
-      if (String(password).trim().toLowerCase() === String(usuario || '').trim().toLowerCase()) {
+      // Solo los administradores no pueden tener la contraseña igual que el usuario.
+      if (rol === 'admin' && String(password).trim().toLowerCase() === String(usuario || '').trim().toLowerCase()) {
         mostrarToast('La contraseña no puede ser igual que el usuario', true); inputPassword.focus(); return;
       }
       const btn = document.getElementById('modal-confirm-btn');
@@ -455,7 +456,8 @@ function abrirModalPasswordUsuario_(usuarioExistente) {
     const input = document.getElementById('modal-usuario-password-nueva');
     const password = input.value;
     if (!password || password.length < 3) { input.focus(); return; }
-    if (String(password).trim().toLowerCase() === String(usuarioExistente.usuario || '').trim().toLowerCase()) {
+    // Solo los administradores no pueden tener la contraseña igual que el usuario.
+    if (usuarioExistente.rol === 'admin' && String(password).trim().toLowerCase() === String(usuarioExistente.usuario || '').trim().toLowerCase()) {
       mostrarToast('La contraseña no puede ser igual que el usuario', true); input.focus(); return;
     }
     const btn = document.getElementById('modal-confirm-btn');
@@ -552,7 +554,8 @@ function abrirModalMiUsuario_() {
 
     if (!inputActual.value) { mostrarToast('Escribe tu contraseña actual', true); inputActual.focus(); return; }
     if (!inputNueva.value || inputNueva.value.length < 3) { mostrarToast('La contraseña nueva debe tener al menos 3 caracteres', true); inputNueva.focus(); return; }
-    if (inputNueva.value.trim().toLowerCase() === String(SESSION_USUARIO || '').trim().toLowerCase()) {
+    // Solo los administradores no pueden tener la contraseña igual que el usuario.
+    if (SESSION_ROL === 'admin' && inputNueva.value.trim().toLowerCase() === String(SESSION_USUARIO || '').trim().toLowerCase()) {
       mostrarToast('La contraseña no puede ser igual que el usuario', true); inputNueva.focus(); return;
     }
     if (inputRepetir.value !== inputNueva.value) { mostrarToast('Las dos contraseñas nuevas no coinciden', true); inputRepetir.focus(); return; }
