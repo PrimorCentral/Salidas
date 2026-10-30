@@ -8,6 +8,19 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.16',
+    fecha: '2026-10-30',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Ajustar carga: mientras alguien tiene abierta la ventana de ajustar la carga de una agrupación, nadie más puede meter palets en ella. Los demás ven la franja azul «Conteo bloqueado · … está ajustando la carga» y, si otro responsable intenta abrirla a la vez, le sale «Ya están ajustando esta carga». Se suelta al guardar o cancelar (y sola a los 2 minutos si se cierra el navegador). Al guardar queda el bloqueo de carga ajustada de siempre' },
+      { tipo: 'mejora',     texto: 'La ventana de ajustar carga coge al abrirse los palets que hay guardados en ese momento, también los que hayan metido otros aunque la pantalla no se hubiera refrescado todavía' },
+      { tipo: 'mejora',     texto: 'Ajustar carga: «MODO EDICIÓN» sale en grande en la cabecera de la ventana' },
+      { tipo: 'correccion', texto: 'Al guardar el conteo solo se guardan las casillas que ha tocado cada persona. Una pantalla sin actualizar ya no borra los palets que haya metido otra persona en el mismo rato' },
+      { tipo: 'nuevo',      texto: 'Si dos personas cambian la misma casilla a la vez, a quien guarda el último le sale un aviso con lo que había puesto el otro (quién y a qué hora) y lo que ha puesto él, con el botón «Dejar el …» para volver a lo del otro si era lo bueno' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: al eliminar una agrupación que ya tiene palets contados para hoy o los próximos días, avisa con la lista y hay que elegir: pasarlos a la agrupación donde está esa tienda ese día o borrarlos. Antes la agrupación eliminada seguía saliendo en el conteo diario' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: si la tienda no está en ninguna otra agrupación ese día, sus palets quedan «en espera» (no salen en el conteo diario). Cuando se mete la tienda en otra agrupación, desde la franja «Palets en espera» se pasan con un botón, o se descartan. Todo queda en el registro de actividad' }
+    ]
+  },
+  {
     version: '2.1.15',
     fecha: '2026-10-30',
     cambios: [
@@ -15,6 +28,25 @@ const CHANGELOG_SALIDAS = [
       { tipo: 'mejora',     texto: 'Cuando falla algo importante (guardar el conteo, verificar…) sale un aviso claro en mitad de la pantalla, con qué ha pasado y qué hacer, en vez de quedarse cargando sin avisar. Si el servidor no contesta en 30 segundos, se avisa también' },
       { tipo: 'mejora',     texto: 'Usuarios: un operario puede tener la contraseña igual que su usuario (la regla de que no puede ser igual solo se aplica a los administradores)' },
       { tipo: 'correccion', texto: 'Verificar una nave se quedaba cargando sin terminar nunca en las agrupaciones con una tienda que ese día sale por otra agrupación (cambio puntual), como ONTIME ANDALUCÍA o TXT ANDALUCÍA. Ya se puede verificar con normalidad' }
+    ]
+  },
+  {
+    version: '2.1.14',
+    fecha: '2026-10-30',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Administración → Registro de actividad: quién ha hecho qué en la app (conteos, envíos y desbloqueos, bloqueos y cambios, rutas y tiendas, usuarios, emails de tiendas y de agencias). Filtros por periodo, usuario, sección, tipo de acción y buscador, por páginas y sin scroll de página. No busca sola al entrar: se elige el periodo. Se guardan 6 meses' },
+      { tipo: 'nuevo',      texto: 'Conteo diario: al añadir una observación importante pregunta si es del día o de una agrupación (con un desplegable de las agrupaciones de ese día)' },
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: al editar una nota se puede cambiar entre nota del día y nota de agrupación (si el texto nombra una agrupación, viene ya elegida)' },
+      { tipo: 'mejora',     texto: 'Cambios puntuales: la nota automática sale una sola vez, como nota de la agrupación de destino, y ya no aparece repetida en Bloqueos y cambios' },
+      { tipo: 'mejora',     texto: 'Bloqueos y cambios: el formulario de añadir se abre sin fecha ni tipo elegidos, y «Guardar» solo se enciende cuando está todo lo necesario' },
+      { tipo: 'mejora',     texto: 'Al ajustar la carga, la agrupación queda verificada (60, PTA y CART.) por quien la ajusta y se quitan los avisos de «cambiado tras verificar». «Enviar a informática» manda la carga ajustada, no el conteo real' },
+      { tipo: 'mejora',     texto: 'Lista y ajuste de carga: los camiones salen en fichas a la izquierda con su matrícula, remolque y palets (en rojo si pasan del máximo de un camión), y en la tabla una franja «CAMIÓN 2 · Matrícula … · Remolque …»' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: un solo buscador para agrupaciones y tiendas del día, «Añadir ruta nueva» arriba a la derecha, los interruptores de cada ruta (PESO, C.EXPRESS, SOBRESTOCK, VIERNES, DOMINGO, PDF ESPECIAL) en una franja aparte con un check cuando están activos y una fila de títulos encima de las tiendas' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: la papelera sale en rojo y para eliminar hay que deslizar, como al desbloquear un conteo. Si hay que elegir qué eliminar, la barra no se puede deslizar hasta elegirlo' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: un conteo especial ya pasado solo se puede consultar, no editar' },
+      { tipo: 'mejora',     texto: 'Acceso rápido a agrupación: al volver a Conteos diarios el buscador conserva lo escrito y tiene una × para borrarlo' },
+      { tipo: 'correccion', texto: 'Una agrupación con casillas a 0 ya sale «En progreso» y no «Pendiente», igual que en la pantalla de inicio' },
+      { tipo: 'correccion', texto: 'Las cabeceras de agrupaciones con dos horas (p. ej. «14:00 - 19:00») ya no pasan el estado a otra línea' }
     ]
   },
   {

@@ -1392,8 +1392,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     guardandoAhora_ = true;
     if (btnGuardarConteo) btnGuardarConteo.disabled = true;
     llamarApi_('guardarConteo', [dia, filas, fecha, seccion.nombre])
-      .then(function () {
+      .then(function (res) {
         confirmarOriginalesConteo_(filas);
+        if (res && res.conflictos && res.conflictos.length) avisarConflictosConteo_(res.conflictos);
         marcarGuardando(panel, false);
         guardandoAhora_ = false;
         if (btnGuardarConteo) btnGuardarConteo.disabled = false;
@@ -1409,6 +1410,69 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         avisarNoGuardado_(err);
         if (onDone) onDone(false);
       });
+  }
+  // Alguien había cambiado la misma casilla mientras esta pantalla estaba
+  // abierta: se ha guardado lo de aquí, pero se enseña lo que había para
+  // poder dejar lo suyo si era lo bueno. Si hay otra ventana abierta
+  // (carga, envío…), se espera a que se cierre.
+  function avisarConflictosConteo_(conflictos) {
+    const ov = document.getElementById('modal-overlay');
+    if (ov && getComputedStyle(ov).display !== 'none') {
+      setTimeout(function () { avisarConflictosConteo_(conflictos); }, 1000);
+      return;
+    }
+    const box = document.getElementById('modal-box');
+    box.classList.remove('ancho', 'peligro', 'usuario-form', 'gestor-obs');
+    box.classList.add('medio');
+    document.getElementById('modal-title').style.display = '';
+    document.getElementById('modal-title').textContent = 'Alguien había cambiado lo mismo que tú';
+    document.getElementById('modal-text').style.display = 'block';
+    document.getElementById('modal-text').textContent = 'Mientras tenías la pantalla abierta, otra persona cambió estas casillas en ' +
+      parsearNombreAgrupacion(seccion.nombre).titulo + '. Se ha guardado lo tuyo. Revisa cuál es el número bueno.';
+    document.getElementById('modal-textarea').style.display = 'none';
+    const custom = document.getElementById('modal-custom');
+    custom.style.display = 'block';
+    custom.innerHTML = '<table class="conflictos-conteo"><thead><tr>' +
+        '<th>Tienda</th><th>Casilla</th><th>Había puesto</th><th>Tú has puesto</th><th></th></tr></thead><tbody>' +
+      conflictos.map(function (c, i) {
+        const etiqueta = (naveDeCampo_(c.campo) || {}).etiqueta || c.campo;
+        const habia = c.habia === '' ? 'vacío' : c.habia;
+        return '<tr>' +
+          '<td class="cc-tienda">' + escapeHtml(c.tienda || '') + '</td>' +
+          '<td>' + escapeHtml(etiqueta) + '</td>' +
+          '<td><b class="cc-num">' + escapeHtml(habia) + '</b><div class="cc-quien">' +
+            escapeHtml([c.por ? nombreLegible_(c.por) : '', c.hora || ''].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td><b class="cc-num cc-tuyo">' + escapeHtml(c.puesto === '' ? 'vacío' : c.puesto) + '</b><div class="cc-quien">guardado ahora</div></td>' +
+          '<td class="cc-accion"><button type="button" class="cc-dejar" data-i="' + i + '">Dejar ' + (c.habia === '' ? 'vacío' : 'el ' + escapeHtml(c.habia)) + '</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+    document.getElementById('modal-actions').innerHTML = '<button class="modal-confirm" id="modal-confirm-btn">Lo mío está bien</button>';
+    ov.style.display = 'flex';
+    document.getElementById('modal-confirm-btn').onclick = cerrarModal;
+    custom.querySelectorAll('.cc-dejar').forEach(function (btn) {
+      btn.onclick = function () {
+        const c = conflictos[Number(btn.getAttribute('data-i'))];
+        const fila = { row: c.row, c60: '', pta: '', cart: '', cambiados: [c.campo] };
+        fila[c.campo] = c.habia;
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+        llamarApi_('guardarConteo', [dia, [fila], fecha, seccion.nombre])
+          .then(function () {
+            const input = tableWrap.querySelector('tr[data-row="' + c.row + '"] input[data-campo="' + c.campo + '"]');
+            if (input) {
+              input.setAttribute('data-original', c.habia);
+              input.value = c.habia;
+              input.dispatchEvent(new Event('input', { bubbles: true })); // recalcula totales
+            }
+            btn.textContent = 'Hecho ✓';
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = 'Dejar ' + (c.habia === '' ? 'vacío' : 'el ' + c.habia);
+            mostrarErrorServidor(err);
+          });
+      };
+    });
   }
   if (btnGuardarConteo) {
     btnGuardarConteo.onclick = function (e) {

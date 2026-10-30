@@ -510,13 +510,21 @@ function recogerFilas(tableWrap) {
     const casillaDomingo = get('casillaDomingo');
     if (casillaDomingo !== undefined) fila.casillaDomingo = casillaDomingo;
     // Casillas que este usuario ha cambiado: el servidor solo toca esas.
+    // Y, de 60/PTA/CART., lo que había en pantalla antes de cambiarlo: si
+    // en el servidor ya no es eso (otra persona lo cambió mientras tanto),
+    // el servidor lo devuelve para avisar (ver avisarConflictosConteo_).
     fila.cambiados = [];
+    fila.originales = {};
     CAMPOS_CONTEO_GUARDABLES_.forEach(function (campo) {
       const input = tr.querySelector('input[data-campo="' + campo + '"]');
       if (!input) return;
       if (!input.hasAttribute('data-original') || input.value !== input.getAttribute('data-original')) {
         fila.cambiados.push(campo);
         enviados.push({ input: input, valor: input.value });
+        if ((campo === 'c60' || campo === 'pta' || campo === 'cart') && input.hasAttribute('data-original') &&
+            input.getAttribute('data-forzado') !== '1') {
+          fila.originales[campo] = input.getAttribute('data-original');
+        }
       }
     });
     filas.push(fila);
