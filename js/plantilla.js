@@ -509,7 +509,9 @@ function cargarPlantilla_(opts) {
   // normal -- se mantiene el contenido anterior visible hasta que llega
   // la respuesta, y se restaura la posición de scroll al terminar.
   const silencioso = opts && opts.silencioso;
-  const scrollY = window.scrollY;
+  // En el PC se desplaza la ventana; en el móvil, el contenido (main).
+  const scroller = contenedorScrollPlantilla_(listaEl);
+  const scrollY = scroller === window ? window.scrollY : scroller.scrollTop;
   if (!silencioso) listaEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
   // En un conteo especial se traen también los cambios puntuales de esa
   // fecha, para marcarlos en la lista (si falla, se pinta igual sin ellos).
@@ -530,7 +532,9 @@ function cargarPlantilla_(opts) {
       PLANTILLA_ESTADO.puntuales = res[1] || [];
       PLANTILLA_ESTADO.enEspera = res[2] || [];
       pintarPlantilla_();
-      if (silencioso) window.scrollTo(0, scrollY);
+      if (silencioso) {
+        if (scroller === window) window.scrollTo(0, scrollY); else scroller.scrollTop = scrollY;
+      }
     })
     .catch(function (err) {
       document.body.classList.remove('plantilla-guardando-orden');

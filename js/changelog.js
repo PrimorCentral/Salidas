@@ -12,7 +12,9 @@ const CHANGELOG_SALIDAS = [
     fecha: '2026-10-31',
     cambios: [
       { tipo: 'correccion', texto: 'Actualización menor. Móvil: en los iPhone con iOS 26 ya no sale una franja blanquecina y borrosa encima de la barra azul de arriba' },
-      { tipo: 'correccion', texto: 'Móvil: la barra «Desliza para desbloquear» (y la de eliminar) ocupa todo el ancho de la ventana y se lee entera; «Cancelar» va debajo' }
+      { tipo: 'correccion', texto: 'Móvil: la barra «Desliza para desbloquear» (y la de eliminar) ocupa todo el ancho de la ventana y se lee entera; «Cancelar» va debajo' },
+      { tipo: 'mejora',     texto: 'Móvil, inicio de sesión: la contraseña también saca el teclado de números, con un botón «ABC» al lado para cambiar al teclado con letras (y «123» para volver). El móvil recuerda el último que se usó' },
+      { tipo: 'mejora',     texto: 'Móvil: la cabecera se queda quieta arriba y solo se desplaza lo de debajo, así la barra de desplazamiento ya no pasa por encima de la cabecera' }
     ]
   },
   {

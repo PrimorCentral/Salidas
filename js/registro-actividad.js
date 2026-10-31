@@ -634,7 +634,10 @@ function ajustarAlturaTablaActividad_() {
   if (!wrap) return;
   const pag = document.querySelector('#admin-actividad-resultado .ra-paginacion');
   const altoPag = pag ? pag.offsetHeight + 12 : 0;
-  const arriba = wrap.getBoundingClientRect().top + window.scrollY;
+  // En el móvil no se desplaza la ventana sino el contenido (main).
+  const main = document.querySelector('main');
+  const desplazado = (main && main.scrollHeight > main.clientHeight && getComputedStyle(main).overflowY === 'auto') ? main.scrollTop : window.scrollY;
+  const arriba = wrap.getBoundingClientRect().top + desplazado;
   const margenAbajo = 56; // padding de la tarjeta y de la página (con un pequeño margen)
   const disponible = window.innerHeight - arriba - altoPag - margenAbajo;
   wrap.style.maxHeight = Math.max(200, Math.floor(disponible)) + 'px';
