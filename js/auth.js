@@ -12,8 +12,8 @@
 function ajustarAlturaTopbar_() {
   const topbar = document.querySelector('header.topbar');
   if (!topbar) return;
-  // En el móvil la barra no va fija arriba (ver bloque "MÓVIL" al final de
-  // styles.css): si no está pegada, lo demás no tiene que dejarle hueco.
+  // Si algún día la barra deja de ir pegada arriba (position distinta de
+  // sticky), lo demás no tiene que dejarle hueco.
   const fija = getComputedStyle(topbar).position === 'sticky';
   document.documentElement.style.setProperty('--topbar-h', (fija ? topbar.offsetHeight : 0) + 'px');
 }
