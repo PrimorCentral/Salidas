@@ -11,7 +11,8 @@ const CHANGELOG_SALIDAS = [
     version: '2.1.18',
     fecha: '2026-10-31',
     cambios: [
-      { tipo: 'correccion', texto: 'Actualización menor. Móvil: en los iPhone con iOS 26 ya no sale una franja blanquecina y borrosa encima de la barra azul de arriba' }
+      { tipo: 'correccion', texto: 'Actualización menor. Móvil: en los iPhone con iOS 26 ya no sale una franja blanquecina y borrosa encima de la barra azul de arriba' },
+      { tipo: 'correccion', texto: 'Móvil: la barra «Desliza para desbloquear» (y la de eliminar) ocupa todo el ancho de la ventana y se lee entera; «Cancelar» va debajo' }
     ]
   },
   {
