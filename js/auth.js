@@ -236,8 +236,22 @@ document.getElementById('btn-imprimir-dia').addEventListener('click', function (
     poner(modo);
     try { localStorage.setItem(CLAVE, modo); } catch (e) {}
     campo.removeAttribute('readonly');
-    if (document.activeElement === campo) campo.blur();
+    // El iPhone no cambia el teclado si se quita y se pone el foco al mismo
+    // campo. Sí lo cambia al pasar de una casilla a otra: por eso el foco
+    // pasa un instante a una casilla invisible y vuelve a la contraseña
+    // (todo dentro del mismo toque, si no el iPhone no abre el teclado).
+    const puente = document.createElement('input');
+    puente.type = 'text';
+    puente.setAttribute('inputmode', modo === 'letras' ? 'numeric' : 'text');
+    puente.setAttribute('aria-hidden', 'true');
+    puente.tabIndex = -1;
+    puente.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;';
+    document.body.appendChild(puente);
+    puente.focus();
     campo.focus();
+    const largo = campo.value.length;
+    try { campo.setSelectionRange(largo, largo); } catch (e) {}
+    setTimeout(function () { puente.remove(); }, 300);
   });
 })();
 
