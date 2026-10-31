@@ -4823,4 +4823,10 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     .modal-overlay { padding: 10px; }
     .modal-box { padding: 20px 16px; max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
     .modal-actions button { flex: 1 1 auto; padding: 12px 14px; }
+    /* Barra "Desliza para desbloquear / eliminar": ocupa todo el ancho
+       (si no, Cancelar se comía el sitio y no se leía el texto) y
+       Cancelar va debajo. */
+    .desliza-fila { flex-wrap: wrap; row-gap: 10px; }
+    .desliza-fila .desliza { flex: 1 1 100%; }
+    .desliza-fila .modal-cancel { flex: 1 1 100%; }
   }
