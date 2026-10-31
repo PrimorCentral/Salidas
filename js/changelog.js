@@ -8,6 +8,20 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.17',
+    fecha: '2026-10-31',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'La app se puede usar en el móvil: todas las pantallas se ajustan al ancho del teléfono y ya no hay que mover la página de lado a lado. En el PC no cambia nada' },
+      { tipo: 'mejora',     texto: 'Móvil: la barra de arriba se queda fija al bajar, ordenada en filas (marca y botones, el menú y la fecha con «CONTEO ESPECIAL» debajo). La cuenta atrás del autorefresco del conteo sale junto a la campana' },
+      { tipo: 'mejora',     texto: 'Móvil, conteo diario: los botones de cada agrupación (palets, camión, email, descargas, verificar, candado) van en una fila debajo del nombre. La tabla de tiendas cabe entera; si una agrupación lleva más columnas, la tabla se desliza a los lados y la columna TIENDA se queda fija' },
+      { tipo: 'mejora',     texto: 'Móvil, inicio: el nombre de la ruta se ve entero, con la ubicación debajo, sin montarse encima de las casillas 60, PTA y CART.' },
+      { tipo: 'mejora',     texto: 'Móvil, Rutas y tiendas: el nombre de la ruta se ve entero, con sus botones debajo, y la fila de días ya no se queda pegada arriba ocupando media pantalla. En Configuración agencias y tiendas los contadores y los botones PDF, Excel y Sincronizar bajan de línea si no caben' },
+      { tipo: 'mejora',     texto: 'Móvil: las ventanas ocupan casi toda la pantalla y sus botones son más grandes para pulsarlos con el dedo' },
+      { tipo: 'mejora',     texto: 'Móvil: funciona como una app. No hace zoom (ni con dos dedos ni con doble toque), no se puede seleccionar ni copiar el texto de las pantallas, la página no se estira al arrastrar arriba o abajo y en el iPhone la barra de la hora va en negro sin la franja borrosa. En las casillas donde se escribe se puede seleccionar y pegar como siempre' },
+      { tipo: 'mejora',     texto: 'Móvil, inicio de sesión: la casilla de usuario saca el teclado de números y, con el teclado abierto, la tarjeta se coloca encima de él y se ve entera hasta «Entrar»' }
+    ]
+  },
+  {
     version: '2.1.16',
     fecha: '2026-10-30',
     cambios: [
