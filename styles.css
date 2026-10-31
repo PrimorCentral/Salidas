@@ -4671,6 +4671,30 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     html { background: var(--navy); }
     body { min-height: 100vh; min-height: 100dvh; }
 
+    /* ---------- Como una app: sin zoom ni seleccionar texto ----------
+     * Sin zoom con doble toque (el de dos dedos se quita en index.html y
+     * js/auth.js) y sin poder seleccionar / copiar los textos de la app
+     * ni que salga el menú de copiar al dejar el dedo pulsado.
+     * En las casillas donde se escribe (conteo, emails, notas, buscador...)
+     * se puede seleccionar y pegar como siempre: si no, no se podría
+     * corregir lo escrito ni pegar los emails de las agencias. */
+    html { touch-action: manipulation; }
+    body {
+      -webkit-user-select: none; user-select: none;
+      -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    }
+    input, textarea, select, [contenteditable="true"] {
+      -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+    }
+
+    /* ---------- Login con el teclado abierto ----------
+     * js/auth.js le pone la clase "teclado-abierto" y el alto del hueco
+     * que queda encima del teclado: la tarjeta se queda centrada ahí,
+     * sin la marca de arriba, para que se vea entera hasta "Entrar". */
+    #login-screen.teclado-abierto { padding-top: 10px; padding-bottom: 10px; justify-content: center; }
+    #login-screen.teclado-abierto .login-hero { display: none; }
+    #login-screen.teclado-abierto .login-panel { padding-top: 26px; padding-bottom: 58px; }
+
     /* ---------- Barra superior ----------
      * Se queda fija arriba y se ordena en filas: marca +
      * campana/usuario/Salir; el menú; y la fecha (con "CONTEO ESPECIAL"
