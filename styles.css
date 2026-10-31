@@ -4668,8 +4668,14 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
      * El fondo azul del html es por si algún móvil antiguo lo ignora:
      * entonces el hueco de arriba sale azul, como la barra. */
     html, body { overscroll-behavior: none; }
-    html { background: var(--navy); }
+    /* Fondo azul en html y body, y el gris claro de siempre solo dentro de
+       la app (#app). Los iPhone con iOS 26 pintan la franja de la hora y
+       la batería borrosa con el color del fondo de la página: si el fondo
+       es gris, sale una franja blanquecina encima de la barra azul; así
+       sale azul, igual que la barra. */
+    html, body { background: var(--navy); }
     body { min-height: 100vh; min-height: 100dvh; }
+    #app { background: var(--bg); min-height: 100vh; min-height: 100dvh; }
 
     /* ---------- Como una app: sin zoom ni seleccionar texto ----------
      * Sin zoom con doble toque (el de dos dedos se quita en index.html y
