@@ -4661,6 +4661,16 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
    * ================================================================ */
   @media (max-width: 700px) {
 
+    /* ---------- Sin "estirar" la app ----------
+     * Al llegar arriba (o abajo) y seguir arrastrando con el dedo, el
+     * móvil estiraba la página entera y dejaba ver un hueco gris/blanco
+     * encima de la barra azul. Así la app se queda quieta en su sitio.
+     * El fondo azul del html es por si algún móvil antiguo lo ignora:
+     * entonces el hueco de arriba sale azul, como la barra. */
+    html, body { overscroll-behavior: none; }
+    html { background: var(--navy); }
+    body { min-height: 100vh; min-height: 100dvh; }
+
     /* ---------- Barra superior ----------
      * Se queda fija arriba y se ordena en filas: marca +
      * campana/usuario/Salir; el menú; y la fecha (con "CONTEO ESPECIAL"
