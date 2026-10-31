@@ -111,7 +111,10 @@
           <!-- Campo de TEXTO que se ve con puntos (por CSS), no type="password":
                así el navegador no lo trata como contraseña y no avisa de
                "contraseña no segura / hay que cambiarla" ni ofrece guardarla. -->
-          <input type="text" id="login-pass" name="salidas-c" class="campo-oculto" placeholder="Contraseña" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other">
+          <input type="text" id="login-pass" name="salidas-c" class="campo-oculto" placeholder="Contraseña" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other">
+          <!-- Solo en el móvil: cambia entre el teclado de números (el que sale
+               por defecto) y el teclado normal con letras. Ver js/auth.js. -->
+          <button type="button" class="teclado-pass" id="teclado-pass" aria-label="Usar el teclado con letras">ABC</button>
           <button type="button" class="toggle-pass" id="toggle-pass" aria-label="Mostrar contraseña">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>
