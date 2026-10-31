@@ -168,7 +168,12 @@ document.getElementById('login-pass').addEventListener('keydown', function (e) {
 });
 // Que pulsar el ojo no le quite el foco a la contraseña: si no, en el móvil
 // se cierra el teclado cada vez que se quiere ver lo escrito.
-document.getElementById('toggle-pass').addEventListener('pointerdown', function (e) { e.preventDefault(); });
+let passEnfocadaAlPulsarOjo_ = false;
+document.getElementById('toggle-pass').addEventListener('pointerdown', function (e) {
+  passEnfocadaAlPulsarOjo_ = document.activeElement === document.getElementById('login-pass');
+  e.preventDefault();
+});
+document.getElementById('toggle-pass').addEventListener('mousedown', function (e) { e.preventDefault(); });
 document.getElementById('toggle-pass').addEventListener('click', function () {
   const input = document.getElementById('login-pass');
   // Si va con puntos por CSS, se muestra/oculta quitando la clase; si el
@@ -178,6 +183,15 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
   } else {
     input.classList.toggle('mostrar');
   }
+  // El iPhone le quita el foco igualmente al tocar el ojo: si se estaba
+  // escribiendo, se devuelve a la contraseña (con el cursor al final) para
+  // que el teclado siga abierto.
+  if (passEnfocadaAlPulsarOjo_ && document.activeElement !== input) {
+    input.focus();
+    const largo = input.value.length;
+    try { input.setSelectionRange(largo, largo); } catch (e) {}
+  }
+  passEnfocadaAlPulsarOjo_ = false;
 });
 
 /* Campos del login sin autorrelleno ni aviso de "contraseña no segura".
