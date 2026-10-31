@@ -16,8 +16,18 @@ function ajustarAlturaTopbar_() {
   // sticky), lo demás no tiene que dejarle hueco.
   const fija = getComputedStyle(topbar).position === 'sticky';
   document.documentElement.style.setProperty('--topbar-h', (fija ? topbar.offsetHeight : 0) + 'px');
+  // Alto real de la cabecera (vaya o no pegada): lo usan los paneles que se
+  // abren justo debajo de ella en el móvil (p. ej. «Cambios después de
+  // verificar», bloque "MÓVIL" de styles.css).
+  document.documentElement.style.setProperty('--cabecera-alto', topbar.getBoundingClientRect().bottom + 'px');
 }
 window.addEventListener('resize', ajustarAlturaTopbar_);
+// La cabecera cambia de alto según la pantalla (la fila de la fecha solo
+// sale en Conteos Diarios): se vuelve a medir cada vez que cambia.
+if (window.ResizeObserver) {
+  const cabecera = document.querySelector('header.topbar');
+  if (cabecera) new ResizeObserver(ajustarAlturaTopbar_).observe(cabecera);
+}
 
 /** Guarda la sesión que devuelve el servidor (login o cambio obligatorio
  *  de contraseña) y muestra la app. */
