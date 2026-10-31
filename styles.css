@@ -4738,7 +4738,10 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
      * detrás de esa barra: entonces el azul sube hasta arriba. */
     header.topbar {
       position: relative; flex: 0 0 auto; flex-wrap: wrap; row-gap: 8px; column-gap: 8px;
-      padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+      /* 18 px de margen arriba (y no 10): el iOS 26 emborrona una franja que
+         baja un poco más allá de la hora y la batería; así la fila de la
+         marca queda por debajo y lo borroso cae solo sobre el azul. */
+      padding: calc(18px + env(safe-area-inset-top, 0px)) 12px 10px;
     }
     header.topbar .brand { order: 0; }
     header.topbar .topbar-derecha { order: 1; margin-left: auto; gap: 6px; }
