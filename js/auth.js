@@ -208,3 +208,37 @@ document.getElementById('toggle-pass').addEventListener('click', function () {
 })();
 document.getElementById('btn-mi-usuario').addEventListener('click', abrirModalMiUsuario_);
 document.getElementById('btn-imprimir-dia').addEventListener('click', function () { imprimirConteoDia_(); });
+
+/* ---------------- MÓVIL: que se comporte como una app ---------------- */
+
+/* Login con el teclado abierto (sobre todo iPhone): el teclado tapaba la
+   mitad de abajo y la pantalla bailaba. Mientras está abierto, la pantalla
+   del login se ajusta justo al hueco que queda visible encima del teclado
+   (se esconde la marca de arriba para que quepa la tarjeta entera) y, al
+   cerrarlo, vuelve a su sitio. Solo en pantallas estrechas. */
+(function () {
+  const vv = window.visualViewport;
+  const pantalla = document.getElementById('login-screen');
+  if (!vv || !pantalla) return;
+  function ajustar() {
+    const teclado = window.innerWidth <= 700 && (window.innerHeight - vv.height) > 120;
+    pantalla.classList.toggle('teclado-abierto', teclado);
+    if (teclado) {
+      pantalla.style.top = vv.offsetTop + 'px';
+      pantalla.style.bottom = 'auto';
+      pantalla.style.height = vv.height + 'px';
+    } else {
+      pantalla.style.top = '';
+      pantalla.style.bottom = '';
+      pantalla.style.height = '';
+    }
+  }
+  vv.addEventListener('resize', ajustar);
+  vv.addEventListener('scroll', ajustar);
+})();
+
+/* Sin zoom con dos dedos en el iPhone (el viewport de index.html ya lo
+   pide, pero el iPhone a veces no le hace caso). El doble toque se quita
+   por CSS (touch-action: manipulation, bloque "MÓVIL" de styles.css). */
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+document.addEventListener('gesturechange', function (e) { e.preventDefault(); });
