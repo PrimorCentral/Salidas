@@ -4662,13 +4662,15 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
   @media (max-width: 700px) {
 
     /* ---------- Barra superior ----------
-     * En el móvil deja de ir fija arriba (se comería media pantalla) y
-     * se ordena en filas: marca + campana/usuario/Salir; el menú; y la
-     * fecha (con "CONTEO ESPECIAL" debajo, sin salirse por la derecha).
-     * Como ya no va fija, js/auth.js pone --topbar-h a 0 para que lo
-     * que se "pega" arriba al hacer scroll no deje un hueco. */
+     * Se queda fija arriba y se ordena en filas: marca +
+     * campana/usuario/Salir; el menú; y la fecha (con "CONTEO ESPECIAL"
+     * debajo, sin salirse por la derecha).
+     * El azul de la barra sube también por detrás de la hora y la batería
+     * del iPhone (env(safe-area-inset-top), junto con viewport-fit=cover
+     * en index.html): así no se ve la franja borrosa encima de la barra. */
     header.topbar {
-      position: relative; flex-wrap: wrap; padding: 10px 12px; row-gap: 8px; column-gap: 8px;
+      position: sticky; top: 0; flex-wrap: wrap; row-gap: 8px; column-gap: 8px;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
     }
     header.topbar .brand { order: 0; }
     header.topbar .topbar-derecha { order: 1; margin-left: auto; gap: 6px; }
