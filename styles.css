@@ -4849,6 +4849,15 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     /* ---------- Ventanas (modales) ----------
      * Casi a pantalla completa y con los botones de abajo a lo ancho,
      * más fáciles de pulsar con el dedo. */
+    /* Panel de la campana («Cambios después de verificar»): justo debajo
+       de la cabecera (no detrás de ella) y casi a todo el ancho. */
+    .avisos-verif-panel {
+      top: calc(var(--cabecera-alto, 120px) + 6px); left: 8px; right: 8px; width: auto; max-width: none;
+      max-height: calc(100vh - var(--cabecera-alto, 120px) - 20px);
+      max-height: calc(100dvh - var(--cabecera-alto, 120px) - 20px);
+    }
+    .avisos-verif-toast { left: 10px; right: 10px; width: auto; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+
     .modal-overlay { padding: 10px; }
     .modal-box { padding: 20px 16px; max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
     .modal-actions button { flex: 1 1 auto; padding: 12px 14px; }
