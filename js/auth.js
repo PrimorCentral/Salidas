@@ -211,6 +211,36 @@ document.getElementById('btn-imprimir-dia').addEventListener('click', function (
 
 /* ---------------- MÓVIL: que se comporte como una app ---------------- */
 
+/* Contraseña del login: sale el teclado de números (la mayoría de las
+   claves son números) y el botón ABC / 123 cambia al teclado con letras y
+   vuelve. Se recuerda en ese móvil lo último que se eligió. Para que el
+   teclado cambie en el momento, se quita y se vuelve a poner el foco. */
+(function () {
+  const campo = document.getElementById('login-pass');
+  const boton = document.getElementById('teclado-pass');
+  if (!campo || !boton) return;
+  const CLAVE = 'salidas-teclado-pass';
+  function poner(modo) {
+    const letras = modo === 'letras';
+    campo.setAttribute('inputmode', letras ? 'text' : 'numeric');
+    boton.textContent = letras ? '123' : 'ABC';
+    boton.setAttribute('aria-label', letras ? 'Usar el teclado de números' : 'Usar el teclado con letras');
+  }
+  let guardado = null;
+  try { guardado = localStorage.getItem(CLAVE); } catch (e) {}
+  poner(guardado === 'letras' ? 'letras' : 'numeros');
+  // Que pulsar el botón no le quite el foco al campo (si no, se cierra el teclado).
+  boton.addEventListener('pointerdown', function (e) { e.preventDefault(); });
+  boton.addEventListener('click', function () {
+    const modo = campo.getAttribute('inputmode') === 'text' ? 'numeros' : 'letras';
+    poner(modo);
+    try { localStorage.setItem(CLAVE, modo); } catch (e) {}
+    campo.removeAttribute('readonly');
+    if (document.activeElement === campo) campo.blur();
+    campo.focus();
+  });
+})();
+
 /* Login con el teclado abierto (sobre todo iPhone): el teclado tapaba la
    mitad de abajo y la pantalla bailaba. Mientras está abierto, la pantalla
    del login se ajusta justo al hueco que queda visible encima del teclado
