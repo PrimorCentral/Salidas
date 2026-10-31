@@ -4650,3 +4650,130 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
 .gestor-fecha-wrap.vacia input[type="date"]:not(:focus) { color: transparent; }
 .gestor-fecha-wrap.vacia input[type="date"]:not(:focus)::-webkit-datetime-edit { color: transparent; }
 .gestor-fecha-wrap.vacia:focus-within .gestor-fecha-placeholder { display: none; }
+
+  /* ================================================================
+   * MÓVIL (pantallas de hasta 700 px de ancho)
+   * ----------------------------------------------------------------
+   * Todo lo de este bloque SOLO se aplica en el móvil: en el PC no
+   * cambia nada. Pensado sobre todo para Inicio, Conteos Diarios y
+   * Diseño (Rutas y tiendas, Configuración agencias / tiendas).
+   * Va al final del archivo para que mande sobre las reglas de arriba.
+   * ================================================================ */
+  @media (max-width: 700px) {
+
+    /* ---------- Barra superior ----------
+     * En el móvil deja de ir fija arriba (se comería media pantalla) y
+     * se ordena en filas: marca + campana/usuario/Salir; el menú; y la
+     * fecha (con "CONTEO ESPECIAL" debajo, sin salirse por la derecha).
+     * Como ya no va fija, js/auth.js pone --topbar-h a 0 para que lo
+     * que se "pega" arriba al hacer scroll no deje un hueco. */
+    header.topbar {
+      position: relative; flex-wrap: wrap; padding: 10px 12px; row-gap: 8px; column-gap: 8px;
+    }
+    header.topbar .brand { order: 0; }
+    header.topbar .topbar-derecha { order: 1; margin-left: auto; gap: 6px; }
+    header.topbar .topbar-nav { order: 2; flex: 1 1 100%; justify-content: space-between; gap: 0; }
+    header.topbar .topbar-nav-item { padding: 8px 7px; font-size: 12px; }
+    header.topbar .topbar-fecha-wrap {
+      order: 3; flex: 1 1 100%; justify-content: center; flex-wrap: wrap; row-gap: 6px; margin: 0;
+    }
+    header.topbar .topbar-fecha { font-size: 15px; max-width: calc(100vw - 80px); }
+    .topbar-conteo-especial { position: static; transform: none; }
+    .topbar-dropdown-menu { max-width: calc(100vw - 24px); }
+    #topbar-dropdown-administracion .topbar-dropdown-menu { right: 0; left: auto; }
+
+    /* ---------- Contenido general ---------- */
+    main { padding: 12px 8px; }
+    .vista-card { padding: 14px 12px; }
+    .vista-card-header h2 { flex-basis: 100%; }
+    /* Contadores del título ("274 tiendas", "0 nuevas"...): bajan de
+       línea si no caben, en vez de salirse de la pantalla. */
+    .vista-card-header h2 .tiendas-config-total { display: inline-block; margin-top: 4px; }
+    /* Botones PDF / Excel / Buscar y sincronizar...: se reparten el ancho
+       y bajan de línea si no caben. */
+    .vista-card-header-acciones { flex-wrap: wrap; flex-shrink: 1; min-width: 0; max-width: 100%; }
+    .vista-card-header-acciones > * { flex: 1 1 auto; justify-content: center; }
+
+    /* Campos de texto a 16 px: si son más pequeños, el iPhone hace zoom
+       solo al tocarlos y descoloca la pantalla. */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select, textarea { font-size: 16px; }
+
+    /* ---------- Inicio: "Estado del conteo de hoy / mañana" ----------
+     * El nombre de la ruta ocupa su línea y la ubicación va debajo, en
+     * vez de montarse encima de las casillas 60 / PTA / CART. */
+    .inicio-tc-fila { grid-template-columns: minmax(0, 1fr) repeat(3, 28px) 92px; }
+    .inicio-tc-pill-col { margin-left: 4px; }
+    .inicio-tc-nombre-col { flex-wrap: wrap; row-gap: 3px; overflow: hidden; }
+    .inicio-tc-nombre-txt { white-space: normal; flex: 1 1 100%; }
+    .inicio-badge-ubicacion { flex-shrink: 1; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .inicio-card { max-height: none; }
+
+    /* ---------- Conteos Diarios: cabecera de cada agrupación ----------
+     * Icono + nombre arriba (con la flecha de plegar a la derecha) y los
+     * botones (palets, camión, email, descargas, verificar, candado...)
+     * en una fila entera debajo, en vez de salirse por la derecha. */
+    .seccion-header { padding: 12px; }
+    .seccion-header-top { flex-wrap: wrap; row-gap: 10px; gap: 10px; }
+    .seccion-header-top .icono-agrup { width: 34px; height: 34px; font-size: 12.5px; align-self: flex-start; }
+    .seccion-header-top .info { flex: 1 1 0; min-width: 0; }
+    .seccion-header-top .btn-toggle-colapsar { align-self: flex-start; }
+    .seccion-header-controles {
+      order: 10; flex: 1 1 100%; min-width: 0; margin-left: 0;
+      justify-content: flex-start; flex-wrap: wrap; row-gap: 8px;
+    }
+    .seccion-header .name-row .name { font-size: 16px; }
+    .seccion-header .name-row > .vista-carga-tabs .vista-carga-tab { padding: 5px 7px; }
+
+    /* ---------- Conteos Diarios: tabla de tiendas ----------
+     * Casillas más estrechas para que la tabla normal quepa entera. Si
+     * una agrupación lleva más columnas (PESO, C.EXPRESS, VIERNES...) la
+     * tabla se desliza a los lados, pero la columna TIENDA se queda fija
+     * a la izquierda para no perder de vista qué tienda es. */
+    table.conteo { font-size: 13px; }
+    table.conteo td { padding: 6px 2px; }
+    table.conteo thead th { padding-left: 3px; padding-right: 3px; font-size: 10px; }
+    table.conteo td.limite { font-size: 12px; }
+    table.conteo input.celda,
+    table.conteo input.celda-total,
+    table.conteo input.celda-total-visual { width: 40px; min-width: 40px; padding-left: 2px; padding-right: 2px; }
+    .seccion-panel table.conteo thead tr th:first-child,
+    .seccion-panel table.conteo tbody tr td.nombre {
+      position: sticky; left: 0; z-index: 2;
+      min-width: 84px; max-width: 104px; padding-left: 6px; font-size: 12px; white-space: normal;
+      box-shadow: 1px 0 0 var(--line);
+    }
+    .seccion-panel table.conteo thead tr th:first-child { z-index: 3; }
+    .seccion-panel table.conteo tbody tr td.nombre { background: var(--panel); }
+    .seccion-panel table.conteo tbody tr:nth-child(even) td.nombre { background: #fafbfc; }
+
+    /* ---------- Diseño > Rutas y tiendas ---------- */
+    /* La fila de días deja de ir pegada arriba: con tantos botones
+       ocuparía un tercio de la pantalla al bajar por las rutas. */
+    .plantilla-dias-fila { position: static; margin: 4px -12px 12px; padding: 8px 12px; }
+    /* Cabecera de la ruta: nombre (entero, sin "…") y botones debajo. */
+    .plantilla-ruta-header { flex-wrap: wrap; row-gap: 6px; }
+    .plantilla-ruta-nombre-texto { flex: 1 1 0; min-width: 0; white-space: normal; }
+    .plantilla-ruta-spacer { flex-basis: 100%; height: 0; }
+    .plantilla-ruta-opciones { padding-left: 10px; }
+    .plantilla-tiendas-cabecera { white-space: normal; }
+    .plantilla-tiendas-cabecera .col-lim,
+    .plantilla-tiendas-cabecera .col-num { font-size: 9px; }
+    .plantilla-tienda { gap: 6px; padding: 7px 8px; }
+    .plantilla-tienda .lim,
+    .plantilla-tiendas-cabecera .col-lim,
+    .plantilla-tienda .numero,
+    .plantilla-tiendas-cabecera .col-num { width: 52px; }
+    .plantilla-tienda .nombre { flex: 1 1 120px; }
+
+    /* ---------- Diseño > Configuración agencias / tiendas ---------- */
+    .emails-config-toolbar { gap: 8px; }
+    .emails-config-toolbar > * { flex: 1 1 auto; }
+
+    /* ---------- Ventanas (modales) ----------
+     * Casi a pantalla completa y con los botones de abajo a lo ancho,
+     * más fáciles de pulsar con el dedo. */
+    .modal-overlay { padding: 10px; }
+    .modal-box { padding: 20px 16px; max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
+    .modal-actions button { flex: 1 1 auto; padding: 12px 14px; }
+  }
