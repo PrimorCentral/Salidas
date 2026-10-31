@@ -166,6 +166,9 @@ document.getElementById('login-usuario').addEventListener('keydown', function (e
 document.getElementById('login-pass').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') intentarLogin();
 });
+// Que pulsar el ojo no le quite el foco a la contraseña: si no, en el móvil
+// se cierra el teclado cada vez que se quiere ver lo escrito.
+document.getElementById('toggle-pass').addEventListener('pointerdown', function (e) { e.preventDefault(); });
 document.getElementById('toggle-pass').addEventListener('click', function () {
   const input = document.getElementById('login-pass');
   // Si va con puntos por CSS, se muestra/oculta quitando la clase; si el
@@ -237,21 +240,23 @@ document.getElementById('btn-imprimir-dia').addEventListener('click', function (
     try { localStorage.setItem(CLAVE, modo); } catch (e) {}
     campo.removeAttribute('readonly');
     // El iPhone no cambia el teclado si se quita y se pone el foco al mismo
-    // campo. Sí lo cambia al pasar de una casilla a otra: por eso el foco
-    // pasa un instante a una casilla invisible y vuelve a la contraseña
-    // (todo dentro del mismo toque, si no el iPhone no abre el teclado).
+    // campo, pero sí al pasar de una casilla a otra. Por eso: dentro del
+    // toque, el foco pasa a una casilla invisible (así el teclado sigue
+    // abierto) y, un momento después, vuelve a la contraseña, que se abre
+    // ya con el teclado nuevo. Si se hace todo de golpe, el iPhone lo ignora.
     const puente = document.createElement('input');
     puente.type = 'text';
-    puente.setAttribute('inputmode', modo === 'letras' ? 'numeric' : 'text');
     puente.setAttribute('aria-hidden', 'true');
     puente.tabIndex = -1;
-    puente.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;';
+    puente.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;border:0;padding:0;margin:0;';
     document.body.appendChild(puente);
     puente.focus();
-    campo.focus();
-    const largo = campo.value.length;
-    try { campo.setSelectionRange(largo, largo); } catch (e) {}
-    setTimeout(function () { puente.remove(); }, 300);
+    setTimeout(function () {
+      campo.focus();
+      const largo = campo.value.length;
+      try { campo.setSelectionRange(largo, largo); } catch (e) {}
+      puente.remove();
+    }, 120);
   });
 })();
 
