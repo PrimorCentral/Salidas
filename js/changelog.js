@@ -8,6 +8,13 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.18',
+    fecha: '2026-10-31',
+    cambios: [
+      { tipo: 'correccion', texto: 'Actualización menor. Móvil: en los iPhone con iOS 26 ya no sale una franja blanquecina y borrosa encima de la barra azul de arriba' }
+    ]
+  },
+  {
     version: '2.1.17',
     fecha: '2026-10-31',
     cambios: [
