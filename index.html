@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#1c2b45">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Salidas">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -101,7 +101,7 @@
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
           </svg>
           <!-- Sin autorrelleno: el navegador no debe proponer usuarios guardados. -->
-          <input type="text" id="login-usuario" name="salidas-u" placeholder="Usuario" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other" autofocus>
+          <input type="text" id="login-usuario" name="salidas-u" placeholder="Usuario" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" readonly data-lpignore="true" data-1p-ignore data-form-type="other" autofocus>
         </div>
         <label class="login-label" for="login-pass">Contraseña</label>
         <div class="campo-pass">

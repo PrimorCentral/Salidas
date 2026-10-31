@@ -4675,9 +4675,11 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
      * Se queda fija arriba y se ordena en filas: marca +
      * campana/usuario/Salir; el menú; y la fecha (con "CONTEO ESPECIAL"
      * debajo, sin salirse por la derecha).
-     * El azul de la barra sube también por detrás de la hora y la batería
-     * del iPhone (env(safe-area-inset-top), junto con viewport-fit=cover
-     * en index.html): así no se ve la franja borrosa encima de la barra. */
+     * En el iPhone la barra de la hora y la batería va en negro sólido
+     * (apple-mobile-web-app-status-bar-style="black" en index.html), así
+     * la app empieza debajo y no sale la franja borrosa por encima. El
+     * env(safe-area-inset-top) es por si algún móvil dibuja la app por
+     * detrás de esa barra: entonces el azul sube hasta arriba. */
     header.topbar {
       position: sticky; top: 0; flex-wrap: wrap; row-gap: 8px; column-gap: 8px;
       padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
@@ -4691,6 +4693,9 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     }
     header.topbar .topbar-fecha { font-size: 15px; max-width: calc(100vw - 80px); }
     .topbar-conteo-especial { position: static; transform: none; }
+    /* Cuenta atrás del autorefresco del conteo: arriba se escondía por
+       debajo de 760 px; en el móvil se enseña junto a la campana. */
+    .topbar-refresco-conteo.visible { display: flex !important; }
     .topbar-dropdown-menu { max-width: calc(100vw - 24px); }
     #topbar-dropdown-administracion .topbar-dropdown-menu { right: 0; left: auto; }
 
