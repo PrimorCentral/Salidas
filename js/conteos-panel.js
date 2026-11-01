@@ -284,13 +284,17 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>' +
       'CARGA NO AJUSTADA POR UN RESPONSABLE</span>' +
     '</div></div>' +
-    // Botones de la derecha en un bloque de ancho mínimo fijo: así la
-    // columna de ubicación / pestañas queda a la misma altura en todas las
-    // agrupaciones, tengan más o menos botones.
+    // Bloque de la derecha: arriba los botones y debajo los contadores
+    // (Viernes, Domingo, palets), cada fila en su propio bloque para que el
+    // bloque mida solo lo que ocupan (en el móvil van todos en una fila, ver
+    // .seccion-header-contadores / -botones en styles.css).
     '<div class="seccion-header-controles">' +
+    '<span class="seccion-header-contadores">' +
     (seccion.tieneViernes ? '<span class="badge-total-viernes" title="Palets de VIERNES: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Viernes:&nbsp;<span class="total-viernes-valor">0</span></span>' : '') +
     (seccion.tieneCasillaDomingo ? '<span class="badge-total-domingo" title="Palets de DOMINGO: suman al TOTAL de cada tienda, pero no al total de palets de la carga">Domingo:&nbsp;<span class="total-domingo-valor">0</span></span>' : '') +
     '<span class="badge-total-palets"><span class="total-palets-valor">0</span>&nbsp;palets</span>' +
+    '</span>' +
+    '<span class="seccion-header-botones">' +
     htmlBotonListaCarga_(seccion) +
     htmlMenuEnvios_ +
     htmlMenuDescargas_ +
@@ -300,6 +304,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       ? '<span class="verif-wrap"></span>'
       : '') +
     '<button type="button" class="btn-candado-carga" hidden aria-label="Conteo bloqueado">' + SVG_CANDADO_CARGA_ + '</button>' +
+    '</span>' +
     '</div>' +
     '<button type="button" class="btn-toggle-colapsar" title="Contraer / expandir">' +
     '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
@@ -358,8 +363,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     if (viejo && claseNueva === claseBotonCarga_) return; // ya está como debe: no tocar el DOM
     claseBotonCarga_ = claseNueva;
     if (viejo) viejo.remove();
-    const badge = header.querySelector('.badge-total-palets');
-    if (nuevo && badge) badge.insertAdjacentElement('afterend', nuevo);
+    // El camioncito va el primero de la fila de botones.
+    const botones = header.querySelector('.seccion-header-botones');
+    if (nuevo && botones) botones.insertBefore(nuevo, botones.firstChild);
     bindBotonListaCarga_();
   }
   bindBotonListaCarga_();
