@@ -31,6 +31,7 @@ function irAAgrupacionDesdeInicio_(fecha, nombreRuta) {
  *  scroll automáticamente en cuanto termine de cargar el día (ver
  *  irAAgrupacionDesdeInicio_, que es quien la usa desde "Inicio"). */
 function cambiarVista(vista, seccion) {
+  quitarCargaInicio_(); // por si quedaba abierta la carga desde Inicio
   ESTADO.vista = vista;
   document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
     btn.classList.toggle('activa', btn.dataset.vista === vista);
@@ -116,14 +117,7 @@ function renderVistaInicio() {
     .then(function (resumen) {
       const cont = document.getElementById('inicio-cols2');
       if (!cont) return; // el usuario ya ha cambiado de vista
-      cont.innerHTML =
-        htmlTarjetaInicio_('Estado del conteo de hoy', resumen.hoy, 'hoy') +
-        htmlTarjetaInicio_('Estado del conteo de mañana', resumen.manana, 'manana');
-      cont.querySelectorAll('[data-ir-agrupacion]').forEach(function (btn) {
-        btn.onclick = function () {
-          irAAgrupacionDesdeInicio_(btn.getAttribute('data-fecha'), btn.getAttribute('data-ruta'));
-        };
-      });
+      pintarTarjetasInicio_(cont, resumen);
     })
     .catch(function (err) {
       const cont = document.getElementById('inicio-cols2');
@@ -132,6 +126,107 @@ function renderVistaInicio() {
           htmlTarjetaInicioError_('Estado del conteo de hoy') +
           htmlTarjetaInicioError_('Estado del conteo de mañana');
       }
+      mostrarErrorServidor(err);
+    });
+}
+
+/** Pinta las dos tarjetas con la respuesta de resumenInicio y engancha
+ *  los clics: el nombre lleva a Conteos Diarios y las pastillas «Carga
+ *  ajustada» / «Carga sin ajustar» abren la carga del camión aquí mismo. */
+function pintarTarjetasInicio_(cont, resumen) {
+  resumen = resumen || {};
+  cont.innerHTML =
+    htmlTarjetaInicio_('Estado del conteo de hoy', resumen.hoy, 'hoy') +
+    htmlTarjetaInicio_('Estado del conteo de mañana', resumen.manana, 'manana');
+  cont.querySelectorAll('[data-ir-agrupacion]').forEach(function (btn) {
+    btn.onclick = function () {
+      irAAgrupacionDesdeInicio_(btn.getAttribute('data-fecha'), btn.getAttribute('data-ruta'));
+    };
+  });
+  cont.querySelectorAll('[data-abrir-carga]').forEach(function (btn) {
+    btn.onclick = function () {
+      abrirCargaDesdeInicio_(btn.getAttribute('data-fecha'), btn.getAttribute('data-ruta'));
+    };
+  });
+}
+
+/** Vuelve a pedir el resumen y repinta las tarjetas sin "Cargando…"
+ *  (tras cerrar la ventana de la carga, por si ha cambiado el estado). */
+function refrescarInicioEnSilencio_() {
+  if (ESTADO.vista !== 'inicio') return;
+  llamarApi_('resumenInicio', [])
+    .then(function (resumen) {
+      const cont = document.getElementById('inicio-cols2');
+      if (!cont || ESTADO.vista !== 'inicio') return;
+      pintarTarjetasInicio_(cont, resumen);
+    })
+    .catch(function () { /* si falla, se queda lo que había */ });
+}
+
+/* ---------------- CARGA DEL CAMIÓN DESDE INICIO ----------------
+ * Al pulsar «Carga ajustada» o «Carga sin ajustar» se abre la MISMA
+ * ventana del camioncito de Conteos Diarios, sin salir de Inicio. Para no
+ * duplicar nada (permisos, ajustar, matrículas, bloqueo mientras se
+ * ajusta, guardar…), se trae el conteo de ese día, se monta la agrupación
+ * igual que en Conteos Diarios pero invisible (fuera de la pantalla) y se
+ * pulsa su camioncito. Al cerrarse la ventana se quita esa copia invisible
+ * y se refrescan las tarjetas de Inicio. */
+let INICIO_CARGA_ABIERTA_ = null; // { host, vigia }
+function quitarCargaInicio_() {
+  const a = INICIO_CARGA_ABIERTA_;
+  if (!a) return;
+  INICIO_CARGA_ABIERTA_ = null;
+  clearInterval(a.vigia);
+  if (a.host && a.host.parentNode) a.host.parentNode.removeChild(a.host);
+}
+function hayVentanaCargaAbierta_() {
+  const ov = document.getElementById('modal-overlay');
+  if (ov && ov.style.display !== 'none') return true;
+  if (document.getElementById('aviso-sin-ajustar-overlay')) return true;
+  return typeof AJUSTE_CARGA_ACTIVO_ !== 'undefined' && !!AJUSTE_CARGA_ACTIVO_;
+}
+function abrirCargaDesdeInicio_(fecha, nombreRuta) {
+  if (!fecha || !nombreRuta) return;
+  quitarCargaInicio_();
+  mostrarModalCargando('Abriendo la carga…');
+  llamarApi_('getConteoDia', [fecha])
+    .then(function (data) {
+      const sec = data && !data.bloqueada && data.dia && (data.secciones || []).find(function (s) { return s.nombre === nombreRuta; });
+      if (!sec) {
+        cerrarModal();
+        mostrarToast('No se ha encontrado esta agrupación en el conteo de ese día', true);
+        return;
+      }
+      const host = document.createElement('div');
+      host.id = 'inicio-carga-oculta';
+      host.hidden = true;
+      host.setAttribute('aria-hidden', 'true');
+      const panel = crearSeccionPanel(sec, data.dia, data.fecha, data.esHoy);
+      host.appendChild(panel);
+      document.body.appendChild(host);
+      const btn = panel.querySelector('.btn-lista-carga');
+      if (!btn) {
+        host.remove();
+        cerrarModal();
+        mostrarToast('Esta agrupación todavía no tiene carga', true);
+        return;
+      }
+      btn.click(); // abre la ventana de la carga (sustituye a "Abriendo la carga…")
+      // Vigila cuándo se cierra todo (lista de carga, ajustar, matrícula…)
+      // para quitar la copia invisible y refrescar Inicio. Se esperan dos
+      // comprobaciones seguidas "cerrado" por si una ventana da paso a otra.
+      let cerradas = 0;
+      const a = { host: host };
+      a.vigia = setInterval(function () {
+        if (hayVentanaCargaAbierta_()) { cerradas = 0; return; }
+        if (++cerradas < 2) return;
+        quitarCargaInicio_();
+        refrescarInicioEnSilencio_();
+      }, 600);
+      INICIO_CARGA_ABIERTA_ = a;
+    })
+    .catch(function (err) {
+      cerrarModal();
       mostrarErrorServidor(err);
     });
 }
@@ -214,11 +309,21 @@ function htmlFilaRutaInicio_(ruta, fecha) {
       INICIO_CAMPOS_.map(function (c) {
         return '<div class="inicio-tc-col">' + htmlCheckCircleInicio_(ruta[c.clave]) + '</div>';
       }).join('') +
-      '<div class="inicio-tc-pill-col"><span class="inicio-pill inicio-pill-' + estado + '">' +
-        escapeHtml(INICIO_ESTADO_TXT_[estado] || estado) +
-      '</span></div>' +
+      '<div class="inicio-tc-pill-col">' + htmlPastillaEstadoInicio_(estado, ruta, fecha) + '</div>' +
     '</div>'
   );
+}
+
+// Estados cuya pastilla abre la carga del camión sin salir de Inicio.
+const INICIO_ESTADOS_CON_CARGA_ = { ajustada: true, sin_ajustar: true };
+function htmlPastillaEstadoInicio_(estado, ruta, fecha) {
+  const texto = escapeHtml(INICIO_ESTADO_TXT_[estado] || estado);
+  if (!INICIO_ESTADOS_CON_CARGA_[estado]) {
+    return '<span class="inicio-pill inicio-pill-' + estado + '">' + texto + '</span>';
+  }
+  return '<button type="button" class="inicio-pill inicio-pill-btn inicio-pill-' + estado + '" data-abrir-carga' +
+    ' data-fecha="' + escapeAttr(fecha || '') + '" data-ruta="' + escapeAttr(ruta.nombre || '') + '"' +
+    ' title="' + (estado === 'ajustada' ? 'Ver la carga ajustada' : 'Ver o ajustar la carga') + '">' + texto + '</button>';
 }
 
 /** estado: 'vacio' (gris, nada rellenado) | 'parcial' (naranja, alguna
