@@ -223,7 +223,10 @@ function renderContenidoDia(data) {
   cont.innerHTML = '';
   cont.appendChild(wrap);
 
-  // «Añadir observación» va ahora en la franja del día (js/navegacion-cabecera.js).
+  // «+» de Observaciones importantes: añadir una observación (del día o de agrupación).
+  document.getElementById('btn-nota-dia').onclick = function () {
+    abrirModalAnadirObservacionDia_(data);
+  };
 
   renderResumenDia(data);
   renderMenuRapido(data);

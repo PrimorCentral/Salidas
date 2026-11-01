@@ -143,13 +143,6 @@ document.getElementById('subbarra-hoy').onclick = function () { irADiaDesdeSubba
 document.getElementById('subbarra-manana').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(hoyStr(), 1)); };
 document.getElementById('subbarra-dia-anterior').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, -1)); };
 document.getElementById('subbarra-dia-siguiente').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, 1)); };
-// «Añadir observación»: el antiguo botón «Añadir» de Observaciones
-// importantes, ahora en la franja. Usa el día que se está viendo.
-document.getElementById('subbarra-nota').onclick = function () {
-  const data = ESTADO.datosDiaActual;
-  if (!data || data.bloqueada) return;
-  abrirModalAnadirObservacionDia_(data);
-};
 
 /** Marca Hoy / Mañana según el día que se está viendo. */
 function marcarDiaEnSubbarra_() {
@@ -337,7 +330,6 @@ function resaltarTiendaBuscada_(nombreAgrupacion, tienda) {
  *  cargar el día y con cada autorefresco (ver js/conteos-dia.js). */
 function pintarSubbarraConteo_(data) {
   marcarDiaEnSubbarra_();
-  document.getElementById('subbarra-nota').disabled = !(data && !data.bloqueada);
   const cont = document.getElementById('subbarra-resumen');
   if (!cont) return;
   const secciones = (data && !data.bloqueada && data.dia && data.secciones) || [];

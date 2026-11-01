@@ -506,9 +506,16 @@
   }
   .subbarra-conteo .subbarra-imprimir:hover { background: var(--amber); color: #fff; }
 
-  /* Añadir observación: en naranja, que destaque. */
-  .subbarra-boton.subbarra-observacion { background: var(--amber); color: #fff; padding: 0 14px; box-shadow: 0 2px 6px rgba(0,0,0,.22); }
-  .subbarra-boton.subbarra-observacion:hover { background: var(--amber-dark); }
+  /* «+» para añadir una observación, en la tarjeta de Observaciones importantes. */
+  .btn-anadir-obs-mas {
+    width: 30px; height: 30px; flex: 0 0 auto; border: none; border-radius: 50%; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #2f7ae5; color: #fff; box-shadow: 0 3px 10px rgba(47,122,229,.45);
+    transition: transform .12s, background .12s;
+  }
+  .btn-anadir-obs-mas:hover { background: #1f66cc; transform: scale(1.08); }
+  /* .resumen-header svg pinta los iconos en gris: el + va en blanco. */
+  .resumen-header .btn-anadir-obs-mas svg { width: 18px; height: 18px; color: #fff; }
   .subbarra-boton:disabled { opacity: .45; cursor: default; }
 
   /* Resultados del buscador, en un desplegable debajo de él. */
@@ -570,7 +577,7 @@
   }
   @media (max-width: 1200px) {
     .subbarra-boton:not(.redondo) span { display: none; }
-    .subbarra-boton:not(.redondo), .subbarra-boton.subbarra-observacion { width: 30px; padding: 0; }
+    .subbarra-boton:not(.redondo) { width: 30px; padding: 0; }
     .subbarra-buscar-slot { flex-basis: 170px; }
   }
   @media (max-width: 980px) {

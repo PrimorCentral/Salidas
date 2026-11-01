@@ -3660,6 +3660,9 @@ function renderShellPrincipal() {
             '<span>Observaciones importantes:</span>' +
             '<div class="resumen-header-right">' +
               '<span class="resumen-count" id="resumen-count" style="display:none;">0</span>' +
+              '<button type="button" class="btn-anadir-obs-mas" id="btn-nota-dia" title="Añadir observación (del día o de una agrupación)" aria-label="Añadir observación">' +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
+              '</button>' +
             '</div>' +
           '</div>' +
           '<div class="resumen-body" id="resumen-body"><div class="resumen-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
