@@ -522,6 +522,15 @@
   .inicio-pill-ajustada { background: #e4eefb; color: #2f5fa8; }
   .inicio-pill-prevision { background: #dff3f5; color: #1f7f8c; }
   .inicio-pill-definitivo { background: var(--ok); color: #fff; }
+  /* «Carga ajustada» / «Carga sin ajustar» se pueden pulsar: abren la
+     carga del camión sin salir de Inicio (ver abrirCargaDesdeInicio_). */
+  .inicio-pill-btn {
+    border: 1px solid transparent; font-family: inherit; line-height: inherit;
+    cursor: pointer; transition: filter .15s, border-color .15s, box-shadow .15s;
+  }
+  .inicio-pill-btn:hover { filter: brightness(.95); border-color: currentColor; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .inicio-pill-btn:active { transform: scale(.97); }
+  .inicio-pill-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 
   /* La insignia de versión, sobre la foto de portada, queda fija en la
      esquina de la pantalla en vez de en el flujo normal (que la dejaría
