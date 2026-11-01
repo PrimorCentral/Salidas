@@ -118,3 +118,114 @@ function poblarDropdownAdministracion() {
   });
 }
 poblarDropdownAdministracion();
+
+
+/* ---------------- FRANJA DEL DÍA (solo en Conteos Diarios) ----------------
+ * Debajo de la barra de menús, pegada a ella. Lleva todo lo del día que
+ * antes iba en la barra o en la columna izquierda:
+ *   izquierda: Hoy / Mañana y el resumen del día (rutas, ajustadas...)
+ *   centro:    ‹ fecha › (la fecha abre el calendario) y CONTEO ESPECIAL
+ *   derecha:   buscador de agrupación o tienda, + Nota, imprimir y la
+ *              cuenta atrás del refresco.
+ * Los botones fijos se enganchan una sola vez aquí. El calendario y el
+ * buscador los pinta renderShellPrincipal (js/plantilla.js) cada vez que
+ * se entra en Conteos, y se quitan al salir (limpiarSubbarraConteo_), para
+ * que #calendar-body solo exista estando en Conteos, como antes. */
+
+/** Va a un día desde la franja (Hoy, Mañana, flechas). */
+function irADiaDesdeSubbarra_(fecha) {
+  if (!fecha || ESTADO.vista !== 'conteos') return;
+  cerrarCalendarioSubbarra_();
+  seleccionarFecha(fecha);
+  marcarDiaEnSubbarra_();
+}
+document.getElementById('subbarra-hoy').onclick = function () { irADiaDesdeSubbarra_(hoyStr()); };
+document.getElementById('subbarra-manana').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(hoyStr(), 1)); };
+document.getElementById('subbarra-dia-anterior').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, -1)); };
+document.getElementById('subbarra-dia-siguiente').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, 1)); };
+document.getElementById('subbarra-nota').onclick = function () {
+  // Mismo botón que "Añadir" de Observaciones importantes.
+  const btn = document.getElementById('btn-nota-dia');
+  if (btn) btn.click();
+};
+
+/** Marca Hoy / Mañana según el día que se está viendo. */
+function marcarDiaEnSubbarra_() {
+  const hoy = hoyStr();
+  document.getElementById('subbarra-hoy').classList.toggle('activa', ESTADO.fecha === hoy);
+  document.getElementById('subbarra-manana').classList.toggle('activa', ESTADO.fecha === sumarDias_(hoy, 1));
+}
+
+/* Calendario desplegable (al pulsar la fecha). Se cierra al elegir un día,
+ * al pulsar fuera o con Escape. */
+const SUBBARRA_CALENDARIO_ = document.getElementById('subbarra-calendario');
+const SUBBARRA_FECHA_BTN_ = document.getElementById('subbarra-fecha-btn');
+function abrirCalendarioSubbarra_() {
+  if (!document.getElementById('calendar-body')) return;
+  SUBBARRA_CALENDARIO_.hidden = false;
+  SUBBARRA_FECHA_BTN_.classList.add('abierto');
+  SUBBARRA_FECHA_BTN_.setAttribute('aria-expanded', 'true');
+}
+function cerrarCalendarioSubbarra_() {
+  SUBBARRA_CALENDARIO_.hidden = true;
+  SUBBARRA_FECHA_BTN_.classList.remove('abierto');
+  SUBBARRA_FECHA_BTN_.setAttribute('aria-expanded', 'false');
+}
+SUBBARRA_FECHA_BTN_.onclick = function (e) {
+  e.stopPropagation();
+  if (SUBBARRA_CALENDARIO_.hidden) abrirCalendarioSubbarra_();
+  else cerrarCalendarioSubbarra_();
+};
+SUBBARRA_CALENDARIO_.addEventListener('click', function (e) {
+  e.stopPropagation(); // los clics dentro no cuentan como "fuera"
+  const dia = e.target.closest('.cal-day[data-fecha]');
+  if (dia && !dia.disabled) {
+    cerrarCalendarioSubbarra_();
+    // seleccionarFecha ya lo hace el propio día (renderCalendario).
+    setTimeout(marcarDiaEnSubbarra_, 0);
+  }
+});
+document.addEventListener('click', function () {
+  if (!SUBBARRA_CALENDARIO_.hidden) cerrarCalendarioSubbarra_();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && !SUBBARRA_CALENDARIO_.hidden) cerrarCalendarioSubbarra_();
+});
+
+/** Al salir de Conteos: fuera el calendario y el buscador de la franja. */
+function limpiarSubbarraConteo_() {
+  cerrarCalendarioSubbarra_();
+  SUBBARRA_CALENDARIO_.innerHTML = '';
+  document.getElementById('subbarra-buscar-slot').innerHTML = '';
+  document.getElementById('subbarra-resumen').innerHTML = '';
+}
+
+/** Resumen del día en la franja: cuántas rutas hay y cómo van, con los
+ *  mismos estados y colores que la pantalla de Inicio. Se repinta al
+ *  cargar el día y con cada autorefresco (ver js/conteos-dia.js). */
+function pintarSubbarraConteo_(data) {
+  marcarDiaEnSubbarra_();
+  const cont = document.getElementById('subbarra-resumen');
+  if (!cont) return;
+  const secciones = (data && !data.bloqueada && data.dia && data.secciones) || [];
+  if (!secciones.length) { cont.innerHTML = ''; return; }
+  const n = { ajustada: 0, sin_ajustar: 0, prevision: 0, definitivo: 0 };
+  secciones.forEach(function (s) {
+    const c = s.carga;
+    const hayCarga = !!(c && !c.desbloqueada);
+    if (s.estado === 'enviado') { n.definitivo++; return; }
+    if (s.previsionEnviada || (hayCarga && c.origen === 'prevision')) { n.prevision++; return; }
+    if (hayCarga) { n.ajustada++; return; }
+    const v = s.verificaciones || {};
+    if (NAVES_CONTEO.every(function (nv) { return !!v[nv.campo]; })) n.sin_ajustar++;
+  });
+  const pastilla = function (clase, num, texto, titulo) {
+    return '<span class="subbarra-res subbarra-res-' + clase + '" title="' + escapeAttr(titulo) + '"><b>' + num + '</b>' + texto + '</span>';
+  };
+  cont.innerHTML =
+    pastilla('total', secciones.length, secciones.length === 1 ? 'ruta' : 'rutas', 'Rutas de este día') +
+    pastilla('ajustada', n.ajustada, n.ajustada === 1 ? 'ajustada' : 'ajustadas', 'Con la carga ajustada') +
+    pastilla('sin_ajustar', n.sin_ajustar, 'sin ajustar', 'Naves verificadas, pero falta ajustar la carga') +
+    (n.prevision ? pastilla('prevision', n.prevision, 'previsión', 'Con la previsión enviada') : '') +
+    pastilla('definitivo', n.definitivo, n.definitivo === 1 ? 'enviada' : 'enviadas', 'Con el definitivo enviado');
+}

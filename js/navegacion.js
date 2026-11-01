@@ -39,6 +39,12 @@ function cambiarVista(vista, seccion) {
   document.getElementById('topbar-fecha-wrap').style.display = (vista === 'conteos') ? '' : 'none';
   const elRefrescoConteo = document.getElementById('topbar-refresco-conteo');
   if (elRefrescoConteo) elRefrescoConteo.classList.toggle('visible', vista === 'conteos');
+  // Franja del día (fecha, Hoy/Mañana, calendario, buscador...): solo en
+  // Conteos Diarios. Cambia el alto de la cabecera, así que se vuelve a
+  // medir para lo que va pegado debajo (ver ajustarAlturaTopbar_).
+  document.body.classList.toggle('vista-conteos-activa', vista === 'conteos');
+  if (vista !== 'conteos') limpiarSubbarraConteo_();
+  ajustarAlturaTopbar_();
   document.getElementById('main').classList.toggle('main-sin-padding', vista === 'inicio');
   document.body.classList.toggle('vista-inicio-activa', vista === 'inicio');
 

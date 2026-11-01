@@ -57,7 +57,11 @@ function aplicarPermisosUI() {
   }
 
   const elRol = document.getElementById('topbar-usuario-rol');
-  if (elRol) elRol.textContent = SESSION_ROL ? (SESSION_NOMBRE || (esAdmin() ? 'Administrador' : 'Operario')) : '';
+  // En la cabecera sale el número de usuario (ocupa poco); el nombre
+  // completo, al pasar el ratón por encima.
+  if (elRol) elRol.textContent = SESSION_ROL ? (SESSION_USUARIO || SESSION_NOMBRE || (esAdmin() ? 'Administrador' : 'Operario')) : '';
+  const btnMiUsuario = document.getElementById('btn-mi-usuario');
+  if (btnMiUsuario) btnMiUsuario.title = SESSION_ROL ? ((SESSION_NOMBRE || SESSION_USUARIO || '') + ' · Mi usuario') : 'Mi usuario';
   poblarDropdownConfiguracion();
   poblarDropdownAdministracion();
 }

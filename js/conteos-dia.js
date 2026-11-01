@@ -138,6 +138,7 @@ function aplicarRefrescoConteoDiaEnVivo_(data) {
   // esos contadores/puntos de estado siempre al día.
   renderResumenDia(data);
   renderMenuRapido(data);
+  pintarSubbarraConteo_(data);
 
   if (data.bloqueada || !data.dia || !data.secciones || !data.secciones.length) return;
 
@@ -167,6 +168,7 @@ function renderContenidoDia(data) {
   const topbarFecha = document.getElementById('topbar-fecha');
   if (topbarFecha) topbarFecha.textContent = fechaLarga;
   pintarEtiquetaConteoEspecial_(data);
+  pintarSubbarraConteo_(data);
 
   if (data.bloqueada) {
     const msg = document.createElement('div');

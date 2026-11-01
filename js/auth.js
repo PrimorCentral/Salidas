@@ -10,7 +10,9 @@
  *  del topbar puede variar (p.ej. si el texto envuelve a dos líneas en
  *  pantallas estrechas). */
 function ajustarAlturaTopbar_() {
-  const topbar = document.querySelector('header.topbar');
+  // Lo que va pegado arriba es la cabecera entera: la barra de menús y,
+  // en Conteos Diarios, la franja del día debajo (#cabecera-fija).
+  const topbar = document.getElementById('cabecera-fija') || document.querySelector('header.topbar');
   if (!topbar) return;
   // Si algún día la barra deja de ir pegada arriba (position distinta de
   // sticky), lo demás no tiene que dejarle hueco.
@@ -22,10 +24,10 @@ function ajustarAlturaTopbar_() {
   document.documentElement.style.setProperty('--cabecera-alto', topbar.getBoundingClientRect().bottom + 'px');
 }
 window.addEventListener('resize', ajustarAlturaTopbar_);
-// La cabecera cambia de alto según la pantalla (la fila de la fecha solo
+// La cabecera cambia de alto según la pantalla (la franja del día solo
 // sale en Conteos Diarios): se vuelve a medir cada vez que cambia.
 if (window.ResizeObserver) {
-  const cabecera = document.querySelector('header.topbar');
+  const cabecera = document.getElementById('cabecera-fija') || document.querySelector('header.topbar');
   if (cabecera) new ResizeObserver(ajustarAlturaTopbar_).observe(cabecera);
 }
 

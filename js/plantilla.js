@@ -3645,28 +3645,8 @@ function renderShellPrincipal() {
   main.innerHTML =
     '<div class="layout-grid">' +
       '<aside class="col-sidebar col-calendario">' +
-        '<div class="calendar-panel' + (ESTADO.calendarioColapsado ? ' colapsado' : '') + '" id="calendar-panel">' +
-          '<div class="calendar-panel-header" id="calendar-toggle">' +
-            '<div class="titulo">' +
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
-              '<span>Calendario</span>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;gap:10px;">' +
-              '<span class="selected-pill" id="selected-pill"></span>' +
-              '<svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
-            '</div>' +
-          '</div>' +
-          '<div class="calendar-body" id="calendar-body">' +
-            '<div class="loader"><span class="spinner-navy"></span><div>Cargando calendario…</div></div>' +
-          '</div>' +
-        '</div>' +
         '<div class="menu-rapido-panel">' +
           '<h4>Acceso rápido a agrupación</h4>' +
-          '<div class="menu-rapido-buscar">' +
-            '<span class="emoji">🔍</span>' +
-            '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…">' +
-            '<button type="button" class="menu-rapido-limpiar" id="menu-rapido-limpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda" hidden>×</button>' +
-          '</div>' +
           '<div class="menu-rapido-body" id="menu-rapido-body"><div class="menu-rapido-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
         '</div>' +
       '</aside>' +
@@ -3690,10 +3670,22 @@ function renderShellPrincipal() {
       '</aside>' +
     '</div>';
 
-  document.getElementById('calendar-toggle').onclick = function () {
-    ESTADO.calendarioColapsado = !ESTADO.calendarioColapsado;
-    document.getElementById('calendar-panel').classList.toggle('colapsado', ESTADO.calendarioColapsado);
-  };
+  // El calendario y el buscador ya no van en la columna izquierda, sino en
+  // la franja del día de la cabecera (ver index.html y
+  // js/navegacion-cabecera.js): el calendario se despliega al pulsar la
+  // fecha. Se pintan aquí, en sus huecos de la franja, cada vez que se entra
+  // en Conteos (y se quitan al salir, ver limpiarSubbarraConteo_).
+  document.getElementById('subbarra-calendario').innerHTML =
+    '<span class="selected-pill" id="selected-pill" hidden></span>' +
+    '<div class="calendar-body" id="calendar-body">' +
+      '<div class="loader"><span class="spinner-navy"></span><div>Cargando calendario…</div></div>' +
+    '</div>';
+  document.getElementById('subbarra-buscar-slot').innerHTML =
+    '<div class="subbarra-buscar">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+      '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…" autocomplete="off" title="Filtra el acceso rápido. Con Intro vas a la primera que coincida.">' +
+      '<button type="button" class="menu-rapido-limpiar" id="menu-rapido-limpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda" hidden>×</button>' +
+    '</div>';
 
   // El panel se vuelve a pintar al volver a esta vista: el buscador recupera
   // lo que hubiera escrito, para que no salga vacío con la lista filtrada.
@@ -3711,6 +3703,17 @@ function renderShellPrincipal() {
       MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(valor.trim());
       pintarMenuRapido_();
     }, 150);
+  });
+  // Intro en el buscador de la franja: lleva a la primera agrupación que
+  // coincida (la búsqueda se aplica ya, sin esperar los 150 ms).
+  inputBuscarMenu.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    clearTimeout(temporizadorBusquedaMenuRapido_);
+    MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(inputBuscarMenu.value.trim());
+    pintarMenuRapido_();
+    const primera = document.querySelector('#menu-rapido-body .menu-rapido-item');
+    if (primera) primera.click();
   });
   btnLimpiarMenu.onclick = function () {
     clearTimeout(temporizadorBusquedaMenuRapido_);
