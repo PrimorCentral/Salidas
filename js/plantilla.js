@@ -3660,9 +3660,6 @@ function renderShellPrincipal() {
             '<span>Observaciones importantes:</span>' +
             '<div class="resumen-header-right">' +
               '<span class="resumen-count" id="resumen-count" style="display:none;">0</span>' +
-              '<button type="button" class="btn-anadir-obs" id="btn-nota-dia">' +
-              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' +
-              'Añadir</button>' +
             '</div>' +
           '</div>' +
           '<div class="resumen-body" id="resumen-body"><div class="resumen-vacio cargando-linea"><span class="spinner-mini"></span>Cargando…</div></div>' +
@@ -3680,48 +3677,17 @@ function renderShellPrincipal() {
     '<div class="calendar-body" id="calendar-body">' +
       '<div class="loader"><span class="spinner-navy"></span><div>Cargando calendario…</div></div>' +
     '</div>';
+  // Buscador de la franja: enseña sus propios resultados en un desplegable
+  // debajo (ver engancharBuscadorSubbarra_ en js/navegacion-cabecera.js).
+  // El acceso rápido de la izquierda ya no se filtra: siempre la lista entera.
+  MENU_RAPIDO_ESTADO.texto = '';
+  MENU_RAPIDO_ESTADO.filtro = '';
   document.getElementById('subbarra-buscar-slot').innerHTML =
     '<div class="subbarra-buscar">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
-      '<input type="text" id="menu-rapido-buscar-input" placeholder="Buscar agrupación o tienda…" autocomplete="off" title="Filtra el acceso rápido. Con Intro vas a la primera que coincida.">' +
-      '<button type="button" class="menu-rapido-limpiar" id="menu-rapido-limpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda" hidden>×</button>' +
-    '</div>';
-
-  // El panel se vuelve a pintar al volver a esta vista: el buscador recupera
-  // lo que hubiera escrito, para que no salga vacío con la lista filtrada.
-  const inputBuscarMenu = document.getElementById('menu-rapido-buscar-input');
-  const btnLimpiarMenu = document.getElementById('menu-rapido-limpiar');
-  inputBuscarMenu.value = MENU_RAPIDO_ESTADO.texto || '';
-  btnLimpiarMenu.hidden = !inputBuscarMenu.value;
-  let temporizadorBusquedaMenuRapido_ = null;
-  inputBuscarMenu.addEventListener('input', function (e) {
-    clearTimeout(temporizadorBusquedaMenuRapido_);
-    const valor = e.target.value;
-    MENU_RAPIDO_ESTADO.texto = valor;
-    btnLimpiarMenu.hidden = !valor;
-    temporizadorBusquedaMenuRapido_ = setTimeout(function () {
-      MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(valor.trim());
-      pintarMenuRapido_();
-    }, 150);
-  });
-  // Intro en el buscador de la franja: lleva a la primera agrupación que
-  // coincida (la búsqueda se aplica ya, sin esperar los 150 ms).
-  inputBuscarMenu.addEventListener('keydown', function (e) {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    clearTimeout(temporizadorBusquedaMenuRapido_);
-    MENU_RAPIDO_ESTADO.filtro = normalizarBusquedaPlantilla_(inputBuscarMenu.value.trim());
-    pintarMenuRapido_();
-    const primera = document.querySelector('#menu-rapido-body .menu-rapido-item');
-    if (primera) primera.click();
-  });
-  btnLimpiarMenu.onclick = function () {
-    clearTimeout(temporizadorBusquedaMenuRapido_);
-    inputBuscarMenu.value = '';
-    MENU_RAPIDO_ESTADO.texto = '';
-    MENU_RAPIDO_ESTADO.filtro = '';
-    btnLimpiarMenu.hidden = true;
-    pintarMenuRapido_();
-    inputBuscarMenu.focus();
-  };
+      '<input type="text" id="subbarra-buscar-input" placeholder="Buscar agrupación o tienda…" autocomplete="off" spellcheck="false" aria-controls="subbarra-buscar-resultados">' +
+      '<button type="button" class="menu-rapido-limpiar" id="subbarra-buscar-limpiar" title="Borrar búsqueda" aria-label="Borrar búsqueda" hidden>×</button>' +
+    '</div>' +
+    '<div class="subbarra-buscar-resultados" id="subbarra-buscar-resultados" role="listbox" hidden></div>';
+  engancharBuscadorSubbarra_();
 }

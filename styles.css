@@ -437,11 +437,13 @@
 
   /* Franja del día: solo se ve en Conteos Diarios. */
   .subbarra-conteo {
-    display: none; align-items: center; gap: 10px; min-height: 46px; box-sizing: border-box;
-    padding: 6px 20px; background: var(--navy); color: #fff;
+    display: none; align-items: center; gap: 10px; min-height: 42px; box-sizing: border-box;
+    padding: 4px 20px; background: var(--navy); color: #fff;
     border-top: 1px solid rgba(255,255,255,.09);
   }
   body.vista-conteos-activa .subbarra-conteo { display: flex; }
+  /* Con la franja debajo, la barra de menús deja algo menos de aire abajo. */
+  body.vista-conteos-activa header.topbar { padding-bottom: 10px; }
   .subbarra-izq, .subbarra-der { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 8px; }
   .subbarra-der { justify-content: flex-end; }
   .subbarra-centro { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; position: relative; }
@@ -452,7 +454,7 @@
   }
   .subbarra-chip:hover { background: rgba(255,255,255,.2); color: #fff; }
   .subbarra-chip.activa { background: #fff; color: var(--navy); }
-  .subbarra-sep { width: 1px; height: 20px; background: rgba(255,255,255,.16); margin: 0 4px; flex: 0 0 auto; }
+  .subbarra-sep { width: 1px; height: 20px; background: rgba(255,255,255,.16); margin: 0 10px; flex: 0 0 auto; }
 
   .subbarra-resumen { display: flex; align-items: center; gap: 12px; min-width: 0; overflow: hidden; }
   .subbarra-res { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.72); white-space: nowrap; cursor: default; }
@@ -494,7 +496,49 @@
   .subbarra-calendario[hidden] { display: none; }
   .subbarra-calendario .calendar-body { margin-top: 0; }
 
-  .subbarra-buscar-slot { min-width: 0; flex: 0 1 240px; }
+  .subbarra-buscar-slot { min-width: 0; flex: 0 1 260px; position: relative; }
+
+  /* Imprimir: justo después de la fecha, en blanco para que destaque. */
+  .subbarra-conteo .subbarra-imprimir {
+    width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; color: var(--navy); box-shadow: 0 2px 6px rgba(0,0,0,.25);
+  }
+  .subbarra-conteo .subbarra-imprimir:hover { background: var(--amber); color: #fff; }
+
+  /* Añadir observación: en naranja, que destaque. */
+  .subbarra-boton.subbarra-observacion { background: var(--amber); color: #fff; padding: 0 14px; box-shadow: 0 2px 6px rgba(0,0,0,.22); }
+  .subbarra-boton.subbarra-observacion:hover { background: var(--amber-dark); }
+  .subbarra-boton:disabled { opacity: .45; cursor: default; }
+
+  /* Resultados del buscador, en un desplegable debajo de él. */
+  .subbarra-buscar-resultados {
+    position: absolute; top: calc(100% + 8px); right: 0; width: 360px; max-width: calc(100vw - 24px);
+    max-height: min(420px, calc(100vh - var(--topbar-h) - 30px)); overflow-y: auto; box-sizing: border-box; z-index: 60;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(20,30,55,.28); padding: 6px;
+  }
+  .subbarra-buscar-resultados[hidden] { display: none; }
+  .subbarra-res-agrup, .subbarra-res-tienda {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none;
+    border-radius: 8px; color: var(--ink); cursor: pointer; font-family: inherit;
+  }
+  .subbarra-res-agrup { padding: 8px 10px; font-size: 13px; font-weight: 700; }
+  .subbarra-res-agrup .titulo { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subbarra-res-agrup .ubic { flex: 0 0 auto; font-size: 10.5px; font-weight: 700; color: #2f5fa8; background: #eef3fb; border-radius: 10px; padding: 2px 7px; }
+  .subbarra-res-agrup .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #c7cdd6; }
+  .subbarra-res-agrup .dot.estado-progreso { background: var(--amber); }
+  .subbarra-res-agrup .dot.estado-prevision { background: var(--prevision); }
+  .subbarra-res-agrup .dot.estado-enviado { background: var(--ok); }
+  .subbarra-res-tienda { padding: 6px 10px 6px 26px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+  .subbarra-res-tienda svg { flex: 0 0 auto; }
+  .subbarra-res-agrup.activo, .subbarra-res-tienda.activo { background: #eef1f7; color: var(--navy); }
+  .subbarra-res-mas, .subbarra-res-vacio { padding: 6px 10px 8px 26px; font-size: 12px; color: var(--ink-soft); }
+  .subbarra-res-vacio { padding-left: 10px; }
+
+  /* Tienda encontrada con el buscador: se marca un momento en la tabla. */
+  @keyframes fila-buscada-parpadeo { 0%, 60% { background: #ffe9a8; } 100% { background: transparent; } }
+  table.conteo tr.fila-buscada > td { animation: fila-buscada-parpadeo 2.6s ease-out; }
   .subbarra-buscar {
     display: flex; align-items: center; gap: 7px; height: 30px; box-sizing: border-box; padding: 0 10px 0 12px;
     background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 20px;
@@ -526,7 +570,7 @@
   }
   @media (max-width: 1200px) {
     .subbarra-boton:not(.redondo) span { display: none; }
-    .subbarra-boton:not(.redondo) { width: 30px; padding: 0; }
+    .subbarra-boton:not(.redondo), .subbarra-boton.subbarra-observacion { width: 30px; padding: 0; }
     .subbarra-buscar-slot { flex-basis: 170px; }
   }
   @media (max-width: 980px) {
@@ -542,7 +586,11 @@
     .subbarra-conteo .topbar-conteo-especial { padding: 5px 7px; }
     .subbarra-conteo .topbar-conteo-especial span { display: none; }
     .subbarra-centro { gap: 4px; }
-    .subbarra-fecha-btn { padding: 4px 6px; gap: 6px; }
+    .subbarra-fecha-btn { padding: 4px 4px; gap: 5px; }
+    .subbarra-fecha-btn svg { width: 15px; height: 15px; }
+    .subbarra-flecha { width: 26px; height: 26px; }
+    .subbarra-conteo .subbarra-imprimir { width: 28px; height: 28px; }
+    .subbarra-conteo .topbar-fecha { font-size: 13.5px; letter-spacing: 0; }
     /* Segunda fila: Hoy/Mañana a la izquierda y el buscador ocupa el resto. */
     .subbarra-izq { flex: 0 0 auto; }
     .subbarra-der { flex: 1 1 0; }

@@ -223,9 +223,7 @@ function renderContenidoDia(data) {
   cont.innerHTML = '';
   cont.appendChild(wrap);
 
-  document.getElementById('btn-nota-dia').onclick = function () {
-    abrirModalAnadirObservacionDia_(data);
-  };
+  // «Añadir observación» va ahora en la franja del día (js/navegacion-cabecera.js).
 
   renderResumenDia(data);
   renderMenuRapido(data);

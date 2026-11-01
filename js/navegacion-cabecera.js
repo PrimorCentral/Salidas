@@ -143,10 +143,12 @@ document.getElementById('subbarra-hoy').onclick = function () { irADiaDesdeSubba
 document.getElementById('subbarra-manana').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(hoyStr(), 1)); };
 document.getElementById('subbarra-dia-anterior').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, -1)); };
 document.getElementById('subbarra-dia-siguiente').onclick = function () { irADiaDesdeSubbarra_(sumarDias_(ESTADO.fecha, 1)); };
+// «Añadir observación»: el antiguo botón «Añadir» de Observaciones
+// importantes, ahora en la franja. Usa el día que se está viendo.
 document.getElementById('subbarra-nota').onclick = function () {
-  // Mismo botón que "Añadir" de Observaciones importantes.
-  const btn = document.getElementById('btn-nota-dia');
-  if (btn) btn.click();
+  const data = ESTADO.datosDiaActual;
+  if (!data || data.bloqueada) return;
+  abrirModalAnadirObservacionDia_(data);
 };
 
 /** Marca Hoy / Mañana según el día que se está viendo. */
@@ -200,11 +202,142 @@ function limpiarSubbarraConteo_() {
   document.getElementById('subbarra-resumen').innerHTML = '';
 }
 
+/* ---------------- BUSCADOR DE LA FRANJA ----------------
+ * Busca agrupaciones y tiendas del día que se está viendo y enseña los
+ * resultados en un desplegable debajo del propio buscador (el acceso
+ * rápido de la izquierda ya no se filtra). Al pulsar un resultado lleva a
+ * esa agrupación; si se pulsa una tienda, además la marca en la tabla.
+ * Flechas arriba/abajo para moverse, Intro para ir, Escape para cerrar.
+ * El buscador lo pinta renderShellPrincipal (js/plantilla.js) y lo
+ * engancha con esta función cada vez que se entra en Conteos. */
+function engancharBuscadorSubbarra_() {
+  const input = document.getElementById('subbarra-buscar-input');
+  const limpiar = document.getElementById('subbarra-buscar-limpiar');
+  const panel = document.getElementById('subbarra-buscar-resultados');
+  if (!input || !panel) return;
+  let resultados = [];   // [{ nombre, tienda }] en el orden en que se ven
+  let activo = -1;
+  let temporizador = null;
+
+  function cerrar() { panel.hidden = true; activo = -1; }
+  function marcarActivo(i) {
+    const items = panel.querySelectorAll('[data-res]');
+    activo = items.length ? (i + items.length) % items.length : -1;
+    items.forEach(function (el, k) { el.classList.toggle('activo', k === activo); });
+    if (activo >= 0) items[activo].scrollIntoView({ block: 'nearest' });
+  }
+  function ir(i) {
+    const r = resultados[i];
+    if (!r) return;
+    cerrar();
+    input.blur();
+    irASeccion(r.nombre);
+    if (r.tienda) setTimeout(function () { resaltarTiendaBuscada_(r.nombre, r.tienda); }, 450);
+  }
+  function buscar() {
+    const texto = input.value.trim();
+    limpiar.hidden = !input.value;
+    const q = normalizarBusquedaPlantilla_(texto);
+    resultados = [];
+    if (q.length < 2) { cerrar(); return; }
+    const data = ESTADO.datosDiaActual;
+    const secciones = (data && !data.bloqueada && data.secciones) || [];
+    let html = '';
+    let n = 0;
+    secciones.forEach(function (sec) {
+      const partes = parsearNombreAgrupacion(sec.nombre);
+      const enNombre = normalizarBusquedaPlantilla_(partes.titulo).indexOf(q) !== -1;
+      // Una tienda que ese día sale por otra agrupación (cambio puntual) solo
+      // cuenta en la agrupación por la que sale (igual que el acceso rápido).
+      const tiendas = (sec.tiendas || []).filter(function (t) {
+        return !t.salePorExcepcion && normalizarBusquedaPlantilla_(t.nombre).indexOf(q) !== -1;
+      });
+      if (!enNombre && !tiendas.length) return;
+      resultados.push({ nombre: sec.nombre, tienda: null });
+      html += '<button type="button" class="subbarra-res-agrup" data-res="' + (n++) + '" role="option">' +
+        '<span class="dot ' + claseEstadoMenuRapido_(sec) + '"></span>' +
+        '<span class="titulo">' + escapeHtml(partes.titulo) + '</span>' +
+        (partes.ubicacion ? '<span class="ubic">' + escapeHtml(partes.ubicacion) + '</span>' : '') +
+        '</button>';
+      tiendas.slice(0, 6).forEach(function (t) {
+        resultados.push({ nombre: sec.nombre, tienda: t.nombre });
+        html += '<button type="button" class="subbarra-res-tienda" data-res="' + (n++) + '" role="option">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg>' +
+          '<span>' + escapeHtml(t.nombre) + '</span></button>';
+      });
+      if (tiendas.length > 6) html += '<div class="subbarra-res-mas">y ' + (tiendas.length - 6) + ' tienda(s) más…</div>';
+    });
+    panel.innerHTML = html || '<div class="subbarra-res-vacio">Ninguna agrupación ni tienda coincide con «' + escapeHtml(texto) + '».</div>';
+    panel.hidden = false;
+    marcarActivo(0);
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(buscar, 120);
+  });
+  input.addEventListener('focus', function () { if (input.value.trim().length >= 2) buscar(); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (panel.hidden) buscar();
+      marcarActivo(activo + (e.key === 'ArrowDown' ? 1 : -1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(temporizador);
+      if (panel.hidden) buscar();
+      ir(activo >= 0 ? activo : 0);
+    } else if (e.key === 'Escape') {
+      cerrar();
+      input.blur();
+    }
+  });
+  panel.addEventListener('mousedown', function (e) { e.preventDefault(); }); // que no se pierda el foco al pulsar
+  panel.addEventListener('click', function (e) {
+    e.stopPropagation();
+    const b = e.target.closest('[data-res]');
+    if (b) ir(Number(b.getAttribute('data-res')));
+  });
+  panel.addEventListener('mousemove', function (e) {
+    const b = e.target.closest('[data-res]');
+    if (b && Number(b.getAttribute('data-res')) !== activo) marcarActivo(Number(b.getAttribute('data-res')));
+  });
+  input.addEventListener('click', function (e) { e.stopPropagation(); });
+  document.addEventListener('click', function (e) {
+    if (!panel.hidden && !panel.contains(e.target) && e.target !== input) cerrar();
+  });
+  limpiar.onclick = function (e) {
+    e.stopPropagation();
+    input.value = '';
+    limpiar.hidden = true;
+    cerrar();
+    input.focus();
+  };
+}
+
+/** Marca un momento la fila de una tienda encontrada con el buscador (la
+ *  que se esté viendo: conteo real o carga ajustada) y la centra. */
+function resaltarTiendaBuscada_(nombreAgrupacion, tienda) {
+  const panel = document.querySelector('.seccion-panel[data-seccion-key="' + cssEscapeAtributo(nombreAgrupacion) + '"]');
+  if (!panel) return;
+  const filas = Array.prototype.filter.call(
+    panel.querySelectorAll('tr[data-nombre="' + cssEscapeAtributo(tienda) + '"]'),
+    function (tr) { return tr.offsetParent !== null; });
+  const fila = filas[0];
+  if (!fila) return;
+  fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  fila.classList.remove('fila-buscada');
+  void fila.offsetWidth; // para que la animación vuelva a empezar
+  fila.classList.add('fila-buscada');
+  setTimeout(function () { fila.classList.remove('fila-buscada'); }, 2600);
+}
+
 /** Resumen del día en la franja: cuántas rutas hay y cómo van, con los
  *  mismos estados y colores que la pantalla de Inicio. Se repinta al
  *  cargar el día y con cada autorefresco (ver js/conteos-dia.js). */
 function pintarSubbarraConteo_(data) {
   marcarDiaEnSubbarra_();
+  document.getElementById('subbarra-nota').disabled = !(data && !data.bloqueada);
   const cont = document.getElementById('subbarra-resumen');
   if (!cont) return;
   const secciones = (data && !data.bloqueada && data.dia && data.secciones) || [];
