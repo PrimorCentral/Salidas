@@ -1926,7 +1926,9 @@
   /* El contenido en sí se limita a un ancho legible y se centra dentro de su
      columna, para que no quede estirado de pared a pared en pantallas anchas. */
   .col-contenido > * { max-width: 1120px; margin: 0 auto; }
-  .col-sidebar { position: sticky; top: var(--topbar-h); display: flex; flex-direction: column; gap: 16px; }
+  /* Al hacer scroll se quedan con el mismo hueco bajo la cabecera que sin
+     scroll (el padding de arriba de main), en vez de pegarse a ella. */
+  .col-sidebar { position: sticky; top: calc(var(--topbar-h) + 24px); display: flex; flex-direction: column; gap: 16px; }
 
   @media (max-width: 1600px) {
     .layout-grid { grid-template-columns: 300px minmax(0, 1fr) 340px; gap: 24px; }
@@ -2026,7 +2028,7 @@
      de la parte visible, así que no había forma de llegar a las últimas
      agrupaciones. Con el scroll en la columna entera, siempre se puede
      bajar hasta el final se vea donde se vea. */
-  .col-calendario { max-height: calc(100vh - var(--topbar-h) - 34px); overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+  .col-calendario { max-height: calc(100vh - var(--topbar-h) - 48px); overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
 
   /* ---------- ACCESO RÁPIDO A AGRUPACIONES ---------- */
   .menu-rapido-panel {
@@ -2136,7 +2138,7 @@
   .seccion-panel {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
     margin-bottom: 16px; overflow: hidden;
-    scroll-margin-top: var(--topbar-h);
+    scroll-margin-top: calc(var(--topbar-h) + 16px);
   }
   .seccion-panel.estado-progreso { border-left: 4px solid var(--amber); }
   .seccion-panel.estado-enviado { border-left: 4px solid var(--ok); }
