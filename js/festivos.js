@@ -654,6 +654,14 @@ function editarNotaDesdeFestivos_(id, textoActual, agrupacionActual, fecha) {
   select.addEventListener('input', alElegirAgrupacion);
   select.addEventListener('blur', refrescar);
   select.addEventListener('keyup', refrescar);
+  // En algunos equipos el desplegable no avisa al elegir (y «Guardar» no se
+  // encendía hasta pinchar fuera). Mientras la ventana está abierta se mira
+  // cada poco si ha cambiado lo elegido; se para sola al cerrarla.
+  let ultimoValor = select.value;
+  const vigiaAgr = setInterval(function () {
+    if (!select.isConnected || document.getElementById('modal-overlay').style.display === 'none') { clearInterval(vigiaAgr); return; }
+    if (select.value !== ultimoValor) { ultimoValor = select.value; alElegirAgrupacion(); }
+  }, 150);
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
