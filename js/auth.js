@@ -312,6 +312,37 @@ document.getElementById('btn-imprimir-dia').addEventListener('click', function (
   vv.addEventListener('scroll', ajustar);
 })();
 
+/* Móvil: la página entera nunca se desplaza (solo el contenido de debajo de
+   la cabecera, main). Aun así, el iPhone la sube al abrir el teclado para
+   enseñar la casilla y a veces no la devuelve al cerrarlo, y algunas órdenes
+   de "ir a" también la movían: la cabecera se quedaba fuera de la pantalla
+   (solo se veía el menú, borroso bajo la hora) y no había forma de bajarla.
+   Si pasa sin estar escribiendo, se devuelve a su sitio. En el PC no hace
+   nada (allí la página sí se desplaza normal). */
+(function () {
+  const esMovil = window.matchMedia('(max-width: 700px)');
+  function escribiendo() {
+    const a = document.activeElement;
+    return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable));
+  }
+  function recolocar() {
+    if (!esMovil.matches || escribiendo()) return;
+    const raiz = document.scrollingElement || document.documentElement;
+    if (window.scrollY || raiz.scrollTop || document.body.scrollTop) {
+      window.scrollTo(0, 0);
+      raiz.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }
+  let t = null;
+  function luego() { clearTimeout(t); t = setTimeout(recolocar, 250); }
+  window.addEventListener('scroll', luego, { passive: true });
+  document.addEventListener('focusout', luego);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', luego);
+  window.addEventListener('orientationchange', luego);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) luego(); });
+})();
+
 /* Sin zoom con dos dedos en el iPhone (el viewport de index.html ya lo
    pide, pero el iPhone a veces no le hace caso). El doble toque se quita
    por CSS (touch-action: manipulation, bloque "MÓVIL" de styles.css). */

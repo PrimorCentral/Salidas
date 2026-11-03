@@ -318,7 +318,7 @@ function resaltarTiendaBuscada_(nombreAgrupacion, tienda) {
     function (tr) { return tr.offsetParent !== null; });
   const fila = filas[0];
   if (!fila) return;
-  fila.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  desplazarHasta_(fila, 'center');
   fila.classList.remove('fila-buscada');
   void fila.offsetWidth; // para que la animación vuelva a empezar
   fila.classList.add('fila-buscada');

@@ -79,10 +79,39 @@ function irASeccion(key) {
   if (!panel) return;
   panel.classList.remove('colapsada');
   ESTADO.colapsadas.delete(key);
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  desplazarHasta_(panel, 'start');
   panel.style.transition = 'box-shadow .3s';
   panel.style.boxShadow = '0 0 0 3px rgba(28,43,69,.35)';
   setTimeout(function () { panel.style.boxShadow = ''; }, 1300);
+}
+
+/** Lleva un elemento a la vista moviendo SOLO lo que se desplaza: en el PC
+ *  la ventana y en el móvil el contenido (main), dejando la cabecera quieta.
+ *  Antes se usaba scrollIntoView, que en el iPhone empujaba también la
+ *  página entera hacia arriba y la cabecera se quedaba fuera de la pantalla
+ *  sin poder volver. bloque: 'start' (arriba, respetando scroll-margin-top)
+ *  o 'center'. */
+function desplazarHasta_(el, bloque) {
+  if (!el) return;
+  const main = document.getElementById('main');
+  const enMain = !!(main && /(auto|scroll)/.test(getComputedStyle(main).overflowY) && main.scrollHeight > main.clientHeight);
+  const r = el.getBoundingClientRect();
+  let arriba, alto;
+  if (enMain) {
+    const rm = main.getBoundingClientRect();
+    arriba = rm.top; alto = main.clientHeight;
+  } else {
+    arriba = 0; alto = window.innerHeight;
+  }
+  let delta;
+  if (bloque === 'center') {
+    delta = (r.top + r.height / 2) - (arriba + alto / 2);
+  } else {
+    const margen = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+    delta = r.top - arriba - margen;
+  }
+  if (enMain) main.scrollBy({ top: delta, behavior: 'smooth' });
+  else window.scrollBy({ top: delta, behavior: 'smooth' });
 }
 
 function cssEscapeAtributo(s) {
