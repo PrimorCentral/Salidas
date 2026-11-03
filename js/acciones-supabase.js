@@ -307,6 +307,18 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], row = args[1], destino = args[2];
     return llamarRpcSupabase_('mover_tienda_agrupacion_plantilla_todos_dias', { p_dia: dia, p_row: row, p_nombre_seccion_destino: destino });
   },
+  // Qué pasaría en cada uno de los otros días donde está la tienda al
+  // moverla a esa agrupación (ok / igual / falta / duplicada).
+  simularMoverTiendaAgrupacionDias: function (args) {
+    const dia = args[0], row = args[1], destino = args[2];
+    return llamarRpcSupabase_('simular_mover_tienda_agrupacion_dias', { p_dia: dia, p_row: row, p_destino: destino });
+  },
+  // Mueve la tienda hoy y en los días elegidos; en los de "crear" crea
+  // antes la agrupación (igual que en el día actual).
+  moverTiendaAgrupacionPlantillaDias: function (args) {
+    const dia = args[0], row = args[1], destino = args[2], dias = args[3], crear = args[4];
+    return llamarRpcSupabase_('mover_tienda_agrupacion_plantilla_dias', { p_dia: dia, p_row: row, p_destino: destino, p_dias: dias || [], p_crear: crear || [] });
+  },
   // -- Supabase: Configuración tiendas + Aviso a tiendas (barrido del día) --
   getConfigAvisoTiendas: function () {
     return llamarRpcSupabase_('get_config_aviso_tiendas', {});
@@ -522,6 +534,12 @@ const SUPABASE_ACCIONES_ = {
   moverRutaPlantilla: function (args) {
     const dia = args[0], nombreRuta = args[1], direccion = args[2];
     return llamarRpcSupabase_('mover_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_direccion: direccion });
+  },
+  // Colocar una agrupación de golpe: donde = 'arriba' | 'abajo' | 'debajo'
+  // (debajoDe = nombre de la agrupación de ese día).
+  colocarRutaPlantilla: function (args) {
+    const dia = args[0], nombreRuta = args[1], donde = args[2], debajoDe = args[3];
+    return llamarRpcSupabase_('colocar_ruta_plantilla', { p_dia: dia, p_nombre_ruta: nombreRuta, p_donde: donde, p_debajo_de: debajoDe || null });
   },
   editarNombreRutaPlantilla: function (args) {
     const dia = args[0], nombreActual = args[1], nombreNuevo = args[2];

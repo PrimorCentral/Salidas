@@ -962,6 +962,12 @@ function pintarPlantilla_() {
             '<button type="button" data-bajar-ruta="' + escapeAttr(s.nombre) + '"' + (si === PLANTILLA_ESTADO.secciones.length - 1 ? ' disabled' : '') + ' title="Bajar ruta">' +
               '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '</div>' +
+          // «Mover»: llevar la ruta de una vez arriba del todo, abajo del
+          // todo o justo debajo de otra (las flechas mueven de una en una).
+          (puedeEditarPlantilla_() && PLANTILLA_ESTADO.secciones.length > 1
+            ? '<button type="button" class="plantilla-ruta-mover" data-colocar-ruta="' + escapeAttr(s.nombre) + '" title="Mover esta ruta a otro sitio del día">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4"/><path d="M17 20V4M13 16l4 4 4-4"/></svg>Mover</button>'
+            : '') +
           '<span class="plantilla-ruta-nombre-texto">' + escapeHtml(s.nombre) + '</span>' +
           (puedeEditarPlantilla_()
             ? '<button type="button" class="plantilla-ruta-editar" data-editar-ruta="' + escapeAttr(s.nombre) + '" title="Editar ubicación y hora de carga">' +
@@ -1068,6 +1074,9 @@ function pintarPlantilla_() {
   });
   listaEl.querySelectorAll('[data-bajar-ruta]').forEach(function (btn) {
     btn.onclick = function () { moverRutaPlantilla_(btn.getAttribute('data-bajar-ruta'), 'abajo'); };
+  });
+  listaEl.querySelectorAll('[data-colocar-ruta]').forEach(function (btn) {
+    btn.onclick = function () { abrirModalColocarRutaPlantilla_(btn.getAttribute('data-colocar-ruta')); };
   });
   listaEl.querySelectorAll('[data-anadir-tienda-ruta]').forEach(function (btn) {
     btn.onclick = function () { abrirModalAnadirTiendaPlantilla_(btn.getAttribute('data-anadir-tienda-ruta')); };
@@ -1582,33 +1591,49 @@ function mostrarModalMoverTiendaPlantilla_(row, nombreTienda, seccionActual, des
   };
 }
 
-/** Tras elegir la agrupación destino, comprueba (igual que al eliminar) si
- *  esta misma tienda (misma clave interna) aparece también en otros días.
- *  Si es así, ofrece moverla de golpe en todos esos días también, en vez
- *  de mover solo la fila de hoy. */
+/** Tras elegir la agrupación destino, se mira qué pasaría en los OTROS
+ *  días donde está esta misma tienda (misma clave interna). Si no está en
+ *  ningún otro día, se mueve solo aquí sin preguntar; si no, se abre la
+ *  ventana para elegir en qué días moverla (y crear la agrupación en los
+ *  días que no la tengan). */
 function prepararMoverTiendaPlantilla_(row, destino) {
-  llamarApi_('otrasAparicionesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row])
-    .then(function (resultado) {
-      const dias = (resultado && resultado.dias) || [];
+  llamarApi_('simularMoverTiendaAgrupacionDias', [PLANTILLA_ESTADO.dia, row, destino])
+    .then(function (sim) {
+      const dias = (sim && sim.dias) || [];
       if (!dias.length) {
         moverTiendaAgrupacionPlantilla_(row, destino);
         return;
       }
-      mostrarModalMoverTiendaVariosDias_(row, destino, dias);
+      mostrarModalMoverTiendaVariosDias_(row, destino, sim);
     })
     .catch(mostrarErrorServidor);
 }
 
-/** Modal con 3 opciones cuando la tienda que se va a mover también
- *  aparece en otros días: cancelar, mover solo el día actual, o mover de
- *  golpe en todos los días donde aparezca (a la agrupación con el mismo
- *  nombre elegido; si algún día no tiene una agrupación con ese nombre,
- *  esa aparición se deja tal cual, no se fuerza ni se pierde). */
-function mostrarModalMoverTiendaVariosDias_(row, destino, dias) {
-  document.getElementById('modal-box').classList.remove('ancho');
-  document.getElementById('modal-box').classList.remove('usuario-form');
-  document.getElementById('modal-box').classList.add('medio');
-  document.getElementById('modal-box').classList.remove('peligro');
+/** Nombre de la agrupación sin el paréntesis de ubicación/hora. */
+function nombreCortoRutaPlantilla_(nombre) {
+  return String(nombre || '').replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Ventana «Esta tienda aparece en más días»: un renglón por cada otro día
+ *  donde está la tienda.
+ *   - ok: casilla marcada (se mueve también ese día).
+ *   - falta: ese día no existe la agrupación destino; casilla aparte, sin
+ *     marcar, para crearla ahí y mover la tienda.
+ *   - igual / duplicada: en gris, no se toca. */
+function mostrarModalMoverTiendaVariosDias_(row, destino, sim) {
+  const dia = PLANTILLA_ESTADO.dia;
+  const tienda = (sim && sim.tienda) || '';
+  const otros = (sim && sim.dias) || [];
+  const info = buscarTiendaPlantilla_(Number(row));
+  const origen = info ? info.seccion.nombre : '';
+  const destinoCorto = nombreCortoRutaPlantilla_(destino);
+  const mover = new Set(otros.filter(function (d) { return d.estado === 'ok'; }).map(function (d) { return d.dia; }));
+  const crear = new Set();
+  const hayFalta = otros.some(function (d) { return d.estado === 'falta'; });
+
+  const box = document.getElementById('modal-box');
+  box.classList.remove('ancho', 'usuario-form', 'peligro');
+  box.classList.add('medio');
   document.getElementById('modal-title').style.display = '';
   document.getElementById('modal-title').textContent = 'Esta tienda aparece en más días';
   document.getElementById('modal-text').style.display = 'none';
@@ -1617,20 +1642,98 @@ function mostrarModalMoverTiendaVariosDias_(row, destino, dias) {
   const custom = document.getElementById('modal-custom');
   custom.style.display = 'block';
   custom.innerHTML =
-    '<p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 10px;">Esta misma tienda también está en: <b>' +
-      dias.map(escapeHtml).join(', ') +
-      '</b>. Si mueves solo aquí, en esos otros días seguirá saliendo por su agrupación de siempre. Usa "Mover en todos" para llevarla también a "' +
-      escapeHtml(destino) + '" en los días donde exista una agrupación con ese mismo nombre (si algún día no la tiene, se deja como está ahí).</p>';
+    '<p class="modal-campo-ayuda" style="margin:0 0 10px;font-size:13.5px;">Has movido <b>' + escapeHtml(tienda) + '</b>' +
+      (origen ? ' de <b>' + escapeHtml(nombreCortoRutaPlantilla_(origen)) + '</b>' : '') +
+      ' a <b>' + escapeHtml(destinoCorto) + '</b> en ' + escapeHtml(dia) + '. ¿La muevo también en los demás días?</p>' +
+    '<div class="plantilla-dias-destino">' +
+      otros.map(function (d) {
+        const diaHtml = '<b>' + escapeHtml(d.dia) + '</b>';
+        if (d.estado === 'ok') {
+          return '<label class="plantilla-dia-destino">' +
+            '<input type="checkbox" data-dia-mover="' + escapeAttr(d.dia) + '" checked>' + diaHtml +
+            '<span class="det">' + escapeHtml(nombreCortoRutaPlantilla_(d.actual)) + ' → ' + escapeHtml(destinoCorto) + '</span>' +
+          '</label>';
+        }
+        if (d.estado === 'falta') {
+          return '<div class="plantilla-dia-destino falta">' +
+            '<span class="plantilla-dia-destino-av">!</span>' + diaHtml +
+            '<span class="det">' + escapeHtml(destinoCorto) + ' no está creada ese día</span>' +
+            '<label class="plantilla-dia-destino-crear"><input type="checkbox" data-dia-crear="' + escapeAttr(d.dia) + '">' +
+              'Crearla en ' + escapeHtml(d.dia) + ' y mover la tienda</label>' +
+          '</div>';
+        }
+        const esIgual = d.estado === 'igual';
+        const motivo = esIgual
+          ? 'ya está en ' + escapeHtml(destinoCorto)
+          : escapeHtml(destinoCorto) + ' ya tiene una tienda con ese número: no se toca';
+        return '<div class="plantilla-dia-destino deshabilitado">' +
+          (esIgual ? '<span class="plantilla-dia-destino-ok">✓</span>' : '<span class="plantilla-dia-destino-av">!</span>') +
+          diaHtml + '<span class="det">' + motivo + '</span></div>';
+      }).join('') +
+    '</div>' +
+    (hayFalta
+      ? '<p class="plantilla-dias-nota">Si se crea, se pone igual que en ' + escapeHtml(dia) + ' (ubicación, hora y casillas PESO, C.EXPRESS…), en el mismo sitio (debajo de la misma ruta que aquí), con esta tienda dentro. Grupos de palets y notas de carga no se copian.</p>'
+      : '');
+
+  custom.querySelectorAll('[data-dia-mover]').forEach(function (chk) {
+    chk.onchange = function () {
+      const d = chk.getAttribute('data-dia-mover');
+      if (chk.checked) mover.add(d); else mover.delete(d);
+      pintarBotones();
+    };
+  });
+  custom.querySelectorAll('[data-dia-crear]').forEach(function (chk) {
+    chk.onchange = function () {
+      const d = chk.getAttribute('data-dia-crear');
+      if (chk.checked) crear.add(d); else crear.delete(d);
+      pintarBotones();
+    };
+  });
 
   const actions = document.getElementById('modal-actions');
-  actions.innerHTML =
-    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
-    '<button class="modal-confirm" id="modal-mover-aqui-btn">Mover solo aquí</button>' +
-    '<button class="modal-confirm" id="modal-mover-todos-btn">Mover en todos (' + (dias.length + 1) + ' días)</button>';
+  function pintarBotones() {
+    const n = mover.size + crear.size;
+    actions.innerHTML =
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+      '<button class="modal-cancel" id="modal-mover-aqui-btn">Solo ' + escapeHtml(dia) + '</button>' +
+      (n ? '<button class="modal-confirm" id="modal-mover-todos-btn">Mover en ' + escapeHtml(dia) + ' + ' + n + ' día' + (n === 1 ? '' : 's') + '</button>' : '');
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+    document.getElementById('modal-mover-aqui-btn').onclick = function () { cerrarModal(); moverTiendaAgrupacionPlantilla_(row, destino); };
+    const btnTodos = document.getElementById('modal-mover-todos-btn');
+    if (btnTodos) {
+      btnTodos.onclick = function () {
+        cerrarModal();
+        moverTiendaAgrupacionPlantillaDias_(row, destino, Array.from(mover).concat(Array.from(crear)), Array.from(crear));
+      };
+    }
+  }
+  pintarBotones();
   document.getElementById('modal-overlay').style.display = 'flex';
-  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
-  document.getElementById('modal-mover-aqui-btn').onclick = function () { cerrarModal(); moverTiendaAgrupacionPlantilla_(row, destino); };
-  document.getElementById('modal-mover-todos-btn').onclick = function () { cerrarModal(); moverTiendaAgrupacionPlantillaTodosDias_(row, destino); };
+}
+
+/** Mueve la tienda aquí y en los días elegidos, creando antes la
+ *  agrupación en los días de "crear". */
+function moverTiendaAgrupacionPlantillaDias_(row, destino, dias, crear) {
+  mostrarModalCargando('Moviendo la tienda…');
+  llamarApi_('moverTiendaAgrupacionPlantillaDias', [PLANTILLA_ESTADO.dia, row, destino, dias, crear])
+    .then(function (res) {
+      cerrarModal();
+      const movidas = (res && res.movidas) || 0;
+      const creadas = (res && res.creadas) || 0;
+      const omitidas = (res && res.omitidas) || 0;
+      mostrarToast(
+        'Tienda movida a "' + nombreCortoRutaPlantilla_(destino) + '"' +
+        (movidas ? ' (también en ' + movidas + ' día' + (movidas === 1 ? '' : 's') + ' más)' : '') +
+        (creadas ? '. Agrupación creada en ' + creadas + ' día' + (creadas === 1 ? '' : 's') : '') +
+        (omitidas ? '. ' + omitidas + ' sin cambios' : '')
+      );
+      cargarPlantilla_({ silencioso: true });
+    })
+    .catch(function (err) {
+      cerrarModal();
+      mostrarErrorServidor(err);
+      cargarPlantilla_({ silencioso: true });
+    });
 }
 
 /** Mueve la tienda SOLO en el día que se está viendo ahora mismo. Como
@@ -1907,6 +2010,91 @@ function mostrarModalColocarOtrosDias_(row, rowDebajo, sim, otros) {
   pintar();
   pintarBotones();
   document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+/* ---------------- MOVER UNA RUTA DE GOLPE ----------------
+ * Botón «Mover» de la cabecera de cada ruta: arriba del todo, abajo del
+ * todo o justo debajo de otra ruta del mismo día, sin tener que ir
+ * pulsando la flechita una y otra vez. Solo en el día que se está viendo. */
+function abrirModalColocarRutaPlantilla_(nombreRuta) {
+  const dia = PLANTILLA_ESTADO.dia;
+  const nombres = PLANTILLA_ESTADO.secciones.map(function (s) { return s.nombre; });
+  const pos = nombres.indexOf(nombreRuta);
+  if (pos === -1) return;
+  const total = nombres.length;
+  const otras = nombres.filter(function (n) { return n !== nombreRuta; });
+  const corto = nombreCortoRutaPlantilla_;
+
+  const box = document.getElementById('modal-box');
+  box.classList.remove('ancho', 'usuario-form', 'peligro');
+  box.classList.add('medio');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Mover ' + corto(nombreRuta);
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+
+  const icoArriba = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14M12 20V9M7 13l5-5 5 5"/></svg>';
+  const icoAbajo = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20h14M12 4v11M7 11l5 5 5-5"/></svg>';
+  const icoDebajo = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M8 14l4 4 4-4M12 10v8"/></svg>';
+
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p class="colocar-ruta-pos">Ahora es la <b>' + (pos + 1) + 'ª de ' + total + '</b> en ' + escapeHtml(dia) + '.</p>' +
+    '<div class="colocar-ruta-opciones">' +
+      '<button type="button" class="colocar-ruta-op" data-colocar-donde="arriba"' + (pos === 0 ? ' disabled' : '') + '>' +
+        '<span class="ico">' + icoArriba + '</span><span>Arriba del todo<span class="sub">' +
+        (pos === 0 ? 'Ya es la primera' : 'Pasa a ser la 1ª, encima de ' + escapeHtml(corto(nombres[0]))) + '</span></span></button>' +
+      '<button type="button" class="colocar-ruta-op" data-colocar-donde="abajo"' + (pos === total - 1 ? ' disabled' : '') + '>' +
+        '<span class="ico">' + icoAbajo + '</span><span>Abajo del todo<span class="sub">' +
+        (pos === total - 1 ? 'Ya es la última' : 'Pasa a ser la ' + total + 'ª, debajo de ' + escapeHtml(corto(nombres[total - 1]))) + '</span></span></button>' +
+      '<div class="colocar-ruta-op debajo">' +
+        '<span class="ico">' + icoDebajo + '</span><span>Justo debajo de</span>' +
+        '<select id="colocar-ruta-debajo">' +
+          '<option value="">Elige una ruta…</option>' +
+          otras.map(function (n) { return '<option value="' + escapeAttr(n) + '">' + escapeHtml(n) + '</option>'; }).join('') +
+        '</select>' +
+      '</div>' +
+    '</div>';
+
+  const select = document.getElementById('colocar-ruta-debajo');
+  const actions = document.getElementById('modal-actions');
+  function pintarBotones() {
+    const elegida = select.value;
+    // Sin elegir, o si la elegida es la que ya tiene encima (no cambiaría
+    // nada), el botón va apagado.
+    const apagado = !elegida || (pos > 0 && elegida === nombres[pos - 1]);
+    actions.innerHTML =
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+      (elegida
+        ? '<button class="modal-confirm" id="modal-confirm-btn"' + (apagado ? ' disabled' : '') + '>Mover debajo de ' + escapeHtml(corto(elegida)) + '</button>'
+        : '');
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+    const btn = document.getElementById('modal-confirm-btn');
+    if (btn) btn.onclick = function () { colocarRutaPlantilla_(nombreRuta, 'debajo', select.value); };
+  }
+  select.addEventListener('change', pintarBotones);
+  select.addEventListener('input', pintarBotones);
+  custom.querySelectorAll('[data-colocar-donde]').forEach(function (b) {
+    b.onclick = function () { colocarRutaPlantilla_(nombreRuta, b.getAttribute('data-colocar-donde'), null); };
+  });
+  pintarBotones();
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function colocarRutaPlantilla_(nombreRuta, donde, debajoDe) {
+  cerrarModal();
+  llamarApi_('colocarRutaPlantilla', [PLANTILLA_ESTADO.dia, nombreRuta, donde, debajoDe])
+    .then(function () {
+      mostrarToast('Ruta movida');
+      cargarPlantilla_({ silencioso: true });
+      // Que se vea dónde ha quedado.
+      setTimeout(function () {
+        const el = document.querySelector('.plantilla-ruta[data-ruta-nombre="' + cssEscapeAtributo(nombreRuta) + '"]');
+        if (el && typeof desplazarHasta_ === 'function') desplazarHasta_(el, 'center');
+      }, 700);
+    })
+    .catch(mostrarErrorServidor);
 }
 
 function moverRutaPlantilla_(nombreRuta, direccion) {
