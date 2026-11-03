@@ -108,7 +108,26 @@ const INICIO_ESTADO_TXT_ = {
   completado: 'Completado'
 };
 
+// Filtro de cada tarjeta de Inicio (estado pulsado en sus contadores; null
+// = todas) y la última respuesta de resumenInicio, para repintar al
+// filtrar sin volver a pedir nada al servidor. Al entrar en Inicio se
+// vuelve a «todas».
+let INICIO_FILTRO_ = { hoy: null, manana: null };
+let INICIO_ULTIMO_RESUMEN_ = null;
+// Orden y texto corto de los contadores de la cabecera de cada tarjeta.
+const INICIO_ESTADOS_ORDEN_ = ['pendiente', 'progreso', 'sin_ajustar', 'ajustada', 'prevision', 'definitivo', 'completado'];
+const INICIO_ESTADO_CORTO_ = {
+  pendiente: 'Pendiente',
+  progreso: 'En progreso',
+  sin_ajustar: 'Sin ajustar',
+  ajustada: 'Ajustada',
+  prevision: 'Previsión',
+  definitivo: 'Definitivo',
+  completado: 'Completado'
+};
+
 function renderVistaInicio() {
+  INICIO_FILTRO_ = { hoy: null, manana: null };
   const main = document.getElementById('main');
   main.innerHTML =
     htmlBannerInstalacion_() +
@@ -141,6 +160,7 @@ function renderVistaInicio() {
  *  ajustada» / «Carga sin ajustar» abren la carga del camión aquí mismo. */
 function pintarTarjetasInicio_(cont, resumen) {
   resumen = resumen || {};
+  INICIO_ULTIMO_RESUMEN_ = resumen;
   cont.innerHTML =
     htmlTarjetaInicio_('Estado del conteo de hoy', resumen.hoy, 'hoy') +
     htmlTarjetaInicio_('Estado del conteo de mañana', resumen.manana, 'manana');
@@ -152,6 +172,16 @@ function pintarTarjetasInicio_(cont, resumen) {
   cont.querySelectorAll('[data-abrir-carga]').forEach(function (btn) {
     btn.onclick = function () {
       abrirCargaDesdeInicio_(btn.getAttribute('data-fecha'), btn.getAttribute('data-ruta'));
+    };
+  });
+  // Contadores de la cabecera: pulsar uno deja solo esas rutas; pulsar el
+  // que ya está elegido (o su ✕) vuelve a todas.
+  cont.querySelectorAll('[data-filtro-inicio]').forEach(function (btn) {
+    btn.onclick = function () {
+      const tipo = btn.getAttribute('data-tipo');
+      const estado = btn.getAttribute('data-filtro-inicio');
+      INICIO_FILTRO_[tipo] = INICIO_FILTRO_[tipo] === estado ? null : estado;
+      pintarTarjetasInicio_(cont, INICIO_ULTIMO_RESUMEN_);
     };
   });
 }
@@ -260,8 +290,31 @@ function htmlTarjetaInicioError_(titulo) {
  *  totalRutas, enviadas, enProgreso, pendientes }. */
 function htmlTarjetaInicio_(titulo, datos, tipo) {
   datos = datos || {};
-  const rutas = datos.rutas || [];
+  const todas = datos.rutas || [];
   const subtitulo = datos.fecha ? formatearFechaLarga(datos.fecha) : '';
+  // Contadores por estado (solo los que hay ese día).
+  const cuenta = {};
+  todas.forEach(function (r) { const e = r.estado || 'pendiente'; cuenta[e] = (cuenta[e] || 0) + 1; });
+  // Si el estado filtrado ya no tiene rutas (p. ej. tras refrescar), se
+  // vuelve a todas.
+  if (INICIO_FILTRO_[tipo] && !cuenta[INICIO_FILTRO_[tipo]]) INICIO_FILTRO_[tipo] = null;
+  const filtro = INICIO_FILTRO_[tipo];
+  const rutas = filtro ? todas.filter(function (r) { return (r.estado || 'pendiente') === filtro; }) : todas;
+  const estadosDia = INICIO_ESTADOS_ORDEN_.filter(function (e) { return cuenta[e]; })
+    .concat(Object.keys(cuenta).filter(function (e) { return INICIO_ESTADOS_ORDEN_.indexOf(e) === -1; }));
+  const contadores = estadosDia.length
+    ? '<div class="inicio-contadores">' +
+        estadosDia.map(function (e) {
+          const activo = filtro === e;
+          return '<button type="button" class="inicio-contador inicio-pill-' + escapeAttr(e) + (activo ? ' activo' : '') + '"' +
+            ' data-filtro-inicio="' + escapeAttr(e) + '" data-tipo="' + escapeAttr(tipo) + '"' +
+            ' title="' + (activo ? 'Ver todas las rutas' : 'Ver solo las rutas «' + escapeAttr(INICIO_ESTADO_TXT_[e] || e) + '»') + '">' +
+            '<b>' + cuenta[e] + '</b>' + escapeHtml(INICIO_ESTADO_CORTO_[e] || INICIO_ESTADO_TXT_[e] || e) +
+            (activo ? '<span class="inicio-contador-x" aria-hidden="true">✕</span>' : '') +
+          '</button>';
+        }).join('') +
+      '</div>'
+    : '';
   let cuerpo;
   if (!rutas.length) {
     cuerpo = '<div class="inicio-card-vacio">No hay rutas para este día.</div>';
@@ -280,6 +333,7 @@ function htmlTarjetaInicio_(titulo, datos, tipo) {
     '<div class="inicio-card inicio-card-' + tipo + '">' +
       '<div class="inicio-card-header">' +
         '<h2>' + escapeHtml(titulo) + '</h2>' +
+        contadores +
         (subtitulo ? '<span class="inicio-card-fecha">' + escapeHtml(subtitulo) + '</span>' : '') +
       '</div>' +
       cuerpo +
