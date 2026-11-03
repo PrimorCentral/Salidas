@@ -603,14 +603,20 @@ function editarNotaDesdeFestivos_(id, textoActual, agrupacionActual, fecha) {
     refrescar();
   };
   const select = document.getElementById('edit-nota-agr');
+  select.value = agrupacion; // la agrupación actual de la nota (o ninguna)
+
+  // La agrupación elegida es SIEMPRE la que enseña el desplegable (antes se
+  // guardaba aparte y, si no se enteraba del cambio, se veía una agrupación
+  // elegida con «Guardar» apagado).
+  function agrupacionElegida() { return tipo === 'agrupacion' ? (select.value || '') : ''; }
 
   function refrescar() {
+    agrupacion = agrupacionElegida();
     custom.querySelectorAll('[data-edit-tipo]').forEach(function (b) { b.classList.toggle('activa', b.getAttribute('data-edit-tipo') === tipo); });
     document.getElementById('edit-nota-agr-campo').style.display = tipo === 'agrupacion' ? '' : 'none';
     document.getElementById('edit-nota-ayuda').textContent = tipo === 'agrupacion'
       ? 'Solo sale en la agrupación que elijas, en el conteo del ' + fechaTxt + '.'
       : 'Sale en todas las agrupaciones del conteo del ' + fechaTxt + '.';
-    select.value = agrupacion;
     const btn = document.getElementById('modal-confirm-btn');
     if (btn) {
       const ok = area.value.trim() && (tipo === 'dia' || agrupacion);
@@ -625,21 +631,29 @@ function editarNotaDesdeFestivos_(id, textoActual, agrupacionActual, fecha) {
       tipo = b.getAttribute('data-edit-tipo');
       const ayudaAgr = document.getElementById('edit-nota-agr-ayuda');
       ayudaAgr.textContent = '';
-      if (tipo === 'agrupacion' && !agrupacion) {
+      if (tipo === 'agrupacion' && !select.value) {
         // Opción A: si el texto nombra una agrupación de ese día, se elige
         // sola (se puede cambiar en el desplegable).
-        agrupacion = agrupacionDesdeTextoFestivos_(area.value, secciones);
-        if (agrupacion) ayudaAgr.textContent = 'Elegida porque aparece en el texto de la nota. Puedes cambiarla.';
+        const sugerida = agrupacionDesdeTextoFestivos_(area.value, secciones);
+        if (sugerida) {
+          select.value = sugerida;
+          if (select.value) ayudaAgr.textContent = 'Elegida porque aparece en el texto de la nota. Puedes cambiarla.';
+        }
       }
-      if (tipo === 'dia') agrupacion = '';
+      if (tipo === 'dia') select.value = '';
       refrescar();
     };
   });
-  select.onchange = function () {
-    agrupacion = select.value;
+  // 'change' e 'input': según el navegador o si se elige con el teclado,
+  // llega uno u otro; con cualquiera de los dos se vuelve a mirar.
+  function alElegirAgrupacion() {
     document.getElementById('edit-nota-agr-ayuda').textContent = '';
     refrescar();
-  };
+  }
+  select.addEventListener('change', alElegirAgrupacion);
+  select.addEventListener('input', alElegirAgrupacion);
+  select.addEventListener('blur', refrescar);
+  select.addEventListener('keyup', refrescar);
 
   const actions = document.getElementById('modal-actions');
   actions.innerHTML =
@@ -648,6 +662,7 @@ function editarNotaDesdeFestivos_(id, textoActual, agrupacionActual, fecha) {
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () {
+    agrupacion = agrupacionElegida();
     const nuevo = area.value.trim().toUpperCase();
     if (!nuevo || (tipo === 'agrupacion' && !agrupacion)) return;
     const agrFinal = tipo === 'agrupacion' ? agrupacion : '';
