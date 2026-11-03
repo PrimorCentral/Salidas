@@ -8,13 +8,30 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.19',
+    fecha: '2026-11-03',
+    cambios: [
+      { tipo: 'mejora',     texto: 'Cabecera nueva: los menús llevan icono, arriba sale el número de usuario (el nombre completo al pasar el ratón) y «Salir» es un botón de apagar en rojo' },
+      { tipo: 'mejora',     texto: 'Conteos Diarios: la fecha va en una franja propia debajo de la barra, con Hoy / Mañana, el resumen, flechas de día anterior y siguiente, el calendario al pulsar la fecha, imprimir, el buscador y la cuenta atrás del autorefresco' },
+      { tipo: 'nuevo',      texto: 'Inicio: al pulsar «Carga ajustada» o «Carga sin ajustar» se abre la carga del camión sin salir de Inicio. Al cerrarla, las tarjetas se actualizan solas' },
+      { tipo: 'nuevo',      texto: 'Inicio: en la línea del título de cada tarjeta salen cuántas rutas hay en cada estado (Pendiente, En progreso, Sin ajustar, Ajustada…). Al pulsar uno, la lista se queda solo con esas rutas; pulsándolo otra vez vuelven todas' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: botón «Mover» en cada ruta para llevarla de una vez arriba del todo, abajo del todo o justo debajo de otra ruta del día, sin ir pulsando la flechita' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: al mover una tienda a otra agrupación, si está en más días se eligen con casillas en qué días moverla. Si algún día no tiene esa agrupación, se avisa y se puede crear ahí (igual que en el día actual y en el mismo sitio) para mover la tienda' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: el botón de los avisos dice lo que hace («Bloquear», «Quitar», «Excluir») en vez de «Eliminar»' },
+      { tipo: 'mejora',     texto: 'Conteo diario: en cada agrupación los contadores (Viernes, Domingo, palets) van en una fila y los botones en otra' },
+      { tipo: 'mejora',     texto: 'Móvil, inicio de sesión: la contraseña también saca el teclado de números, con un botón «ABC» al lado para cambiar al teclado con letras (y «123» para volver). El móvil recuerda el último que se usó' },
+      { tipo: 'mejora',     texto: 'Móvil: la cabecera se queda quieta arriba y solo se desplaza lo de debajo, así la barra de desplazamiento ya no pasa por encima de la cabecera' },
+      { tipo: 'correccion', texto: 'Lista de carga, botón WhatsApp en el ordenador: ya no sale el aviso rojo «Ha fallado algo en la app» cuando la lista se ha copiado bien' },
+      { tipo: 'correccion', texto: 'Bloqueos y cambios: al editar una nota y elegir la agrupación, «Guardar» se enciende al momento (antes había que pinchar fuera)' },
+      { tipo: 'correccion', texto: 'Móvil: la cabecera ya no se queda fuera de la pantalla al ir a una agrupación desde el resumen o al cerrar el teclado en el iPhone; y en el inicio de sesión, tocar el ojo de la contraseña ya no cierra el teclado' }
+    ]
+  },
+  {
     version: '2.1.18',
     fecha: '2026-10-31',
     cambios: [
       { tipo: 'correccion', texto: 'Actualización menor. Móvil: en los iPhone con iOS 26 ya no sale una franja blanquecina y borrosa encima de la barra azul de arriba' },
-      { tipo: 'correccion', texto: 'Móvil: la barra «Desliza para desbloquear» (y la de eliminar) ocupa todo el ancho de la ventana y se lee entera; «Cancelar» va debajo' },
-      { tipo: 'mejora',     texto: 'Móvil, inicio de sesión: la contraseña también saca el teclado de números, con un botón «ABC» al lado para cambiar al teclado con letras (y «123» para volver). El móvil recuerda el último que se usó' },
-      { tipo: 'mejora',     texto: 'Móvil: la cabecera se queda quieta arriba y solo se desplaza lo de debajo, así la barra de desplazamiento ya no pasa por encima de la cabecera' }
+      { tipo: 'correccion', texto: 'Móvil: la barra «Desliza para desbloquear» (y la de eliminar) ocupa todo el ancho de la ventana y se lee entera; «Cancelar» va debajo' }
     ]
   },
   {
