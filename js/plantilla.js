@@ -1142,7 +1142,8 @@ function togglePesoRutaPlantilla_(nombreRuta, activoActualmente) {
       'Quitar la casilla PESO',
       '¿Seguro que quieres quitar la casilla PESO de "' + nombreRuta + '"? Se borrarán los valores de peso ya guardados en esta ruta.',
       function () { guardarPlantillaOptimista_(mutar, 'desactivarPesoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla PESO desactivada'); },
-      true
+      true,
+      'Quitar'
     );
     return;
   }
@@ -1164,7 +1165,8 @@ function toggleCExpressRutaPlantilla_(nombreRuta, activoActualmente) {
       'Quitar la casilla C.EXPRESS',
       '¿Seguro que quieres quitar la casilla C.EXPRESS de "' + nombreRuta + '"? Se borrarán los valores de C.EXPRESS ya guardados en esta ruta.',
       function () { guardarPlantillaOptimista_(mutar, 'desactivarCExpressRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla C.EXPRESS desactivada'); },
-      true
+      true,
+      'Quitar'
     );
     return;
   }
@@ -1186,7 +1188,8 @@ function toggleSobrestockRutaPlantilla_(nombreRuta, activoActualmente) {
       'Quitar la casilla SOBRESTOCK',
       '¿Seguro que quieres quitar la casilla SOBRESTOCK de "' + nombreRuta + '"? Se borrarán los valores de SOBRESTOCK ya guardados en esta ruta.',
       function () { guardarPlantillaOptimista_(mutar, 'desactivarSobrestockRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla SOBRESTOCK desactivada'); },
-      true
+      true,
+      'Quitar'
     );
     return;
   }
@@ -1209,7 +1212,8 @@ function toggleViernesRutaPlantilla_(nombreRuta, activoActualmente) {
       'Quitar la casilla VIERNES',
       '¿Seguro que quieres quitar la casilla VIERNES de "' + nombreRuta + '"? Se borrarán los valores de VIERNES ya guardados en esta ruta.',
       function () { guardarPlantillaOptimista_(mutar, 'desactivarViernesRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla VIERNES desactivada'); },
-      true
+      true,
+      'Quitar'
     );
     return;
   }
@@ -1244,7 +1248,8 @@ function toggleViernesTiendaPlantilla_(row, incluidaActualmente) {
     'Excluir del VIERNES',
     'Esta tienda dejará de llevar la casilla VIERNES (saldrá en gris con una X). Si ya tenía algo escrito en VIERNES, se borrará. ¿Seguro?',
     function () { guardarPlantillaOptimista_(mutar, 'excluirViernesTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda excluida del VIERNES'); },
-    true
+    true,
+    'Excluir'
   );
 }
 
@@ -1263,7 +1268,8 @@ function toggleDomingoRutaPlantilla_(nombreRuta, activoActualmente) {
       'Quitar la casilla DOMINGO',
       '¿Seguro que quieres quitar la casilla DOMINGO de "' + nombreRuta + '"? Se borrarán los valores de DOMINGO ya guardados en esta ruta.',
       function () { guardarPlantillaOptimista_(mutar, 'desactivarDomingoRuta', [PLANTILLA_ESTADO.dia, nombreRuta], 'Casilla DOMINGO desactivada'); },
-      true
+      true,
+      'Quitar'
     );
     return;
   }
@@ -1298,7 +1304,8 @@ function toggleDomingoTiendaPlantilla_(row, incluidaActualmente) {
     'Excluir del DOMINGO',
     'Esta tienda dejará de llevar la casilla DOMINGO (saldrá en gris con una X). Si ya tenía algo escrito en DOMINGO, se borrará. ¿Seguro?',
     function () { guardarPlantillaOptimista_(mutar, 'excluirDomingoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row], 'Tienda excluida del DOMINGO'); },
-    true
+    true,
+    'Excluir'
   );
 }
 
@@ -1338,7 +1345,8 @@ function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
     'Bloquear ' + etiqueta,
     'Esta tienda quedará marcada como "NO" en ' + etiqueta + ' (no debería recibir palets ahí ese día de la semana). Si esa casilla ya tenía algo escrito, se sobrescribirá. ¿Seguro?',
     function () { guardarPlantillaOptimista_(mutar, 'bloquearCampoTiendaPlantilla', [PLANTILLA_ESTADO.dia, row, campo], 'Bloqueado'); },
-    true
+    true,
+    'Bloquear'
   );
 }
 

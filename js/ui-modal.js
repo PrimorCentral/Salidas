@@ -119,7 +119,9 @@ function mostrarErrorServidor(err) {
   mostrarToast('Error: ' + (err && err.message ? err.message : err), true);
 }
 
-function appConfirm(titulo, texto, onConfirm, peligro) {
+/** textoBoton (opcional): texto del botón de confirmar. Si no se pasa,
+ *  sale "Eliminar" en los avisos de peligro y "Confirmar" en el resto. */
+function appConfirm(titulo, texto, onConfirm, peligro, textoBoton) {
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('medio');
   document.getElementById('modal-box').classList.remove('usuario-form');
@@ -135,7 +137,7 @@ function appConfirm(titulo, texto, onConfirm, peligro) {
   actions.innerHTML =
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
     '<button class="modal-confirm' + (peligro ? ' danger' : '') + '" id="modal-confirm-btn">' +
-    (peligro ? 'Eliminar' : 'Confirmar') + '</button>';
+    escapeHtml(textoBoton || (peligro ? 'Eliminar' : 'Confirmar')) + '</button>';
   document.getElementById('modal-overlay').style.display = 'flex';
   document.getElementById('modal-cancel-btn').onclick = cerrarModal;
   document.getElementById('modal-confirm-btn').onclick = function () { cerrarModal(); onConfirm(); };
