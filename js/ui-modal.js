@@ -1719,12 +1719,17 @@ function compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totC
   // WhatsApp Web que ya tiene abierta el usuario). Se copia la imagen y se
   // pega con Ctrl+V en el grupo, en su WhatsApp de siempre. El portapapeles
   // se pide ya, dentro del clic.
-  let copiada = Promise.reject(new Error('sin portapapeles de imágenes'));
+  // El "no se puede" solo se crea si de verdad hace falta: si se creaba de
+  // antemano y luego sí se copiaba la imagen, se quedaba suelto sin que nadie
+  // lo recogiera y saltaba el aviso rojo «Ha fallado algo en la app» aunque
+  // la lista se hubiera copiado bien.
+  let copiada = null;
   try {
     if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
       copiada = navigator.clipboard.write([new ClipboardItem({ 'image/png': imagen })]);
     }
-  } catch (e) { /* se prueba con el texto */ }
+  } catch (e) { copiada = null; /* se prueba con el texto */ }
+  if (!copiada) copiada = Promise.reject(new Error('sin portapapeles de imágenes'));
   copiada.then(function () {
     mostrarToast('Lista copiada como imagen. Ve a WhatsApp, abre el grupo y pulsa Ctrl+V');
   }).catch(function () {
