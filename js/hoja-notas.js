@@ -1439,7 +1439,7 @@ function hnModalCopiar_() {
 /* ---------------- IMPRIMIR ---------------- */
 
 /** Hoja de impresión: la misma tabla, sin botones, sin lo que no sale, en
- *  A4 apaisado (ver .hn-print en styles.css). La cabecera de la tabla se
+ *  A4 vertical (ver .hn-print en styles.css). La cabecera de la tabla se
  *  repite en cada página. */
 function hnImprimir_() {
   if (!HN.datos) {

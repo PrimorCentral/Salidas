@@ -5375,7 +5375,7 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
      página y sin cortar ninguna agrupación: si no cabe entera, pasa a la
      página siguiente (cada sección es un <tbody>). El título de un bloque
      (RHENUS INTERNACIONAL...) no se queda solo al final de una página. */
-  @page hojanotas { size: A4 landscape; margin: 7mm; }
+  @page hojanotas { size: A4 portrait; margin: 6mm; }
   @media print {
     .hn-print { page: hojanotas; color: #000; font-family: Arial, Helvetica, sans-serif; }
     .hn-print, .hn-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -5405,10 +5405,13 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     .hn-print .hn-tabla tr { break-inside: avoid; page-break-inside: avoid; }
     .hn-print .hn-tabla tbody.hn-sec-bloque { break-after: avoid; page-break-after: avoid; }
     .hn-print .hn-tabla tr.hn-fila-sec, .hn-print .hn-tabla tr.hn-fila-bloque { break-after: avoid; page-break-after: avoid; }
-    .hn-print .hn-c-fest { width: 46px; } .hn-print .hn-c-ab { width: 16px; } .hn-print .hn-c-dom { width: 26px; }
-    .hn-print .hn-c-grupo { width: 32px; } .hn-print .hn-c-g2 { width: 18px; } .hn-print .hn-c-tienda { width: 128px; }
-    .hn-print .hn-c-hora { width: 26px; } .hn-print .hn-c-age { width: 28px; } .hn-print .hn-c-pob { width: 74px; }
-    .hn-print .hn-c-planta { width: 86px; } .hn-print .hn-c-ref { width: 104px; } .hn-print .hn-c-x { width: 14px; }
+    /* A4 vertical (unos 745 px de ancho útil): columnas más estrechas. */
+    .hn-print .hn-c-fest { width: 38px; } .hn-print .hn-c-ab { width: 15px; } .hn-print .hn-c-dom { width: 24px; }
+    .hn-print .hn-c-grupo { width: 30px; } .hn-print .hn-c-g2 { width: 17px; } .hn-print .hn-c-tienda { width: 118px; }
+    .hn-print .hn-c-hora { width: 22px; } .hn-print .hn-c-age { width: 26px; } .hn-print .hn-c-pob { width: 62px; }
+    .hn-print .hn-c-planta { width: 76px; } .hn-print .hn-c-ref { width: 92px; } .hn-print .hn-c-x { width: 13px; }
+    .hn-print .hn-tabla td.hn-tienda, .hn-print .hn-tabla td.hn-pob, .hn-print .hn-tabla td.hn-planta { white-space: normal; word-break: break-word; }
+    .hn-print .hn-tabla th { font-size: 7px; padding: 2px 1px; letter-spacing: -.02em; }
   }
 
   /* Hoja de notas: bloqueo de edición */
