@@ -336,14 +336,7 @@ function abrirModalUsuario_(usuarioExistente) {
             '<label for="modal-usuario-activo">Activo (puede entrar en la app)</label>' +
           '</div>' +
         '</div>' +
-        // Vale para cualquier rol (también Administrador), por eso va fuera
-        // del panel de permisos. La comprueba la RPC login en Supabase.
-        '<div class="modal-campo">' +
-          '<label class="permiso-externo" for="modal-usuario-externo">' +
-            '<input type="checkbox" id="modal-usuario-externo"' + (permisosIniciales.usuario_externo ? ' checked' : '') + '>' +
-            '<span><b>🌍 Usuario externo</b><small>Puede iniciar sesión desde fuera del centro de trabajo (sin restricción de IP).</small></span>' +
-          '</label>' +
-        '</div>' +
+
       '</div>' +
       '<div class="modal-usuario-col-der">' +
         '<div class="modal-campo" id="modal-usuario-permisos-wrap"' + (rolInicial === 'operario' ? '' : ' style="display:none"') + '>' +
@@ -406,8 +399,8 @@ function abrirModalUsuario_(usuarioExistente) {
     // Los administradores tienen acceso a todo por su rol, así que no se
     // les guarda ningún permiso fino (el backend los deja pasar igual).
     const permisos = rol === 'operario' ? leerPermisosMarcados_(custom) : {};
-    // "Usuario externo" vale para cualquier rol, así que se guarda siempre.
-    if (document.getElementById('modal-usuario-externo').checked) permisos.usuario_externo = true;
+    // "Usuario externo" (entrar desde fuera del trabajo) no se toca desde la
+    // app: se da solo desde la base de datos y editar_usuario lo conserva.
     // Los administradores no llevan nave: verifican cualquier columna
     // desde el selector de VERIFICAR CONTEO.
     const naveElegida = custom.querySelector('#modal-usuario-nave-pills .modal-pill.activo');
