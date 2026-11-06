@@ -1482,13 +1482,14 @@ function pintarColocarPuntualGestorObs_() {
   tiendas.forEach(function (t) {
     if (!t.notaGrupoId) return;
     if (!vistos[t.notaGrupoId]) {
-      vistos[t.notaGrupoId] = { id: t.notaGrupoId, texto: t.nota || 'Grupo', limite: t.notaLimite, n: 0 };
+      vistos[t.notaGrupoId] = { id: t.notaGrupoId, texto: t.nota || 'Grupo', limite: t.notaLimite, n: 0, nombres: [] };
       grupos.push(vistos[t.notaGrupoId]);
     }
     vistos[t.notaGrupoId].n++;
+    vistos[t.notaGrupoId].nombres.push(t.nombre);
   });
   selGrupo.innerHTML = '<option value="">Sin grupo</option>' + grupos.map(function (g) {
-    return '<option value="' + escapeAttr(g.id) + '">' + escapeHtml(g.texto) + ' (' + g.n + ' tienda' + (g.n === 1 ? '' : 's') + ')</option>';
+    return '<option value="' + escapeAttr(g.id) + '">' + escapeHtml(textoOpcionGrupoPalets_(g)) + '</option>';
   }).join('');
   if (grupoPrevio && selGrupo.querySelector('option[value="' + CSS.escape(grupoPrevio) + '"]')) selGrupo.value = grupoPrevio;
   selGrupo.disabled = !grupos.length;

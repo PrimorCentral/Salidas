@@ -2809,6 +2809,18 @@ function claveComparableTienda_(nombre) {
   return String(nombre || '').replace(/\s*[*^]\s*$/, '').trim().toUpperCase().replace(/\s+/g, ' ').trim();
 }
 
+/** Texto de una opción del desplegable "Grupo de palets": como varios
+ *  grupos pueden llamarse igual (p. ej. "CARGA EN GAITE"), se añaden el
+ *  límite y las tiendas que ya tiene, para saber cuál es cada uno.
+ *  g: { texto, limite, nombres: [...] } */
+function textoOpcionGrupoPalets_(g) {
+  const nombres = (g.nombres || []).map(function (n) { return quitarCodigoTienda(quitarMarcadorNombre(n)); });
+  const max = 4;
+  const lista = nombres.slice(0, max).join(', ') + (nombres.length > max ? ' y ' + (nombres.length - max) + ' más' : '');
+  const lim = (g.limite != null && g.limite !== '') ? g.limite + ' palets' : 'sin límite';
+  return (g.texto || 'Grupo') + ' · ' + lim + (lista ? ' — ' + lista : '');
+}
+
 function abrirModalAnadirTiendaPlantilla_(nombreRuta) {
   // Antes de pintar el modal, se comprueba si esta misma ruta (misma
   // "agrupación", p.ej. "TXT ANDORRA") existe también otros días, para
@@ -2891,10 +2903,11 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
     seccionActual.tiendas.forEach(function (t) {
       if (!t.notaGrupoId) return;
       if (!vistos[t.notaGrupoId]) {
-        vistos[t.notaGrupoId] = { row: t.row, texto: t.nota || 'Grupo', n: 0 };
+        vistos[t.notaGrupoId] = { row: t.row, texto: t.nota || 'Grupo', limite: t.notaLimite, n: 0, nombres: [] };
         gruposActuales.push(vistos[t.notaGrupoId]);
       }
       vistos[t.notaGrupoId].n++;
+      vistos[t.notaGrupoId].nombres.push(t.nombre);
     });
   }
 
@@ -2955,7 +2968,7 @@ function pintarModalAnadirTiendaPlantilla_(nombreRuta, otrosDias, tiendasConfig)
             '<select id="modal-plantilla-grupo">' +
               '<option value="">Sin grupo</option>' +
               gruposActuales.map(function (g) {
-                return '<option value="' + g.row + '">' + escapeHtml(g.texto) + ' (' + g.n + ' tiendas)</option>';
+                return '<option value="' + g.row + '">' + escapeHtml(textoOpcionGrupoPalets_(g)) + '</option>';
               }).join('') +
             '</select>' +
           '</div>' +
