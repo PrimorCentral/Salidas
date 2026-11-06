@@ -58,9 +58,17 @@ function abrirGestorObservaciones(fechaInicial) {
 
   // El botón Guardar solo se enciende cuando todo lo necesario está
   // rellenado. Se revisa tras cualquier cambio dentro del formulario.
-  ['input', 'change', 'click'].forEach(function (ev) {
-    custom.addEventListener(ev, function () { setTimeout(actualizarBotonGuardarGestor_, 0); });
-  });
+  // OJO: #modal-custom es el mismo hueco para TODAS las ventanas de la app,
+  // así que estos avisos se enganchan una sola vez (no en cada apertura) y
+  // actualizarBotonGuardarGestor_ no hace nada si la ventana abierta no es
+  // la de este gestor (si no, apagaba el "Guardar" de otras ventanas, p.ej.
+  // Grupos de palets, después de haber usado Bloqueos y cambios).
+  if (!custom.dataset.vigiaGestorObs) {
+    custom.dataset.vigiaGestorObs = '1';
+    ['input', 'change', 'click'].forEach(function (ev) {
+      custom.addEventListener(ev, function () { setTimeout(actualizarBotonGuardarGestor_, 0); });
+    });
+  }
   actualizarFormularioSegunTipo_();
   if (GESTOR_OBS.fecha) cargarDatosDiaGestorObs_(GESTOR_OBS.fecha);
 }
@@ -653,6 +661,8 @@ function formularioGestorObsCompleto_() {
 /** Actualiza el botón "Guardar": texto (cuántos bloqueos/cambios se van a
  *  crear, si es más de uno) y encendido/apagado según el formulario. */
 function actualizarBotonGuardarGestor_() {
+  // Solo si la ventana abierta es la de este gestor.
+  if (!document.querySelector('#modal-custom .gestor-form')) return;
   const btn = document.getElementById('modal-confirm-btn');
   if (!btn || GESTOR_OBS.guardando) return;
   btn.disabled = !formularioGestorObsCompleto_();

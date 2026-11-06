@@ -2566,6 +2566,10 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
   }
 
   function pintar() {
+    // La lista de grupos tiene su propio scroll: se guarda dónde estaba
+    // para que no salte arriba al repintar (añadir/quitar una tienda...).
+    const listaPrevia = custom.querySelector('.grupos2-lista');
+    const scrollPrevio = listaPrevia ? listaPrevia.scrollTop : 0;
     const enGrupo = new Set();
     grupos.forEach(function (g) { g.rows.forEach(function (r) { enGrupo.add(r); }); });
     const sinGrupo = seccion.tiendas.filter(function (t) { return !enGrupo.has(t.row); });
@@ -2635,6 +2639,8 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
       '</div>';
 
     marcarActivo(activo);
+    const listaNueva = custom.querySelector('.grupos2-lista');
+    if (listaNueva) listaNueva.scrollTop = scrollPrevio;
 
     custom.querySelectorAll('[data-grupo-card]').forEach(function (card) {
       card.addEventListener('mousedown', function () { marcarActivo(Number(card.getAttribute('data-grupo-card'))); });
@@ -2703,6 +2709,8 @@ function abrirModalGruposLimitePlantilla_(nombreRuta) {
         setTimeout(function () {
           const inputs = custom.querySelectorAll('[data-grupo-texto]');
           const ultimo = inputs[inputs.length - 1];
+          const lista = custom.querySelector('.grupos2-lista');
+          if (lista) lista.scrollTop = lista.scrollHeight;
           if (ultimo) ultimo.focus();
         }, 30);
       };
