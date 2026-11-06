@@ -221,7 +221,9 @@ function pintarTablaUsuarios_() {
       '<tbody>' + items.map(function (it) {
         return '<tr>' +
           '<td class="usuarios-col-nombre">' + escapeHtml(it.nombreCompleto || '—') + '</td>' +
-          '<td>' + escapeHtml(it.usuario) + '</td>' +
+          '<td>' + escapeHtml(it.usuario) +
+            (it.permisos && it.permisos.usuario_externo ? ' <span class="usuarios-badge-externo" title="Usuario externo: puede entrar desde fuera del centro de trabajo">🌍 Externo</span>' : '') +
+          '</td>' +
           '<td><span class="usuarios-badge-rol ' + it.rol + '">' + (it.rol === 'admin' ? 'Administrador' : 'Operario') + '</span></td>' +
           '<td>' + (it.nave && it.rol !== 'admin' ? '<span class="usuarios-badge-nave">' + escapeHtml(it.nave) + '</span>' : '<span class="usuarios-sin-nave">—</span>') + '</td>' +
           '<td><span class="usuarios-badge-estado ' + (it.activo ? 'activo' : 'inactivo') + '"><span class="badge-dot"></span>' + (it.activo ? 'Activo' : 'Inactivo') + '</span></td>' +
@@ -334,6 +336,14 @@ function abrirModalUsuario_(usuarioExistente) {
             '<label for="modal-usuario-activo">Activo (puede entrar en la app)</label>' +
           '</div>' +
         '</div>' +
+        // Vale para cualquier rol (también Administrador), por eso va fuera
+        // del panel de permisos. La comprueba la RPC login en Supabase.
+        '<div class="modal-campo">' +
+          '<label class="permiso-externo" for="modal-usuario-externo">' +
+            '<input type="checkbox" id="modal-usuario-externo"' + (permisosIniciales.usuario_externo ? ' checked' : '') + '>' +
+            '<span><b>🌍 Usuario externo</b><small>Puede iniciar sesión desde fuera del centro de trabajo (sin restricción de IP).</small></span>' +
+          '</label>' +
+        '</div>' +
       '</div>' +
       '<div class="modal-usuario-col-der">' +
         '<div class="modal-campo" id="modal-usuario-permisos-wrap"' + (rolInicial === 'operario' ? '' : ' style="display:none"') + '>' +
@@ -396,6 +406,8 @@ function abrirModalUsuario_(usuarioExistente) {
     // Los administradores tienen acceso a todo por su rol, así que no se
     // les guarda ningún permiso fino (el backend los deja pasar igual).
     const permisos = rol === 'operario' ? leerPermisosMarcados_(custom) : {};
+    // "Usuario externo" vale para cualquier rol, así que se guarda siempre.
+    if (document.getElementById('modal-usuario-externo').checked) permisos.usuario_externo = true;
     // Los administradores no llevan nave: verifican cualquier columna
     // desde el selector de VERIFICAR CONTEO.
     const naveElegida = custom.querySelector('#modal-usuario-nave-pills .modal-pill.activo');

@@ -44,6 +44,11 @@ function loginSupabase_(usuario, pass) {
         if (resp.error.message && resp.error.message.indexOf('Usuario o contraseña incorrectos') !== -1) {
           return null; // credenciales mal -- no es un error de servidor
         }
+        // Restricción por IP: se enseña en el login como "contraseña mal",
+        // no como fallo del servidor.
+        if (resp.error.message && resp.error.message.indexOf('Fuera del centro de trabajo') !== -1) {
+          return { fuera_de_red: true, mensaje: resp.error.message };
+        }
         throw resp.error;
       }
       return resp.data;

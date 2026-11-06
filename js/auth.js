@@ -154,8 +154,12 @@ function intentarLogin() {
   loginSupabase_(usuario, pass)
     .then(function (resultado) {
       btn.disabled = false; spinner.style.display = 'none'; btnText.textContent = 'Entrar';
-      if (!resultado) {
-        document.getElementById('login-error').style.display = 'block';
+      const errorLogin = document.getElementById('login-error');
+      if (!resultado || resultado.fuera_de_red) {
+        // Usuario externo (Usuarios): si no lo es, solo entra desde la IP
+        // del centro de trabajo. Lo comprueba la RPC login.
+        errorLogin.textContent = resultado ? resultado.mensaje : 'Usuario o contraseña incorrectos';
+        errorLogin.style.display = 'block';
         return;
       }
       // Administrador que todavía no ha cambiado su contraseña: el servidor
