@@ -418,7 +418,7 @@ function hnTablaHtml_(datos, opts) {
       html += '<tr class="hn-fila-bloque"><td colspan="' + (nCols - (editar ? 1 : 0)) + '">' +
         hnTextoSeccion_(sec) + '</td>' + (editar ? '<td class="hn-acc">' + hnAccSeccionHtml_(iSec) + '</td>' : '') + '</tr>';
     } else {
-      html += '<tr class="hn-fila-sec"><td colspan="' + (nCols - 3 - (editar ? 1 : 0)) + '">' + hnTextoSeccion_(sec) + '</td>' +
+      html += '<tr class="hn-fila-sec"><td colspan="' + (nCols - 3 - (editar ? 1 : 0)) + '"><div class="hn-sec-caja">' + hnTextoSeccion_(sec) + '</div></td>' +
         (sec.casillas ? '<td class="hn-x">1</td><td class="hn-x">2</td><td class="hn-x">3</td>' : '<td></td><td></td><td></td>') +
         (editar ? '<td class="hn-acc">' + hnAccSeccionHtml_(iSec) + '</td>' : '') +
         '</tr>';
@@ -442,8 +442,12 @@ function hnTablaHtml_(datos, opts) {
 
 function hnTextoSeccion_(sec) {
   return '<span class="hn-sec-nombre">' + escapeHtml(sec.nombre || '(sin nombre)') + '</span>' +
-    (sec.instruccion ? '<span class="hn-sec-instr">' + escapeHtml(sec.instruccion) + '</span>' : '') +
-    (sec.nota ? '<span class="hn-sec-nota">' + escapeHtml(sec.nota) + '</span>' : '') +
+    ((sec.instruccion || sec.nota)
+      ? '<span class="hn-sec-der">' +
+          (sec.instruccion ? '<span class="hn-sec-instr">' + escapeHtml(sec.instruccion) + '</span>' : '') +
+          (sec.nota ? '<span class="hn-sec-nota">' + escapeHtml(sec.nota) + '</span>' : '') +
+        '</span>'
+      : '') +
     (sec.activa ? '' : '<span class="hn-badge hn-badge-oculta">no sale</span>');
 }
 
@@ -476,26 +480,28 @@ function hnFilasLineaHtml_(l, fest, editar, iLin, nLin) {
           html += '<td class="hn-fest' + (v === 'CIERRE' ? ' hn-fest-cierre' : '') + '">' + escapeHtml(v) + '</td>';
         }
       });
+      // Colores como en el Excel: DOM verde si abre (SI/OC...) y
+      // anaranjado si está vacío; la "C" en rojo.
       html +=
-        '<td class="hn-c">' + escapeHtml(l.grupoNotas || '') + '</td>' +
-        '<td class="hn-c">' + escapeHtml(l.dom || '') + '</td>' +
-        '<td class="hn-c">' + escapeHtml(l.grupo || '') + '</td>' +
-        '<td class="hn-c">' + escapeHtml(l.grupo2 || '') + '</td>' +
+        '<td class="hn-c hn-ab">' + escapeHtml(l.grupoNotas || '') + '</td>' +
+        '<td class="hn-c hn-dom' + (l.dom ? ' hn-dom-si' : ' hn-dom-vacio') + '">' + escapeHtml(l.dom || '') + '</td>' +
+        '<td class="hn-c hn-grupo">' + escapeHtml(l.grupo || '') + '</td>' +
+        '<td class="hn-c hn-g2' + (l.grupo2 ? ' hn-lleno' : '') + '">' + escapeHtml(l.grupo2 || '') + '</td>' +
         '<td class="hn-tienda">' + escapeHtml(l.nombre || '') +
           (l.baja ? ' <span class="hn-badge hn-badge-baja">dada de baja</span>' : '') +
           (!l.activa ? ' <span class="hn-badge hn-badge-oculta">no sale</span>' : '') +
         '</td>' +
-        '<td class="hn-c">' + hnHora_(l.transito) + '</td>' +
-        '<td class="hn-c">' + escapeHtml(l.agencia || '') + '</td>' +
-        '<td>' + escapeHtml(l.poblacion || '') + '</td>';
+        '<td class="hn-c hn-hora">' + hnHora_(l.transito) + '</td>' +
+        '<td class="hn-c hn-age">' + escapeHtml(l.agencia || '') + '</td>' +
+        '<td class="hn-pob">' + escapeHtml(l.poblacion || '') + '</td>';
     } else {
       html += fest.map(function () { return '<td class="hn-fest"></td>'; }).join('') +
-        '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+        '<td class="hn-ab"></td><td class="hn-dom"></td><td class="hn-grupo"></td><td class="hn-g2"></td><td class="hn-tienda"></td><td class="hn-hora"></td><td class="hn-age"></td><td class="hn-pob"></td>';
     }
     html +=
-      '<td>' + escapeHtml(f.planta || '') + '</td>' +
-      '<td class="hn-ref">' + escapeHtml(f.ref || '') + '</td>' +
-      '<td class="hn-obs">' + escapeHtml(f.obs || '') + '</td>' +
+      '<td class="hn-planta' + (f.planta ? ' hn-lleno' : '') + '">' + escapeHtml(f.planta || '') + '</td>' +
+      '<td class="hn-ref' + (f.ref ? ' hn-lleno' : '') + '">' + escapeHtml(f.ref || '') + '</td>' +
+      '<td class="hn-obs' + (f.obs ? ' hn-lleno' : '') + '">' + escapeHtml(f.obs || '') + '</td>' +
       '<td class="hn-x"></td><td class="hn-x"></td><td class="hn-x"></td>';
     if (editar) {
       html += '<td class="hn-acc">' + (i === 0
@@ -518,7 +524,23 @@ function hnPintarHoja_() {
     '<div class="hn-scroll">' + hnTablaHtml_(HN.datos, { editar: HN.editar, filtro: HN.filtro }) + '</div>' +
     (HN.editar ? '<div class="hn-pie-editar"><button type="button" class="hn-link" data-nueva-seccion="1">+ Añadir sección al final</button></div>' : '');
   if (HN.editar) hnVincularEdicion_(cont);
+  hnAjustarAltoScroll_();
 }
+
+/* El scroll va dentro de la tabla (no en toda la página), con la cabecera
+ * TIENDA / HORA / AGE... siempre fija arriba: la caja de la tabla ocupa lo
+ * que queda de pantalla por debajo de ella. */
+function hnAjustarAltoScroll_() {
+  const sc = document.querySelector('#hn-hoja .hn-scroll');
+  if (!sc) return;
+  const top = sc.getBoundingClientRect().top + window.scrollY;
+  const pie = document.querySelector('#hn-hoja .hn-pie-editar');
+  const reservado = (pie ? pie.offsetHeight + 12 : 0) + 18;
+  sc.style.maxHeight = Math.max(260, window.innerHeight - top - reservado) + 'px';
+}
+window.addEventListener('resize', function () {
+  if (ESTADO && ESTADO.vista === 'almacen') hnAjustarAltoScroll_();
+});
 
 /* ---------------- EDICIÓN EN LA TABLA ---------------- */
 
@@ -1050,8 +1072,9 @@ function hnImprimir_() {
   cont.innerHTML =
     '<div class="hn-print">' +
       '<div class="hn-print-cab">' +
-        '<b>HOJA DE NOTAS · ' + escapeHtml(HN.datos.nave) + ' · ' + escapeHtml(hnDiaLargo_(HN.datos.dia).toUpperCase()) + '</b>' +
-        '<span>Impresa el ' + pad2(ahora.getDate()) + '/' + pad2(ahora.getMonth() + 1) + '/' + ahora.getFullYear() + ' ' + pad2(ahora.getHours()) + ':' + pad2(ahora.getMinutes()) + '</span>' +
+        '<b class="hn-print-dia">' + escapeHtml(hnDiaLargo_(HN.datos.dia).toUpperCase()) + '</b>' +
+        '<b class="hn-print-fecha">' + pad2(ahora.getDate()) + '/' + pad2(ahora.getMonth() + 1) + '/' + ahora.getFullYear() + '</b>' +
+        '<span class="hn-print-nave">HOJA DE NOTAS · ' + escapeHtml(HN.datos.nave) + '</span>' +
       '</div>' +
       hnTablaHtml_(HN.datos, { editar: false, imprimir: true, filtro: '' }) +
     '</div>';
