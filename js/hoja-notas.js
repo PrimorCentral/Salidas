@@ -31,7 +31,7 @@ const HN_DIAS = [
 ];
 const HN_NAVES = ['GAITE', 'PTA'];
 
-let HN = { dia: null, nave: null, datos: null, editar: false, filtro: '', peticion: 0, latido: null, bloqueoDe: null, vigia: null };
+let HN = { dia: null, nave: null, datos: null, editar: false, verOcultas: false, filtro: '', peticion: 0, latido: null, bloqueoDe: null, vigia: null };
 
 /* ---------------- BLOQUEO DE EDICIÓN ----------------
  * Solo una persona puede editar a la vez cada hoja (día + nave). Al pulsar
@@ -70,6 +70,7 @@ function hnSalirEdicion_() {
   const de = HN.bloqueoDe;
   HN.bloqueoDe = null;
   HN.editar = false;
+  HN.verOcultas = false;
   if (de) hnBloqueo_('soltar', de.dia, de.nave).catch(function () { /* caduca solo */ });
 }
 
@@ -334,6 +335,9 @@ function renderAlmacenHojaNotas() {
           '<button type="button" class="hn-btn hn-solo-editor" id="hn-btn-festivos" title="Columnas de festivos (horario de las tiendas ese día)">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>' +
             'Festivos</button>' +
+          '<button type="button" class="hn-btn hn-solo-editor" id="hn-btn-ocultas" title="Las tiendas y secciones marcadas como «no sale» (y las dadas de baja)">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+            '<span>Ver tiendas ocultas</span></button>' +
           '<button type="button" class="hn-btn hn-solo-editor" id="hn-btn-copiar" title="Sustituir esta hoja por una copia de otra">' +
             '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
             'Copiar de otra hoja</button>' +
@@ -373,6 +377,10 @@ function renderAlmacenHojaNotas() {
   };
   document.getElementById('hn-btn-festivos').onclick = hnModalFestivos_;
   document.getElementById('hn-btn-copiar').onclick = hnModalCopiar_;
+  document.getElementById('hn-btn-ocultas').onclick = function () {
+    HN.verOcultas = !HN.verOcultas;
+    hnPintar_();
+  };
 
   let temporizador = null;
   document.getElementById('hn-buscar').addEventListener('input', function (e) {
@@ -421,6 +429,15 @@ function hnPintar_() {
   }
   const btnEditar = document.getElementById('hn-btn-editar');
   if (btnEditar) btnEditar.querySelector('span').textContent = HN.editar ? 'Terminar de editar' : 'Editar';
+  const btnOcultas = document.getElementById('hn-btn-ocultas');
+  if (btnOcultas) {
+    const n = hnContarOcultas_();
+    btnOcultas.querySelector('span').textContent = HN.verOcultas
+      ? 'Esconder ocultas'
+      : 'Ver tiendas ocultas' + (n ? ' (' + n + ')' : '');
+    btnOcultas.classList.toggle('activo', HN.verOcultas);
+    btnOcultas.disabled = !n && !HN.verOcultas;
+  }
 
   const sub = document.getElementById('hn-sub');
   if (sub) {
@@ -432,6 +449,20 @@ function hnPintar_() {
   }
   hnPintarAvisos_();
   hnPintarHoja_();
+}
+
+/** Tiendas y secciones que no salen en la hoja ("no sale" o dadas de baja). */
+function hnContarOcultas_() {
+  let n = 0;
+  (HN.datos && HN.datos.secciones || []).forEach(function (s) {
+    if (!s.activa) n++;
+    (s.lineas || []).forEach(function (l) { if (!s.activa || !l.activa || l.baja) n++; });
+  });
+  return n;
+}
+/** ¿Se pintan las ocultas? Solo en modo editar y con «Ver tiendas ocultas». */
+function hnMostrarOcultas_() {
+  return HN.editar && HN.verOcultas;
 }
 
 function hnFechaHora_(iso) {
@@ -557,13 +588,16 @@ function hnTablaHtml_(datos, opts) {
       (editar ? '<th></th>' : '') +
     '</tr></thead>';
 
+  // Lo que no sale ("no sale" o dada de baja) solo se ve en modo editar
+  // y pulsando «Ver tiendas ocultas».
+  const verOcultas = editar && !!opts.verOcultas;
   let pintadas = 0;
   (datos.secciones || []).forEach(function (sec, iSec) {
-    if (!sec.activa && !editar) return;
+    if (!sec.activa && !verOcultas) return;
     const lineasTodas = sec.lineas || [];
     const nombreSecCoincide = opts.filtro && (sec.nombre || '').toLowerCase().indexOf(opts.filtro) !== -1;
     const lineas = lineasTodas.filter(function (l) {
-      if (!editar && (!l.activa || l.baja)) return false;
+      if (!verOcultas && (!l.activa || l.baja)) return false;
       return nombreSecCoincide || hnLineaCoincide_(l, sec, opts.filtro);
     });
     if (opts.filtro && !lineas.length && !nombreSecCoincide) return;
@@ -683,7 +717,7 @@ function hnPintarHoja_() {
   if (!cont || !HN.datos) return;
   cont.innerHTML =
     (HN.editar ? '<div class="hn-ayuda-editar">Pulsa una tienda para editarla. Las flechas cambian el orden; el lápiz de cada sección la edita (también su color) y el + añade una sección debajo. Al guardar un cambio te pregunto si lo quieres también en otros días o en la otra nave. Los horarios de festivo se escriben directamente en su casilla.</div>' : '') +
-    '<div class="hn-scroll">' + hnTablaHtml_(HN.datos, { editar: HN.editar, filtro: HN.filtro }) + '</div>' +
+    '<div class="hn-scroll">' + hnTablaHtml_(HN.datos, { editar: HN.editar, verOcultas: hnMostrarOcultas_(), filtro: HN.filtro }) + '</div>' +
     (HN.editar ? '<div class="hn-pie-editar"><button type="button" class="hn-link" data-nueva-seccion="1">+ Añadir sección al final</button></div>' : '');
   if (HN.editar) hnVincularEdicion_(cont);
   hnAjustarAltoScroll_();
@@ -781,7 +815,12 @@ function hnMoverLinea_(lineaId, dir) {
   if (!r) return;
   const lista = r.seccion.lineas;
   const i = lista.indexOf(r.linea);
-  const j = i + dir;
+  let j = i + dir;
+  // Con las ocultas escondidas, se salta por encima de ellas (si no, la
+  // flecha parecería no hacer nada).
+  if (!hnMostrarOcultas_()) {
+    while (j >= 0 && j < lista.length && (!lista[j].activa || lista[j].baja)) j += dir;
+  }
   if (j < 0 || j >= lista.length) return;
   lista.splice(i, 1);
   lista.splice(j, 0, r.linea);
@@ -792,7 +831,10 @@ function hnMoverLinea_(lineaId, dir) {
 
 function hnMoverSeccion_(i, dir) {
   const secs = HN.datos.secciones;
-  const j = i + dir;
+  let j = i + dir;
+  if (!hnMostrarOcultas_()) {
+    while (j >= 0 && j < secs.length && !secs[j].activa) j += dir;
+  }
   if (j < 0 || j >= secs.length) return;
   const s = secs.splice(i, 1)[0];
   secs.splice(j, 0, s);

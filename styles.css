@@ -5500,3 +5500,7 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
   .hn-filas-ed-fila[data-color="morado"] input { background: #f2edfb; border-color: #d9cdf2; }
   .hn-tabla td.hn-rc-gris, .hn-tabla tr.hn-clicable:hover td.hn-rc-gris { background: #bfbfbf !important; }
   .hn-filas-ed-fila[data-color="gris"] input { background: #f0f0f0; border-color: #bfbfbf; }
+
+/* Hoja de notas: botón «Ver tiendas ocultas» encendido */
+  .hn-btn.activo { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .hn-btn:disabled { opacity: .5; cursor: default; }
