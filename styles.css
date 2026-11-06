@@ -5427,3 +5427,51 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
 .permiso-externo small { font-size: 11.5px; color: var(--ink-soft); font-weight: 400; }
 .permiso-externo:has(input:checked) { border-color: #FFD2AE; background: #FFF6EE; }
 .usuarios-badge-externo { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; color: #B4570B; background: #FFF1E3; border: 1px solid #FFD2AE; white-space: nowrap; }
+
+/* ---------------- Hoja de notas: colores de sección ----------------
+   Cabecera de la sección con el color y una franja a la izquierda de sus
+   tiendas. Se imprime igual (print-color-adjust en .hn-print). */
+  .hn-tabla tbody.hn-color-verde tr.hn-fila-sec td, .hn-tabla tbody.hn-color-verde tr.hn-fila-bloque td { background: #c6efce; }
+  .hn-tabla tbody.hn-color-verde tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #1e7b3a; }
+  .hn-muestra-verde { background: #c6efce !important; border-color: #1e7b3a !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-amarillo tr.hn-fila-sec td, .hn-tabla tbody.hn-color-amarillo tr.hn-fila-bloque td { background: #ffeb9c; }
+  .hn-tabla tbody.hn-color-amarillo tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #8a6d00; }
+  .hn-muestra-amarillo { background: #ffeb9c !important; border-color: #8a6d00 !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-naranja tr.hn-fila-sec td, .hn-tabla tbody.hn-color-naranja tr.hn-fila-bloque td { background: #fcd5b4; }
+  .hn-tabla tbody.hn-color-naranja tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #b4570b; }
+  .hn-muestra-naranja { background: #fcd5b4 !important; border-color: #b4570b !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-rojo tr.hn-fila-sec td, .hn-tabla tbody.hn-color-rojo tr.hn-fila-bloque td { background: #ffc7ce; }
+  .hn-tabla tbody.hn-color-rojo tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #b42318; }
+  .hn-muestra-rojo { background: #ffc7ce !important; border-color: #b42318 !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-azul tr.hn-fila-sec td, .hn-tabla tbody.hn-color-azul tr.hn-fila-bloque td { background: #bdd7ee; }
+  .hn-tabla tbody.hn-color-azul tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #1d4ed8; }
+  .hn-muestra-azul { background: #bdd7ee !important; border-color: #1d4ed8 !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-morado tr.hn-fila-sec td, .hn-tabla tbody.hn-color-morado tr.hn-fila-bloque td { background: #d9cdf2; }
+  .hn-tabla tbody.hn-color-morado tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #6b3fc0; }
+  .hn-muestra-morado { background: #d9cdf2 !important; border-color: #6b3fc0 !important; color: #1a1a1a !important; }
+  .hn-tabla tbody.hn-color-gris tr.hn-fila-sec td, .hn-tabla tbody.hn-color-gris tr.hn-fila-bloque td { background: #a6a6a6; }
+  .hn-tabla tbody.hn-color-gris tr.hn-fila td:first-child { box-shadow: inset 4px 0 0 #262626; }
+  .hn-muestra-gris { background: #a6a6a6 !important; border-color: #262626 !important; color: #1a1a1a !important; }
+  .hn-colores { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hn-color-op { border: 1.5px solid var(--line); background: #d9d9d9; color: #1a1a1a; border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .hn-color-op.hn-color-auto { background: #fff; }
+  .hn-color-op.hn-color-ninguno { background: #d9d9d9; }
+  .hn-color-op.activo { outline: 2.5px solid var(--navy); outline-offset: 1px; }
+
+/* ---------------- Hoja de notas: "¿cambiar también en otras hojas?" ---------------- */
+  .hn-paso-hojas { display: flex; flex-direction: column; gap: 12px; }
+  .hn-paso-texto { font-size: 13.5px; color: var(--ink); line-height: 1.45; }
+  .hn-paso-nota { font-size: 12px; color: var(--ink-soft); }
+  .hn-paso-rapidos { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hn-chip.hn-chip-suave { background: transparent; color: var(--ink-soft); }
+  .hn-paso-rejilla { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fafbfc; }
+  .hn-paso-fila { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .hn-paso-fila b { width: 58px; font-size: 12.5px; color: var(--navy); }
+  .hn-paso-dia { display: inline-flex; align-items: center; gap: 5px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .hn-paso-dia input { width: 15px; height: 15px; margin: 0; }
+  .hn-paso-dia:has(input:checked) { border-color: var(--navy); background: #eef2f8; }
+  .hn-paso-dia.actual { background: #fff4d6; border-color: #e7c15a; cursor: default; }
+  .hn-paso-dia.no { opacity: .45; cursor: not-allowed; text-decoration: line-through; }
+  .hn-paso-leyenda { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-soft); }
+  .hn-paso-leyenda .hn-paso-dia { padding: 2px 7px; font-weight: 600; font-size: 11.5px; text-decoration: none; }
+  .hn-l-ayuda-otras { margin: 6px 0 0; }

@@ -153,6 +153,165 @@ function hnAccion_(accion, datos) {
   return hnRpc_('hoja_notas_accion', { p_accion: accion, p_datos: datos || {} });
 }
 
+/* ---------------- COLORES DE SECCIÓN ----------------
+ * color null = automático (verde si el nombre lleva ADELANTO), 'ninguno' =
+ * sin color a propósito, o uno de la lista. */
+const HN_COLORES = [
+  { id: 'verde', nombre: 'Verde' },
+  { id: 'amarillo', nombre: 'Amarillo' },
+  { id: 'naranja', nombre: 'Naranja' },
+  { id: 'rojo', nombre: 'Rojo' },
+  { id: 'azul', nombre: 'Azul' },
+  { id: 'morado', nombre: 'Morado' },
+  { id: 'gris', nombre: 'Gris' }
+];
+
+function hnColorAuto_(nombre) {
+  return /ADELANT/i.test(nombre || '') ? 'verde' : '';
+}
+/** Color con el que se pinta la sección ('' = el gris de siempre). */
+function hnColorDe_(sec) {
+  if (!sec) return '';
+  if (sec.color === 'ninguno') return '';
+  return sec.color || hnColorAuto_(sec.nombre);
+}
+
+/* ---------------- APLICAR EN OTRAS HOJAS ----------------
+ * Al cambiar algo de una tienda o una sección se pregunta si se quiere
+ * cambiar también en otros días y en la otra nave. Solo se ofrecen las
+ * hojas donde está esa misma tienda (o una sección con el mismo nombre). */
+
+function hnClaveHoja_(dia, nave) { return dia + '|' + nave; }
+
+/** Hojas (sin la actual) donde está la tienda `num`. */
+function hnHojasConTienda_(num) {
+  const m = (HN.datos && HN.datos.presenciaTiendas) || {};
+  const actual = hnClaveHoja_(HN.dia, HN.nave);
+  return (m[num] || []).filter(function (k) { return k !== actual; });
+}
+/** Hojas (sin la actual) con una sección que se llama `nombre`. */
+function hnHojasConSeccion_(nombre) {
+  const m = (HN.datos && HN.datos.presenciaSecciones) || {};
+  const actual = hnClaveHoja_(HN.dia, HN.nave);
+  return (m[String(nombre || '').trim().toUpperCase()] || []).filter(function (k) { return k !== actual; });
+}
+/** Todas las hojas menos la actual. */
+function hnOtrasHojas_() {
+  const res = [];
+  HN_NAVES.forEach(function (n) {
+    HN_DIAS.forEach(function (d) { if (!(d.id === HN.dia && n === HN.nave)) res.push(hnClaveHoja_(d.id, n)); });
+  });
+  return res;
+}
+
+/** Pregunta, dentro del modal abierto, en qué otras hojas aplicar el
+ *  cambio. Oculta (sin borrar) lo que había en el modal; "Volver" lo
+ *  devuelve tal cual. opts: { titulo, texto (html), elegibles: ['DIA|NAVE'],
+ *  noElegibleTxt, botonSolo, botonVarias, peligro, onElegir(lista) }.
+ *  lista = [{ dia, nave }] (vacía = solo esta hoja). */
+function hnPreguntarHojas_(opts) {
+  const custom = document.getElementById('modal-custom');
+  const acciones = document.getElementById('modal-actions');
+  const titulo = document.getElementById('modal-title');
+  const tituloAntes = titulo.textContent;
+  const ocultos = [];
+  Array.prototype.forEach.call(custom.children, function (el) { if (el.style.display !== 'none') { ocultos.push(el); el.style.display = 'none'; } });
+  Array.prototype.forEach.call(acciones.children, function (el) { if (el.style.display !== 'none') { ocultos.push(el); el.style.display = 'none'; } });
+  if (opts.titulo) titulo.textContent = opts.titulo;
+
+  const elegibles = opts.elegibles || [];
+  const panel = document.createElement('div');
+  panel.className = 'hn-paso-hojas';
+  panel.innerHTML =
+    '<div class="hn-paso-texto">' + opts.texto + '</div>' +
+    '<div class="hn-paso-rapidos">' +
+      '<button type="button" class="hn-chip" data-rapido="nave">' + escapeHtml(HN.nave) + ' · todos los días</button>' +
+      '<button type="button" class="hn-chip" data-rapido="ambas">Ambas naves · todos los días</button>' +
+      '<button type="button" class="hn-chip hn-chip-suave" data-rapido="ninguna">Desmarcar</button>' +
+    '</div>' +
+    '<div class="hn-paso-rejilla">' +
+      HN_NAVES.map(function (n) {
+        return '<div class="hn-paso-fila"><b>' + n + '</b>' +
+          HN_DIAS.map(function (d) {
+            const k = hnClaveHoja_(d.id, n);
+            if (d.id === HN.dia && n === HN.nave) {
+              return '<label class="hn-paso-dia actual" title="La hoja que estás editando"><input type="checkbox" checked disabled>' + d.corto + '</label>';
+            }
+            const ok = elegibles.indexOf(k) !== -1;
+            return '<label class="hn-paso-dia' + (ok ? '' : ' no') + '"' + (ok ? '' : ' title="' + escapeAttr(opts.noElegibleTxt || 'No está en esa hoja') + '"') + '>' +
+              '<input type="checkbox" data-hoja="' + k + '"' + (ok ? '' : ' disabled') + '>' + d.corto + '</label>';
+          }).join('') + '</div>';
+      }).join('') +
+    '</div>' +
+    '<div class="hn-paso-leyenda"><span class="hn-paso-dia actual"><input type="checkbox" checked disabled>esta hoja</span>' +
+      '<span class="hn-paso-dia no"><input type="checkbox" disabled>' + escapeHtml(opts.noElegibleTxt || 'no está en esa hoja') + '</span></div>';
+  custom.appendChild(panel);
+
+  const bVolver = document.createElement('button');
+  bVolver.className = 'modal-cancel'; bVolver.textContent = 'Volver';
+  const bSolo = document.createElement('button');
+  bSolo.className = 'modal-cancel hn-paso-solo'; bSolo.textContent = opts.botonSolo || 'Solo en esta hoja';
+  const bVarias = document.createElement('button');
+  bVarias.className = 'modal-confirm' + (opts.peligro ? ' danger' : '');
+  acciones.appendChild(bVolver); acciones.appendChild(bSolo); acciones.appendChild(bVarias);
+
+  const cajas = panel.querySelectorAll('input[data-hoja]');
+  const marcadas = function () {
+    const res = [];
+    cajas.forEach(function (c) { if (c.checked) { const p = c.dataset.hoja.split('|'); res.push({ dia: p[0], nave: p[1] }); } });
+    return res;
+  };
+  const refrescar = function () {
+    const n = marcadas().length;
+    bVarias.disabled = !n;
+    bVarias.textContent = (opts.botonVarias || 'Aplicar también en') + (n ? ' ' + n + (n === 1 ? ' hoja más' : ' hojas más') : '…');
+  };
+  cajas.forEach(function (c) { c.addEventListener('change', refrescar); });
+  panel.querySelectorAll('[data-rapido]').forEach(function (b) {
+    b.onclick = function () {
+      const modo = b.dataset.rapido;
+      cajas.forEach(function (c) {
+        if (c.disabled) return;
+        c.checked = modo === 'ambas' || (modo === 'nave' && c.dataset.hoja.split('|')[1] === HN.nave);
+      });
+      refrescar();
+    };
+  });
+  refrescar();
+
+  const quitarPanel = function () {
+    panel.remove(); bVolver.remove(); bSolo.remove(); bVarias.remove();
+    titulo.textContent = tituloAntes;
+    ocultos.forEach(function (el) { el.style.display = ''; });
+  };
+  bVolver.onclick = quitarPanel;
+  const elegir = function (lista, btn) {
+    bVolver.disabled = bSolo.disabled = bVarias.disabled = true;
+    btn.textContent = 'Guardando…';
+    // Si algo falla, se vuelve al formulario con el error a la vista.
+    opts.onElegir(lista, function (err) {
+      quitarPanel();
+      if (err) hnErrorModal_(err);
+    });
+  };
+  bSolo.onclick = function () { elegir([], bSolo); };
+  bVarias.onclick = function () { elegir(marcadas(), bVarias); };
+}
+
+/** Mensaje tras guardar con "aplicar en otras hojas". */
+function hnAvisoResultado_(base, r) {
+  let msg = base;
+  if (r && r.anadidasOtras) msg += ' (y en ' + r.anadidasOtras + (r.anadidasOtras === 1 ? ' hoja más' : ' hojas más') + ')';
+  mostrarToast(msg);
+  const bloq = (r && r.bloqueadas) || [];
+  if (bloq.length) {
+    appConfirm('No se ha cambiado en todas',
+      'Estas hojas las estaba editando otra persona y no se han tocado: ' +
+      bloq.map(function (b) { return b.nave + ' · ' + hnDiaLargo_(b.dia) + (b.por ? ' (' + b.por + ')' : ''); }).join(', ') +
+      '. Cámbialas cuando terminen.', function () {});
+  }
+}
+
 /* ---------------- PANTALLA ---------------- */
 
 function renderAlmacenHojaNotas() {
@@ -413,7 +572,8 @@ function hnTablaHtml_(datos, opts) {
     if (!editar && !esBloque && !lineas.length) return;
     pintadas++;
 
-    html += '<tbody class="hn-sec' + (sec.activa ? '' : ' hn-oculta') + (esBloque ? ' hn-sec-bloque' : '') + '" data-seccion="' + sec.id + '">';
+    const color = hnColorDe_(sec);
+    html += '<tbody class="hn-sec' + (sec.activa ? '' : ' hn-oculta') + (esBloque ? ' hn-sec-bloque' : '') + (color ? ' hn-color-' + color : '') + '" data-seccion="' + sec.id + '">';
     if (esBloque) {
       html += '<tr class="hn-fila-bloque"><td colspan="' + (nCols - (editar ? 1 : 0)) + '">' +
         hnTextoSeccion_(sec) + '</td>' + (editar ? '<td class="hn-acc">' + hnAccSeccionHtml_(iSec) + '</td>' : '') + '</tr>';
@@ -520,7 +680,7 @@ function hnPintarHoja_() {
   const cont = document.getElementById('hn-hoja');
   if (!cont || !HN.datos) return;
   cont.innerHTML =
-    (HN.editar ? '<div class="hn-ayuda-editar">Pulsa una tienda para editarla. Las flechas cambian el orden; el lápiz de cada sección la edita y el + añade una sección debajo. Los horarios de festivo se escriben directamente en su casilla.</div>' : '') +
+    (HN.editar ? '<div class="hn-ayuda-editar">Pulsa una tienda para editarla. Las flechas cambian el orden; el lápiz de cada sección la edita (también su color) y el + añade una sección debajo. Al guardar un cambio te pregunto si lo quieres también en otros días o en la otra nave. Los horarios de festivo se escriben directamente en su casilla.</div>' : '') +
     '<div class="hn-scroll">' + hnTablaHtml_(HN.datos, { editar: HN.editar, filtro: HN.filtro }) + '</div>' +
     (HN.editar ? '<div class="hn-pie-editar"><button type="button" class="hn-link" data-nueva-seccion="1">+ Añadir sección al final</button></div>' : '');
   if (HN.editar) hnVincularEdicion_(cont);
@@ -752,7 +912,6 @@ function hnModalLinea_(seccionId, linea, numInicial) {
       '<button type="button" class="hn-link" id="hn-l-fila-mas">+ Añadir renglón</button>' +
       (nueva ? '<span class="modal-campo-ayuda">Si lo dejas vacío, se copian los que ya tenga la tienda en otra hoja.</span>' : '') +
     '</div>' +
-    '<label class="hn-check"><input type="checkbox" id="hn-l-todas"><span>Poner estas plantas, refuerzos y observaciones en esta tienda en <b>todas</b> las hojas</span></label>' +
     (fest.length && !nueva
       ? '<div class="hn-subtitulo">Horario festivo</div><div class="hn-fila-4">' +
           fest.map(function (fe) {
@@ -773,9 +932,11 @@ function hnModalLinea_(seccionId, linea, numInicial) {
           '<button type="button" class="hn-link" id="hn-l-marcar-todas">Marcar todas</button>' +
         '</div>'
       : '<div class="hn-quitar">' +
-          '<button type="button" class="hn-link hn-link-peligro" id="hn-l-quitar">Quitar de esta hoja</button>' +
-          (l.num ? '<button type="button" class="hn-link hn-link-peligro" id="hn-l-quitar-todas">Quitar de todas las hojas</button>' : '') +
-        '</div>');
+          '<button type="button" class="hn-link hn-link-peligro" id="hn-l-quitar">Quitar tienda…</button>' +
+        '</div>' +
+        (l.num && hnHojasConTienda_(l.num).length
+          ? '<p class="modal-campo-ayuda hn-l-ayuda-otras">Esta tienda está también en otras ' + hnHojasConTienda_(l.num).length + ' hojas: al guardar te preguntaré si quieres cambiarlo también allí.</p>'
+          : ''));
 
   hnAbrirModal_(nueva ? 'Añadir tienda' : 'Editar tienda', cuerpo,
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
@@ -843,21 +1004,32 @@ function hnModalLinea_(seccionId, linea, numInicial) {
     return res;
   };
 
-  // Quitar
-  const quitar = function (todas) {
-    const msg = todas
-      ? 'Se quitará ' + l.nombre + ' de TODAS las hojas de notas (GAITE y PTA, todos los días).'
-      : 'Se quitará ' + l.nombre + ' de la hoja de ' + HN.nave + ' · ' + hnDiaLargo_(HN.dia) + '.';
-    appConfirm('Quitar tienda', msg, function () {
-      hnAccion_('linea_eliminar', { id: l.id, todas: !!todas })
-        .then(function () { mostrarToast('Tienda quitada'); hnCargar_(true); })
-        .catch(mostrarErrorServidor);
-    }, true);
-  };
+  // Quitar: si la tienda está en otras hojas, se pregunta de cuáles.
   const bq = document.getElementById('hn-l-quitar');
-  if (bq) bq.onclick = function () { quitar(false); };
-  const bqt = document.getElementById('hn-l-quitar-todas');
-  if (bqt) bqt.onclick = function () { quitar(true); };
+  if (bq) {
+    bq.onclick = function () {
+      const otras = l.num ? hnHojasConTienda_(l.num) : [];
+      const quitarEn = function (lista, alTerminar) {
+        hnAccion_('linea_eliminar_en', { id: l.id, aplicarEn: lista })
+          .then(function (r) { cerrarModal(); hnAvisoResultado_('Tienda quitada', r); hnCargar_(true); })
+          .catch(function (err) { if (alTerminar) alTerminar(err); else mostrarErrorServidor(err); });
+      };
+      if (!otras.length) {
+        appConfirm('Quitar tienda', 'Se quitará ' + l.nombre + ' de la hoja de ' + HN.nave + ' · ' + hnDiaLargo_(HN.dia) + '.', function () { quitarEn([]); }, true);
+        return;
+      }
+      hnPreguntarHojas_({
+        titulo: 'Quitar tienda',
+        texto: '¿Quitar <b>' + escapeHtml(l.nombre) + '</b> solo de esta hoja o también de otras? Marca de qué otras hojas.',
+        elegibles: otras,
+        noElegibleTxt: 'no está en esa hoja',
+        botonSolo: 'Solo de esta hoja',
+        botonVarias: 'Quitar también de',
+        peligro: true,
+        onElegir: quitarEn
+      });
+    };
+  }
 
   document.getElementById('modal-confirm-btn').onclick = function () {
     const btn = this;
@@ -868,8 +1040,7 @@ function hnModalLinea_(seccionId, linea, numInicial) {
       dom: document.getElementById('hn-l-dom').value,
       grupo: document.getElementById('hn-l-grupo').value,
       grupo2: document.getElementById('hn-l-g2').value,
-      activa: document.getElementById('hn-l-activa').checked,
-      aplicarFilasTodas: document.getElementById('hn-l-todas').checked
+      activa: document.getElementById('hn-l-activa').checked
     };
     if (nueva) {
       if (!inpTienda.value.trim()) { inpTienda.focus(); return; }
@@ -891,7 +1062,26 @@ function hnModalLinea_(seccionId, linea, numInicial) {
       datos.poblacion = document.getElementById('hn-l-pob').value;
     }
 
-    hnBotonOcupado_(btn, 'Guardando…');
+    // Qué ha cambiado (para preguntar si se cambia también en otras hojas).
+    const campos = [];
+    if (!nueva) {
+      const norm = function (v) { return String(v || '').trim().toUpperCase(); };
+      const normFilas = function (lista) {
+        return JSON.stringify((lista || []).map(function (f) {
+          return { planta: norm(f.planta), ref: norm(f.ref), obs: norm(f.obs) };
+        }).filter(function (f) { return f.planta || f.ref || f.obs; }));
+      };
+      if (norm(datos.grupoNotas) !== norm(l.grupoNotas)) campos.push('grupoNotas');
+      if (norm(datos.dom) !== norm(l.dom)) campos.push('dom');
+      if (norm(datos.grupo) !== norm(l.grupo)) campos.push('grupo');
+      if (norm(datos.grupo2) !== norm(l.grupo2)) campos.push('grupo2');
+      if (normFilas(filas) !== normFilas(l.filas)) campos.push('filas');
+      if (!!datos.activa !== !!l.activa) campos.push('activa');
+      if (seccionDestino !== seccionId) campos.push('seccion');
+    }
+    const otrasHojas = (!nueva && l.num && campos.length) ? hnHojasConTienda_(l.num) : [];
+
+    const guardar = function (aplicarEn, alFallar) {
     hnAccion_('linea_guardar', datos)
       .then(function (r) {
         const pendientes = [];
@@ -911,30 +1101,65 @@ function hnModalLinea_(seccionId, linea, numInicial) {
         return Promise.all(pendientes).then(function () { return r; });
       })
       .then(function (r) {
+        // Llevar los cambios a las otras hojas elegidas (después de mover
+        // de sección, para que use ya la sección nueva).
+        if (!aplicarEn || !aplicarEn.length) return r;
+        return hnAccion_('linea_propagar', { id: l.id, campos: campos, aplicarEn: aplicarEn });
+      })
+      .then(function (r) {
         cerrarModal();
-        let msg = nueva ? 'Tienda añadida' : 'Guardado';
+        if (!nueva) { hnAvisoResultado_('Guardado', r); hnCargar_(true); return; }
+        let msg = 'Tienda añadida';
         if (r && r.anadidasOtras) msg += ' (y en ' + r.anadidasOtras + (r.anadidasOtras === 1 ? ' hoja más' : ' hojas más') + ')';
         if (r && r.sinSeccion) msg += '. En ' + r.sinSeccion + (r.sinSeccion === 1 ? ' hoja' : ' hojas') + ' no había una sección con ese nombre';
         mostrarToast(msg);
         hnCargar_(true);
       })
-      .catch(function (err) { hnBotonLibre_(btn); hnErrorModal_(err); });
+      .catch(function (err) { hnBotonLibre_(btn); if (alFallar) alFallar(err); else hnErrorModal_(err); });
+    };
+
+    if (otrasHojas.length) {
+      const nombresCampos = { grupoNotas: 'A', dom: 'DOM', grupo: 'Grupo', grupo2: 'C', filas: 'plantas / refuerzos / observaciones', activa: 'si sale en la hoja', seccion: 'la sección' };
+      hnPreguntarHojas_({
+        titulo: '¿Cambiar también en otras hojas?',
+        texto: 'Has cambiado <b>' + campos.map(function (c) { return escapeHtml(nombresCampos[c]); }).join(', ') + '</b> de ' +
+          '<b>' + escapeHtml(l.nombre) + '</b>. ¿Lo cambio también en otros días o en la otra nave? Marca dónde.' +
+          (campos.indexOf('seccion') !== -1 ? '<br><span class="hn-paso-nota">La sección solo se cambia donde exista una con el mismo nombre.</span>' : ''),
+        elegibles: otrasHojas,
+        noElegibleTxt: 'la tienda no está en esa hoja',
+        onElegir: guardar
+      });
+      return;
+    }
+    hnBotonOcupado_(btn, 'Guardando…');
+    guardar([]);
   };
 }
 
 /** Editor de sección. sec: null para crear (debajo de `despuesDe`, o al final). */
 function hnModalSeccion_(sec, despuesDe) {
   const nueva = !sec;
-  const s = sec || { nombre: '', instruccion: '', nota: '', casillas: true, activa: true };
+  const s = sec || { nombre: '', instruccion: '', nota: '', casillas: true, activa: true, color: null };
+  let colorElegido = s.color || '';
   const cuerpo =
     '<div class="modal-campo"><label for="hn-s-nombre">Nombre</label><input type="text" id="hn-s-nombre" maxlength="80" placeholder="Ej: TXT PORTUGAL" value="' + escapeAttr(s.nombre || '') + '"></div>' +
     '<div class="modal-campo"><label for="hn-s-instr">Instrucción</label><input type="text" id="hn-s-instr" maxlength="120" list="hn-s-instr-lista" placeholder="Ej: SACAR GRUPO COMPLETO" value="' + escapeAttr(s.instruccion || '') + '">' +
       '<datalist id="hn-s-instr-lista"><option value="SACAR GRUPO COMPLETO"><option value="SACAR POR TIENDA"><option value="SACAR POR GRUPO"><option value="GAITE SACA POR GRUPO / PTA POR TIENDA"></datalist></div>' +
     '<div class="modal-campo"><label for="hn-s-nota">Nota</label><input type="text" id="hn-s-nota" maxlength="160" placeholder="Ej: GENERAR MARTES 14:00" value="' + escapeAttr(s.nota || '') + '"></div>' +
+    '<div class="modal-campo"><label>Color</label>' +
+      '<div class="hn-colores" id="hn-s-colores">' +
+        '<button type="button" class="hn-color-op hn-color-auto" data-color="" title="Verde si el nombre lleva ADELANTO; si no, gris">Automático</button>' +
+        '<button type="button" class="hn-color-op hn-color-ninguno" data-color="ninguno" title="Gris, como siempre">Sin color</button>' +
+        HN_COLORES.map(function (c) {
+          return '<button type="button" class="hn-color-op hn-muestra-' + c.id + '" data-color="' + c.id + '" title="' + c.nombre + '">' + c.nombre + '</button>';
+        }).join('') +
+      '</div>' +
+      '<span class="modal-campo-ayuda" id="hn-s-color-ayuda"></span>' +
+    '</div>' +
     '<label class="hn-check"><input type="checkbox" id="hn-s-casillas"' + (s.casillas ? ' checked' : '') + '> Casillas 1 · 2 · 3 para marcar</label>' +
     '<label class="hn-check"><input type="checkbox" id="hn-s-activa"' + (s.activa ? ' checked' : '') + '> Sale en la hoja</label>' +
     '<p class="modal-campo-ayuda">Una sección sin tiendas sale como título de bloque (p. ej. CANARIAS o MALAGA).</p>' +
-    (nueva ? '' : '<div class="hn-quitar"><button type="button" class="hn-link hn-link-peligro" id="hn-s-borrar">Eliminar sección y sus tiendas</button></div>');
+    (nueva ? '' : '<div class="hn-quitar"><button type="button" class="hn-link hn-link-peligro" id="hn-s-borrar">Eliminar sección y sus tiendas…</button></div>');
 
   hnAbrirModal_(nueva ? 'Nueva sección' : 'Editar sección', cuerpo,
     '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
@@ -942,15 +1167,50 @@ function hnModalSeccion_(sec, despuesDe) {
   ['hn-s-nombre', 'hn-s-instr', 'hn-s-nota'].forEach(function (id) { hnInputMayus_(document.getElementById(id)); });
   setTimeout(function () { document.getElementById('hn-s-nombre').focus(); }, 50);
 
+  // Color: se marca el elegido y se explica qué hará "Automático".
+  const pintarColores = function () {
+    const nombre = document.getElementById('hn-s-nombre').value;
+    document.querySelectorAll('#hn-s-colores .hn-color-op').forEach(function (b) {
+      b.classList.toggle('activo', b.dataset.color === colorElegido);
+    });
+    const auto = hnColorAuto_(nombre);
+    const autoBtn = document.querySelector('#hn-s-colores .hn-color-auto');
+    autoBtn.className = 'hn-color-op hn-color-auto' + (auto ? ' hn-muestra-' + auto : '') + (colorElegido === '' ? ' activo' : '');
+    document.getElementById('hn-s-color-ayuda').textContent = colorElegido === ''
+      ? (auto ? 'Automático: sale en verde porque es un ADELANTO.' : 'Automático: sale en gris. Si el nombre lleva ADELANTO, saldría en verde.')
+      : '';
+  };
+  document.querySelectorAll('#hn-s-colores .hn-color-op').forEach(function (b) {
+    b.onclick = function () { colorElegido = b.dataset.color; pintarColores(); };
+  });
+  document.getElementById('hn-s-nombre').addEventListener('input', pintarColores);
+  pintarColores();
+
   const bBorrar = document.getElementById('hn-s-borrar');
   if (bBorrar) {
     bBorrar.onclick = function () {
       const n = (sec.lineas || []).length;
-      appConfirm('Eliminar sección', 'Se eliminará la sección ' + (sec.nombre || '') + (n ? ' con sus ' + n + ' tiendas' : '') + ' de esta hoja.', function () {
-        hnAccion_('seccion_eliminar', { id: sec.id })
-          .then(function () { mostrarToast('Sección eliminada'); hnCargar_(true); })
-          .catch(mostrarErrorServidor);
-      }, true);
+      const otras = hnHojasConSeccion_(sec.nombre);
+      const borrarEn = function (lista, alFallar) {
+        hnAccion_('seccion_eliminar_en', { id: sec.id, aplicarEn: lista })
+          .then(function (r) { cerrarModal(); hnAvisoResultado_('Sección eliminada', r); hnCargar_(true); })
+          .catch(function (err) { if (alFallar) alFallar(err); else mostrarErrorServidor(err); });
+      };
+      if (!otras.length) {
+        appConfirm('Eliminar sección', 'Se eliminará la sección ' + (sec.nombre || '') + (n ? ' con sus ' + n + ' tiendas' : '') + ' de esta hoja.', function () { borrarEn([]); }, true);
+        return;
+      }
+      hnPreguntarHojas_({
+        titulo: 'Eliminar sección',
+        texto: 'Se eliminará <b>' + escapeHtml(sec.nombre || '') + '</b>' + (n ? ' con sus ' + n + ' tiendas' : '') +
+          '. Hay una sección con el mismo nombre en otras hojas: ¿la elimino también allí (con sus tiendas)?',
+        elegibles: otras,
+        noElegibleTxt: 'no tiene esa sección',
+        botonSolo: 'Solo en esta hoja',
+        botonVarias: 'Eliminar también en',
+        peligro: true,
+        onElegir: borrarEn
+      });
     };
   }
 
@@ -963,7 +1223,8 @@ function hnModalSeccion_(sec, despuesDe) {
       instruccion: document.getElementById('hn-s-instr').value,
       nota: document.getElementById('hn-s-nota').value,
       casillas: document.getElementById('hn-s-casillas').checked,
-      activa: document.getElementById('hn-s-activa').checked
+      activa: document.getElementById('hn-s-activa').checked,
+      color: colorElegido
     };
     if (nueva) {
       datos.dia = HN.dia;
@@ -972,10 +1233,60 @@ function hnModalSeccion_(sec, despuesDe) {
     } else {
       datos.id = sec.id;
     }
+
+    // Qué ha cambiado y en qué otras hojas se puede aplicar.
+    const campos = [];
+    let otras = [];
+    const secRef = despuesDe ? hnBuscarSeccion_(despuesDe) : null;
+    if (nueva) {
+      const yaEstan = hnHojasConSeccion_(nombre);
+      otras = hnOtrasHojas_().filter(function (k) { return yaEstan.indexOf(k) === -1; });
+    } else {
+      const norm = function (v) { return String(v || '').trim().toUpperCase(); };
+      if (norm(datos.nombre) !== norm(sec.nombre)) campos.push('nombre');
+      if (norm(datos.instruccion) !== norm(sec.instruccion)) campos.push('instruccion');
+      if (norm(datos.nota) !== norm(sec.nota)) campos.push('nota');
+      if (!!datos.casillas !== !!sec.casillas) campos.push('casillas');
+      if (!!datos.activa !== !!sec.activa) campos.push('activa');
+      if ((datos.color || '') !== (sec.color || '')) campos.push('color');
+      if (campos.length) otras = hnHojasConSeccion_(sec.nombre);
+    }
+
+    const guardar = function (aplicarEn, alFallar) {
+      hnAccion_('seccion_guardar', datos)
+        .then(function (r) {
+          if (!aplicarEn || !aplicarEn.length) return r;
+          if (nueva) {
+            return hnAccion_('seccion_copiar_en', { id: r.id, aplicarEn: aplicarEn, despuesDeNombre: secRef ? secRef.nombre : '' });
+          }
+          return hnAccion_('seccion_propagar', { id: sec.id, nombreAnterior: sec.nombre, campos: campos, aplicarEn: aplicarEn });
+        })
+        .then(function (r) { cerrarModal(); hnAvisoResultado_(nueva ? 'Sección creada' : 'Sección guardada', r); hnCargar_(true); })
+        .catch(function (err) { hnBotonLibre_(btn); if (alFallar) alFallar(err); else hnErrorModal_(err); });
+    };
+
+    if (otras.length) {
+      const nombresCampos = { nombre: 'el nombre', instruccion: 'la instrucción', nota: 'la nota', casillas: 'las casillas', activa: 'si sale en la hoja', color: 'el color' };
+      hnPreguntarHojas_(nueva ? {
+        titulo: '¿Crear también en otras hojas?',
+        texto: '¿Creo la sección <b>' + escapeHtml(nombre) + '</b> también en otros días o en la otra nave?' +
+          (secRef ? ' Irá debajo de <b>' + escapeHtml(secRef.nombre) + '</b> donde exista; si no, al final.' : ' Irá al final de cada hoja.'),
+        elegibles: otras,
+        noElegibleTxt: 'ya tiene esa sección',
+        botonVarias: 'Crear también en',
+        onElegir: guardar
+      } : {
+        titulo: '¿Cambiar también en otras hojas?',
+        texto: 'Has cambiado <b>' + campos.map(function (c) { return nombresCampos[c]; }).join(', ') + '</b> de la sección <b>' + escapeHtml(sec.nombre) + '</b>. ' +
+          '¿Lo cambio también en las secciones con el mismo nombre de otros días o de la otra nave?',
+        elegibles: otras,
+        noElegibleTxt: 'no tiene esa sección',
+        onElegir: guardar
+      });
+      return;
+    }
     hnBotonOcupado_(btn, 'Guardando…');
-    hnAccion_('seccion_guardar', datos)
-      .then(function () { cerrarModal(); mostrarToast(nueva ? 'Sección creada' : 'Sección guardada'); hnCargar_(true); })
-      .catch(function (err) { hnBotonLibre_(btn); hnErrorModal_(err); });
+    guardar([]);
   };
 }
 
