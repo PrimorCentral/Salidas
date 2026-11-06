@@ -658,10 +658,12 @@ function hnFilasLineaHtml_(l, fest, editar, iLin, nLin) {
       html += fest.map(function () { return '<td class="hn-fest"></td>'; }).join('') +
         '<td class="hn-ab"></td><td class="hn-dom"></td><td class="hn-grupo"></td><td class="hn-g2"></td><td class="hn-tienda"></td><td class="hn-hora"></td><td class="hn-age"></td><td class="hn-pob"></td>';
     }
+    // Color del renglón (opcional): pinta sus casillas de planta, refuerzo y observación.
+    const rc = f.color ? ' hn-rc hn-rc-' + f.color : '';
     html +=
-      '<td class="hn-planta' + (f.planta ? ' hn-lleno' : '') + '">' + escapeHtml(f.planta || '') + '</td>' +
-      '<td class="hn-ref' + (f.ref ? ' hn-lleno' : '') + '">' + escapeHtml(f.ref || '') + '</td>' +
-      '<td class="hn-obs' + (f.obs ? ' hn-lleno' : '') + '">' + escapeHtml(f.obs || '') + '</td>' +
+      '<td class="hn-planta' + (f.planta ? ' hn-lleno' : '') + rc + '">' + escapeHtml(f.planta || '') + '</td>' +
+      '<td class="hn-ref' + (f.ref ? ' hn-lleno' : '') + rc + '">' + escapeHtml(f.ref || '') + '</td>' +
+      '<td class="hn-obs' + (f.obs ? ' hn-lleno' : '') + rc + '">' + escapeHtml(f.obs || '') + '</td>' +
       '<td class="hn-x"></td><td class="hn-x"></td><td class="hn-x"></td>';
     if (editar) {
       html += '<td class="hn-acc">' + (i === 0
@@ -950,13 +952,35 @@ function hnModalLinea_(seccionId, linea, numInicial) {
   const pintarFila = function (f) {
     const div = document.createElement('div');
     div.className = 'hn-filas-ed-fila';
+    div.dataset.color = f.color || '';
     div.innerHTML =
       '<input type="text" class="hn-f-planta" placeholder="Planta" maxlength="40" value="' + escapeAttr(f.planta || '') + '">' +
       '<input type="text" class="hn-f-ref" placeholder="Refuerzo" maxlength="80" value="' + escapeAttr(f.ref || '') + '">' +
       '<input type="text" class="hn-f-obs" placeholder="Observación" maxlength="120" value="' + escapeAttr(f.obs || '') + '">' +
-      '<button type="button" title="Quitar renglón">×</button>';
+      '<button type="button" class="hn-f-color" title="Color del renglón"></button>' +
+      '<button type="button" class="hn-f-quitar" title="Quitar renglón">×</button>' +
+      // Paleta del color del renglón (se abre con el botón de color)
+      '<div class="hn-f-paleta" style="display:none">' +
+        '<button type="button" class="hn-color-op hn-color-ninguno" data-color="">Sin color</button>' +
+        HN_COLORES.map(function (c) {
+          return '<button type="button" class="hn-color-op hn-muestra-' + c.id + '" data-color="' + c.id + '">' + c.nombre + '</button>';
+        }).join('') +
+      '</div>';
     div.querySelectorAll('input').forEach(hnInputMayus_);
-    div.querySelector('button').onclick = function () { div.remove(); };
+    const btnColor = div.querySelector('.hn-f-color');
+    const paleta = div.querySelector('.hn-f-paleta');
+    const pintarColor = function () {
+      const c = div.dataset.color;
+      btnColor.className = 'hn-f-color' + (c ? ' hn-muestra-' + c : '');
+      btnColor.title = 'Color del renglón: ' + (c ? (HN_COLORES.find(function (x) { return x.id === c; }) || {}).nombre : 'sin color');
+      paleta.querySelectorAll('.hn-color-op').forEach(function (b) { b.classList.toggle('activo', b.dataset.color === c); });
+    };
+    btnColor.onclick = function () { paleta.style.display = paleta.style.display === 'none' ? '' : 'none'; };
+    paleta.querySelectorAll('.hn-color-op').forEach(function (b) {
+      b.onclick = function () { div.dataset.color = b.dataset.color; pintarColor(); paleta.style.display = 'none'; };
+    });
+    pintarColor();
+    div.querySelector('.hn-f-quitar').onclick = function () { div.remove(); };
     contFilas.appendChild(div);
   };
   (l.filas || []).forEach(pintarFila);
@@ -999,7 +1023,10 @@ function hnModalLinea_(seccionId, linea, numInicial) {
       if (f.planta) limpio.planta = f.planta;
       if (f.ref) limpio.ref = f.ref;
       if (f.obs) limpio.obs = f.obs;
-      if (Object.keys(limpio).length) res.push(limpio);
+      if (Object.keys(limpio).length) {
+        if (div.dataset.color) limpio.color = div.dataset.color;
+        res.push(limpio);
+      }
     });
     return res;
   };
@@ -1068,7 +1095,7 @@ function hnModalLinea_(seccionId, linea, numInicial) {
       const norm = function (v) { return String(v || '').trim().toUpperCase(); };
       const normFilas = function (lista) {
         return JSON.stringify((lista || []).map(function (f) {
-          return { planta: norm(f.planta), ref: norm(f.ref), obs: norm(f.obs) };
+          return { planta: norm(f.planta), ref: norm(f.ref), obs: norm(f.obs), color: f.color || '' };
         }).filter(function (f) { return f.planta || f.ref || f.obs; }));
       };
       if (norm(datos.grupoNotas) !== norm(l.grupoNotas)) campos.push('grupoNotas');
