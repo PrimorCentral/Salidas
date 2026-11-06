@@ -665,6 +665,21 @@ const SUPABASE_ACCIONES_ = {
       p_campos_compartidos: c.modo === 'doble' ? (c.camposCompartidos || []) : null
     });
   },
+  // Tienda puntual: una o varias tiendas que ese día no salen por ninguna
+  // agrupación se añaden solo esa fecha a una agrupación (las que ya salen
+  // por otra se guardan como cambio puntual). Todo o nada.
+  guardarTiendaPuntual: function (args) {
+    const c = args[0];
+    return llamarRpcSupabase_('guardar_tienda_puntual', {
+      p_fecha: c.fecha,
+      p_agrupacion: c.agrupacion,
+      p_tiendas: c.tiendas || [],
+      p_limite: c.limite || null,
+      p_posicion: c.posicion || 'final',
+      p_debajo_tienda: c.debajoTienda || null,
+      p_grupo_id: c.grupoId || null
+    });
+  },
   eliminarExcepcionTienda: function (args) {
     return llamarRpcSupabase_('eliminar_excepcion_tienda', { p_id: args[0] });
   },

@@ -155,7 +155,14 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
         ' · aquí: ' + (camposPropiosDobleTexto_(fuera, t.camposCompartidos) || 'solo PDTE')
       ) + '">&#8644; DOBLE</span>'
     : '';
-  const tituloEntrada = t.entraPorExcepcion
+  // Tienda puntual: no es de ninguna agrupación ese día, solo sale hoy por
+  // aquí. Etiqueta "PUNTUAL" al lado del nombre.
+  const avisoPuntualHtml = t.tiendaPuntual
+    ? '<span class="aviso-tienda-puntual" title="Tienda puntual: solo sale este día por aquí (se quita desde Bloqueos y cambios)">PUNTUAL</span>'
+    : '';
+  const tituloEntrada = t.tiendaPuntual
+    ? ' title="Tienda puntual: solo sale este día por aquí, no está en la plantilla."'
+    : t.entraPorExcepcion
     ? (esDoble
         ? ' title="Doble salida: hoy esta tienda sale por aquí y por ' + escapeAttr(otra) + '. Aquí solo se rellenan sus columnas."'
         : ' title="Sale por aquí hoy por un cambio puntual (excepción), no es de esta agrupación habitualmente."')
@@ -169,7 +176,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<input class="celda" data-campo="' + campo + '" type="number"' + (step ? ' step="' + step + '"' : '') + ' value="' + (valor == null ? '' : valor) + '">';
   };
   return '<tr class="' + (claseGrupo.trim() + claseExcepcionEntrada + claseDoble).trim() + '" data-row="' + t.row + '" data-limite="' + escapeAttr(textoLimite_(t.limite)) + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + tituloEntrada + '>' +
-    '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + avisoDobleHtml + '</td>' +
+    '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + avisoPuntualHtml + notaHtml + avisoDobleHtml + '</td>' +
     '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
     (tieneViernes ? (esFuera('extras') && !t.excluidaViernes ? '<td>' + celdaOtraAgrupacionHtml_('viernes', otra) + '</td>' : celdaViernesHtml_(t)) : '') +
     (tieneDomingo ? (esFuera('extras') && !t.excluidaDomingo ? '<td>' + celdaOtraAgrupacionHtml_('casillaDomingo', otra) + '</td>' : celdaDomingoHtml_(t)) : '') +

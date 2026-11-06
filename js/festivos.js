@@ -291,6 +291,12 @@ function aplanarDatosFestivos_(datosDias) {
       });
       (seccion.tiendas || []).forEach(function (t) {
         if (t.cerrada) lista.push({ fecha: data.fecha, tag: t.nombre, tipo: 'cierre', texto: t.motivoCierre || 'CONTEO BLOQUEADO', id: t.cierreId });
+        // Tienda puntual: sale solo ese día por esta agrupación. Cuenta
+        // como un cambio (filtro «Cambios»), pero con su propia tarjeta.
+        if (t.tiendaPuntual && t.excepcionId) {
+          lista.push({ fecha: data.fecha, tag: 'Tienda puntual · ' + parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', puntual: true,
+            texto: t.nombre + ' sale solo este día por ' + parsearNombreAgrupacion(seccion.nombre).titulo, id: t.excepcionId });
+        }
       });
       (seccion.excepcionesSalida || []).forEach(function (e) {
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', texto: e.texto, id: e.id });
@@ -397,10 +403,10 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     col.className = 'festivos-dia-col' + (esHoy ? ' es-hoy' : '') + (g.items.length ? '' : ' vacio');
     const itemsHtml = g.items.length
       ? g.items.map(function (it) {
-          const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : (it.tipo === 'cambio' ? 'festivos-item cambio' : 'festivos-item');
-          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? ICONO_CAMBIO_ : ICONO_NOTA_);
+          const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : (it.tipo === 'cambio' ? 'festivos-item cambio' + (it.puntual ? ' puntual' : '') : 'festivos-item');
+          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? (it.puntual ? ICONO_PUNTUAL_ : ICONO_CAMBIO_) : ICONO_NOTA_);
           const delBtn = it.id
-            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '" title="Eliminar">' +
+            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + ' title="Eliminar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
           // Lápiz para editar el texto: solo notas y bloqueos (los cambios
@@ -457,12 +463,13 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
   });
 
   listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
-    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo')); };
+    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo'), btn.getAttribute('data-puntual') === '1'); };
   });
 }
 
 const ICONO_NOTA_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
 const ICONO_CIERRE_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>';
+const ICONO_PUNTUAL_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-5h14.8L21 9"/><path d="M3 9h18"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-6h5v6"/></svg>';
 const ICONO_CAMBIO_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 
 // Quita del caché local (FESTIVOS_ESTADO.datosCache) el elemento con el id
@@ -488,6 +495,7 @@ function quitarDeCacheFestivos_(id) {
         }
         if (t.excepcionId === id) {
           t.entraPorExcepcion = false;
+          t.tiendaPuntual = false;
           t.excepcionId = null;
         }
       });
@@ -734,10 +742,12 @@ function cambiarTextoEnCacheFestivos_(id, texto) {
   });
 }
 
-function eliminarObservacionDesdeFestivos_(id, tipo) {
+function eliminarObservacionDesdeFestivos_(id, tipo, esPuntual) {
   appConfirm(
-    'Eliminar registro',
-    '¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.',
+    esPuntual ? 'Quitar tienda puntual' : 'Eliminar registro',
+    esPuntual
+      ? '¿Seguro que quieres quitar esta tienda puntual? Ese día deja de salir por esa agrupación y, si ya tenía palets contados, se borran. Esta acción no se puede deshacer.'
+      : '¿Seguro que quieres eliminar este registro? Esta acción no se puede deshacer.',
     function () {
       // Guardamos una copia del caché para poder revertir si el servidor falla.
       const copiaCache = JSON.parse(JSON.stringify(FESTIVOS_ESTADO.datosCache || []));

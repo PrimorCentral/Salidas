@@ -32,7 +32,7 @@ function abrirGestorObservaciones(fechaInicial) {
   const fecha = (typeof fechaInicial === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaInicial))
     ? fechaInicial
     : null;
-  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: null, seleccion: null, cargaId: 0, guardando: false };
+  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: null, seleccion: null, cargaId: 0, guardando: false, puntual: nuevoEstadoPuntualGestorObs_(), tiendasConfig: null };
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
@@ -96,6 +96,9 @@ function crearFormularioGestorObs_() {
         '<button type="button" class="gestor-tipo-pill" data-tipo="cambio">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' +
           'Cambio puntual</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="puntual">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-5h14.8L21 9"/><path d="M3 9h18"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-6h5v6"/></svg>' +
+          'Tienda puntual</button>' +
       '</div>' +
       '<div class="gestor-aviso" id="gestor-aviso-dia" style="display:none;margin-top:8px;">Ese día de la semana no tiene hoja de conteo: solo se puede añadir una nota general.</div>' +
     '</div>' +
@@ -113,6 +116,42 @@ function crearFormularioGestorObs_() {
       '<label>Agrupación destino</label>' +
       '<select id="gestor-destino-select"></select>' +
       '<div class="gestor-campo-ayuda" id="gestor-destino-ayuda"></div>' +
+    '</div>' +
+    // "Tienda puntual": una tienda que ese día no sale por ninguna
+    // agrupación y se añade solo para esa fecha. Mismo listado que "Añadir
+    // tienda" de un conteo especial (Rutas y tiendas).
+    '<div class="gestor-campo gestor-puntual" id="gestor-puntual-campo" style="display:none;">' +
+      '<div class="gestor-aviso" id="gestor-puntual-aviso" style="display:none;"></div>' +
+      '<div id="gestor-puntual-cuerpo">' +
+        '<label for="gestor-puntual-agrupacion">Agrupación por la que sale</label>' +
+        '<select id="gestor-puntual-agrupacion"></select>' +
+        '<div id="gestor-puntual-resto" style="display:none;">' +
+          '<label for="gestor-puntual-buscar" class="gestor-puntual-sublabel">Tiendas</label>' +
+          '<input type="text" id="gestor-puntual-buscar" placeholder="Buscar por número o nombre…" autocomplete="off">' +
+          '<div class="modal-plantilla-marcar">' +
+            '<button type="button" class="modal-link-btn" id="gestor-puntual-marcar-todas">Marcar todas</button>' +
+            '<button type="button" class="modal-link-btn" id="gestor-puntual-desmarcar-todas">Desmarcar todas</button>' +
+            '<button type="button" class="modal-link-btn modal-plantilla-ver-todas" id="gestor-puntual-ver-todas">Ver todas las tiendas</button>' +
+          '</div>' +
+          '<div class="modal-plantilla-lista-tiendas gestor-puntual-lista" id="gestor-puntual-lista"></div>' +
+          '<div class="gestor-campo-ayuda" id="gestor-puntual-ayuda-lista"></div>' +
+          '<label class="gestor-puntual-sublabel">Límite de palets</label>' +
+          '<div class="plantilla-caja-limite" id="gestor-puntual-lim-general"><span class="modal-campo-ayuda" style="margin:0">Elige primero la tienda.</span></div>' +
+          '<button type="button" class="modal-link-btn" id="gestor-puntual-lim-toggle" style="margin-top:6px;font-size:12.5px;">Poner un límite distinto solo para este día…</button>' +
+          '<input type="text" id="gestor-puntual-lim" inputmode="numeric" placeholder="Límite solo para este día" style="display:none;margin-top:6px;">' +
+          '<div class="plantilla-anadir-colocar gestor-puntual-colocar">' +
+            '<div class="modal-campo">' +
+              '<label for="gestor-puntual-pos">Posición en la agrupación</label>' +
+              '<select id="gestor-puntual-pos"></select>' +
+            '</div>' +
+            '<div class="modal-campo">' +
+              '<label for="gestor-puntual-grupo">Grupo de palets</label>' +
+              '<select id="gestor-puntual-grupo"></select>' +
+            '</div>' +
+          '</div>' +
+          '<div class="gestor-campo-ayuda">Solo para este día: la plantilla de Rutas y tiendas no cambia. La tienda sale con las casillas 60, PTA y CARTAMA abiertas y sus palets cuentan para el límite del grupo.</div>' +
+        '</div>' +
+      '</div>' +
     '</div>' +
     '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
       '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
@@ -177,6 +216,7 @@ function crearFormularioGestorObs_() {
     GESTOR_OBS.fecha = e.target.value;
     GESTOR_OBS.datosDia = null;
     GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
+    GESTOR_OBS.puntual = nuevoEstadoPuntualGestorObs_();
     document.getElementById('gestor-busqueda').value = '';
     const btnLimpiar = document.getElementById('gestor-busqueda-clear');
     if (btnLimpiar) btnLimpiar.classList.remove('visible');
@@ -209,6 +249,7 @@ function crearFormularioGestorObs_() {
       GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre'
         ? []
         : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
+      GESTOR_OBS.puntual = nuevoEstadoPuntualGestorObs_();
       document.getElementById('gestor-busqueda').value = '';
       const btnLimpiar = document.getElementById('gestor-busqueda-clear');
       if (btnLimpiar) btnLimpiar.classList.remove('visible');
@@ -327,6 +368,8 @@ function crearFormularioGestorObs_() {
     inputBusqueda.focus();
   });
 
+  conectarControlesPuntualGestorObs_(wrap);
+
   return wrap;
 }
 
@@ -351,6 +394,13 @@ function actualizarFormularioSegunTipo_() {
   if (form) form.classList.toggle('gestor-form-cambio', esCambio);
   const vacioDer = document.getElementById('gestor-der-vacio');
   if (vacioDer) vacioDer.style.display = 'none';
+  // "Tienda puntual": modal ancho (la lista de tiendas va en columnas),
+  // pero en una sola columna.
+  const esPuntual = GESTOR_OBS.tipo === 'puntual';
+  if (caja && esPuntual) caja.classList.add('gestor-ancho');
+  if (form) form.classList.toggle('gestor-form-puntual', esPuntual);
+  const campoPuntual = document.getElementById('gestor-puntual-campo');
+  if (campoPuntual) campoPuntual.style.display = esPuntual ? '' : 'none';
 
   if (!GESTOR_OBS.tipo) {
     // Aún no se ha elegido tipo: solo se ven Fecha y Tipo.
@@ -369,6 +419,11 @@ function actualizarFormularioSegunTipo_() {
     inputBusqueda.placeholder = 'Busca una agrupación…';
     textoLabel.textContent = 'Nota';
     textoArea.placeholder = 'Escribe la nota para esta agrupación…';
+  } else if (GESTOR_OBS.tipo === 'puntual') {
+    campoBusqueda.style.display = 'none';
+    ayuda.style.display = 'none';
+    if (campoTexto) campoTexto.style.display = 'none';
+    pintarPuntualGestorObs_();
   } else if (GESTOR_OBS.tipo === 'cambio') {
     campoBusqueda.style.display = 'block';
     ayuda.style.display = 'block';
@@ -573,6 +628,15 @@ function actualizarSeccionModoGestorObs_() {
 function formularioGestorObsCompleto_() {
   if (!GESTOR_OBS.fecha || !GESTOR_OBS.tipo || !GESTOR_OBS.datosDia) return false;
   const sel = GESTOR_OBS.seleccion;
+  if (GESTOR_OBS.tipo === 'puntual') {
+    const p = GESTOR_OBS.puntual || {};
+    if (GESTOR_OBS.datosDia.diaEspecial || !p.agrupacion || !(p.seleccionadas && p.seleccionadas.length)) return false;
+    if (p.limPropio) {
+      const v = ((document.getElementById('gestor-puntual-lim') || {}).value || '').trim().replace(',', '.');
+      if (v === '' || isNaN(Number(v)) || Number(v) < 0) return false;
+    }
+    return true;
+  }
   if (GESTOR_OBS.tipo === 'cambio') {
     if (!sel || !(sel.origenes && sel.origenes.length) || !sel.destino) return false;
     if (sel.modo === 'doble' && !(sel.campos && sel.campos.length)) return false;
@@ -594,6 +658,11 @@ function actualizarBotonGuardarGestor_() {
   btn.disabled = !formularioGestorObsCompleto_();
   btn.title = btn.disabled ? 'Rellena todos los campos para poder guardar' : '';
   const sel = GESTOR_OBS.seleccion;
+  if (GESTOR_OBS.tipo === 'puntual') {
+    const np = GESTOR_OBS.puntual && GESTOR_OBS.puntual.seleccionadas ? GESTOR_OBS.puntual.seleccionadas.length : 0;
+    btn.textContent = np > 1 ? 'Guardar ' + np + ' tiendas' : 'Guardar';
+    return;
+  }
   if (GESTOR_OBS.tipo === 'cambio') {
     const nc = sel && sel.origenes ? sel.origenes.length : 0;
     btn.textContent = nc > 1 ? 'Guardar ' + nc + ' cambios' : 'Guardar';
@@ -713,9 +782,10 @@ function cargarDatosDiaGestorObs_(fecha) {
     if (avisoError) avisoError.classList.add('visible');
   }
 
-  function aplicarDatos(data) {
+  function aplicarDatos(data, deLaPlantilla) {
     try {
       GESTOR_OBS.datosDia = data;
+      GESTOR_OBS.datosDiaDePlantilla = !!deLaPlantilla;
       if (overlay) overlay.classList.remove('visible');
 
       const sinDia = !data.dia || !(data.secciones && data.secciones.length);
@@ -724,6 +794,8 @@ function cargarDatosDiaGestorObs_(fecha) {
       const aviso = document.getElementById('gestor-aviso-dia');
       if (pillAgr) pillAgr.disabled = sinDia;
       if (pillCierre) pillCierre.disabled = sinDia;
+      const pillPuntual = document.querySelector('.gestor-tipo-pill[data-tipo="puntual"]');
+      if (pillPuntual) pillPuntual.disabled = sinDia;
       if (aviso) aviso.style.display = sinDia ? 'block' : 'none';
 
       if (sinDia && GESTOR_OBS.tipo && GESTOR_OBS.tipo !== 'general') {
@@ -750,7 +822,7 @@ function cargarDatosDiaGestorObs_(fecha) {
       .then(function (data) {
         clearTimeout(timeoutId);
         if (miId !== GESTOR_OBS.cargaId) return;
-        aplicarDatos(data);
+        aplicarDatos(data, true);
       })
       .catch(function (err) {
         clearTimeout(timeoutId);
@@ -1014,6 +1086,10 @@ function guardarDesdeGestorObs_() {
     guardarCambioPuntualDesdeGestor_();
     return;
   }
+  if (GESTOR_OBS.tipo === 'puntual') {
+    guardarTiendaPuntualDesdeGestor_();
+    return;
+  }
 
   const texto = (document.getElementById('gestor-texto').value || '').trim();
   if (!texto) { document.getElementById('gestor-texto').focus(); return; }
@@ -1143,6 +1219,396 @@ function guardarCambioPuntualDesdeGestor_() {
         actualizarSeleccionGestorObs_();
         refrescar();
       }
+      mostrarErrorServidor(err);
+    });
+}
+
+/* ---------------- TIENDA PUNTUAL ----------------
+ * Tienda que ese día NO sale por ninguna agrupación y se añade solo para
+ * esa fecha a una agrupación (la plantilla no cambia). El listado es el
+ * mismo que "Añadir tienda" en un conteo especial: las tiendas de
+ * Configuración tiendas (GIDT) que ese día no están ya, por defecto solo
+ * las que alguna vez van en esa agrupación ("Ver todas las tiendas" para
+ * el resto). Si se marca una que ese día ya sale por OTRA agrupación, no
+ * se duplica: se guarda como cambio puntual de los de siempre. */
+
+function nuevoEstadoPuntualGestorObs_() {
+  return { agrupacion: null, seleccionadas: [], limites: {}, verTodas: false, limPropio: false, confirmado: false, filtro: '' };
+}
+
+function esDiaEspecialGestorObs_() {
+  const d = GESTOR_OBS.datosDia || {};
+  return !!d.diaEspecial || /^ESPECIAL/i.test(String(d.dia || ''));
+}
+
+/** Tiendas de Configuración tiendas (se piden una vez por apertura). */
+function cargarTiendasConfigPuntualGestorObs_() {
+  if (GESTOR_OBS.tiendasConfig || GESTOR_OBS.cargandoTiendasConfig) return;
+  GESTOR_OBS.cargandoTiendasConfig = true;
+  llamarApi_('getTiendasConfig', [])
+    .then(function (lista) {
+      GESTOR_OBS.cargandoTiendasConfig = false;
+      GESTOR_OBS.tiendasConfig = lista || [];
+      if (GESTOR_OBS.tipo === 'puntual') pintarPuntualGestorObs_();
+    })
+    .catch(function (err) {
+      GESTOR_OBS.cargandoTiendasConfig = false;
+      const lista = document.getElementById('gestor-puntual-lista');
+      if (lista) lista.innerHTML = '<div class="modal-plantilla-tienda-vacio">No se ha podido cargar el listado de tiendas.</div>';
+      mostrarErrorServidor(err);
+    });
+}
+
+/** Dónde está cada tienda ese día (según el conteo cargado): clave ->
+ *  { nombre, agrupacion, entra } (entra = ya entra en algún sitio por un
+ *  cambio puntual o es ya una tienda puntual). */
+function tiendasDelDiaPuntualGestorObs_() {
+  const mapa = {};
+  ((GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.secciones) || []).forEach(function (s) {
+    (s.tiendas || []).forEach(function (t) {
+      const k = claveComparableTienda_(t.nombre);
+      const previo = mapa[k];
+      if (t.entraPorExcepcion) {
+        mapa[k] = { nombre: t.nombre, agrupacion: s.nombre, entra: true };
+      } else if (!previo) {
+        mapa[k] = { nombre: t.nombre, agrupacion: s.nombre, entra: false };
+      }
+    });
+  });
+  return mapa;
+}
+
+/** Candidatas para la agrupación elegida: { todas, deLaAgrupacion, enOtra }. */
+function candidatasPuntualGestorObs_() {
+  const p = GESTOR_OBS.puntual;
+  const enElDia = tiendasDelDiaPuntualGestorObs_();
+  const enOtra = {};
+  const todas = (GESTOR_OBS.tiendasConfig || [])
+    .filter(function (t) {
+      const info = enElDia[claveComparableTienda_(t.tienda)];
+      if (!info) return true;
+      // Ya sale por esta agrupación, o ya entra en algún sitio por un
+      // cambio puntual / tienda puntual: no se ofrece.
+      if (info.entra || info.agrupacion === p.agrupacion) return false;
+      enOtra[t.tienda] = info;
+      return true;
+    })
+    .sort(function (a, b) { return a.tienda.localeCompare(b.tienda); });
+  const claveRuta = claveAgrupacionJs_(p.agrupacion);
+  const deLaAgrupacion = todas.filter(function (t) {
+    return (t.agrupaciones || []).some(function (a) { return claveAgrupacionJs_(a) === claveRuta; });
+  });
+  return { todas: todas, deLaAgrupacion: deLaAgrupacion, enOtra: enOtra };
+}
+
+/** Pinta todo el bloque "Tienda puntual" según el estado actual. */
+function pintarPuntualGestorObs_() {
+  const campo = document.getElementById('gestor-puntual-campo');
+  if (!campo || GESTOR_OBS.tipo !== 'puntual') return;
+  const aviso = document.getElementById('gestor-puntual-aviso');
+  const cuerpo = document.getElementById('gestor-puntual-cuerpo');
+  const p = GESTOR_OBS.puntual = GESTOR_OBS.puntual || nuevoEstadoPuntualGestorObs_();
+
+  if (!GESTOR_OBS.fecha || !GESTOR_OBS.datosDia) {
+    aviso.textContent = GESTOR_OBS.fecha ? 'Cargando las agrupaciones de ese día…' : 'Elige primero la fecha.';
+    aviso.style.display = '';
+    cuerpo.style.display = 'none';
+    return;
+  }
+  if (esDiaEspecialGestorObs_()) {
+    aviso.textContent = 'Ese día es un conteo especial: las tiendas se añaden desde Rutas y tiendas (botón «Añadir tienda» de cada ruta).';
+    aviso.style.display = '';
+    cuerpo.style.display = 'none';
+    return;
+  }
+  aviso.style.display = 'none';
+  cuerpo.style.display = '';
+  cargarTiendasConfigPuntualGestorObs_();
+
+  // Agrupaciones de ese día a las que aún se puede añadir (no enviadas).
+  const selAgr = document.getElementById('gestor-puntual-agrupacion');
+  const secciones = (GESTOR_OBS.datosDia.secciones || []).filter(function (s) { return s.estado !== 'enviado'; });
+  if (p.agrupacion && !secciones.some(function (s) { return s.nombre === p.agrupacion; })) p.agrupacion = null;
+  selAgr.innerHTML = '<option value="">Elige la agrupación…</option>' +
+    secciones.map(function (s) {
+      return '<option value="' + escapeAttr(s.nombre) + '"' + (s.nombre === p.agrupacion ? ' selected' : '') + '>' + escapeHtml(s.nombre) + '</option>';
+    }).join('');
+
+  const resto = document.getElementById('gestor-puntual-resto');
+  if (!p.agrupacion) { resto.style.display = 'none'; actualizarBotonGuardarGestor_(); return; }
+  resto.style.display = '';
+
+  pintarListaPuntualGestorObs_();
+  pintarLimitePuntualGestorObs_();
+  pintarColocarPuntualGestorObs_();
+  actualizarBotonGuardarGestor_();
+}
+
+function pintarListaPuntualGestorObs_() {
+  const p = GESTOR_OBS.puntual;
+  const listaEl = document.getElementById('gestor-puntual-lista');
+  const ayudaEl = document.getElementById('gestor-puntual-ayuda-lista');
+  const btnVer = document.getElementById('gestor-puntual-ver-todas');
+  const btnMarcar = document.getElementById('gestor-puntual-marcar-todas');
+  if (!listaEl) return;
+  const titulo = parsearNombreAgrupacion(p.agrupacion).titulo;
+  btnVer.textContent = p.verTodas ? ('Ver solo las de ' + titulo) : 'Ver todas las tiendas';
+
+  if (!GESTOR_OBS.tiendasConfig) {
+    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio"><span class="spinner-mini"></span> Cargando tiendas…</div>';
+    ayudaEl.textContent = '';
+    return;
+  }
+  const c = candidatasPuntualGestorObs_();
+  // Lo marcado que ya no es válido (p.ej. al cambiar de agrupación) se quita.
+  const validas = c.todas.map(function (t) { return t.tienda; });
+  p.seleccionadas = p.seleccionadas.filter(function (k) { return validas.indexOf(k) !== -1; });
+
+  const base = p.verTodas ? c.todas : c.deLaAgrupacion;
+  const f = String(p.filtro || '').trim().toLowerCase();
+  const items = f ? base.filter(function (t) { return t.tienda.toLowerCase().indexOf(f) !== -1; }) : base;
+  GESTOR_OBS.puntualVisibles = items;
+  GESTOR_OBS.puntualEnOtra = c.enOtra;
+  btnMarcar.textContent = f ? ('Marcar las ' + items.length + ' que se ven') : 'Marcar todas';
+
+  if (!items.length) {
+    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio">' +
+      (f ? 'Ninguna tienda coincide.'
+         : (p.verTodas ? 'No queda ninguna tienda por añadir ese día.'
+                       : 'No queda ninguna tienda de esta agrupación por añadir. Pulsa «Ver todas las tiendas» para elegir otra.')) +
+      '</div>';
+  } else {
+    listaEl.innerHTML = items.map(function (t) {
+      const marcada = p.seleccionadas.indexOf(t.tienda) !== -1;
+      const otra = c.enOtra[t.tienda];
+      return '<button type="button" class="modal-plantilla-tienda-item' + (marcada ? ' activa' : '') + '" data-clave="' + escapeAttr(t.tienda) + '" data-limite="' + escapeAttr(t.limite != null ? t.limite : '') + '">' +
+        '<span class="modal-plantilla-tienda-check">' + (marcada ? '✓' : '') + '</span>' +
+        '<span>' + escapeHtml(t.tienda) + '</span>' +
+        (otra
+          ? '<span class="modal-plantilla-tienda-badge en-otra" title="Ese día ya sale por ' + escapeAttr(otra.agrupacion) + '. Si la marcas, será un cambio puntual solo para ese día.">en ' + escapeHtml(parsearNombreAgrupacion(otra.agrupacion).titulo) + '</span>'
+          : '') +
+      '</button>';
+    }).join('');
+    listaEl.querySelectorAll('[data-clave]').forEach(function (btn) {
+      btn.onclick = function () {
+        const clave = btn.getAttribute('data-clave');
+        p.limites[clave] = btn.getAttribute('data-limite') || '';
+        const i = p.seleccionadas.indexOf(clave);
+        if (i === -1) p.seleccionadas.push(clave); else p.seleccionadas.splice(i, 1);
+        p.confirmado = false;
+        btn.classList.toggle('activa', i === -1);
+        btn.querySelector('.modal-plantilla-tienda-check').textContent = i === -1 ? '✓' : '';
+        pintarLimitePuntualGestorObs_();
+        actualizarAyudaListaPuntualGestorObs_();
+        actualizarBotonGuardarGestor_();
+      };
+    });
+  }
+  actualizarAyudaListaPuntualGestorObs_();
+}
+
+function actualizarAyudaListaPuntualGestorObs_() {
+  const p = GESTOR_OBS.puntual;
+  const ayudaEl = document.getElementById('gestor-puntual-ayuda-lista');
+  if (!ayudaEl) return;
+  const n = p.seleccionadas.length;
+  const enOtra = GESTOR_OBS.puntualEnOtra || {};
+  const nCambio = p.seleccionadas.filter(function (k) { return !!enOtra[k]; }).length;
+  let txt = n ? (n === 1 ? '1 tienda marcada.' : n + ' tiendas marcadas.') : '';
+  if (nCambio) txt += ' ' + (nCambio === 1 ? '1 ya sale' : nCambio + ' ya salen') + ' ese día por otra agrupación: se guardará' + (nCambio === 1 ? '' : 'n') + ' como cambio puntual.';
+  if (!p.verTodas) txt += (txt ? ' ' : '') + '¿No aparece la tienda? Pulsa «Ver todas las tiendas». Tiene que estar activa en GIDT.';
+  ayudaEl.textContent = txt;
+}
+
+function pintarLimitePuntualGestorObs_() {
+  const p = GESTOR_OBS.puntual;
+  const hint = document.getElementById('gestor-puntual-lim-general');
+  const toggle = document.getElementById('gestor-puntual-lim-toggle');
+  const input = document.getElementById('gestor-puntual-lim');
+  if (!hint) return;
+  const n = p.seleccionadas.length;
+  const enOtra = GESTOR_OBS.puntualEnOtra || {};
+  if (n === 1) {
+    const limGeneral = p.limites[p.seleccionadas[0]];
+    hint.innerHTML = limGeneral
+      ? '<span class="num">' + escapeHtml(limGeneral) + '</span><span>El límite general de la tienda (viene de GIDT).</span>'
+      : '<span class="modal-campo-ayuda" style="margin:0">Esta tienda no tiene límite general en GIDT (sin límite).</span>';
+  } else if (n > 1) {
+    hint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Cada tienda usará su límite general (de GIDT).</span>';
+  } else {
+    hint.innerHTML = '<span class="modal-campo-ayuda" style="margin:0">Elige primero la tienda.</span>';
+  }
+  // El límite "distinto solo este día" solo con una tienda puntual (a un
+  // cambio puntual no se le cambia el límite).
+  const puede = n === 1 && !enOtra[p.seleccionadas[0]];
+  if (!puede && p.limPropio) { p.limPropio = false; input.value = ''; }
+  toggle.style.display = puede ? '' : 'none';
+  toggle.textContent = p.limPropio ? 'Usar el límite general' : 'Poner un límite distinto solo para este día…';
+  input.style.display = p.limPropio ? '' : 'none';
+}
+
+/** Desplegables "Posición" y "Grupo de palets" con lo que tiene ese día la
+ *  agrupación elegida. */
+function pintarColocarPuntualGestorObs_() {
+  const p = GESTOR_OBS.puntual;
+  const selPos = document.getElementById('gestor-puntual-pos');
+  const selGrupo = document.getElementById('gestor-puntual-grupo');
+  if (!selPos || !selGrupo) return;
+  const seccion = ((GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.secciones) || []).filter(function (s) { return s.nombre === p.agrupacion; })[0];
+  const tiendas = seccion ? (seccion.tiendas || []).filter(function (t) { return !t.salePorExcepcion; }) : [];
+  const posPrevia = selPos.value;
+  const grupoPrevio = selGrupo.value;
+  // Desde la plantilla (fechas lejanas) las filas no son de ese día: solo
+  // se ofrece al principio / al final.
+  const puedeDebajo = !GESTOR_OBS.datosDiaDePlantilla;
+  selPos.innerHTML = '<option value="final">Al final</option><option value="inicio">Al principio</option>' +
+    (puedeDebajo ? tiendas.map(function (t) {
+      return '<option value="' + escapeAttr(t.row) + '">Debajo de ' + escapeHtml(t.nombre) + '</option>';
+    }).join('') : '');
+  if (posPrevia && selPos.querySelector('option[value="' + CSS.escape(posPrevia) + '"]')) selPos.value = posPrevia;
+
+  const grupos = [];
+  const vistos = {};
+  tiendas.forEach(function (t) {
+    if (!t.notaGrupoId) return;
+    if (!vistos[t.notaGrupoId]) {
+      vistos[t.notaGrupoId] = { id: t.notaGrupoId, texto: t.nota || 'Grupo', limite: t.notaLimite, n: 0 };
+      grupos.push(vistos[t.notaGrupoId]);
+    }
+    vistos[t.notaGrupoId].n++;
+  });
+  selGrupo.innerHTML = '<option value="">Sin grupo</option>' + grupos.map(function (g) {
+    return '<option value="' + escapeAttr(g.id) + '">' + escapeHtml(g.texto) + ' (' + g.n + ' tienda' + (g.n === 1 ? '' : 's') + ')</option>';
+  }).join('');
+  if (grupoPrevio && selGrupo.querySelector('option[value="' + CSS.escape(grupoPrevio) + '"]')) selGrupo.value = grupoPrevio;
+  selGrupo.disabled = !grupos.length;
+}
+
+/** Engancha los controles del bloque "Tienda puntual" (una vez, al crear el formulario). */
+function conectarControlesPuntualGestorObs_(wrap) {
+  const st = function () { return GESTOR_OBS.puntual || (GESTOR_OBS.puntual = nuevoEstadoPuntualGestorObs_()); };
+  wrap.querySelector('#gestor-puntual-agrupacion').addEventListener('change', function (e) {
+    const p = st();
+    p.agrupacion = e.target.value || null;
+    p.confirmado = false;
+    const pos = document.getElementById('gestor-puntual-pos');
+    const grupo = document.getElementById('gestor-puntual-grupo');
+    if (pos) pos.value = 'final';
+    if (grupo) grupo.value = '';
+    pintarPuntualGestorObs_();
+  });
+  let temporizador = null;
+  wrap.querySelector('#gestor-puntual-buscar').addEventListener('input', function (e) {
+    const el = e.target;
+    const ini = el.selectionStart, fin = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(ini, fin);
+    clearTimeout(temporizador);
+    temporizador = setTimeout(function () { st().filtro = el.value; pintarListaPuntualGestorObs_(); }, 150);
+  });
+  wrap.querySelector('#gestor-puntual-ver-todas').addEventListener('click', function () {
+    st().verTodas = !st().verTodas;
+    pintarListaPuntualGestorObs_();
+  });
+  wrap.querySelector('#gestor-puntual-marcar-todas').addEventListener('click', function () {
+    const p = st();
+    const enOtra = GESTOR_OBS.puntualEnOtra || {};
+    (GESTOR_OBS.puntualVisibles || []).forEach(function (t) {
+      // Las que ese día ya salen por otra agrupación se marcan una a una
+      // (serían un cambio puntual), no en bloque.
+      if (enOtra[t.tienda]) return;
+      p.limites[t.tienda] = t.limite != null ? String(t.limite) : '';
+      if (p.seleccionadas.indexOf(t.tienda) === -1) p.seleccionadas.push(t.tienda);
+    });
+    pintarListaPuntualGestorObs_();
+    pintarLimitePuntualGestorObs_();
+  });
+  wrap.querySelector('#gestor-puntual-desmarcar-todas').addEventListener('click', function () {
+    st().seleccionadas = [];
+    pintarListaPuntualGestorObs_();
+    pintarLimitePuntualGestorObs_();
+  });
+  wrap.querySelector('#gestor-puntual-lim-toggle').addEventListener('click', function () {
+    const p = st();
+    p.limPropio = !p.limPropio;
+    const input = document.getElementById('gestor-puntual-lim');
+    if (!p.limPropio) input.value = '';
+    pintarLimitePuntualGestorObs_();
+    if (p.limPropio) input.focus();
+  });
+}
+
+/** Guarda la(s) tienda(s) puntual(es) en una sola llamada (todo o nada). */
+function guardarTiendaPuntualDesdeGestor_() {
+  const fecha = GESTOR_OBS.fecha;
+  const p = GESTOR_OBS.puntual || {};
+  if (!p.agrupacion) { mostrarToast('Elige la agrupación', true); return; }
+  if (!(p.seleccionadas && p.seleccionadas.length)) { mostrarToast('Marca al menos una tienda', true); return; }
+  const enOtra = GESTOR_OBS.puntualEnOtra || {};
+  const cambios = p.seleccionadas.filter(function (k) { return !!enOtra[k]; });
+  const titulo = parsearNombreAgrupacion(p.agrupacion).titulo;
+
+  if (cambios.length && !p.confirmado) {
+    const una = cambios.length === 1;
+    abrirConfirmPuntualPlantilla_(
+      una ? 'Esta tienda ya sale ese día por otra agrupación' : 'Estas tiendas ya salen ese día por otra agrupación',
+      '<p class="confirm-puntual-intro">El <b>' + escapeHtml(formatearFechaLarga(fecha)) + '</b>:</p>' +
+      '<ul class="confirm-puntual-lista">' + cambios.map(function (k) {
+        const info = enOtra[k];
+        return '<li><b>' + escapeHtml(info.nombre) + '</b> sale por <b>' + escapeHtml(parsearNombreAgrupacion(info.agrupacion).titulo) + '</b></li>';
+      }).join('') + '</ul>' +
+      '<p>¿Pasarla' + (una ? '' : 's') + ' a <b>' + escapeHtml(titulo) + '</b> como <b>cambio puntual solo para ese día</b>?</p>' +
+      '<p class="confirm-puntual-nota">En su agrupación de siempre saldrá' + (una ? '' : 'n') + ' marcada' + (una ? '' : 's') + ' como "sale por excepción" y mantiene' + (una ? '' : 'n') + ' su límite.</p>',
+      una ? 'Sí, como cambio puntual' : ('Sí, las ' + cambios.length + ' como cambio puntual'),
+      function () {
+        p.confirmado = true;
+        guardarTiendaPuntualDesdeGestor_();
+      }
+    );
+    return;
+  }
+
+  let limite = '';
+  if (p.limPropio && p.seleccionadas.length === 1) {
+    limite = (document.getElementById('gestor-puntual-lim').value || '').trim().replace(',', '.');
+    if (limite === '' || isNaN(Number(limite)) || Number(limite) < 0) { document.getElementById('gestor-puntual-lim').focus(); return; }
+    // Igual que el general: se guarda como "usa el general".
+    const general = p.limites[p.seleccionadas[0]];
+    if (general !== '' && general != null && Number(general) === Number(limite)) limite = '';
+  }
+  const posValor = (document.getElementById('gestor-puntual-pos') || {}).value || 'final';
+  const grupoValor = (document.getElementById('gestor-puntual-grupo') || {}).value || '';
+  const posicion = (posValor === 'final' || posValor === 'inicio') ? posValor : 'debajo';
+
+  const btnGuardar = document.getElementById('modal-confirm-btn');
+  GESTOR_OBS.guardando = true;
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
+
+  llamarApi_('guardarTiendaPuntual', [{
+    fecha: fecha,
+    agrupacion: p.agrupacion,
+    tiendas: p.seleccionadas.slice(),
+    limite: limite,
+    posicion: posicion,
+    debajoTienda: posicion === 'debajo' ? posValor : null,
+    grupoId: grupoValor || null
+  }])
+    .then(function (res) {
+      cerrarModal();
+      const nP = (res && res.puntuales) || 0;
+      const nC = (res && res.cambios) || 0;
+      const partes = [];
+      if (nP) partes.push(nP === 1 ? 'Tienda puntual guardada' : nP + ' tiendas puntuales guardadas');
+      if (nC) partes.push(nC === 1 ? '1 cambio puntual' : nC + ' cambios puntuales');
+      mostrarToast(partes.join(' y ') || 'Guardado');
+      if (document.getElementById('calendar-body')) cargarCalendario();
+      if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') cargarFestivos();
+    })
+    .catch(function (err) {
+      GESTOR_OBS.guardando = false;
+      p.confirmado = false;
+      if (btnGuardar) { btnGuardar.disabled = false; actualizarBotonGuardarGestor_(); }
       mostrarErrorServidor(err);
     });
 }
