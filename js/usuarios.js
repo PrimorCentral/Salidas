@@ -51,6 +51,13 @@ const CATALOGO_PERMISOS = [
     ],
   },
   {
+    grupo: 'Almacén',
+    items: [
+      { clave: 'hoja_notas_ver', etiqueta: 'Ver hoja de notas', desc: 'Entrar en Almacén › Hoja de notas (GAITE y PTA), consultarla e imprimirla, sin poder cambiar nada.' },
+      { clave: 'hoja_notas', etiqueta: 'Editar hoja de notas', desc: 'Añadir, quitar, mover y editar tiendas y secciones de la hoja de notas, sus festivos y copiar hojas. Incluye poder verla.' },
+    ],
+  },
+  {
     grupo: 'Administración',
     items: [
       { clave: 'usuarios', etiqueta: 'Gestión de usuarios', desc: 'Crear, editar, eliminar y cambiar la contraseña de otros usuarios.' },
@@ -352,6 +359,15 @@ function abrirModalUsuario_(usuarioExistente) {
       document.getElementById('modal-usuario-nave-wrap').style.display = esOperario ? '' : 'none';
     };
   });
+  // Hoja de notas: editar incluye ver. Marcar "Editar" marca "Ver"; quitar
+  // "Ver" quita también "Editar".
+  const chkHnVer = custom.querySelector('[data-permiso-clave="hoja_notas_ver"]');
+  const chkHnEditar = custom.querySelector('[data-permiso-clave="hoja_notas"]');
+  if (chkHnVer && chkHnEditar) {
+    chkHnEditar.addEventListener('change', function () { if (chkHnEditar.checked) chkHnVer.checked = true; });
+    chkHnVer.addEventListener('change', function () { if (!chkHnVer.checked) chkHnEditar.checked = false; });
+    if (chkHnEditar.checked) chkHnVer.checked = true;
+  }
   custom.querySelectorAll('#modal-usuario-nave-pills .modal-pill').forEach(function (pill) {
     pill.onclick = function () {
       custom.querySelectorAll('#modal-usuario-nave-pills .modal-pill').forEach(function (p) { p.classList.remove('activo'); });

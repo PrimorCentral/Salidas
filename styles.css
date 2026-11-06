@@ -3002,11 +3002,11 @@
   .modal-box.ancho { max-width: 680px; }
 
   /* ---------- Modal "Añadir/Editar usuario": mucho más ancho, con los
-     datos básicos a la izquierda y los permisos a la derecha (4 grupos en
+     datos básicos a la izquierda y los permisos a la derecha (5 grupos en
      una fila), pensado para verse entero de un vistazo sin necesidad de
      hacer scroll. ---------- */
   .modal-box.usuario-form {
-    max-width: 1400px; min-height: 620px; padding: 34px;
+    max-width: 1720px; width: calc(100vw - 40px); min-height: 620px; padding: 34px;
     display: flex; flex-direction: column;
   }
   .modal-box.usuario-form #modal-custom { flex: 1; }
@@ -3014,11 +3014,15 @@
   .modal-usuario-grid { display: flex; gap: 36px; align-items: flex-start; }
   .modal-usuario-col-izq { flex: 0 0 270px; display: flex; flex-direction: column; }
   .modal-usuario-col-der { flex: 1; min-width: 0; }
-  .modal-usuario-col-der .permisos-grupos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .modal-usuario-col-der .permisos-grupos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
   .modal-usuario-col-der .permiso-grupo { padding: 13px 14px; }
   .modal-usuario-col-der .permiso-item { padding: 8px 3px; }
-  /* En pantallas de menos de 1300px no caben 4 columnas legibles: 2 y 2. */
-  @media (max-width: 1300px) {
+  /* 5 grupos (con Almacén) en una fila en pantallas anchas; en menos de
+     1500px, 3 + 2; en menos de 1100px, de 2 en 2. */
+  @media (max-width: 1500px) {
+    .modal-usuario-col-der .permisos-grupos { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 1100px) {
     .modal-usuario-col-der .permisos-grupos { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 720px) {
@@ -5168,3 +5172,199 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
     .desliza-fila .desliza { flex: 1 1 100%; }
     .desliza-fila .modal-cancel { flex: 1 1 100%; }
   }
+
+  /* ======================================================================
+   * ALMACÉN · HOJA DE NOTAS (js/hoja-notas.js)
+   * ====================================================================== */
+  /* El menú Almacén solo se ve si hay alguna sección permitida (ver
+     "tiene-menu-almacen" en aplicarPermisosUI). */
+  #topbar-dropdown-almacen { display: none; }
+  body.es-admin #topbar-dropdown-almacen,
+  body.tiene-menu-almacen #topbar-dropdown-almacen { display: block; }
+
+  .hn-sub { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-left: 8px; }
+  .hn-btn {
+    display: inline-flex; align-items: center; gap: 6px; background: #eef1f7; border: 1px solid #dde3ee; color: var(--navy);
+    border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; flex-shrink: 0; cursor: pointer;
+  }
+  .hn-btn:hover { background: #e1e5eb; }
+  .hn-solo-editor { display: none; }
+  .hn-puede-editar .hn-btn-editar { display: inline-flex; }
+  .hn-puede-editar.hn-editando .hn-solo-editor { display: inline-flex; }
+  .hn-editando .hn-btn-editar { background: var(--amber); border-color: var(--amber-dark); color: #fff; }
+
+  .hn-barra { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0 10px; }
+  .hn-naves { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .hn-naves button {
+    border: none; background: #fff; padding: 6px 14px; font-size: 12.5px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .hn-naves button + button { border-left: 1px solid var(--line); }
+  .hn-naves button.activo { background: var(--amber); color: #fff; }
+  .hn-buscar { max-width: 320px; }
+
+  .hn-aviso {
+    border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin: 0 0 10px;
+  }
+  .hn-aviso-nueva { background: #e8f0fb; border: 1px solid #c7d8f2; color: #1f3d6b; }
+  .hn-aviso-baja { background: #fdf5e9; border: 1px solid #f0d6ad; color: #7a4a12; }
+  .hn-aviso-nombres { font-weight: 600; }
+  .hn-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .hn-chip {
+    border: 1px solid #b9cdee; background: #fff; color: #1f3d6b; border-radius: 999px; padding: 4px 10px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .hn-chip:hover { background: #d9e6f8; }
+  .hn-link {
+    background: none; border: none; padding: 2px 0; color: var(--prevision); font-weight: 700; font-size: 12.5px; cursor: pointer;
+  }
+  .hn-link:hover { text-decoration: underline; }
+  .hn-link-peligro { color: var(--danger); }
+
+  .hn-ayuda-editar {
+    font-size: 12px; color: #7a4a12; background: #fdf5e9; border: 1px dashed #e9c48f; border-radius: 8px;
+    padding: 7px 10px; margin-bottom: 8px;
+  }
+  .hn-pie-editar { margin-top: 10px; }
+  .hn-vacio { padding: 30px 10px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+
+  .hn-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  .hn-tabla { border-collapse: collapse; width: 100%; min-width: 1080px; font-size: 12px; color: var(--ink); table-layout: fixed; }
+  .hn-tabla th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--navy); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .02em;
+    padding: 6px 5px; text-align: left; border-right: 1px solid rgba(255,255,255,.15); white-space: nowrap;
+  }
+  .hn-tabla th.hn-th-fest { background: #b8437a; text-align: center; white-space: normal; line-height: 1.15; }
+  .hn-tabla td { padding: 3px 5px; border-bottom: 1px solid var(--line); border-right: 1px solid #eef0f3; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
+  .hn-c-fest { width: 66px; } .hn-c-ab { width: 28px; } .hn-c-dom { width: 70px; } .hn-c-grupo { width: 46px; } .hn-c-g2 { width: 34px; }
+  .hn-c-tienda { width: 190px; } .hn-c-hora { width: 40px; } .hn-c-age { width: 42px; } .hn-c-pob { width: 104px; }
+  .hn-c-planta { width: 128px; } .hn-c-ref { width: 150px; } .hn-c-obs { width: auto; } .hn-c-x { width: 22px; } .hn-c-acc { width: 104px; }
+  .hn-tabla td.hn-c { text-align: center; }
+  .hn-tabla td.hn-tienda { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .hn-tabla td.hn-ref { color: #a0461d; font-weight: 600; }
+  .hn-tabla td.hn-obs { color: #b23b3b; font-weight: 700; white-space: normal; }
+  .hn-tabla td.hn-x { border-left: 1px solid var(--line); text-align: center; color: var(--ink-soft); padding-left: 0; padding-right: 0; text-overflow: clip; }
+  .hn-tabla td.hn-fest { text-align: center; font-weight: 700; color: #8a2f5c; background: #fdf3f8; }
+  .hn-tabla td.hn-fest-cierre { color: #fff; background: #c26a96; }
+  .hn-tabla tr.hn-fila-extra td { border-bottom-color: #f2f3f5; padding-top: 1px; padding-bottom: 1px; }
+  .hn-tabla tr.hn-fila-tienda td { border-top: 1px solid var(--line); }
+  .hn-tabla tr.hn-fila-sec td {
+    background: #e7ecf5; border-top: 2px solid var(--navy-soft); border-bottom: 1px solid #c9d3e4; padding: 6px 7px;
+  }
+  .hn-tabla tr.hn-fila-sec td.hn-x { font-weight: 800; color: var(--navy); }
+  .hn-tabla tr.hn-fila-bloque td { background: var(--navy); color: #fff; padding: 7px 8px; border-top: 3px solid var(--amber); }
+  .hn-tabla tr.hn-fila-bloque .hn-sec-nombre { color: #fff; font-size: 13.5px; }
+  .hn-sec-nombre { font-weight: 800; color: var(--navy); font-size: 12.5px; letter-spacing: .02em; }
+  .hn-sec-instr { margin-left: 12px; font-weight: 700; color: var(--amber-dark); font-size: 11.5px; }
+  .hn-sec-nota { margin-left: 12px; font-weight: 700; color: #b23b3b; font-size: 11.5px; }
+  .hn-fila-bloque .hn-sec-instr, .hn-fila-bloque .hn-sec-nota { color: #ffd59a; }
+
+  .hn-badge {
+    display: inline-block; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+    background: #eef1f7; color: var(--ink-soft); vertical-align: middle;
+  }
+  .hn-badge-oculta { background: #eceef2; color: #6b7380; }
+  .hn-badge-baja { background: #fceded; color: var(--danger); }
+  .hn-tabla .hn-oculta td { opacity: .5; }
+  .hn-tabla tr.hn-baja td { background: #fff6f6; }
+  .hn-tabla tr.hn-baja td.hn-tienda { text-decoration: line-through; color: var(--danger); }
+
+  .hn-tabla tr.hn-clicable { cursor: pointer; }
+  .hn-tabla tr.hn-clicable:hover td { background: #fff8ec; }
+  .hn-tabla td.hn-acc { text-align: right; white-space: nowrap; padding: 2px 4px; }
+  .hn-acc-grupo { display: inline-flex; gap: 2px; }
+  .hn-acc-grupo button {
+    width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: #fff; border-radius: 6px; color: var(--navy); cursor: pointer; padding: 0;
+  }
+  .hn-acc-grupo button:hover { background: #eef1f7; }
+  .hn-acc-grupo button:disabled { opacity: .3; cursor: default; }
+  .hn-fila-bloque .hn-acc-grupo button { border-color: rgba(255,255,255,.3); }
+  .hn-tabla tr.hn-fila-anadir td { padding: 3px 8px 8px; border-bottom: none; }
+  .hn-fest-input {
+    width: 100%; border: 1px solid transparent; background: transparent; text-align: center; font: inherit; font-weight: 700;
+    color: #8a2f5c; border-radius: 4px; padding: 1px 2px;
+  }
+  .hn-fest-input:focus { border-color: #c26a96; background: #fff; outline: none; }
+  .hn-fest-input.guardando { opacity: .5; }
+
+  /* Modales */
+  .hn-l-titulo { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; }
+  .hn-subtitulo { font-size: 11.5px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 8px; }
+  .hn-subtitulo span { font-weight: 600; color: var(--ink-soft); text-transform: none; letter-spacing: 0; }
+  .hn-fila-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .hn-fila-4 .modal-campo { margin-bottom: 10px; }
+  .hn-filas-ed { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+  .hn-filas-ed-fila { display: grid; grid-template-columns: 1fr 1.2fr 1.6fr 28px; gap: 6px; }
+  .hn-filas-ed-fila input {
+    width: 100%; box-sizing: border-box; border: 1px solid #d8dde4; border-radius: 8px; padding: 7px 9px; font-size: 12.5px;
+  }
+  .hn-filas-ed-fila button {
+    border: 1px solid var(--line); background: #fff; border-radius: 8px; color: var(--danger); font-size: 16px; cursor: pointer;
+  }
+  .hn-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); margin: 8px 0; cursor: pointer; }
+  .hn-otras-hojas { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 12.5px; }
+  .hn-otras-fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .hn-otras-fila b { width: 46px; }
+  .hn-otras-fila label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+  .hn-quitar { display: flex; gap: 18px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .hn-modal-error { margin-top: 12px; font-size: 12.5px; color: var(--danger); background: #fceded; border-radius: 8px; padding: 9px 11px; }
+  .hn-fest-ed { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .hn-fest-ed.pasado { opacity: .6; }
+  .hn-fest-ed input[type="text"], .hn-fest-ed input[type="date"] {
+    border: 1px solid #d8dde4; border-radius: 8px; padding: 6px 8px; font-size: 12.5px;
+  }
+  .hn-fest-ed .hn-fe-etq { width: 130px; }
+  .hn-fe-dias { display: inline-flex; gap: 8px; font-size: 12px; }
+  .hn-fe-dias label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+  .hn-fe-guardar {
+    border: 1px solid #dde3ee; background: #eef1f7; color: var(--navy); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; cursor: pointer;
+  }
+  .hn-fe-borrar { border: none; background: none; color: var(--danger); font-size: 18px; cursor: pointer; }
+
+  @media (max-width: 700px) {
+    .hn-sub { display: block; margin: 4px 0 0; }
+    .hn-fila-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hn-filas-ed-fila { grid-template-columns: 1fr 1fr; }
+    .hn-filas-ed-fila input.hn-f-obs { grid-column: 1 / 2; }
+  }
+
+  /* Impresión de la hoja de notas: A4 apaisado, cabecera de tabla repetida
+     en cada página, sin colores de pantalla. */
+  @page hojanotas { size: A4 landscape; margin: 8mm; }
+  @media print {
+    .hn-print { page: hojanotas; color: #000; font-family: Arial, Helvetica, sans-serif; }
+    .hn-print-cab {
+      display: flex; justify-content: space-between; align-items: baseline; border: 1px solid #000;
+      padding: 4px 8px; margin-bottom: 6px; font-size: 12px;
+    }
+    .hn-print-cab span { font-size: 9px; }
+    .hn-print .hn-tabla { min-width: 0; font-size: 8.5px; color: #000; }
+    .hn-print .hn-tabla thead { display: table-header-group; }
+    .hn-print .hn-tabla th {
+      white-space: normal; position: static; background: #d9d9d9 !important; color: #000; border: 1px solid #000; font-size: 8px; padding: 2px 3px;
+    }
+    .hn-print .hn-tabla td { border: 1px solid #999; padding: 1px 3px; color: #000; overflow: visible; }
+    .hn-print .hn-tabla td.hn-obs, .hn-print .hn-tabla td.hn-ref { color: #000; }
+    .hn-print .hn-tabla td.hn-fest { background: #fff; color: #000; }
+    .hn-print .hn-tabla td.hn-fest-cierre { background: #e0e0e0 !important; color: #000; }
+    .hn-print .hn-tabla tr { break-inside: avoid; page-break-inside: avoid; }
+    .hn-print .hn-tabla tr.hn-fila-sec td { background: #eee !important; border-top: 2px solid #000; padding: 2px 4px; }
+    .hn-print .hn-tabla tr.hn-fila-sec, .hn-print .hn-tabla tr.hn-fila-bloque { break-after: avoid; page-break-after: avoid; }
+    .hn-print .hn-tabla tr.hn-fila-bloque td { background: #444 !important; color: #fff; border: 1px solid #000; }
+    .hn-print .hn-sec-nombre { color: #000; font-size: 9.5px; }
+    .hn-print .hn-sec-instr, .hn-print .hn-sec-nota { color: #000; font-size: 8.5px; }
+    .hn-print .hn-fila-bloque .hn-sec-nombre, .hn-print .hn-fila-bloque .hn-sec-instr, .hn-print .hn-fila-bloque .hn-sec-nota { color: #fff; }
+    .hn-print .hn-c-fest { width: 48px; } .hn-print .hn-c-ab { width: 18px; } .hn-print .hn-c-dom { width: 48px; }
+    .hn-print .hn-c-grupo { width: 32px; } .hn-print .hn-c-g2 { width: 22px; } .hn-print .hn-c-tienda { width: 130px; }
+    .hn-print .hn-c-hora { width: 26px; } .hn-print .hn-c-age { width: 28px; } .hn-print .hn-c-pob { width: 72px; }
+    .hn-print .hn-c-planta { width: 92px; } .hn-print .hn-c-ref { width: 110px; } .hn-print .hn-c-x { width: 16px; }
+  }
+
+  /* Hoja de notas: bloqueo de edición */
+  .hn-aviso-editando { display: flex; align-items: center; gap: 8px; background: #fceded; border: 1px solid #f2c4c4; color: #8a2a2a; }
+  .hn-aviso-editando svg { flex-shrink: 0; }
+  .hn-bloqueada { display: flex; gap: 14px; align-items: flex-start; font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+  .hn-bloqueada svg { color: var(--danger); flex-shrink: 0; margin-top: 2px; }
+  .hn-btn-forzar { color: var(--danger) !important; }
+

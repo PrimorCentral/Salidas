@@ -16,6 +16,9 @@ function tienePermiso(clave) {
 /** Secciones de "Diseño" / "Administración" que la sesión actual puede
  *  ver, en el mismo orden del catálogo. Un admin las ve todas. */
 function seccionesConfigPermitidas_() { return CONFIG_SECCIONES.filter(function (s) { return tienePermiso(s.permiso); }); }
+function seccionesAlmacenPermitidas_() {
+  return ALMACEN_SECCIONES.filter(function (s) { return (s.permisos || []).some(tienePermiso); });
+}
 function seccionesAdminPermitidas_() { return ADMIN_SECCIONES.filter(function (s) { return s.permiso && tienePermiso(s.permiso); }); }
 
 // Claves de CATALOGO_PERMISOS que se traducen en una clase "perm-<clave>"
@@ -27,7 +30,7 @@ const CLAVES_PERMISOS_UI_ = [
   'usuarios', 'notas', 'cierres', 'agencias',
   'tiendas', 'plantilla', 'aviso_tiendas', 'config_hora_aviso_tiendas',
   'festivos', 'palets_forzados', 'cola_emails', 'ver_cuadrante_completo',
-  'forzar_palets'
+  'forzar_palets', 'hoja_notas', 'hoja_notas_ver'
 ];
 
 /** Añade/quita la clase 'es-admin' en <body> (compatibilidad con las
@@ -48,6 +51,11 @@ function aplicarPermisosUI() {
   const adminPermitidas = seccionesAdminPermitidas_();
   document.body.classList.toggle('tiene-menu-diseno', configPermitidas.length > 0);
   document.body.classList.toggle('tiene-menu-administracion', adminPermitidas.length > 0);
+  const almacenPermitidas = seccionesAlmacenPermitidas_();
+  document.body.classList.toggle('tiene-menu-almacen', almacenPermitidas.length > 0);
+  if (almacenPermitidas.length && !almacenPermitidas.some(function (s) { return s.id === ESTADO_ALMACEN.seccionActiva; })) {
+    ESTADO_ALMACEN.seccionActiva = almacenPermitidas[0].id;
+  }
 
   if (!configPermitidas.some(function (s) { return s.id === ESTADO_CONFIG.seccionActiva; })) {
     ESTADO_CONFIG.seccionActiva = configPermitidas.length ? configPermitidas[0].id : ESTADO_CONFIG.seccionActiva;
@@ -64,6 +72,7 @@ function aplicarPermisosUI() {
   if (btnMiUsuario) btnMiUsuario.title = SESSION_ROL ? ((SESSION_NOMBRE || SESSION_USUARIO || '') + ' · Mi usuario') : 'Mi usuario';
   poblarDropdownConfiguracion();
   poblarDropdownAdministracion();
+  poblarDropdownAlmacen();
 }
 
 /* ---------------- NAVES (60 / PTA / CART.) ---------------- */

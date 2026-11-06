@@ -32,6 +32,8 @@ function irAAgrupacionDesdeInicio_(fecha, nombreRuta) {
  *  irAAgrupacionDesdeInicio_, que es quien la usa desde "Inicio"). */
 function cambiarVista(vista, seccion) {
   quitarCargaInicio_(); // por si quedaba abierta la carga desde Inicio
+  // Al salir de la Hoja de notas se suelta el bloqueo de edición (si lo había).
+  if (ESTADO.vista === 'almacen' && typeof hnSalirEdicion_ === 'function') hnSalirEdicion_();
   ESTADO.vista = vista;
   document.querySelectorAll('.topbar-nav-item').forEach(function (btn) {
     btn.classList.toggle('activa', btn.dataset.vista === vista);
@@ -50,6 +52,7 @@ function cambiarVista(vista, seccion) {
 
   if (vista === 'configuracion' && seccion) ESTADO_CONFIG.seccionActiva = seccion;
   if (vista === 'administracion' && seccion) ESTADO_ADMIN.seccionActiva = seccion;
+  if (vista === 'almacen' && seccion) ESTADO_ALMACEN.seccionActiva = seccion;
   marcarSeccionActivaEnDropdown();
 
   if (vista === 'inicio') {
@@ -58,6 +61,8 @@ function cambiarVista(vista, seccion) {
     renderVistaConfiguracion();
   } else if (vista === 'administracion') {
     renderVistaAdministracion();
+  } else if (vista === 'almacen') {
+    renderVistaAlmacen();
   } else {
     if (!ESTADO.fecha) {
       ESTADO.fecha = hoyStr();
@@ -425,6 +430,14 @@ function renderSeccionConfigActiva() {
 /** ADMINISTRACIÓN: mismo patrón que renderVistaConfiguracion, pero con su
  *  propio contenedor ("admin-contenido") para no compartir estado con
  *  Configuración por accidente. */
+/** ALMACÉN: mismo patrón que Configuración/Administración, con su propio
+ *  contenedor ("almacen-contenido"). */
+function renderVistaAlmacen() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="config-contenido" id="almacen-contenido"></div>';
+  if (ESTADO_ALMACEN.seccionActiva === 'hoja-notas') renderAlmacenHojaNotas();
+}
+
 function renderVistaAdministracion() {
   const main = document.getElementById('main');
   main.innerHTML = '<div class="config-contenido" id="admin-contenido"></div>';

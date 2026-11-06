@@ -36,6 +36,15 @@ const ADMIN_SECCIONES = [
 ];
 let ESTADO_ADMIN = { seccionActiva: 'palets-forzados' };
 
+// Secciones de "Almacén". La Hoja de notas la ve quien tenga el permiso
+// "hoja_notas_ver" o el de editarla ("hoja_notas", que incluye verla); los
+// administradores siempre. El menú entero se oculta si no hay ninguna.
+const ALMACEN_SECCIONES = [
+  { id: 'hoja-notas', label: 'Hoja de notas', permisos: ['hoja_notas_ver', 'hoja_notas'] }
+  // futuras secciones de Almacén van aquí
+];
+let ESTADO_ALMACEN = { seccionActiva: 'hoja-notas' };
+
 // Botones simples (Inicio, Conteos): navegan directamente al pulsarlos.
 document.querySelectorAll('.topbar-nav > .topbar-nav-item').forEach(function (btn) {
   btn.addEventListener('click', function () { cambiarVista(btn.dataset.vista); });
@@ -94,6 +103,10 @@ function marcarSeccionActivaEnDropdown() {
     const activa = ESTADO.vista === 'administracion' && btn.getAttribute('data-seccion') === ESTADO_ADMIN.seccionActiva;
     btn.classList.toggle('activa', activa);
   });
+  document.querySelectorAll('#topbar-dropdown-menu-almacen .topbar-dropdown-item').forEach(function (btn) {
+    const activa = ESTADO.vista === 'almacen' && btn.getAttribute('data-seccion') === ESTADO_ALMACEN.seccionActiva;
+    btn.classList.toggle('activa', activa);
+  });
 }
 poblarDropdownConfiguracion();
 
@@ -118,6 +131,26 @@ function poblarDropdownAdministracion() {
   });
 }
 poblarDropdownAdministracion();
+
+/** Desplegable de "Almacén" (Hoja de notas...): mismo funcionamiento que
+ *  los de Diseño y Administración. Se oculta entero por CSS si la sesión
+ *  no puede ver ninguna sección (clase "tiene-menu-almacen"). */
+function poblarDropdownAlmacen() {
+  const cont = document.getElementById('topbar-dropdown-menu-almacen');
+  if (!cont) return;
+  cont.innerHTML = seccionesAlmacenPermitidas_().map(function (s) {
+    const activa = ESTADO.vista === 'almacen' && s.id === ESTADO_ALMACEN.seccionActiva;
+    return '<button type="button" class="topbar-dropdown-item' + (activa ? ' activa' : '') + '" data-seccion="' + s.id + '">' + escapeHtml(s.label) + '</button>';
+  }).join('');
+  cont.querySelectorAll('.topbar-dropdown-item').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      cerrarDropdownsTopbar();
+      cambiarVista('almacen', btn.getAttribute('data-seccion'));
+    });
+  });
+}
+poblarDropdownAlmacen();
 
 
 /* ---------------- FRANJA DEL DÍA (solo en Conteos Diarios) ----------------
