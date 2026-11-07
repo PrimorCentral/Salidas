@@ -8,6 +8,20 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.20',
+    fecha: '2026-11-07',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Nuevo menú «Almacén» con la Hoja de notas de GAITE y PTA (de lunes a sábado), que sustituye a los Excel de notas: tiendas, plantas, refuerzos, observaciones y festivos. El nombre y el tránsito de las tiendas se actualizan solos y solo una persona puede editar cada hoja a la vez' },
+      { tipo: 'nuevo',      texto: 'Nuevos permisos «Ver hoja de notas» y «Editar hoja de notas»' },
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: nueva opción «Tienda puntual» para añadir solo ese día a una agrupación una o varias tiendas que no salen por ninguna. En el conteo salen con la etiqueta «PUNTUAL»' },
+      { tipo: 'nuevo',      texto: 'Límite especial de palets por fechas: se configura en GIDT y, entre esas fechas, manda sobre cualquier otro límite. En el conteo la tienda sale con una estrella y, al pasar el ratón, se ven los palets y las fechas' },
+      { tipo: 'mejora',     texto: 'Configuración tiendas: se muestra el límite especial de cada tienda (solo lectura, viene de GIDT)' },
+      { tipo: 'mejora',     texto: 'Solo se puede entrar desde el centro de trabajo, salvo los usuarios externos, que se marcan en Usuarios con el distintivo «Externo»' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: el desplegable «Grupo de palets» muestra el límite y las tiendas de cada grupo, para distinguir los que se llaman igual' },
+      { tipo: 'correccion', texto: 'Grupos de palets: el botón «Guardar» ya no se queda apagado después de usar Bloqueos y cambios, y la lista ya no salta arriba al añadir o quitar una tienda' }
+    ]
+  },
+  {
     version: '2.1.19',
     fecha: '2026-11-03',
     cambios: [
