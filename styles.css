@@ -5501,3 +5501,12 @@ header.topbar .brand.abre-acerca-de:hover{ opacity:.85; }
 /* Hoja de notas: botón «Ver tiendas ocultas» encendido */
   .hn-btn.activo { background: var(--navy); border-color: var(--navy); color: #fff; }
   .hn-btn:disabled { opacity: .5; cursor: default; }
+
+/* Límite especial por fechas (viene de GIDT): celda Límite en naranja con
+   estrellita. La estrella va en ::after para que el texto de la celda siga
+   siendo solo el número (PDF/Excel lo leen con textContent). */
+table.conteo td.limite.lim-especial { background: #FFF1E6; color: #C2410C; font-weight: 800; white-space: nowrap; cursor: help; }
+table.conteo td.limite.lim-especial::after { content: "\2605"; margin-left: 4px; color: #F59E0B; font-size: 0.95em; }
+.limite-especial-label { color: #C2410C; }
+.emails-config-gidt.limite-especial-config { color: #C2410C; font-weight: 600; }
+.emails-config-gidt.limite-especial-config.desactivado { color: var(--ink-soft); font-weight: 500; }

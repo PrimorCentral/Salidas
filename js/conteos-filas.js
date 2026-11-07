@@ -25,6 +25,20 @@ const PESO_PALET_KG = { c60: 200, pta: 300, cart: 250 };
  *  igual en todos los sitios en vez del "null" que salía antes cuando
  *  la tienda no tenía límite.
  */
+/** Celda "Límite" de una tienda. Si ese día manda un límite especial
+ *  (configurado por fechas en GIDT, ver t.limiteEspecial = { palets, desde,
+ *  hasta } que manda el servidor), sale en naranja con una estrellita y al
+ *  pasar el ratón: "Límite especial: X palets / Del dd/mm al dd/mm". La
+ *  estrella va por CSS (::after) para que el texto de la celda siga siendo
+ *  solo el número (lo leen el PDF y el Excel). */
+function celdaLimiteHtml_(t) {
+  const esp = t && t.limiteEspecial;
+  if (!esp) return '<td class="limite">' + textoLimite_(t.limite) + '</td>';
+  const ddmm = function (iso) { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; };
+  const titulo = 'Límite especial: ' + esp.palets + ' palets\nDel ' + ddmm(esp.desde) + ' al ' + ddmm(esp.hasta);
+  return '<td class="limite lim-especial" title="' + escapeAttr(titulo) + '">' + textoLimite_(t.limite) + '</td>';
+}
+
 function textoLimite_(limite) {
   return (limite == null || limite === '') ? 'NO' : limite;
 }
@@ -115,7 +129,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   if (t.cerrada) {
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
-      '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
+      celdaLimiteHtml_(t) +
       '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir" title="Desbloquear el conteo de esta tienda">Desbloquear</button></td>' +
       '</tr>';
@@ -128,7 +142,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   if (t.salePorExcepcion) {
     return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
-      '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
+      celdaLimiteHtml_(t) +
       '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
       '<td></td>' +
       '</tr>';
@@ -177,7 +191,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
   };
   return '<tr class="' + (claseGrupo.trim() + claseExcepcionEntrada + claseDoble).trim() + '" data-row="' + t.row + '" data-limite="' + escapeAttr(textoLimite_(t.limite)) + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + tituloEntrada + '>' +
     '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + avisoPuntualHtml + notaHtml + avisoDobleHtml + '</td>' +
-    '<td class="limite">' + textoLimite_(t.limite) + '</td>' +
+    celdaLimiteHtml_(t) +
     (tieneViernes ? (esFuera('extras') && !t.excluidaViernes ? '<td>' + celdaOtraAgrupacionHtml_('viernes', otra) + '</td>' : celdaViernesHtml_(t)) : '') +
     (tieneDomingo ? (esFuera('extras') && !t.excluidaDomingo ? '<td>' + celdaOtraAgrupacionHtml_('casillaDomingo', otra) + '</td>' : celdaDomingoHtml_(t)) : '') +
     '<td>' + celdaNave('c60') + '</td>' +
