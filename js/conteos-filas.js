@@ -220,8 +220,11 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     (tieneCExpress ? '<td>' + celdaExtra('cexpress', t.cexpress, '0.01') + '</td>' : '') +
     // SOBRESTOCK separado por nave (60 / PTA / CART.): cada casilla cuenta
     // como palets de esa nave (suma al TOTAL igual que la casilla de la nave).
+    // Bloqueado desde Rutas y tiendas: sale "NO" (se puede forzar con el
+    // permiso "Forzar palets", igual que las naves).
     (tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (s) {
-      return '<td class="td-sobrestock">' + celdaExtra(s.campo, t[s.campo], '0.01') + '</td>';
+      if (esFuera('extras')) return '<td class="td-sobrestock">' + celdaOtraAgrupacionHtml_(s.campo, otra) + '</td>';
+      return '<td class="td-sobrestock">' + celdaConteoHtml(s.campo, t[s.campo] == null ? '' : t[s.campo], !!(t.forzados && t.forzados[s.campo] !== undefined)) + '</td>';
     }).join('') : '') +
     // PDTE y TOTAL, a la derecha del todo (TOTAL el último).
     '<td>' + celdaExtra('pdte', t.pdte) + '</td>' +
@@ -287,7 +290,7 @@ function attachCalculoYValidacion(tr) {
   }
 
   function recalcTotal() {
-    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && sobrestockInputs.every(function (i) { return i.value === ''; })) {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && sobrestockInputs.every(function (i) { return i.value === '' || i.classList.contains('celda-no'); })) {
       totalInput.value = '';
     } else {
       const m = parseFloat(c60Input.value) || 0;
@@ -337,7 +340,7 @@ function attachCalculoYValidacion(tr) {
     if (!pesoAuto) return;
     // "NO" sin forzar o casilla vacía cuentan como 0.
     const n = function (input) { return input ? (parseFloat(input.value) || 0) : 0; };
-    const vacias = c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && sobrestockInputs.every(function (i) { return i.value === ''; });
+    const vacias = c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && sobrestockInputs.every(function (i) { return i.value === '' || i.classList.contains('celda-no'); });
     // El sobrestock de cada nave pesa como un palet de esa nave.
     const kg = (n(c60Input) + sobrestockDeNave_(tr, 'c60')) * PESO_PALET_KG.c60 +
       (n(ptaInput) + sobrestockDeNave_(tr, 'pta')) * PESO_PALET_KG.pta +
@@ -396,8 +399,10 @@ function attachForzarNo(tr) {
             input.classList.add('celda-forzada');
             input.setAttribute('data-forzado', '1');
             input.title = 'Forzado pese al "NO" original';
+            // El evento "input" ya actualiza el TOTAL y el contador de palets
+            // de la agrupación (actualizarTotalPalets es interna del panel).
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            actualizarTotalPalets();
+            if (typeof actualizarTotalPalets === 'function') actualizarTotalPalets();
           }, false);
         }
       );
@@ -548,9 +553,16 @@ function recogerFilas(tableWrap) {
     if (cexpress !== undefined) fila.cexpress = cexpress;
     // Igual que "peso" y "cexpress", el SOBRESTOCK (una casilla por nave)
     // solo existe si la ruta lo tiene activado (ver seccion.tieneSobrestock).
+    // Con "NO" (bloqueado) se manda "NO" y, si se ha forzado, el número va
+    // en xxxForzado, igual que en 60/PTA/CART.
     CAMPOS_SOBRESTOCK_.forEach(function (s) {
-      const v = get(s.campo);
-      if (v !== undefined) fila[s.campo] = v;
+      const inp = tr.querySelector('input[data-campo="' + s.campo + '"]');
+      if (!inp) return;
+      if (inp.classList.contains('celda-otra-agencia')) { fila[s.campo] = ''; return; }
+      const v = getConEscape(s.campo);
+      fila[s.campo] = v.valor;
+      fila[s.campo + 'Forzado'] = v.forzado;
+      fila[s.campo + 'ForzadoBorrado'] = v.borrado;
     });
     // "viernes" solo existe si la agrupación lo tiene activado ese día (ver
     // seccion.tieneViernes) y la tienda no está excluida. Si no hay

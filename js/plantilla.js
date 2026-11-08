@@ -805,15 +805,36 @@ function dividirNombreTiendaPlantilla_(nombre) {
  *  tiendas". campo: 'c60' | 'pta' | 'cart'. Visible para todos (para que
  *  el usuario normal vea qué está bloqueado), pero solo pulsable si es
  *  admin. */
+// Campo de la casilla -> propiedad de la tienda (plantilla) con su bloqueo.
+// Las de SOBRESTOCK (sobrestock60 / sobrestockPta / sobrestockCart) se
+// bloquean igual que las naves: en el conteo salen "NO".
+const CLAVE_BLOQUEO_PLANTILLA_ = {
+  c60: 'bloqueo60', pta: 'bloqueoPta', cart: 'bloqueoCart',
+  sobrestock60: 'bloqueoSob60', sobrestockPta: 'bloqueoSobPta', sobrestockCart: 'bloqueoSobCart'
+};
+
 function botonBloqueoPlantillaHtml_(t, campo, etiqueta) {
-  const bloqueado = campo === 'c60' ? t.bloqueo60 : (campo === 'pta' ? t.bloqueoPta : t.bloqueoCart);
+  const bloqueado = !!t[CLAVE_BLOQUEO_PLANTILLA_[campo]];
+  const esSob = campo.indexOf('sobrestock') === 0;
+  const nombre = esSob ? 'Sobrestock ' + etiqueta : etiqueta;
   const titulo = bloqueado
-    ? etiqueta + ' bloqueada para esta tienda (sale "NO" en el conteo). Pulsa para desbloquear'
-    : etiqueta + ' carga para esta tienda. Pulsa para bloquearla en los conteos';
+    ? nombre + ' bloqueado para esta tienda (sale "NO" en el conteo). Pulsa para desbloquear'
+    : nombre + (esSob ? ' permitido' : ' carga') + ' para esta tienda. Pulsa para bloquear' + (esSob ? 'lo' : 'la') + ' en los conteos';
   const candado = bloqueado
     ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
     : '';
   return '<button type="button" class="plantilla-tienda-bloqueo' + (bloqueado ? ' activo' : '') + '" data-bloqueo-row="' + t.row + '" data-bloqueo-campo="' + campo + '" data-bloqueo-activo="' + (bloqueado ? '1' : '0') + '" title="' + titulo + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' + candado + etiqueta + '</button>';
+}
+
+/** Bloqueos del SOBRESTOCK de la tienda (SOBR. 60 / PTA / CART.), aparte
+ *  de los de las naves. Solo salen si la ruta tiene la casilla SOBRESTOCK. */
+function bloqueosSobrestockPlantillaHtml_(t) {
+  return '<span class="plantilla-tienda-bloqueos-sob" title="Bloquear el sobrestock de una nave en esta tienda (sale &quot;NO&quot; en el conteo)">' +
+    '<span class="plantilla-tienda-bloqueos-sob-label">SOBR.</span>' +
+    botonBloqueoPlantillaHtml_(t, 'sobrestock60', '60') +
+    botonBloqueoPlantillaHtml_(t, 'sobrestockPta', 'PTA') +
+    botonBloqueoPlantillaHtml_(t, 'sobrestockCart', 'CART.') +
+  '</span>';
 }
 
 /** Franja bajo la cabecera de cada ruta con los interruptores de la
@@ -924,7 +945,8 @@ function pintarPlantilla_() {
             (s.tieneCasillaDomingo ? botonDomingoTiendaPlantillaHtml_(t) : '') +
             botonBloqueoPlantillaHtml_(t, 'c60', '60') +
             botonBloqueoPlantillaHtml_(t, 'pta', 'PTA') +
-            botonBloqueoPlantillaHtml_(t, 'cart', 'CART.')) +
+            botonBloqueoPlantillaHtml_(t, 'cart', 'CART.') +
+            (s.tieneSobrestock ? bloqueosSobrestockPlantillaHtml_(t) : '')) +
           '</div>' +
           '<button type="button" class="plantilla-tienda-nota' + (tieneNota ? ' con-dato' : '') + '" data-nota-fila="' + t.row + '" data-nota-texto="' + escapeAttr(t.nota || '') + '" data-nota-grupo="' + (t.notaGrupoId ? '1' : '0') + '" title="' + (t.notaGrupoId ? 'Pertenece a un grupo de palets: edítalo desde Grupos de palets' : (tieneNota ? 'Editar comentario' : 'Añadir comentario')) + '"' + (puedeEditarPlantilla_() ? '' : ' disabled') + '>' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>' +
@@ -1396,9 +1418,9 @@ function togglePdfEspecialRutaPlantilla_(nombreRuta, activoActualmente) {
  *  valor que hubiera en esa celda (por ejemplo un conteo ya metido hoy). */
 function toggleBloqueoCampoTiendaPlantilla_(row, campo, activoActualmente) {
   row = Number(row);
-  const etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.' };
+  const etiquetas = { c60: '60', pta: 'PTA', cart: 'CART.', sobrestock60: 'sobrestock 60', sobrestockPta: 'sobrestock PTA', sobrestockCart: 'sobrestock CART.' };
   const etiqueta = etiquetas[campo] || campo;
-  const claveBloqueo = campo === 'c60' ? 'bloqueo60' : (campo === 'pta' ? 'bloqueoPta' : 'bloqueoCart');
+  const claveBloqueo = CLAVE_BLOQUEO_PLANTILLA_[campo];
   const mutar = function () {
     const info = buscarTiendaPlantilla_(row);
     if (info) info.tienda[claveBloqueo] = !activoActualmente;
