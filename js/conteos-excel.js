@@ -75,10 +75,11 @@ function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap) {
   const cabeceras = ['Tienda', 'Límite']
     .concat(seccion.tieneViernes ? ['VIERNES'] : [])
     .concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : [])
-    .concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE'])
+    .concat(['60', 'PTA', 'CART.'])
     .concat(seccion.tienePeso ? ['PESO'] : [])
     .concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])
-    .concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : []);
+    .concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : [])
+    .concat(['PDTE', 'TOTAL']);
   const nCols = cabeceras.length;
   const idxTotal = indiceTotalPdf_(seccion);
 

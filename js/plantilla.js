@@ -108,6 +108,8 @@ function renderConfigPlantilla() {
       '<div class="plantilla-dias-fila" id="plantilla-dias-fila"></div>' +
       '<div id="plantilla-lista"><div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div></div>' +
     '</div>';
+  ajustarAlturaListaScrollable_('plantilla-lista');
+  window.addEventListener('resize', ajustarAlturasListasConfig_debounced_);
 
   // Los días especiales (conteo especial de una fecha concreta) se piden
   // aparte; si fallan (p.ej. el backend aún no los tiene) se sigue igual
@@ -222,6 +224,9 @@ function pintarDiasPlantilla_() {
     abrirModalSobrestockTodas_(todasActivas, e.rutas, e.conSobrestock);
   };
   if (PLANTILLA_ESTADO.dia) inicializarBuscadoresPlantilla_();
+  // La fila de días/buscador puede cambiar de alto: se recalcula el alto
+  // de la caja con scroll de las agrupaciones.
+  ajustarAlturaListaScrollable_('plantilla-lista');
 }
 
 /* ---------------- SOBRESTOCK EN TODAS LAS RUTAS ----------------
@@ -878,6 +883,10 @@ function pintarPlantilla_() {
   const listaEl = document.getElementById('plantilla-lista');
   document.body.classList.remove('plantilla-guardando-orden');
   if (!listaEl) return;
+  // Igual que Configuración agencias: la cabecera (título, días, buscador)
+  // se queda fija y solo se desplaza la lista de agrupaciones, en su caja
+  // con scroll propio (#plantilla-lista).
+  ajustarAlturaListaScrollable_('plantilla-lista');
 
   if (!PLANTILLA_ESTADO.secciones.length) {
     listaEl.innerHTML = avisoConteosEnEsperaHtml_() + '<div class="festivos-vacio">Sin rutas configuradas para este día.</div>';

@@ -42,6 +42,7 @@ function ajustarAlturasListasConfig_debounced_() {
     ajustarAlturaListaScrollable_('festivos-lista');
     ajustarAlturaListaScrollable_('tiendas-config-lista');
     ajustarAlturaListaScrollable_('barrido-resultado');
+    ajustarAlturaListaScrollable_('plantilla-lista');
   }, 120);
 }
 

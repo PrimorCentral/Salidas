@@ -228,10 +228,11 @@ function construirGrupoImpresionDia_(seccion) {
       // DOMINGO: igual que VIERNES.
       (seccion.tieneCasillaDomingo ? (t.excluidaDomingo ? '<td class="hi-blanco hi-no hi-viernes-excluida">X</td>' : '<td class="hi-blanco"></td>') : '') +
       celdaImpresionManual_(t.c60) + celdaImpresionManual_(t.pta) + celdaImpresionManual_(t.cart) +
-      '<td class="hi-blanco"></td><td class="hi-blanco"></td>' +
       (seccion.tienePeso ? '<td class="hi-blanco"></td>' : '') +
       (seccion.tieneCExpress ? '<td class="hi-blanco"></td>' : '') +
       (seccion.tieneSobrestock ? '<td class="hi-blanco"></td><td class="hi-blanco"></td><td class="hi-blanco"></td>' : '') +
+      // PDTE y TOTAL al final, como en pantalla.
+      '<td class="hi-blanco"></td><td class="hi-blanco"></td>' +
       '</tr>';
     return html;
   }).join('');
@@ -239,10 +240,11 @@ function construirGrupoImpresionDia_(seccion) {
   const tabla = document.createElement('table');
   tabla.className = 'hi-tabla';
   tabla.innerHTML =
-    '<thead><tr><th>Lim</th><th></th>' + (seccion.tieneViernes ? '<th>Viernes</th>' : '') + (seccion.tieneCasillaDomingo ? '<th>Domingo</th>' : '') + '<th>60</th><th>PTA</th><th>Cart.</th><th>Total</th><th>Pdte</th>' +
+    '<thead><tr><th>Lim</th><th></th>' + (seccion.tieneViernes ? '<th>Viernes</th>' : '') + (seccion.tieneCasillaDomingo ? '<th>Domingo</th>' : '') + '<th>60</th><th>PTA</th><th>Cart.</th>' +
     (seccion.tienePeso ? '<th>Peso</th>' : '') +
     (seccion.tieneCExpress ? '<th>C.Express</th>' : '') +
     (seccion.tieneSobrestock ? '<th>Sobr. 60</th><th>Sobr. PTA</th><th>Sobr. Cart.</th>' : '') +
+    '<th>Pdte</th><th>Total</th>' +
     '</tr></thead><tbody>' + filasHtml + '</tbody>';
 
   const layout = document.createElement('table');

@@ -29,16 +29,22 @@ function textoBloqueoFila_(tr) {
 const PDF_ANCHO_MM_ = 297; // ancho fijo tipo A4 apaisado
 const PDF_ALTO_A4_MM_ = 210; // alto estándar de un A4 apaisado
 
-/** Columnas VIERNES y DOMINGO en el PDF (solo si la agrupación las tiene
- *  activadas ese día): van justo después de "Límite", igual que en
- *  pantalla, así que cada una desplaza una posición el resto de columnas
- *  (TOTAL pasa del índice 5 al 6, o al 7 si están las dos). */
+/** Orden de columnas del PDF/Excel, igual que en pantalla:
+ *  Tienda, Límite, (VIERNES), (DOMINGO), 60, PTA, CART., (PESO),
+ *  (C.EXPRESS), (SOBR. 60, SOBR. PTA, SOBR. CART.), PDTE, TOTAL.
+ *  TOTAL es siempre la última columna. */
 function indiceTotalPdf_(seccion) {
-  return 5 + (seccion.tieneViernes ? 1 : 0) + (seccion.tieneCasillaDomingo ? 1 : 0);
+  return 2 + (seccion.tieneViernes ? 1 : 0) + (seccion.tieneCasillaDomingo ? 1 : 0) + 3 +
+    (seccion.tienePeso ? 1 : 0) + (seccion.tieneCExpress ? 1 : 0) + (seccion.tieneSobrestock ? 3 : 0) + 1;
+}
+
+/** Celdas en blanco de las columnas opcionales (PESO, C.EXPRESS, SOBR.). */
+function blancosExtrasPdf_(seccion) {
+  return [].concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? ['', '', ''] : []);
 }
 
 /** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
- *  sin guardar) las filas [tienda, límite, (VIERNES), (DOMINGO), 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBR. 60, SOBR. PTA, SOBR. CART.)].
+ *  sin guardar) las filas [tienda, límite, (VIERNES), (DOMINGO), 60, PTA, CART., (PESO), (C.EXPRESS), (SOBR. 60, SOBR. PTA, SOBR. CART.), PDTE, TOTAL].
  *  Con VIERNES / DOMINGO, el TOTAL de cada tienda los incluye (como en
  *  pantalla) y el total de la carga sin ellos se guarda aparte en
  *  fila._carga, para la fila de TOTAL GENERAL. */
@@ -57,8 +63,8 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : ''
       ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
-        textoBloqueoFila_(tr), '', '', '', ''
-      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? ['', '', ''] : []));
+        textoBloqueoFila_(tr), '', ''
+      ]).concat(blancosExtrasPdf_(seccion)).concat(['', '']));
       return;
     }
 
@@ -69,8 +75,8 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         nombre,
         limiteCelda ? limiteCelda.textContent.trim() : ''
       ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
-        motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', '', '', ''
-      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? ['', '', ''] : []));
+        motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', ''
+      ]).concat(blancosExtrasPdf_(seccion)).concat(['', '']));
       return;
     }
 
@@ -109,10 +115,9 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
     ].concat(celdaViernes).concat(celdaDomingo).concat([
       valorCampo('c60'),
       valorCampo('pta'),
-      valorCampo('cart'),
-      totalTienda,
-      valorCampo('pdte')
-    ]).concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (x) { return valorCampo(x.campo); }) : []);
+      valorCampo('cart')
+    ]).concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (x) { return valorCampo(x.campo); }) : [])
+      .concat([valorCampo('pdte'), totalTienda]);
     fila._carga = totalCarga;
     filas.push(fila);
   });
@@ -192,17 +197,13 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   let idxCol = 2;
   if (seccion.tieneViernes) { filaTotal.push(String(sumaColumnaPdf(idxCol))); idxCol++; }
   if (seccion.tieneCasillaDomingo) { filaTotal.push(String(sumaColumnaPdf(idxCol))); idxCol++; }
-  filaTotal = filaTotal.concat(['', '', '', String(totalGeneral), '']);
-  filaTotal = filaTotal
-    .concat(seccion.tienePeso ? [''] : [])
-    .concat(seccion.tieneCExpress ? [''] : [])
-    .concat(seccion.tieneSobrestock ? ['', '', ''] : []);
+  filaTotal = filaTotal.concat(['', '', '']).concat(blancosExtrasPdf_(seccion)).concat(['', String(totalGeneral)]);
   const filasConTotal = filas.concat([filaTotal]);
   const indiceFilaTotal = filasConTotal.length - 1;
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : []).concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : [])],
+    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : []).concat(['60', 'PTA', 'CART.']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : []).concat(['PDTE', 'TOTAL'])],
     body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },

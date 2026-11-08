@@ -1321,6 +1321,12 @@
     overflow-y: auto; min-height: 160px;
     padding-right: 6px; margin-right: -6px;
   }
+  /* Igual en "Rutas y tiendas": título, días y buscador fijos; solo se
+     desplaza la lista de agrupaciones. */
+  #plantilla-lista {
+    overflow-y: auto; min-height: 160px;
+    padding-right: 6px; margin-right: -6px;
+  }
 
   /* ---------- CONFIGURACIÓN: "Plantilla conteos" ---------- */
   /* La fila de días (LUNES, MARTES...) se queda pegada justo debajo de la
