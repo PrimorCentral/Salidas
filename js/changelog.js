@@ -8,6 +8,21 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.21',
+    fecha: '2026-11-08',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Conteo diario: el SOBRESTOCK va separado por nave (SOBRESTOCK 60 / PTA / CART.), en columnas con fondo gris. El sobrestock de cada nave cuenta como palets de esa nave y suma al TOTAL' },
+      { tipo: 'nuevo',      texto: 'Ajustar carga: al quitar palets de una tienda con sobrestock se pregunta si se quitan palets normales o de sobrestock. La elección sale debajo de la tienda y se puede cambiar' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: el sobrestock de cada nave se puede bloquear por tienda (botones «SOBR. 60 · PTA · CART.»). En el conteo sale «NO» y solo se puede forzar con el permiso «Forzar palets»' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: botón para activar o desactivar el SOBRESTOCK en todas las rutas de lunes a domingo a la vez. Al desactivar se borra el sobrestock contado de hoy en adelante' },
+      { tipo: 'mejora',     texto: 'Conteo diario, PDF, Excel e impresión: PDTE y TOTAL van al final de la tabla' },
+      { tipo: 'mejora',     texto: 'Conteo diario: al pasarse del límite solo se pinta la casilla TOTAL y debajo solo pone «+N sobre el límite»' },
+      { tipo: 'mejora',     texto: 'Conteo diario: las tiendas bloqueadas ya no tienen el botón «Desbloquear»; se desbloquean desde Bloqueos y cambios' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: la cabecera (título, días y buscador) se queda fija y solo se desplaza la lista de agrupaciones, como en Configuración agencias' },
+      { tipo: 'correccion', texto: 'Conteo diario: al forzar palets en una casilla «NO» ya no salta un error interno' }
+    ]
+  },
+  {
     version: '2.1.20',
     fecha: '2026-11-07',
     cambios: [
