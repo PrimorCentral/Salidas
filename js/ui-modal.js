@@ -1019,11 +1019,14 @@ function mostrarModalMatriculasDefinitivo(datos) {
  *
  * datos: {
  *   titulo, fechaTexto,
- *   filas: [{ nombre, contados, limite, otros, cerrada, cargar, cambio: {antes, ahora}|null }],
+ *   filas: [{ nombre, contados, limite, otros, cerrada, cargar, cambio: {antes, ahora}|null,
+ *            sobrestock (palets de sobrestock contados), sobrestockTexto (de qué nave),
+ *            quitarSobrestock (los que ya se decidió quitar) }],
  *   carga: carga vigente (para decir quién la ajustó) o null,
  *   camiones: camiones guardados [{matricula, remolque, tiendas, parciales}] o null,
  *   tipoEnvio: 'prevision'|'definitivo'|null (si se abre en mitad de un envío),
- *   onGuardar: function(cargas, camiones) con cargas = { 'NOMBRE TIENDA': palets }
+ *   onGuardar: function(cargas, camiones, quitarSobrestock) con cargas = { 'NOMBRE TIENDA': palets }
+ *     y quitarSobrestock = { 'NOMBRE TIENDA': palets de sobrestock que no se cargan }
  *     y camiones = [{matricula, remolque, tiendas: ['NOMBRE TIENDA', ...],
  *       parciales: {'NOMBRE TIENDA': palets}}] ([] = sin camiones),
  *   onCancelar: opcional,
@@ -1064,7 +1067,8 @@ function mostrarModalAjustarCarga(datos) {
     if (f.cerrada) return '<tr class="cerrada"><td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</td><td class="num" colspan="5">CERRADA</td></tr>';
     const hayLimite = !isNaN(f.limite) && f.limite > 0;
     return '<tr class="' + (f.cambio ? 'revisar' : '') + '" data-fila="' + i + '">' +
-      '<td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + (f.cambio ? etiquetaCambioConteo_(f.cambio) : '') + '</td>' +
+      '<td class="tienda">' + escapeHtml(quitarCodigoTienda(f.nombre)) + (f.cambio ? etiquetaCambioConteo_(f.cambio) : '') +
+        (f.sobrestock > 0 ? '<button type="button" class="modal-quitar-tipo" data-tq="' + i + '" hidden></button>' : '') + '</td>' +
       '<td class="num contados' + (hayLimite && f.contados + f.otros > f.limite ? ' pasado' : '') + '">' + f.contados +
         (f.otros ? ' <span class="modal-palets-otros">+' + f.otros + ' vie/dom</span>' : '') + '</td>' +
       '<td class="num">' + (hayLimite ? f.limite : '—') + '</td>' +
@@ -1127,6 +1131,88 @@ function mostrarModalAjustarCarga(datos) {
   function valor(inp) {
     const v = parseInt(inp.value, 10);
     return isNaN(v) || v < 0 ? 0 : v;
+  }
+  // SOBRESTOCK: al quitar palets de una tienda que tiene sobrestock se
+  // pregunta si se quitan palets normales o de sobrestock. tipoQuitar[i] =
+  // 'sob' | 'normal' | null (aún no se ha elegido / no se quita nada).
+  const tipoQuitar = filasDatos.map(function (f) {
+    if (f.cerrada || !(f.sobrestock > 0) || !(f.cargar < f.contados)) return null;
+    return f.quitarSobrestock > 0 ? 'sob' : 'normal';
+  });
+  // Palets de sobrestock que de verdad no se cargan en la fila i. Si se
+  // quitan más de los que hay del tipo elegido, el resto sale del otro.
+  function sobrestockQuitado(i, v) {
+    const f = filasDatos[i];
+    const quitar = Math.max(0, f.contados - v);
+    if (!quitar || !(f.sobrestock > 0)) return 0;
+    const normales = Math.max(0, f.contados - f.sobrestock);
+    if (tipoQuitar[i] === 'sob') return Math.min(f.sobrestock, quitar);
+    return Math.min(f.sobrestock, Math.max(0, quitar - normales));
+  }
+  function preguntarTipoQuitar(i, alElegir, alCancelar) {
+    const f = filasDatos[i];
+    const v = cargaFila(i);
+    const quitar = f.contados - v;
+    const previo = document.getElementById('pregunta-quitar-overlay');
+    if (previo) previo.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'pregunta-quitar-overlay';
+    overlay.className = 'modal-overlay confirm-puntual-overlay';
+    overlay.style.display = 'flex';
+    const opcion = function (valorOp, titulo, detalle, marcada) {
+      return '<label class="pregunta-quitar-opcion' + (marcada ? ' marcada' : '') + '">' +
+        '<input type="radio" name="tipo-quitar" value="' + valorOp + '"' + (marcada ? ' checked' : '') + '>' +
+        '<span><b>' + titulo + '</b><small>' + detalle + '</small></span></label>';
+    };
+    const elegido = tipoQuitar[i] || 'normal';
+    overlay.innerHTML =
+      '<div class="modal-box confirm-puntual-box pregunta-quitar-box" role="alertdialog" aria-modal="true" aria-labelledby="pregunta-quitar-titulo">' +
+        '<div class="confirm-puntual-icono">' + ICONO_PALET_CAMION_20_ + '</div>' +
+        '<h3 id="pregunta-quitar-titulo">¿Qué palets quieres quitar?</h3>' +
+        '<div class="confirm-puntual-cuerpo">' +
+          '<p><b>' + escapeHtml(quitarCodigoTienda(f.nombre)) + '</b>: quitas <b>' + quitar + (quitar === 1 ? ' palet' : ' palets') + '</b> (de ' + f.contados + ' a ' + v + ').</p>' +
+          opcion('normal', 'Palets normales', 'Se quitan en el orden de siempre: PTA → CART. → 60', elegido === 'normal') +
+          opcion('sob', 'Palets de sobrestock', 'Tiene ' + f.sobrestock + ' de sobrestock' + (f.sobrestockTexto ? ': ' + escapeHtml(f.sobrestockTexto) : ''), elegido === 'sob') +
+        '</div>' +
+        '<div class="modal-actions">' +
+          '<button type="button" class="modal-cancel" data-pq="no">Cancelar</button>' +
+          '<button type="button" class="modal-confirm" data-pq="si">Quitar ' + quitar + (quitar === 1 ? ' palet' : ' palets') + '</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('input[name="tipo-quitar"]').forEach(function (r) {
+      r.onchange = function () {
+        overlay.querySelectorAll('.pregunta-quitar-opcion').forEach(function (l) { l.classList.toggle('marcada', l.querySelector('input').checked); });
+      };
+    });
+    function cerrar() { overlay.remove(); document.removeEventListener('keydown', teclas, true); }
+    function teclas(e) {
+      if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); cerrar(); if (alCancelar) alCancelar(); }
+    }
+    document.addEventListener('keydown', teclas, true);
+    overlay.querySelector('[data-pq="no"]').onclick = function () { cerrar(); if (alCancelar) alCancelar(); };
+    overlay.querySelector('[data-pq="si"]').onclick = function () {
+      const r = overlay.querySelector('input[name="tipo-quitar"]:checked');
+      cerrar();
+      alElegir(r ? r.value : 'normal');
+    };
+    setTimeout(function () { const b = overlay.querySelector('[data-pq="si"]'); if (b) b.focus(); }, 30);
+  }
+  // Tras cambiar lo que se carga de la fila i (antes valía "antes"):
+  // si ahora se quitan palets de una tienda con sobrestock y aún no se ha
+  // elegido de qué tipo, se pregunta. Si se cancela, se vuelve a lo de antes.
+  function trasCambiarCarga(i, antes) {
+    const f = filasDatos[i];
+    const v = cargaFila(i);
+    if (!(f.sobrestock > 0) || v >= f.contados) { tipoQuitar[i] = null; refrescar(); return; }
+    if (tipoQuitar[i]) { refrescar(); return; }
+    refrescar();
+    preguntarTipoQuitar(i, function (tipo) { tipoQuitar[i] = tipo; refrescar(); }, function () {
+      const inp = custom.querySelector('input[data-i="' + i + '"]');
+      if (inp) inp.value = antes;
+      if (antes >= f.contados) tipoQuitar[i] = null;
+      refrescar();
+    });
   }
   function normalizarMatricula(t) {
     return String(t || '').toUpperCase().replace(/[^A-Z0-9 -]/g, '').replace(/\s+/g, ' ').replace(/^\s+/, '').slice(0, 15);
@@ -1287,6 +1373,15 @@ function mostrarModalAjustarCarga(datos) {
       if (falta) sinCamion++;
       const sel = custom.querySelector('select.sel-camion[data-c="' + i + '"]');
       if (sel) sel.classList.toggle('falta', falta);
+      const tq = custom.querySelector('[data-tq="' + i + '"]');
+      if (tq) {
+        const qs = (!vacio && v < f.contados) ? sobrestockQuitado(i, v) : 0;
+        const quitados = Math.max(0, f.contados - v);
+        tq.hidden = !(quitados > 0 && tipoQuitar[i]);
+        tq.textContent = qs > 0 ? 'Sin cargar: ' + qs + ' de sobrestock' + (quitados - qs > 0 ? ' + ' + (quitados - qs) + ' normales' : '') : 'Sin cargar: palets normales';
+        tq.title = 'Pulsa para cambiar qué palets se quitan';
+        tq.classList.toggle('es-sob', qs > 0);
+      }
       inp.classList.toggle('pasado', pasado || vacio);
       q.classList.toggle('pasado', pasado || vacio);
       q.classList.toggle('cero', !vacio && !pasado && v === f.contados);
@@ -1349,11 +1444,23 @@ function mostrarModalAjustarCarga(datos) {
   custom.querySelectorAll('.modal-palets-ctrl button').forEach(function (b) {
     b.onclick = function () {
       const inp = custom.querySelector('input[data-i="' + b.getAttribute('data-i') + '"]');
-      inp.value = Math.max(0, valor(inp) + Number(b.getAttribute('data-d')));
-      refrescar();
+      const antes = valor(inp);
+      inp.value = Math.max(0, antes + Number(b.getAttribute('data-d')));
+      trasCambiarCarga(Number(b.getAttribute('data-i')), antes);
     };
   });
-  inputs.forEach(function (inp) { inp.oninput = refrescar; });
+  inputs.forEach(function (inp) {
+    let antes = valor(inp);
+    inp.onfocus = function () { antes = valor(inp); };
+    inp.oninput = refrescar;
+    inp.onchange = function () { if (inp.value !== '') trasCambiarCarga(Number(inp.getAttribute('data-i')), antes); antes = valor(inp); };
+  });
+  custom.querySelectorAll('.modal-quitar-tipo').forEach(function (b) {
+    b.onclick = function () {
+      const i = Number(b.getAttribute('data-tq'));
+      preguntarTipoQuitar(i, function (tipo) { tipoQuitar[i] = tipo; refrescar(); });
+    };
+  });
   selects.forEach(function (s) {
     s.onchange = function () {
       const i = Number(s.getAttribute('data-c'));
@@ -1382,6 +1489,7 @@ function mostrarModalAjustarCarga(datos) {
 
   document.getElementById('modal-restablecer-btn').onclick = function () {
     inputs.forEach(function (inp) { inp.value = filasDatos[inp.getAttribute('data-i')].contados; });
+    tipoQuitar.forEach(function (t, i) { tipoQuitar[i] = null; });
     refrescar();
   };
   function cancelar() {
@@ -1435,7 +1543,13 @@ function mostrarModalAjustarCarga(datos) {
     if (sinCamion) { sinCamion.focus(); return; }
     const descuadre = custom.querySelector('tr.fila-reparto.mal input');
     if (descuadre) { descuadre.focus(); return; }
-    datos.onGuardar(cargas, camionesParaGuardar());
+    const quitarSob = {};
+    inputs.forEach(function (inp) {
+      const i = Number(inp.getAttribute('data-i'));
+      const qs = sobrestockQuitado(i, valor(inp));
+      if (qs > 0) quitarSob[filasDatos[i].nombre] = qs;
+    });
+    datos.onGuardar(cargas, camionesParaGuardar(), quitarSob);
   };
 }
 

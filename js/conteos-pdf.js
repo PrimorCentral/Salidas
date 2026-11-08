@@ -38,7 +38,7 @@ function indiceTotalPdf_(seccion) {
 }
 
 /** Lee de la tabla en pantalla (no de "seccion", para incluir cambios aún
- *  sin guardar) las filas [tienda, límite, (VIERNES), (DOMINGO), 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBRESTOCK)].
+ *  sin guardar) las filas [tienda, límite, (VIERNES), (DOMINGO), 60, PTA, CART., TOTAL, PDTE, (PESO), (C.EXPRESS), (SOBR. 60, SOBR. PTA, SOBR. CART.)].
  *  Con VIERNES / DOMINGO, el TOTAL de cada tienda los incluye (como en
  *  pantalla) y el total de la carga sin ellos se guarda aparte en
  *  fila._carga, para la fila de TOTAL GENERAL. */
@@ -58,7 +58,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         limiteCelda ? limiteCelda.textContent.trim() : ''
       ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
         textoBloqueoFila_(tr), '', '', '', ''
-      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
+      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? ['', '', ''] : []));
       return;
     }
 
@@ -70,7 +70,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
         limiteCelda ? limiteCelda.textContent.trim() : ''
       ].concat(conViernes ? [''] : []).concat(conDomingo ? [''] : []).concat([
         motivo ? motivo.textContent.trim() : 'SALE POR EXCEPCIÓN', '', '', '', ''
-      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? [''] : []));
+      ]).concat(seccion.tienePeso ? [''] : []).concat(seccion.tieneCExpress ? [''] : []).concat(seccion.tieneSobrestock ? ['', '', ''] : []));
       return;
     }
 
@@ -112,7 +112,7 @@ function leerFilasPdfSeccion_(tableWrap, seccion) {
       valorCampo('cart'),
       totalTienda,
       valorCampo('pdte')
-    ]).concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneSobrestock ? [valorCampo('sobrestock')] : []);
+    ]).concat(seccion.tienePeso ? [valorCampo('peso')] : []).concat(seccion.tieneCExpress ? [valorCampo('cexpress')] : []).concat(seccion.tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (x) { return valorCampo(x.campo); }) : []);
     fila._carga = totalCarga;
     filas.push(fila);
   });
@@ -196,13 +196,13 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   filaTotal = filaTotal
     .concat(seccion.tienePeso ? [''] : [])
     .concat(seccion.tieneCExpress ? [''] : [])
-    .concat(seccion.tieneSobrestock ? [''] : []);
+    .concat(seccion.tieneSobrestock ? ['', '', ''] : []);
   const filasConTotal = filas.concat([filaTotal]);
   const indiceFilaTotal = filasConTotal.length - 1;
 
   doc.autoTable({
     startY: y,
-    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : []).concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBRESTOCK'] : [])],
+    head: [['Tienda', 'Límite'].concat(seccion.tieneViernes ? ['VIERNES'] : []).concat(seccion.tieneCasillaDomingo ? ['DOMINGO'] : []).concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE']).concat(seccion.tienePeso ? ['PESO'] : []).concat(seccion.tieneCExpress ? ['C.EXPRESS'] : []).concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : [])],
     body: filasConTotal,
     styles: { fontSize: 9, cellPadding: 2.5, valign: 'middle', halign: 'center' },
     headStyles: { fillColor: [28, 43, 69], textColor: 255, halign: 'center' },
@@ -407,9 +407,19 @@ function leerFilasPdfEspecialSeccion_(tableWrap, agenciaNombre) {
           const inp = tr.querySelector('input[data-campo="' + campo + '"]');
           return inp ? inp.value : '';
         }
+        // El SOBRESTOCK de cada nave cuenta como palets de esa nave: en esta
+        // hoja va sumado en su columna (60 / PTA / CART.), así cuadra con el TOTAL.
+        function valorNave(campo) {
+          const base = valorCampo(campo);
+          const sob = CAMPOS_SOBRESTOCK_.find(function (x) { return x.nave === campo; });
+          const vs = sob ? valorCampo(sob.campo) : '';
+          if (vs === '' || isNaN(parseFloat(vs)) || parseFloat(vs) === 0) return base;
+          const b = parseFloat(base);
+          return String((isNaN(b) ? 0 : b) + parseFloat(vs));
+        }
         celdasPropias = [
           tr.getAttribute('data-limite') || '', nombre,
-          valorCampo('c60'), valorCampo('pta'), valorCampo('cart'), valorCampo('total')
+          valorNave('c60'), valorNave('pta'), valorNave('cart'), valorCampo('total')
         ];
       }
 

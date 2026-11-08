@@ -111,6 +111,23 @@ function celdaDomingoHtml_(t) {
   return '<td><input class="celda celda-domingo" data-campo="casillaDomingo" type="number" value="' + (t.casillaDomingo == null ? '' : t.casillaDomingo) + '" title="DOMINGO: suma al TOTAL de la tienda, pero no al total de palets de la carga ni al envío a la agencia"></td>';
 }
 
+/** Casillas de SOBRESTOCK, una por nave. "nave" es la columna de palets
+ *  (data-campo) a la que corresponde cada una: el sobrestock de GAITE
+ *  cuenta como palets de GAITE (60), el de PTA como PTA y el de CARTAMA
+ *  como CART. Mismo nombre que espera guardar_conteo en el servidor. */
+const CAMPOS_SOBRESTOCK_ = [
+  { campo: 'sobrestock60', nave: 'c60', etiqueta: '60' },
+  { campo: 'sobrestockPta', nave: 'pta', etiqueta: 'PTA' },
+  { campo: 'sobrestockCart', nave: 'cart', etiqueta: 'CART.' }
+];
+
+/** Valor (número) de la casilla de sobrestock de una nave en una fila. */
+function sobrestockDeNave_(tr, nave) {
+  const s = CAMPOS_SOBRESTOCK_.find(function (x) { return x.nave === nave; });
+  const inp = s ? tr.querySelector('input[data-campo="' + s.campo + '"]') : null;
+  return inp ? (parseFloat(inp.value) || 0) : 0;
+}
+
 function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress, tieneSobrestock, tieneViernes, tieneDomingo) {
   const nombreLimpio = quitarMarcadorNombre(t.nombre);
   const badge = badgeTransitoTienda(t.transito);
@@ -130,7 +147,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-cerrada' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '" data-cierre-id="' + escapeAttr(t.cierreId) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       celdaLimiteHtml_(t) +
-      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 3 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
       '<td><button type="button" class="btn-reabrir" title="Desbloquear el conteo de esta tienda">Desbloquear</button></td>' +
       '</tr>';
   }
@@ -143,7 +160,7 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     return '<tr class="fila-sale-excepcion' + claseGrupo + '" data-row="' + t.row + '" data-nombre="' + escapeAttr(t.nombre) + '"' + atrGrupo + '>' +
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       celdaLimiteHtml_(t) +
-      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 1 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
+      '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 3 : 0)) + '"><div class="motivo-cierre motivo-excepcion">POR EXCEPCIÓN SALE POR ' + escapeHtml(t.excepcionAgrupacionDestino || '') + '</div></td>' +
       '<td></td>' +
       '</tr>';
   }
@@ -205,16 +222,21 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     '<td>' + celdaExtra('pdte', t.pdte) + '</td>' +
     (tienePeso ? '<td>' + celdaExtra('peso', t.peso, '0.01') + '</td>' : '') +
     (tieneCExpress ? '<td>' + celdaExtra('cexpress', t.cexpress, '0.01') + '</td>' : '') +
-    (tieneSobrestock ? '<td>' + celdaExtra('sobrestock', t.sobrestock, '0.01') + '</td>' : '') +
+    // SOBRESTOCK separado por nave (60 / PTA / CART.): cada casilla cuenta
+    // como palets de esa nave (suma al TOTAL igual que la casilla de la nave).
+    (tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (s) {
+      return '<td class="td-sobrestock">' + celdaExtra(s.campo, t[s.campo], '0.01') + '</td>';
+    }).join('') : '') +
     // La X para bloquear la tienda ya no sale aquí: se hace desde "Bloqueo y cambios".
     '<td></td>' +
     '</tr>';
 }
 
 /**
- * Calcula TOTAL = 60 + PTA + CART automáticamente al escribir, y colorea la fila
- * en ámbar (1-2 palets de más, se acepta ciñéndose al límite) o rojo
- * (3 o más de más, hay que consultar a informática).
+ * Calcula TOTAL = 60 + PTA + CART (+ C.EXPRESS + SOBRESTOCK de las tres
+ * naves) automáticamente al escribir, y colorea la fila en ámbar (1-2
+ * palets de más) o rojo (3 o más de más). Debajo solo sale "+N sobre el
+ * límite".
  */
 function attachCalculoYValidacion(tr) {
   const limite = Number(tr.getAttribute('data-limite'));
@@ -222,7 +244,7 @@ function attachCalculoYValidacion(tr) {
   const ptaInput = tr.querySelector('input[data-campo="pta"]');
   const cartInput = tr.querySelector('input[data-campo="cart"]');
   const cexpressInput = tr.querySelector('input[data-campo="cexpress"]');
-  const sobrestockInput = tr.querySelector('input[data-campo="sobrestock"]');
+  const sobrestockInputs = CAMPOS_SOBRESTOCK_.map(function (s) { return tr.querySelector('input[data-campo="' + s.campo + '"]'); }).filter(Boolean);
   const totalInput = tr.querySelector('input[data-campo="total"]');
   const pdteInput = tr.querySelector('input[data-campo="pdte"]');
   const totalVisualInput = tr.querySelector('input[data-campo="totalVisual"]');
@@ -262,14 +284,14 @@ function attachCalculoYValidacion(tr) {
   }
 
   function recalcTotal() {
-    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && (!sobrestockInput || sobrestockInput.value === '')) {
+    if (c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && (!cexpressInput || cexpressInput.value === '') && sobrestockInputs.every(function (i) { return i.value === ''; })) {
       totalInput.value = '';
     } else {
       const m = parseFloat(c60Input.value) || 0;
       const p = parseFloat(ptaInput.value) || 0;
       const c = parseFloat(cartInput.value) || 0;
       const ce = cexpressInput ? (parseFloat(cexpressInput.value) || 0) : 0;
-      const so = sobrestockInput ? (parseFloat(sobrestockInput.value) || 0) : 0;
+      const so = sobrestockInputs.reduce(function (a, i) { return a + (parseFloat(i.value) || 0); }, 0);
       totalInput.value = m + p + c + ce + so;
     }
     validar();
@@ -291,11 +313,11 @@ function attachCalculoYValidacion(tr) {
     const exceso = (total + pdte + vie + dom) - limite;
     if (exceso >= 3) {
       tr.classList.add('fila-alerta');
-      nota.textContent = '+' + exceso + ' sobre el límite — consultar a informática';
+      nota.textContent = '+' + exceso + ' sobre el límite';
       nota.classList.add('alerta');
     } else if (exceso >= 1) {
       tr.classList.add('fila-aviso');
-      nota.textContent = '+' + exceso + ' sobre el límite — ceñirse al límite';
+      nota.textContent = '+' + exceso + ' sobre el límite';
       nota.classList.add('aviso');
     }
   }
@@ -312,8 +334,11 @@ function attachCalculoYValidacion(tr) {
     if (!pesoAuto) return;
     // "NO" sin forzar o casilla vacía cuentan como 0.
     const n = function (input) { return input ? (parseFloat(input.value) || 0) : 0; };
-    const vacias = c60Input.value === '' && ptaInput.value === '' && cartInput.value === '';
-    const kg = n(c60Input) * PESO_PALET_KG.c60 + n(ptaInput) * PESO_PALET_KG.pta + n(cartInput) * PESO_PALET_KG.cart;
+    const vacias = c60Input.value === '' && ptaInput.value === '' && cartInput.value === '' && sobrestockInputs.every(function (i) { return i.value === ''; });
+    // El sobrestock de cada nave pesa como un palet de esa nave.
+    const kg = (n(c60Input) + sobrestockDeNave_(tr, 'c60')) * PESO_PALET_KG.c60 +
+      (n(ptaInput) + sobrestockDeNave_(tr, 'pta')) * PESO_PALET_KG.pta +
+      (n(cartInput) + sobrestockDeNave_(tr, 'cart')) * PESO_PALET_KG.cart;
     pesoInput.value = (vacias || kg === 0) ? '' : kg;
   }
   if (pesoAuto) {
@@ -321,6 +346,7 @@ function attachCalculoYValidacion(tr) {
     c60Input.addEventListener('input', recalcPeso);
     ptaInput.addEventListener('input', recalcPeso);
     cartInput.addEventListener('input', recalcPeso);
+    sobrestockInputs.forEach(function (i) { i.addEventListener('input', recalcPeso); });
     // Al abrir el conteo, si aún no hay peso guardado pero sí palets, se rellena.
     if (pesoInput.value === '') recalcPeso();
   }
@@ -329,7 +355,7 @@ function attachCalculoYValidacion(tr) {
   ptaInput.addEventListener('input', recalcTotal);
   cartInput.addEventListener('input', recalcTotal);
   if (cexpressInput) cexpressInput.addEventListener('input', recalcTotal);
-  if (sobrestockInput) sobrestockInput.addEventListener('input', recalcTotal);
+  sobrestockInputs.forEach(function (i) { i.addEventListener('input', recalcTotal); });
   if (pdteInput) pdteInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   if (viernesInput) viernesInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
   if (domingoInput) domingoInput.addEventListener('input', function () { validar(); recalcTotalVisual(); });
@@ -448,7 +474,7 @@ function attachValidacionGrupos(tableWrap) {
 
 // Casillas que se guardan en el conteo (mismo nombre que espera
 // guardar_conteo en el servidor).
-const CAMPOS_CONTEO_GUARDABLES_ = ['c60', 'pta', 'cart', 'pdte', 'peso', 'cexpress', 'sobrestock', 'viernes', 'casillaDomingo'];
+const CAMPOS_CONTEO_GUARDABLES_ = ['c60', 'pta', 'cart', 'pdte', 'peso', 'cexpress', 'sobrestock60', 'sobrestockPta', 'sobrestockCart', 'viernes', 'casillaDomingo'];
 
 /** Apunta en cada casilla (data-original) el valor que tiene ahora, que es
  *  el que hay guardado en el servidor. Al guardar solo se mandan como
@@ -517,10 +543,12 @@ function recogerFilas(tableWrap) {
     // (ver seccion.tieneCExpress).
     const cexpress = get('cexpress');
     if (cexpress !== undefined) fila.cexpress = cexpress;
-    // Igual que "peso" y "cexpress", "sobrestock" solo existe si la ruta lo
-    // tiene activado (ver seccion.tieneSobrestock).
-    const sobrestock = get('sobrestock');
-    if (sobrestock !== undefined) fila.sobrestock = sobrestock;
+    // Igual que "peso" y "cexpress", el SOBRESTOCK (una casilla por nave)
+    // solo existe si la ruta lo tiene activado (ver seccion.tieneSobrestock).
+    CAMPOS_SOBRESTOCK_.forEach(function (s) {
+      const v = get(s.campo);
+      if (v !== undefined) fila[s.campo] = v;
+    });
     // "viernes" solo existe si la agrupación lo tiene activado ese día (ver
     // seccion.tieneViernes) y la tienda no está excluida. Si no hay
     // casilla, no se manda nada y el backend deja el valor como estaba.

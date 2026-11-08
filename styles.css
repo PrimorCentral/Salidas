@@ -5510,3 +5510,28 @@ table.conteo td.limite.lim-especial::after { content: "\2605"; margin-left: 4px;
 .limite-especial-label { color: #C2410C; }
 .emails-config-gidt.limite-especial-config { color: #C2410C; font-weight: 600; }
 .emails-config-gidt.limite-especial-config.desactivado { color: var(--ink-soft); font-weight: 500; }
+
+  /* ---------- SOBRESTOCK por nave (60 / PTA / CART.) ---------- */
+  /* Fondo grisáceo muy claro para distinguir sus tres columnas. */
+  table.conteo thead th.th-sobrestock { background: #eef0f2; color: #5b6472; }
+  table.conteo thead th.th-sobrestock:not(.th-sobrestock-nave) { border-bottom: 1px solid #dfe3e8; padding-top: 6px; padding-bottom: 4px; }
+  table.conteo thead th.th-sobrestock-nave { font-size: 10px; padding-top: 4px; padding-bottom: 6px; }
+  table.conteo td.td-sobrestock { background: #f6f7f8; }
+
+  /* Ajustar carga: qué palets se quitan (normales / sobrestock). */
+  .modal-quitar-tipo {
+    display: block; margin-top: 3px; padding: 1px 7px; border: 1px solid #d9dee7; border-radius: 10px;
+    background: #f6f7f8; color: #5b6472; font-size: 10.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .modal-quitar-tipo:hover { background: #eef0f2; }
+  .modal-quitar-tipo.es-sob { background: #fdf1de; border-color: #e8c48f; color: #8a5414; }
+  .modal-quitar-tipo[hidden] { display: none; }
+  .pregunta-quitar-box { max-width: 420px; }
+  .pregunta-quitar-opcion {
+    display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; padding: 10px 12px;
+    border: 1.5px solid #dfe3ea; border-radius: 10px; background: #fff; cursor: pointer;
+  }
+  .pregunta-quitar-opcion.marcada { border-color: var(--navy); background: #f3f6fb; }
+  .pregunta-quitar-opcion input { margin-top: 3px; accent-color: var(--navy); }
+  .pregunta-quitar-opcion b { display: block; color: var(--navy); font-size: 14px; }
+  .pregunta-quitar-opcion small { display: block; color: #6b7686; font-size: 12px; margin-top: 2px; }

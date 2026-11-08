@@ -171,7 +171,7 @@ function construirGrupoImpresionDia_(seccion) {
   // así que a extraCols hay que sumarle las 2 columnas iniciales (LIM y
   // nombre) para que la barra llegue hasta el final -- si no, se queda
   // corta y no tapa las últimas columnas (TOTAL, PDTE...).
-  const extraCols = 5 + (seccion.tieneViernes ? 1 : 0) + (seccion.tieneCasillaDomingo ? 1 : 0) + (seccion.tienePeso ? 1 : 0) + (seccion.tieneCExpress ? 1 : 0) + (seccion.tieneSobrestock ? 1 : 0);
+  const extraCols = 5 + (seccion.tieneViernes ? 1 : 0) + (seccion.tieneCasillaDomingo ? 1 : 0) + (seccion.tienePeso ? 1 : 0) + (seccion.tieneCExpress ? 1 : 0) + (seccion.tieneSobrestock ? 3 : 0);
   const totalCols = extraCols + 2;
 
   // Solo las tiendas que hoy hay que contar físicamente aquí: se dejan
@@ -231,7 +231,7 @@ function construirGrupoImpresionDia_(seccion) {
       '<td class="hi-blanco"></td><td class="hi-blanco"></td>' +
       (seccion.tienePeso ? '<td class="hi-blanco"></td>' : '') +
       (seccion.tieneCExpress ? '<td class="hi-blanco"></td>' : '') +
-      (seccion.tieneSobrestock ? '<td class="hi-blanco"></td>' : '') +
+      (seccion.tieneSobrestock ? '<td class="hi-blanco"></td><td class="hi-blanco"></td><td class="hi-blanco"></td>' : '') +
       '</tr>';
     return html;
   }).join('');
@@ -242,7 +242,7 @@ function construirGrupoImpresionDia_(seccion) {
     '<thead><tr><th>Lim</th><th></th>' + (seccion.tieneViernes ? '<th>Viernes</th>' : '') + (seccion.tieneCasillaDomingo ? '<th>Domingo</th>' : '') + '<th>60</th><th>PTA</th><th>Cart.</th><th>Total</th><th>Pdte</th>' +
     (seccion.tienePeso ? '<th>Peso</th>' : '') +
     (seccion.tieneCExpress ? '<th>C.Express</th>' : '') +
-    (seccion.tieneSobrestock ? '<th>Sobrestock</th>' : '') +
+    (seccion.tieneSobrestock ? '<th>Sobr. 60</th><th>Sobr. PTA</th><th>Sobr. Cart.</th>' : '') +
     '</tr></thead><tbody>' + filasHtml + '</tbody>';
 
   const layout = document.createElement('table');

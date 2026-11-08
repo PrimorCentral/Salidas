@@ -78,7 +78,7 @@ function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap) {
     .concat(['60', 'PTA', 'CART.', 'TOTAL', 'PDTE'])
     .concat(seccion.tienePeso ? ['PESO'] : [])
     .concat(seccion.tieneCExpress ? ['C.EXPRESS'] : [])
-    .concat(seccion.tieneSobrestock ? ['SOBRESTOCK'] : []);
+    .concat(seccion.tieneSobrestock ? ['SOBR. 60', 'SOBR. PTA', 'SOBR. CART.'] : []);
   const nCols = cabeceras.length;
   const idxTotal = indiceTotalPdf_(seccion);
 

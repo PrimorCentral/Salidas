@@ -438,14 +438,34 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const domingoInput = tr.querySelector('input[data-campo="casillaDomingo"]');
       const vie = viernesInput && viernesInput.value !== '' ? (parseFloat(viernesInput.value) || 0) : 0;
       const dom = domingoInput && domingoInput.value !== '' ? (parseFloat(domingoInput.value) || 0) : 0;
+      let sobrestock = 0;
+      const sobPartes = [];
+      const NOMBRE_NAVE_ = { c60: 'GAITE', pta: 'PTA', cart: 'CARTAMA' };
+      CAMPOS_SOBRESTOCK_.forEach(function (x) {
+        const inp = tr.querySelector('input[data-campo="' + x.campo + '"]');
+        if (!inp || inp.classList.contains('celda-otra-agencia')) return;
+        const n = parseFloat(inp.value) || 0;
+        sobrestock += n;
+        if (n) sobPartes.push(NOMBRE_NAVE_[x.nave] + ' (' + n + ')');
+      });
       filas.push({
         nombre: nombre,
         contados: isNaN(valor) ? 0 : valor,
         limite: parseFloat(tr.getAttribute('data-limite')),
-        otros: vie + dom
+        otros: vie + dom,
+        sobrestock: sobrestock,
+        sobrestockTexto: sobPartes.join(', ').replace(/, ([^,]*)$/, ' y $1')
       });
     });
     return filas;
+  }
+  // Palets de SOBRESTOCK que se decidió quitar de una tienda al ajustar la
+  // carga (0 si no se eligió o la carga es de antes de esto).
+  function quitarSobrestockCarga_(nombre) {
+    const c = seccion.carga;
+    if (!c || !Array.isArray(c.lista)) return 0;
+    const t = c.lista.find(function (x) { return x.tienda === nombre; });
+    return t && typeof t.quitarSobrestock === 'number' ? t.quitarSobrestock : 0;
   }
   function cargaEditable_() {
     const c = seccion.carga;
@@ -721,8 +741,12 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
 
   // Copia de solo lectura de la tabla real con los números de la carga
   // ajustada. Lo que se quita en cada tienda se reparte en el orden de
-  // siempre: primero PTA, luego CART. y por último 60. Las casillas que
-  // cambian salen en azul (con lo contado al pasar el ratón).
+  // siempre: primero PTA, luego CART. y por último 60. Si al ajustar se
+  // eligió quitar palets de SOBRESTOCK (carga.lista[].quitarSobrestock),
+  // esos salen antes de las casillas de sobrestock (mismo orden) y el
+  // resto de las normales; si no quedan normales, del sobrestock que
+  // quede. Las casillas que cambian salen en azul (con lo contado al
+  // pasar el ratón).
   function pintarVistaAjustada_() {
     const ajustes = ajustesParaVista_();
     const original = tableWrap.querySelector('table.conteo');
@@ -742,18 +766,27 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const contados = parseFloat(totalIn.value) || 0;
       const cargar = Number(ajustes[nombre]) || 0;
       let quitar = contados - cargar;
-      ['pta', 'cart', 'c60'].forEach(function (campo) {
-        if (quitar <= 0) return;
-        const inp = tr.querySelector('input[data-campo="' + campo + '"]');
-        if (!inp || inp.classList.contains('celda-no') || inp.classList.contains('celda-otra-agencia')) return;
-        const v = parseFloat(inp.value) || 0;
-        const q = Math.min(v, quitar);
-        if (q <= 0) return;
-        inp.value = v - q;
-        inp.classList.add('celda-ajustada');
-        inp.title = 'Contado: ' + v + ' · se quita' + (q === 1 ? ' 1 palet' : 'n ' + q + ' palets');
-        quitar -= q;
-      });
+      const ordenNaves = ['pta', 'cart', 'c60'];
+      const ordenSob = ordenNaves.map(function (n) { return CAMPOS_SOBRESTOCK_.find(function (x) { return x.nave === n; }).campo; });
+      function quitarDe(campos, maximo) {
+        let resto = Math.min(maximo, quitar);
+        campos.forEach(function (campo) {
+          if (resto <= 0) return;
+          const inp = tr.querySelector('input[data-campo="' + campo + '"]');
+          if (!inp || inp.classList.contains('celda-no') || inp.classList.contains('celda-otra-agencia')) return;
+          const v = parseFloat(inp.value) || 0;
+          const q = Math.min(v, resto);
+          if (q <= 0) return;
+          inp.value = v - q;
+          inp.classList.add('celda-ajustada');
+          inp.title = 'Contado: ' + v + ' · se quita' + (q === 1 ? ' 1 palet' : 'n ' + q + ' palets');
+          resto -= q;
+          quitar -= q;
+        });
+      }
+      quitarDe(ordenSob, quitarSobrestockCarga_(nombre));
+      quitarDe(ordenNaves, Infinity);
+      quitarDe(ordenSob, Infinity);
       totalIn.value = cargar;
       const vis = tr.querySelector('input[data-campo="totalVisual"]');
       let totalVisto = cargar;
@@ -768,7 +801,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       const pesoIn = tr.querySelector('input[data-campo="peso"]');
       if (pesoIn && !pesoIn.classList.contains('celda-otra-agencia') && typeof PESO_PALET_KG !== 'undefined') {
         const n = function (c) { const i = tr.querySelector('input[data-campo="' + c + '"]'); return i ? (parseFloat(i.value) || 0) : 0; };
-        const kg = n('c60') * PESO_PALET_KG.c60 + n('pta') * PESO_PALET_KG.pta + n('cart') * PESO_PALET_KG.cart;
+        const kg = (n('c60') + sobrestockDeNave_(tr, 'c60')) * PESO_PALET_KG.c60 +
+          (n('pta') + sobrestockDeNave_(tr, 'pta')) * PESO_PALET_KG.pta +
+          (n('cart') + sobrestockDeNave_(tr, 'cart')) * PESO_PALET_KG.cart;
         pesoIn.value = kg || '';
       }
       tr.classList.add('fila-ajustada');
@@ -1003,7 +1038,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (sec.tiendas || []).forEach(function (t) {
       const tr = tableWrap.querySelector('tr[data-row="' + t.row + '"]');
       if (!tr) return;
-      ['c60', 'pta', 'cart', 'viernes', 'casillaDomingo'].forEach(function (campo) {
+      ['c60', 'pta', 'cart', 'viernes', 'casillaDomingo'].concat(CAMPOS_SOBRESTOCK_.map(function (x) { return x.campo; })).forEach(function (campo) {
         const input = tr.querySelector('input[data-campo="' + campo + '"]');
         if (!input || input.getAttribute('data-forzado') === '1') return;
         const v = t[campo] === null || t[campo] === undefined ? '' : String(t[campo]);
@@ -1022,6 +1057,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       if (f.cerrada) return f;
       return Object.assign({}, f, {
         cargar: Object.prototype.hasOwnProperty.call(ajustes, f.nombre) ? ajustes[f.nombre] : f.contados,
+        quitarSobrestock: Object.prototype.hasOwnProperty.call(ajustes, f.nombre) ? quitarSobrestockCarga_(f.nombre) : 0,
         cambio: revisar[f.nombre] || null
       });
     });
@@ -1034,7 +1070,10 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       tipoEnvio: tipoEnvio,
       desdeLapiz: !!desdeLapiz,
       onCancelar: desdeLapiz ? abrirCarga_ : null,
-      onGuardar: function (cargas, camiones) {
+      onGuardar: function (cargas, camiones, quitarSobrestock) {
+        // Palets de sobrestock que se quitan de cada tienda: viajan en la
+        // misma llamada (guardar_carga_ajustada_v2 los apunta en la lista).
+        if (quitarSobrestock && Object.keys(quitarSobrestock).length) cargas = Object.assign({}, cargas, { __quitarSobrestock: quitarSobrestock });
         guardarCarga_(cargas, camiones, function (ok) {
           if (!ok) return;
           if (alTerminar) { alTerminar(); return; }
@@ -1147,18 +1186,31 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     const headerHtml = esPrimeraDeGrupo ? filaGrupoHeaderHtml(t, nombresPorGrupo[t.notaGrupoId], seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes, seccion.tieneCasillaDomingo) : '';
     return headerHtml + filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, seccion.tienePeso, seccion.tieneCExpress, seccion.tieneSobrestock, seccion.tieneViernes, seccion.tieneCasillaDomingo);
   }).join('');
+  // Con SOBRESTOCK, la cabecera va en dos líneas: "SOBRESTOCK" encima de
+  // sus tres casillas (60 / PTA / CART.) y el resto de columnas ocupan las
+  // dos líneas (rowspan).
+  const rs = seccion.tieneSobrestock ? ' rowspan="2"' : '';
+  const thRs = function (html) { return rs ? html.replace(/^<th/, '<th' + rs) : html; };
   tableWrap.innerHTML =
     '<table class="conteo"><thead><tr>' +
-    '<th class="th-nombre">Tienda</th><th>Límite</th>' +
-    (seccion.tieneViernes ? '<th class="th-viernes">VIERNES</th>' : '') +
-    (seccion.tieneCasillaDomingo ? '<th class="th-domingo">DOMINGO</th>' : '') +
-    NAVES_CONTEO.map(function (n) { return thCampoNave_(n.campo, n.etiqueta); }).join('') +
-    '<th class="th-total">TOTAL</th><th>PDTE</th>' +
-    (seccion.tienePeso ? '<th>PESO</th>' : '') +
-    (seccion.tieneCExpress ? '<th>C.EXPRESS</th>' : '') +
-    (seccion.tieneSobrestock ? '<th>SOBRESTOCK</th>' : '') +
-    '<th></th>' +
-    '</tr></thead><tbody>' + filasHtml + '</tbody></table>';
+    '<th class="th-nombre"' + rs + '>Tienda</th><th' + rs + '>Límite</th>' +
+    (seccion.tieneViernes ? '<th class="th-viernes"' + rs + '>VIERNES</th>' : '') +
+    (seccion.tieneCasillaDomingo ? '<th class="th-domingo"' + rs + '>DOMINGO</th>' : '') +
+    NAVES_CONTEO.map(function (n) { return thRs(thCampoNave_(n.campo, n.etiqueta)); }).join('') +
+    '<th class="th-total"' + rs + '>TOTAL</th><th' + rs + '>PDTE</th>' +
+    (seccion.tienePeso ? '<th' + rs + '>PESO</th>' : '') +
+    (seccion.tieneCExpress ? '<th' + rs + '>C.EXPRESS</th>' : '') +
+    (seccion.tieneSobrestock ? '<th class="th-sobrestock" colspan="3">SOBRESTOCK</th>' : '') +
+    '<th' + rs + '></th>' +
+    '</tr>' +
+    (seccion.tieneSobrestock
+      ? '<tr>' + CAMPOS_SOBRESTOCK_.map(function (x) {
+          const bloqueada = !puedeEditarCampoConteo_(x.nave);
+          return '<th class="th-sobrestock th-sobrestock-nave' + (bloqueada ? ' th-nave-bloqueada' : '') + '"' +
+            (bloqueada ? ' title="Solo lectura: sobrestock de otra nave"' : '') + '>' + escapeHtml(x.etiqueta) + '</th>';
+        }).join('') + '</tr>'
+      : '') +
+    '</thead><tbody>' + filasHtml + '</tbody></table>';
   if (!editable) {
     // Fecha demasiado antigua (2+ días atrás) o ya enviada: se puede
     // consultar, pero no modificar nada de esta agrupación.
@@ -1176,6 +1228,12 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         input.disabled = true;
         input.classList.add('celda-bloqueada-nave');
         input.title = 'Solo lectura: columna de la nave ' + n.nave;
+      });
+      const sob = CAMPOS_SOBRESTOCK_.find(function (x) { return x.nave === n.campo; });
+      if (sob) tableWrap.querySelectorAll('tbody input[data-campo="' + sob.campo + '"]').forEach(function (input) {
+        input.disabled = true;
+        input.classList.add('celda-bloqueada-nave');
+        input.title = 'Solo lectura: sobrestock de la nave ' + n.nave;
       });
     });
   }
