@@ -441,6 +441,13 @@ const SUPABASE_ACCIONES_ = {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('activar_sobrestock_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });
   },
+  // SOBRESTOCK en todas las rutas de lunes a domingo (botón de Rutas y tiendas).
+  getEstadoSobrestockTodas: function () {
+    return llamarRpcSupabase_('get_estado_sobrestock_todas', {});
+  },
+  cambiarSobrestockTodas: function (args) {
+    return llamarRpcSupabase_('cambiar_sobrestock_todas', { p_activar: !!args[0] });
+  },
   desactivarSobrestockRuta: function (args) {
     const dia = args[0], nombreRuta = args[1];
     return llamarRpcSupabase_('desactivar_sobrestock_ruta', { p_dia: dia, p_nombre_ruta: nombreRuta });

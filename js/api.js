@@ -59,6 +59,8 @@ const METODOS_REMOTOS_ = {
   desactivarCExpressRuta: 'desactivarCExpressRuta',
   activarSobrestockRuta: 'activarSobrestockRuta',
   desactivarSobrestockRuta: 'desactivarSobrestockRuta',
+  getEstadoSobrestockTodas: 'getEstadoSobrestockTodas',
+  cambiarSobrestockTodas: 'cambiarSobrestockTodas',
   activarViernesRuta: 'activarViernesRuta',
   desactivarViernesRuta: 'desactivarViernesRuta',
   excluirViernesTiendaPlantilla: 'excluirViernesTiendaPlantilla',

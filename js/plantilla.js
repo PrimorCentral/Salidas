@@ -184,7 +184,9 @@ function pintarDiasPlantilla_() {
   // la fila de días, que así queda solo para días y buscador.
   const accionesHeader = document.getElementById('plantilla-header-acciones');
   if (accionesHeader) {
-    accionesHeader.innerHTML = (puedeEditarPlantilla_() && PLANTILLA_ESTADO.dia) ? botonAnadirRutaPlantillaHtml_() : '';
+    accionesHeader.innerHTML = (puedeEditarPlantilla_() && PLANTILLA_ESTADO.dia)
+      ? botonSobrestockTodasHtml_() + botonAnadirRutaPlantillaHtml_() : '';
+    if (puedeEditarPlantilla_() && PLANTILLA_ESTADO.dia) refrescarBotonSobrestockTodas_();
   }
   cont.querySelectorAll('.plantilla-dias button[data-dia]').forEach(function (btn) {
     btn.onclick = function () {
@@ -212,7 +214,73 @@ function pintarDiasPlantilla_() {
   if (btnEliminarEsp) btnEliminarEsp.onclick = function () { confirmarEliminarDiaEspecial_(PLANTILLA_ESTADO.dia); };
   const btnAnadirRuta = document.getElementById('btn-plantilla-anadir-ruta');
   if (btnAnadirRuta) btnAnadirRuta.onclick = anadirRutaPlantilla_;
+  const btnSobTodas = document.getElementById('btn-plantilla-sobrestock-todas');
+  if (btnSobTodas) btnSobTodas.onclick = function () {
+    const e = SOBRESTOCK_TODAS_ESTADO_;
+    if (!e) return;
+    const todasActivas = e.rutas > 0 && e.conSobrestock >= e.rutas;
+    abrirModalSobrestockTodas_(todasActivas, e.rutas, e.conSobrestock);
+  };
   if (PLANTILLA_ESTADO.dia) inicializarBuscadoresPlantilla_();
+}
+
+/* ---------------- SOBRESTOCK EN TODAS LAS RUTAS ----------------
+ * Botón junto a «Añadir ruta nueva»: activa o desactiva de una vez la
+ * casilla SOBRESTOCK (60 / PTA / CART.) en todas las rutas de LUNES a
+ * DOMINGO (los conteos especiales no se tocan). Si ya están todas
+ * activadas dice «Desactivar todos los sobrestocks»; si no, «Activar...». */
+let SOBRESTOCK_TODAS_ESTADO_ = null; // { rutas, conSobrestock }
+
+function botonSobrestockTodasHtml_() {
+  return '<button type="button" class="btn-sobrestock-todas" id="btn-plantilla-sobrestock-todas" disabled>' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>' +
+    '<span class="btn-sobrestock-todas-texto">Sobrestocks…</span></button>';
+}
+
+function refrescarBotonSobrestockTodas_() {
+  llamarApi_('getEstadoSobrestockTodas', [])
+    .then(function (e) {
+      SOBRESTOCK_TODAS_ESTADO_ = e || null;
+      const btn = document.getElementById('btn-plantilla-sobrestock-todas');
+      if (!btn || !e) return;
+      const todasActivas = e.rutas > 0 && e.conSobrestock >= e.rutas;
+      btn.disabled = false;
+      btn.classList.toggle('desactivar', todasActivas);
+      btn.querySelector('.btn-sobrestock-todas-texto').textContent = todasActivas ? 'Desactivar todos los sobrestocks' : 'Activar todos los sobrestocks';
+      btn.title = e.conSobrestock + ' de ' + e.rutas + ' rutas (lunes a domingo) tienen la casilla SOBRESTOCK';
+    })
+    .catch(function () { /* si falla, el botón se queda desactivado */ });
+}
+
+function abrirModalSobrestockTodas_(desactivar, rutas, conSobrestock) {
+  const alTerminar = function (msg) {
+    mostrarToast(msg);
+    refrescarBotonSobrestockTodas_();
+    if (PLANTILLA_ESTADO.dia) cargarPlantilla_();
+  };
+  if (desactivar) {
+    appConfirmDeslizando({
+      titulo: 'Desactivar todos los sobrestocks',
+      texto: 'Se quitará la casilla SOBRESTOCK (60 / PTA / CART.) de las ' + rutas + ' rutas de lunes a domingo, y se borrarán los sobrestocks ya contados de hoy en adelante. Lo contado en días pasados se conserva. Los conteos especiales no se tocan.',
+      textoBarra: 'Desliza para desactivar',
+      onConfirmar: function () {
+        llamarApi_('cambiarSobrestockTodas', [false])
+          .then(function (n) { alTerminar('Casilla SOBRESTOCK desactivada en ' + (n == null ? rutas : n) + ' rutas'); })
+          .catch(mostrarErrorServidor);
+      }
+    });
+    return;
+  }
+  const faltan = rutas - conSobrestock;
+  appConfirm('Activar todos los sobrestocks',
+    'Se activará la casilla SOBRESTOCK (60 / PTA / CART.) en todas las rutas de lunes a domingo' +
+      (conSobrestock > 0 ? ' (ahora la tienen ' + conSobrestock + ' de ' + rutas + '; se activará en las ' + faltan + ' que faltan)' : ' (' + rutas + ' rutas)') +
+      '. Los conteos especiales no se tocan.',
+    function () {
+      llamarApi_('cambiarSobrestockTodas', [true])
+        .then(function (n) { alTerminar('Casilla SOBRESTOCK activada en ' + (n == null ? faltan : n) + ' rutas'); })
+        .catch(mostrarErrorServidor);
+    }, false, 'Activar en todas');
 }
 
 /* ---------------- DESPLEGABLE "PASADOS (n)" ----------------

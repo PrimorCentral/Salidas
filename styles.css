@@ -2802,10 +2802,9 @@
   table.conteo input.celda-total-visual:focus { box-shadow: none; }
   table.conteo input.celda-total-visual:disabled { background: #eef1f7; color: var(--navy); opacity: .6; }
 
-  table.conteo tr.fila-aviso input.celda { border-color: var(--amber); background: #fdf6ea; }
+  /* Por encima del límite solo se pinta la casilla TOTAL (no toda la fila). */
   table.conteo tr.fila-aviso input.celda-total,
   table.conteo tr.fila-aviso input.celda-total-visual { background: var(--amber); color: #2a1c04; border-color: var(--amber-dark); }
-  table.conteo tr.fila-alerta input.celda { border-color: var(--danger); background: #fceded; color: var(--danger); }
   table.conteo tr.fila-alerta input.celda-total,
   table.conteo tr.fila-alerta input.celda-total-visual { background: var(--danger); color: #fff; border-color: var(--danger); }
 
@@ -5535,3 +5534,13 @@ table.conteo td.limite.lim-especial::after { content: "\2605"; margin-left: 4px;
   .pregunta-quitar-opcion input { margin-top: 3px; accent-color: var(--navy); }
   .pregunta-quitar-opcion b { display: block; color: var(--navy); font-size: 14px; }
   .pregunta-quitar-opcion small { display: block; color: #6b7686; font-size: 12px; margin-top: 2px; }
+
+  /* Rutas y tiendas: activar / desactivar el SOBRESTOCK en todas las rutas. */
+  .btn-sobrestock-todas {
+    background: #fff; color: var(--navy); border: 1px solid #d9dee7; border-radius: 7px; padding: 6px 12px;
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; font-family: inherit;
+  }
+  .btn-sobrestock-todas:hover:not(:disabled) { background: #f6f7f8; }
+  .btn-sobrestock-todas:disabled { opacity: .55; cursor: default; }
+  .btn-sobrestock-todas.desactivar { color: var(--danger); border-color: #f0c7c7; }
+  .btn-sobrestock-todas.desactivar:hover:not(:disabled) { background: #fdf2f2; }
