@@ -19,7 +19,7 @@ const CHANGELOG_SALIDAS = [
       { tipo: 'mejora',     texto: 'Conteo diario: al pasarse del límite solo se pinta la casilla TOTAL y debajo solo pone «+N sobre el límite»' },
       { tipo: 'mejora',     texto: 'Conteo diario: las tiendas bloqueadas ya no tienen el botón «Desbloquear»; se desbloquean desde Bloqueos y cambios' },
       { tipo: 'mejora',     texto: 'Rutas y tiendas: la cabecera (título, días y buscador) se queda fija y solo se desplaza la lista de agrupaciones, como en Configuración agencias' },
-      { tipo: 'correccion', texto: 'Conteo diario: al forzar palets en una casilla «NO» ya no salta un error interno' }
+      { tipo: 'correccion', texto: 'Conteo diario: al forzar palets en una casilla «NO» ya no sale el aviso rojo «Ha fallado algo en la app» (los palets sí se ponían bien)' }
     ]
   },
   {
