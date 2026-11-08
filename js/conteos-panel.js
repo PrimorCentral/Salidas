@@ -1197,10 +1197,11 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     (seccion.tieneViernes ? '<th class="th-viernes"' + rs + '>VIERNES</th>' : '') +
     (seccion.tieneCasillaDomingo ? '<th class="th-domingo"' + rs + '>DOMINGO</th>' : '') +
     NAVES_CONTEO.map(function (n) { return thRs(thCampoNave_(n.campo, n.etiqueta)); }).join('') +
-    '<th class="th-total"' + rs + '>TOTAL</th><th' + rs + '>PDTE</th>' +
     (seccion.tienePeso ? '<th' + rs + '>PESO</th>' : '') +
     (seccion.tieneCExpress ? '<th' + rs + '>C.EXPRESS</th>' : '') +
     (seccion.tieneSobrestock ? '<th class="th-sobrestock" colspan="3">SOBRESTOCK</th>' : '') +
+    // PDTE y TOTAL, a la derecha del todo (TOTAL el último).
+    '<th' + rs + '>PDTE</th><th class="th-total"' + rs + '>TOTAL</th>' +
     '<th' + rs + '></th>' +
     '</tr>' +
     (seccion.tieneSobrestock

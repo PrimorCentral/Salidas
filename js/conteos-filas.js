@@ -148,7 +148,9 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
       '<td class="nombre">' + escapeHtml(nombreLimpio) + badgeHtml + notaHtml + '</td>' +
       celdaLimiteHtml_(t) +
       '<td colspan="' + (5 + (tieneViernes ? 1 : 0) + (tieneDomingo ? 1 : 0) + (tienePeso ? 1 : 0) + (tieneCExpress ? 1 : 0) + (tieneSobrestock ? 3 : 0)) + '"><div class="motivo-cierre">' + escapeHtml(String(t.motivoCierre || 'CONTEO BLOQUEADO').toUpperCase()) + '</div></td>' +
-      '<td><button type="button" class="btn-reabrir" title="Desbloquear el conteo de esta tienda">Desbloquear</button></td>' +
+      // Sin botón «Desbloquear»: el conteo de una tienda bloqueada solo se
+      // desbloquea desde «Bloqueos y cambios».
+      '<td></td>' +
       '</tr>';
   }
   // Tienda que HOY sale por otra agrupación por un "cambio puntual"
@@ -214,12 +216,6 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     '<td>' + celdaNave('c60') + '</td>' +
     '<td>' + celdaNave('pta') + '</td>' +
     '<td>' + celdaNave('cart') + '</td>' +
-    '<td>' +
-      '<input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1" style="display:none">' +
-      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE, el VIERNES y el DOMINGO. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
-      '<div class="diff-nota"></div>' +
-    '</td>' +
-    '<td>' + celdaExtra('pdte', t.pdte) + '</td>' +
     (tienePeso ? '<td>' + celdaExtra('peso', t.peso, '0.01') + '</td>' : '') +
     (tieneCExpress ? '<td>' + celdaExtra('cexpress', t.cexpress, '0.01') + '</td>' : '') +
     // SOBRESTOCK separado por nave (60 / PTA / CART.): cada casilla cuenta
@@ -227,6 +223,13 @@ function filaHtml(t, esPrimeraDeGrupo, esUltimaDeGrupo, tienePeso, tieneCExpress
     (tieneSobrestock ? CAMPOS_SOBRESTOCK_.map(function (s) {
       return '<td class="td-sobrestock">' + celdaExtra(s.campo, t[s.campo], '0.01') + '</td>';
     }).join('') : '') +
+    // PDTE y TOTAL, a la derecha del todo (TOTAL el último).
+    '<td>' + celdaExtra('pdte', t.pdte) + '</td>' +
+    '<td>' +
+      '<input class="celda celda-total" data-campo="total" type="number" value="' + t.total + '" readonly tabindex="-1" style="display:none">' +
+      '<input class="celda celda-total-visual" data-campo="totalVisual" type="number" readonly tabindex="-1" title="Incluye el PDTE, el VIERNES y el DOMINGO. El límite del camión, la cabecera y el envío a agencia siguen contando solo 60+PTA+CART.">' +
+      '<div class="diff-nota"></div>' +
+    '</td>' +
     // La X para bloquear la tienda ya no sale aquí: se hace desde "Bloqueo y cambios".
     '<td></td>' +
     '</tr>';
