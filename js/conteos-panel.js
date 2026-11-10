@@ -1089,6 +1089,22 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   // tiendas de cada uno; [] = sin camiones).
   function guardarCarga_(cargas, camiones, done) {
     mostrarModalCargando('Guardando la carga del camión…');
+    // Las naves (60 / PTA / CART.) que todavía no están verificadas quedan
+    // verificadas por quien ajusta la carga: como al verificar a mano, sus
+    // casillas vacías se ponen a 0 (se guardan con el conteo, justo antes
+    // de la carga). Las ya verificadas no se tocan: ni sus números ni
+    // quién las verificó.
+    const navesSinVerificar = NAVES_CONTEO.filter(function (n) { return !(seccion.verificaciones || {})[n.campo]; });
+    try {
+      navesSinVerificar.forEach(function (n) {
+        vaciasDeCampo_(n.campo).inputs.forEach(function (input) {
+          input.value = '0';
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+    } catch (err) {
+      console.error(err);
+    }
     autoguardarSeccion(function (ok) {
       if (!ok) { cerrarModal(); done(false); return; }
       llamarApi_('guardarCargaAjustada', [dia, seccion.nombre, fecha, cargas, camiones || []])
@@ -1098,14 +1114,16 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           seccion.matriculas = null;
           // Carga recién guardada: se vuelve a ver la carga ajustada (si la hay).
           delete VISTA_CONTEO_REAL_[fecha + '|' + seccion.nombre];
-          // Al ajustar la carga, el servidor deja la agrupación verificada
-          // (60/PTA/CART.) por quien la ajusta y cierra los avisos de
-          // "cambiado tras verificar". Se refleja ya en pantalla sin esperar
-          // al autorefresco.
+          // Al ajustar la carga, el servidor deja verificadas por quien la
+          // ajusta las naves que faltaban (las que ya lo estaban conservan
+          // a quien las verificó) y cierra los avisos de "cambiado tras
+          // verificar". Se refleja ya en pantalla sin esperar al
+          // autorefresco.
           const ahoraVerif = new Date();
           const horaVerif = pad2(ahoraVerif.getHours()) + ':' + pad2(ahoraVerif.getMinutes());
           seccion.verificaciones = seccion.verificaciones || {};
           NAVES_CONTEO.forEach(function (n) {
+            if (seccion.verificaciones[n.campo]) return;
             seccion.verificaciones[n.campo] = { usuario: SESSION_USUARIO || '', nombre: SESSION_NOMBRE || SESSION_USUARIO || '', hora: horaVerif };
           });
           seccion.cambiosVerif = {};
