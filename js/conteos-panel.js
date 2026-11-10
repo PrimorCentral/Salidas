@@ -2217,6 +2217,10 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
             return;
           }
           aplicarResultadoEnvio_(tipo, res);
+          // Y se vuelve a pedir el día al servidor (acceso rápido,
+          // contadores de la franja…), descartando cualquier sondeo que
+          // se hubiera pedido antes del envío.
+          refrescarConteoDiaTrasEnvio_();
           // El cuadrante (este panel) ya se ha actualizado en vivo, sin
           // recargar nada; solo se refresca el calendario mensual (ligero,
           // sin loader de página) para que la celda del día refleje el

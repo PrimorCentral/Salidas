@@ -112,15 +112,25 @@ function marcarRefrescoConteoRealizado_() {
   setTimeout(function () { el.classList.remove('recien-refrescado'); }, 900);
 }
 
+// Cada vez que desde esta pantalla se envía algo (previsión o definitivo)
+// sube este contador: un sondeo que se pidió ANTES trae datos de antes del
+// envío y, si llegara después, volvería a pintar el acceso rápido y la
+// agrupación como estaban. Ese sondeo se descarta y se pide otro.
+let CONTEO_REFRESCO_SERIE_ = 0;
+let CONTEO_REFRESCO_PENDIENTE_ = false;
+
 function refrescarConteoDiaEnVivo_() {
   if (CONTEO_REFRESCO_EN_VUELO_) return; // ya hay un sondeo en curso, no solapar
   const fechaDelSondeo = ESTADO.fecha;
+  const serieDelSondeo = CONTEO_REFRESCO_SERIE_;
   CONTEO_REFRESCO_EN_VUELO_ = true;
   llamarApi_('getConteoDia', [fechaDelSondeo])
     .then(function (data) {
       // Si mientras tanto el usuario cambió de fecha o de pantalla, esta
       // respuesta ya no vale: se descarta en silencio.
       if (ESTADO.vista !== 'conteos' || ESTADO.fecha !== fechaDelSondeo) return;
+      // Se pidió antes de un envío hecho aquí: trae datos viejos.
+      if (serieDelSondeo !== CONTEO_REFRESCO_SERIE_) { CONTEO_REFRESCO_PENDIENTE_ = true; return; }
       marcarRefrescoConteoRealizado_();
       aplicarRefrescoConteoDiaEnVivo_(data);
     })
@@ -128,7 +138,24 @@ function refrescarConteoDiaEnVivo_() {
       // Un fallo puntual del sondeo en segundo plano no debe interrumpir
       // a nadie con un error: se reintenta solo en el siguiente ciclo.
     })
-    .finally(function () { CONTEO_REFRESCO_EN_VUELO_ = false; });
+    .finally(function () {
+      CONTEO_REFRESCO_EN_VUELO_ = false;
+      if (CONTEO_REFRESCO_PENDIENTE_) {
+        CONTEO_REFRESCO_PENDIENTE_ = false;
+        if (ESTADO.vista === 'conteos') refrescarConteoDiaEnVivo_();
+      }
+    });
+}
+
+/** Justo después de enviar una previsión o un definitivo: vuelve a pedir el
+ *  día al servidor para que el acceso rápido, los contadores de la franja
+ *  y el resto de agrupaciones queden al día sin esperar al siguiente
+ *  sondeo ni tener que volver a entrar en Conteos Diarios. */
+function refrescarConteoDiaTrasEnvio_() {
+  CONTEO_REFRESCO_SERIE_++;
+  if (ESTADO.vista !== 'conteos') return;
+  if (CONTEO_REFRESCO_EN_VUELO_) { CONTEO_REFRESCO_PENDIENTE_ = true; return; }
+  refrescarConteoDiaEnVivo_();
 }
 
 function aplicarRefrescoConteoDiaEnVivo_(data) {
