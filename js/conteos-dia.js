@@ -263,6 +263,30 @@ function tituloEstadoMenuRapido_(seccion) {
   }
 }
 
+/** Conteo bloqueado por la carga (carga ajustada o previsión enviada que
+ *  un administrador no ha desbloqueado): misma regla que el candado de la
+ *  cabecera de la agrupación (hayCargaAjustada_ en conteos-panel.js). */
+function cargaBloqueadaMenuRapido_(seccion) {
+  const c = seccion.carga;
+  return !!(c && c.origen !== 'definitivo' && seccion.estado !== 'enviado' && Array.isArray(c.lista) && !c.desbloqueada);
+}
+
+const SVG_CANDADO_MENU_RAPIDO_ = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+
+/** Punto de estado de "Acceso rápido a agrupación": con el conteo
+ *  bloqueado pasa a ser un candado, del mismo color que tendría el punto. */
+function pintarPuntoMenuRapido_(item, seccion) {
+  const dot = item.querySelector('.dot');
+  if (!dot) return;
+  const bloqueada = cargaBloqueadaMenuRapido_(seccion);
+  if (dot.classList.contains('candado') !== bloqueada) {
+    dot.classList.toggle('candado', bloqueada);
+    dot.innerHTML = bloqueada ? SVG_CANDADO_MENU_RAPIDO_ : '';
+  }
+  dot.title = tituloEstadoMenuRapido_(seccion) +
+    (bloqueada ? ' · Conteo bloqueado (' + (seccion.carga.origen === 'prevision' ? 'previsión enviada' : 'carga ajustada') + ')' : '');
+}
+
 let MENU_RAPIDO_ESTADO = { secciones: [], filtro: '', texto: '' };
 
 function renderMenuRapido(data) {
@@ -310,9 +334,10 @@ function pintarMenuRapido_() {
     btn.className = 'menu-rapido-item ' + claseEstadoMenuRapido_(seccion);
     btn.setAttribute('data-seccion-key', seccion.nombre);
     btn.innerHTML =
-      '<span class="dot" title="' + escapeAttr(tituloEstadoMenuRapido_(seccion)) + '"></span>' +
+      '<span class="dot"></span>' +
       '<span class="titulo">' + escapeHtml(titulo) + '</span>' +
       '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + '</span>';
+    pintarPuntoMenuRapido_(btn, seccion);
     btn.onclick = function () { irASeccion(seccion.nombre); };
     body.appendChild(btn);
   });
@@ -330,8 +355,7 @@ function actualizarMenuRapidoItem_(seccion) {
   if (!item) return;
   item.classList.remove('estado-pendiente', 'estado-progreso', 'estado-prevision', 'estado-enviado');
   item.classList.add(claseEstadoMenuRapido_(seccion));
-  const dot = item.querySelector('.dot');
-  if (dot) dot.title = tituloEstadoMenuRapido_(seccion);
+  pintarPuntoMenuRapido_(item, seccion);
 }
 
 function crearNotaChip(n) {

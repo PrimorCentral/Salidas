@@ -2086,6 +2086,12 @@
   .menu-rapido-item.estado-progreso .dot { background: var(--amber); }
   .menu-rapido-item.estado-prevision .dot { background: var(--prevision); }
   .menu-rapido-item.estado-enviado .dot { background: var(--ok); }
+  /* Conteo bloqueado por la carga: el punto pasa a ser un candado del mismo color. */
+  .menu-rapido-item .dot.candado { width: 12px; height: 12px; margin: 0 -2px; border-radius: 0; background: none; color: #a3abb8; display: inline-flex; align-items: center; justify-content: center; }
+  .menu-rapido-item .dot.candado svg { display: block; }
+  .menu-rapido-item.estado-progreso .dot.candado { background: none; color: var(--amber); }
+  .menu-rapido-item.estado-prevision .dot.candado { background: none; color: var(--prevision); }
+  .menu-rapido-item.estado-enviado .dot.candado { background: none; color: var(--ok); }
   .menu-rapido-item .titulo { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .menu-rapido-item .count { font-size: 11px; color: var(--ink-soft); flex-shrink: 0; }
 

@@ -644,6 +644,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       tableWrap.querySelectorAll('.bloq-carga').forEach(function (el) { el.disabled = false; el.classList.remove('bloq-carga'); });
     }
     panel.classList.toggle('carga-bloqueada', bloqueado);
+    // Candado en "Acceso rápido a agrupación".
+    actualizarMenuRapidoItem_(seccion);
 
     // Candado de la cabecera (solo si la agrupación aún se puede tocar).
     const candado = header.querySelector('.btn-candado-carga');
