@@ -749,6 +749,31 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   // resto de las normales; si no quedan normales, del sobrestock que
   // quede. Las casillas que cambian salen en azul (con lo contado al
   // pasar el ratón).
+  // Globo rojo en la esquina de la casilla ajustada con los palets que se
+  // quitan de esa nave ("−2"). Va montado encima de la esquina (no ocupa
+  // sitio): la casilla y la fila se quedan donde estaban. Si una misma
+  // casilla se toca dos veces (normales y luego sobrestock), se suma.
+  function marcarQuitados_(inp, q) {
+    let wrap = inp.parentNode;
+    if (!wrap.classList || !wrap.classList.contains('celda-ajuste-wrap')) {
+      wrap = document.createElement('span');
+      wrap.className = 'celda-ajuste-wrap';
+      inp.parentNode.insertBefore(wrap, inp);
+      wrap.appendChild(inp);
+    }
+    let globo = wrap.querySelector('.celda-quitado');
+    if (!globo) {
+      globo = document.createElement('span');
+      globo.className = 'celda-quitado';
+      globo.setAttribute('data-quitados', '0');
+      wrap.appendChild(globo);
+    }
+    const total = (parseFloat(globo.getAttribute('data-quitados')) || 0) + q;
+    globo.setAttribute('data-quitados', total);
+    globo.textContent = '\u2212' + total;
+    globo.title = total === 1 ? 'Se quita 1 palet' : 'Se quitan ' + total + ' palets';
+  }
+
   function pintarVistaAjustada_() {
     const ajustes = ajustesParaVista_();
     const original = tableWrap.querySelector('table.conteo');
@@ -782,6 +807,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           inp.value = v - q;
           inp.classList.add('celda-ajustada');
           inp.title = 'Contado: ' + v + ' · se quita' + (q === 1 ? ' 1 palet' : 'n ' + q + ' palets');
+          marcarQuitados_(inp, q);
           resto -= q;
           quitar -= q;
         });
