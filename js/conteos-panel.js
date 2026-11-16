@@ -2074,11 +2074,22 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   }
   bindBotonDeshacerEnvio_(header.querySelector('.btn-deshacer-envio'));
 
+  // PDF y Excel descargan lo que se está viendo, igual que el PDF Control
+  // responsables: con la pestaña "Carga ajustada" abierta sale la carga
+  // con sus números ajustados (y el documento lo dice bien claro); con
+  // "Ver conteo real sin ajustar", lo contado. Devuelve null si toca el
+  // conteo real, o { cargar, contados } si toca la carga ajustada.
+  function ajusteParaDescarga_() {
+    const conAjuste = !vistaAjustadaWrap.hidden && !!vistaAjustadaWrap.querySelector('table.conteo');
+    return conAjuste ? { cargar: totalCargaAjustada_(), contados: totalContadoAhora_() } : null;
+  }
+
   const btnPdf = header.querySelector('.btn-pdf-seccion');
   if (btnPdf) {
     btnPdf.onclick = function (e) {
       e.stopPropagation();
-      generarPdfSeccion(seccion, dia, fecha, tableWrap);
+      const aj = ajusteParaDescarga_();
+      generarPdfSeccion(seccion, dia, fecha, aj ? vistaAjustadaWrap : tableWrap, aj);
     };
   }
 
@@ -2086,7 +2097,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
   if (btnExcel) {
     btnExcel.onclick = function (e) {
       e.stopPropagation();
-      generarExcelSeccion(seccion, dia, fecha, tableWrap, btnExcel);
+      const aj = ajusteParaDescarga_();
+      generarExcelSeccion(seccion, dia, fecha, aj ? vistaAjustadaWrap : tableWrap, btnExcel, aj);
     };
   }
 

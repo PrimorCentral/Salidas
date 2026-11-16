@@ -47,10 +47,12 @@ function valorCeldaExcel_(v) {
   return t;
 }
 
-function generarExcelSeccion(seccion, dia, fecha, tableWrap, boton) {
+/** "ajuste" (opcional): { cargar, contados } cuando tableWrap es la tabla
+ *  de la carga ajustada en vez del conteo real (ver conteos-panel.js). */
+function generarExcelSeccion(seccion, dia, fecha, tableWrap, boton, ajuste) {
   if (boton) boton.disabled = true;
   cargarExcelJS_()
-    .then(function (ExcelJS) { return construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap); })
+    .then(function (ExcelJS) { return construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap, ajuste); })
     .then(function (res) {
       const blob = new Blob([res.buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -69,7 +71,7 @@ function generarExcelSeccion(seccion, dia, fecha, tableWrap, boton) {
     .finally(function () { if (boton) boton.disabled = false; });
 }
 
-function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap) {
+function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap, ajuste) {
   const partes = parsearNombreAgrupacion(seccion.nombre);
   const filas = leerFilasPdfSeccion_(tableWrap, seccion);
   const cabeceras = ['Tienda', 'Límite']
@@ -102,6 +104,14 @@ function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap) {
   const r3 = ws.addRow(['Generado el ' + Utilities_formatearFechaHora_(new Date())]);
   r3.font = { size: 9, italic: true, color: { argb: 'FF8C949E' } };
   [r1, r2, r3].forEach(function (r) { ws.mergeCells(r.number, 1, r.number, nCols); });
+
+  // Si lo que se descarga es la carga ajustada, se dice bien claro (en
+  // azul, como las casillas ajustadas en pantalla).
+  if (ajuste) {
+    const rAj = ws.addRow([textoCargaAjustada_(ajuste)]);
+    rAj.font = { bold: true, size: 12, color: { argb: 'FF1D4ED8' } };
+    ws.mergeCells(rAj.number, 1, rAj.number, nCols);
+  }
 
   const notas = []
     .concat((seccion.notasCarga || []).map(function (t) { return '• ' + t; }))
@@ -169,6 +179,6 @@ function construirExcelSeccion_(ExcelJS, seccion, dia, fecha, tableWrap) {
   const anchoTienda = filas.reduce(function (m, f) { return Math.max(m, String(f[0] || '').length); }, 12);
   ws.columns.forEach(function (col, i) { col.width = i === 0 ? Math.min(45, anchoTienda + 4) : 11; });
 
-  const nombre = 'Conteo_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.xlsx';
+  const nombre = (ajuste ? 'Carga_ajustada_' : 'Conteo_') + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.xlsx';
   return wb.xlsx.writeBuffer().then(function (buffer) { return { buffer: buffer, nombre: nombre }; });
 }

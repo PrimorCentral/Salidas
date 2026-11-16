@@ -136,7 +136,7 @@ function crearDocPdfPaginaExacta_(jsPDF, anchoMM, altoMM) {
 /** Dibuja la cabecera, las notas y la tabla completa de la agrupación en el
  *  doc dado (empezando siempre en la misma posición) y devuelve la
  *  coordenada Y justo debajo de la tabla, para poder saber cuánto ocupa. */
-function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas) {
+function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas, ajuste) {
   doc.setFontSize(8);
   doc.setTextColor(140, 148, 158);
   doc.text('Generado el ' + fechaGeneracion, 14, 10);
@@ -152,6 +152,19 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   doc.setTextColor(0, 0, 0);
 
   let y = 31;
+
+  // Si lo que se descarga es la carga ajustada, se dice bien claro (en
+  // azul, como las casillas ajustadas en pantalla) para que nadie lo
+  // confunda con el conteo real.
+  if (ajuste) {
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(29, 78, 216);
+    doc.text(textoCargaAjustada_(ajuste), 14, y);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(0, 0, 0);
+    y += 7;
+  }
 
   if (seccion.notasCarga && seccion.notasCarga.length) {
     doc.setFontSize(9);
@@ -234,7 +247,14 @@ function dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, f
   return doc.lastAutoTable.finalY;
 }
 
-function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
+/** Rótulo de los documentos que llevan la carga ajustada. */
+function textoCargaAjustada_(ajuste) {
+  return 'CARGA AJUSTADA · se cargan ' + ajuste.cargar + ' palets (contados: ' + ajuste.contados + ')';
+}
+
+/** "ajuste" (opcional): { cargar, contados } cuando tableWrap es la tabla
+ *  de la carga ajustada en vez del conteo real. */
+function generarPdfSeccion(seccion, dia, fecha, tableWrap, ajuste) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     mostrarToast('No se ha podido cargar el generador de PDF. Revisa tu conexión e inténtalo de nuevo.', true);
     return;
@@ -254,7 +274,7 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
   // cuánto ocupa el contenido real completo, sea cual sea el tamaño de la
   // agrupación.
   const docMedida = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, 2000);
-  const alturaContenido = dibujarPdfSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filas);
+  const alturaContenido = dibujarPdfSeccion_(docMedida, partes, dia, fecha, fechaGeneracion, seccion, filas, ajuste);
 
   // 2ª pasada (definitiva): si con el alto estándar de un A4 apaisado
   // (210mm) ya cabe todo, se usa ese tamaño normal de siempre; si la
@@ -262,9 +282,9 @@ function generarPdfSeccion(seccion, dia, fecha, tableWrap) {
   // entera en UNA sola hoja (nunca se generan páginas adicionales).
   const alturaPagina = Math.max(PDF_ALTO_A4_MM_, alturaContenido + 14);
   const doc = crearDocPdfPaginaExacta_(jsPDF, PDF_ANCHO_MM_, alturaPagina);
-  dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas);
+  dibujarPdfSeccion_(doc, partes, dia, fecha, fechaGeneracion, seccion, filas, ajuste);
 
-  const nombreArchivo = 'Conteo_' + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
+  const nombreArchivo = (ajuste ? 'Carga_ajustada_' : 'Conteo_') + seccion.nombre.replace(/[^a-z0-9áéíóúñ]+/gi, '_') + '_' + fecha + '.pdf';
   doc.save(nombreArchivo);
 }
 
