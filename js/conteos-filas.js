@@ -27,7 +27,8 @@ const PESO_PALET_KG = { c60: 200, pta: 300, cart: 250 };
  */
 /** Celda "Límite" de una tienda. Si ese día manda un límite especial
  *  (configurado por fechas en GIDT, ver t.limiteEspecial = { palets, desde,
- *  hasta } que manda el servidor), sale en naranja con una estrellita y al
+ *  hasta } que manda el servidor; o { sinLimite: true, palets: null, ... }
+ *  si en esas fechas la tienda va SIN LÍMITE: la celda sale "NO"), sale en naranja con una estrellita y al
  *  pasar el ratón: "Límite especial: X palets / Del dd/mm al dd/mm". La
  *  estrella va por CSS (::after) para que el texto de la celda siga siendo
  *  solo el número (lo leen el PDF y el Excel). */
@@ -35,7 +36,7 @@ function celdaLimiteHtml_(t) {
   const esp = t && t.limiteEspecial;
   if (!esp) return '<td class="limite">' + textoLimite_(t.limite) + '</td>';
   const ddmm = function (iso) { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; };
-  const titulo = 'Límite especial: ' + esp.palets + ' palets\nDel ' + ddmm(esp.desde) + ' al ' + ddmm(esp.hasta);
+  const titulo = 'Límite especial: ' + (esp.sinLimite ? 'sin límite' : esp.palets + ' palets') + '\nDel ' + ddmm(esp.desde) + ' al ' + ddmm(esp.hasta);
   return '<td class="limite lim-especial" title="' + escapeAttr(titulo) + '">' + textoLimite_(t.limite) + '</td>';
 }
 

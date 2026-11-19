@@ -1128,7 +1128,7 @@ function htmlLimiteEspecialConfig_(it) {
   const lista = Array.isArray(it.limitesEspeciales) ? it.limitesEspeciales : [];
   if (!lista.length) return '';
   const ddmm = function (iso) { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; };
-  const texto = lista.map(function (x) { return x.palets + ' palets · del ' + ddmm(x.desde) + ' al ' + ddmm(x.hasta); }).join('   ·   ') +
+  const texto = lista.map(function (x) { return (x.sin_limite ? 'Sin límite' : x.palets + ' palets') + ' · del ' + ddmm(x.desde) + ' al ' + ddmm(x.hasta); }).join('   ·   ') +
     (it.limiteEspecialActivo ? '' : '   (desactivado)');
   return '<div class="emails-config-campo">' +
       '<label class="limite-especial-label">★ Límite especial <span class="emails-config-gidt-etiqueta"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Solo lectura · GIDT</span></label>' +
