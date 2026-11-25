@@ -8,6 +8,21 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.22',
+    fecha: '2026-11-25',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Conteo diario: nueva opción «Facturar» en el sobre de las rutas que la tienen activada. Envía a contabilidad (no a la agencia) los palets de la carga ajustada de cada tienda, y se pueden repartir en varias fechas de facturación. Hace falta tener la carga ajustada, no hace falta haber enviado previsión ni definitivo y solo se puede enviar una vez' },
+      { tipo: 'nuevo',      texto: 'Conteo diario: una vez enviada la facturación, «Facturar» sale con un check verde y un ojo para ver el email que se mandó' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: nuevo interruptor «FACTURAR» en cada ruta para activar o quitar la opción Facturar' },
+      { tipo: 'nuevo',      texto: 'Configuración agencias: nuevo campo «Emails Facturación» en cada agrupación, con el email de contabilidad al que se manda la facturación' },
+      { tipo: 'nuevo',      texto: 'Nuevo permiso «Enviar facturación»' },
+      { tipo: 'mejora',     texto: 'Carga ajustada: cada casilla ajustada lleva en la esquina un globo rojo con los palets que se quitan de esa nave (por ejemplo «−2»)' },
+      { tipo: 'mejora',     texto: 'PDF y Excel: con la pestaña «Carga ajustada» abierta se descarga la carga ajustada; con «Conteo real», el conteo sin ajustar' },
+      { tipo: 'mejora',     texto: 'Acceso rápido a agrupación: con la carga ajustada o bloqueada sale un candado del color del estado en vez del punto' },
+      { tipo: 'mejora',     texto: 'Emails a la agencia: ya no sale la columna SOBRESTOCK; el sobrestock va sumado en el TOTAL' }
+    ]
+  },
+  {
     version: '2.1.21',
     fecha: '2026-11-08',
     cambios: [
