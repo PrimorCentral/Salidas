@@ -746,6 +746,7 @@ function actualizarBotonGuardarGestor_() {
   }
   if (GESTOR_OBS.tipo === 'agrpuntual') {
     const na = GESTOR_OBS.agrp && GESTOR_OBS.agrp.seleccionadas ? GESTOR_OBS.agrp.seleccionadas.length : 0;
+    if (GESTOR_OBS.agrp && GESTOR_OBS.agrp.editando) { btn.textContent = 'Guardar cambios'; return; }
     btn.textContent = na ? 'Añadir agrupación (' + na + (na === 1 ? ' tienda)' : ' tiendas)') : 'Añadir agrupación';
     return;
   }
@@ -1787,6 +1788,8 @@ function candidatasAgrpGestorObs_() {
     .filter(function (t) {
       const info = enElDia[claveComparableTienda_(t.tienda)];
       if (!info) return true;
+      // Ya va en esta misma agrupación (al modificarla): es suya.
+      if (info.agrupacion === GESTOR_OBS.agrp.agrupacion) return true;
       if (info.entra) return false;
       enOtra[t.tienda] = info;
       return true;
@@ -1839,7 +1842,39 @@ function pintarAgrpGestorObs_() {
     cuerpo.style.display = 'none';
     return;
   }
-  cargarListaAgrpGestorObs_();
+  if (GESTOR_OBS.agrpEditar) {
+    // Modificar: no se elige agrupación; se trabaja sobre la que ya hay.
+    document.querySelectorAll('.gestor-tipo-pill[data-tipo]').forEach(function (b) {
+      if (b.getAttribute('data-tipo') !== 'agrpuntual') b.disabled = true;
+    });
+    const fechaInput = document.getElementById('gestor-fecha');
+    if (fechaInput) fechaInput.disabled = true;
+    const sec = (GESTOR_OBS.datosDia.secciones || []).filter(function (s) { return s.nombre === GESTOR_OBS.agrpEditar; })[0];
+    if (!sec) {
+      aviso.textContent = 'Esa agrupación puntual ya no existe ese día.';
+      aviso.classList.remove('cargando-linea');
+      aviso.style.display = '';
+      cuerpo.style.display = 'none';
+      return;
+    }
+    if (!a.lista) {
+      const actuales = (sec.tiendas || []).filter(function (t) { return !t.salePorExcepcion; }).map(function (t) { return t.nombre; });
+      const vistos = {};
+      const grupos = [];
+      (sec.tiendas || []).forEach(function (t) {
+        if (!t.notaGrupoId || !t.nota || vistos[t.nota]) return;
+        vistos[t.nota] = true;
+        grupos.push({ texto: t.nota, limite: t.notaLimite });
+      });
+      a.lista = [{ nombre: sec.nombre, dia: null, tiendas: actuales, grupos: grupos }];
+      a.listaFecha = GESTOR_OBS.fecha;
+      a.agrupacion = sec.nombre;
+      a.actuales = actuales;
+      a.editando = true;
+    }
+  } else {
+    cargarListaAgrpGestorObs_();
+  }
   cargarTiendasConfigPuntualGestorObs_();
   if (!a.lista) {
     aviso.textContent = 'Cargando las agrupaciones que se pueden añadir…';
@@ -1859,9 +1894,11 @@ function pintarAgrpGestorObs_() {
     a.lista.map(function (x) {
       return '<option value="' + escapeAttr(x.nombre) + '"' + (x.nombre === a.agrupacion ? ' selected' : '') + '>' + escapeHtml(x.nombre) + '</option>';
     }).join('');
-  selAgr.disabled = !a.lista.length;
+  selAgr.disabled = !a.lista.length || !!a.editando;
   const elegida = agrpElegidaGestorObs_();
-  ayudaAgr.textContent = elegida
+  ayudaAgr.textContent = a.editando
+    ? 'Estás modificando esta agrupación puntual: marca las tiendas que tiene que llevar (las que desmarques se quitan), y cambia el grupo de palets o la posición si hace falta.'
+    : elegida
     ? 'Se copia del ' + String(elegida.dia || '').toLowerCase() + ' (agencia, notas de carga y grupos de palets). Solo salen las agrupaciones que ese día no tienen ya.'
     : 'Solo salen las agrupaciones que ese día no tienen ya.';
 
@@ -1882,9 +1919,11 @@ function pintarGrupoAgrpGestorObs_() {
   const elegida = agrpElegidaGestorObs_();
   const previa = sel.value;
   const grupos = (elegida && elegida.grupos) || [];
+  const editando = !!(GESTOR_OBS.agrp && GESTOR_OBS.agrp.editando);
   sel.innerHTML =
-    '<option value="">' + (grupos.length ? 'Cada tienda con su grupo de siempre (como el ' + escapeHtml(String((elegida && elegida.dia) || '').toLowerCase()) + ')' : 'Sin grupo') + '</option>' +
-    (grupos.length ? '<option value="__ninguno__">Sin grupo</option>' : '') +
+    '<option value="">' + (editando ? 'Dejar los grupos como están'
+      : (grupos.length ? 'Cada tienda con su grupo de siempre (como el ' + escapeHtml(String((elegida && elegida.dia) || '').toLowerCase()) + ')' : 'Sin grupo')) + '</option>' +
+    (grupos.length || editando ? '<option value="__ninguno__">Sin grupo</option>' : '') +
     grupos.map(function (g) {
       return '<option value="' + escapeAttr(g.texto) + '">Todas en: ' + escapeHtml(g.texto) + (g.limite != null ? ' (' + escapeHtml(String(g.limite)) + ' palets)' : '') + '</option>';
     }).join('') +
@@ -1908,9 +1947,25 @@ function opcionesPosicionAgrupacionHtml_(secciones, excluir, actual) {
 function pintarPosicionAgrpGestorObs_() {
   const sel = document.getElementById('gestor-agrp-pos');
   if (!sel) return;
-  const previa = sel.value;
-  sel.innerHTML = opcionesPosicionAgrupacionHtml_((GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.secciones) || [], null, previa);
+  const a = GESTOR_OBS.agrp || {};
+  const secciones = (GESTOR_OBS.datosDia && GESTOR_OBS.datosDia.secciones) || [];
+  let previa = sel.value;
+  if (a.editando && !a.posInicial) {
+    previa = posicionActualAgrupacion_(secciones, a.agrupacion);
+    a.posInicial = true;
+  }
+  sel.innerHTML = opcionesPosicionAgrupacionHtml_(secciones, a.editando ? a.agrupacion : null, previa);
   if (previa && sel.querySelector('option[value="' + CSS.escape(previa) + '"]')) sel.value = previa;
+}
+
+/** Posición actual de una agrupación en el conteo: '__inicio__', el nombre
+ *  de la agrupación (no puntual) que tiene encima, o '' si va la última. */
+function posicionActualAgrupacion_(secciones, nombre) {
+  const i = secciones.map(function (s) { return s.nombre; }).indexOf(nombre);
+  if (i === 0) return '__inicio__';
+  if (i < 0 || i === secciones.length - 1) return '';
+  for (let k = i - 1; k >= 0; k--) { if (!secciones[k].puntual) return secciones[k].nombre; }
+  return '__inicio__';
 }
 
 function pintarListaAgrpGestorObs_() {
@@ -1928,6 +1983,12 @@ function pintarListaAgrpGestorObs_() {
     return;
   }
   const c = candidatasAgrpGestorObs_();
+  if (a.editando && !a.selInicial) {
+    const act = {};
+    (a.actuales || []).forEach(function (n) { act[claveComparableTienda_(n)] = true; });
+    a.seleccionadas = c.todas.filter(function (t) { return act[claveComparableTienda_(t.tienda)]; }).map(function (t) { return t.tienda; });
+    a.selInicial = true;
+  }
   const validas = c.todas.map(function (t) { return t.tienda; });
   a.seleccionadas = a.seleccionadas.filter(function (k) { return validas.indexOf(k) !== -1; });
   GESTOR_OBS.agrpEnOtra = c.enOtra;
@@ -2099,6 +2160,16 @@ function conectarControlesAgrpGestorObs_(wrap) {
   });
 }
 
+/** Abre la ventana de "Agrupación puntual" para modificar una ya creada
+ *  (desde el lápiz de su tarjeta en Bloqueos y cambios). */
+function abrirEditarAgrupacionPuntual(fecha, agrupacion) {
+  abrirGestorObservaciones(fecha);
+  GESTOR_OBS.agrpEditar = agrupacion;
+  document.getElementById('modal-title').textContent = 'Modificar agrupación puntual';
+  const pill = document.querySelector('.gestor-tipo-pill[data-tipo="agrpuntual"]');
+  if (pill) { pill.disabled = false; pill.click(); }
+}
+
 /** Crea la agrupación puntual con sus tiendas en una sola llamada (todo o nada). */
 function guardarAgrpDesdeGestor_() {
   const fecha = GESTOR_OBS.fecha;
@@ -2112,10 +2183,11 @@ function guardarAgrpDesdeGestor_() {
   GESTOR_OBS.guardando = true;
   if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
 
-  llamarApi_('crearAgrupacionPuntual', [{
+  llamarApi_(a.editando ? 'editarAgrupacionPuntual' : 'crearAgrupacionPuntual', [{
     fecha: fecha,
     agrupacion: a.agrupacion,
-    debajo: (document.getElementById('gestor-agrp-pos') || {}).value || null,
+    // Al modificar se manda siempre ('' = al final); al crear, vacío = al final.
+    debajo: a.editando ? ((document.getElementById('gestor-agrp-pos') || {}).value || '') : ((document.getElementById('gestor-agrp-pos') || {}).value || null),
     grupo: (document.getElementById('gestor-agrp-grupo') || {}).value || null,
     grupoNuevoTexto: ((document.getElementById('gestor-agrp-gn-texto') || {}).value || '').trim() || null,
     grupoNuevoLimite: ((document.getElementById('gestor-agrp-gn-limite') || {}).value || '').trim() || null,
@@ -2124,7 +2196,8 @@ function guardarAgrpDesdeGestor_() {
     .then(function (res) {
       cerrarModal();
       const nC = (res && res.cambios) || 0;
-      mostrarToast('Agrupación puntual añadida' + (nC ? ' (' + nC + (nC === 1 ? ' cambio puntual)' : ' cambios puntuales)') : ''));
+      if (a.editando) mostrarToast('Agrupación puntual modificada');
+      else mostrarToast('Agrupación puntual añadida' + (nC ? ' (' + nC + (nC === 1 ? ' cambio puntual)' : ' cambios puntuales)') : ''));
       if (document.getElementById('calendar-body')) cargarCalendario();
       if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
       if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') cargarFestivos();

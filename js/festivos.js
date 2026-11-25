@@ -227,6 +227,8 @@ function cargarFestivos() {
   });
 
   const idSolicitud = ++FESTIVOS_ESTADO.idSolicitud;
+  listaEl.classList.remove('festivos-con-columnas');
+  listaEl.style.height = '';
   listaEl.innerHTML = '<div class="loader"><span class="spinner-navy"></span><div>Cargando…</div></div>';
   const statsElCarga = document.getElementById('festivos-stats');
   if (statsElCarga) statsElCarga.innerHTML = '';
@@ -303,6 +305,7 @@ function aplanarDatosFestivos_(datosDias) {
         // como un cambio (filtro «Cambios»), pero con su propia tarjeta.
         if (t.tiendaPuntual && t.excepcionId) {
           lista.push({ fecha: data.fecha, tag: 'Tienda puntual · ' + parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', puntual: true,
+            tiendaPuntual: true, agrupacion: seccion.nombre, tienda: t.nombre, limite: t.limite, grupoId: t.notaGrupoId || '',
             texto: t.nombre + ' sale solo este día por ' + parsearNombreAgrupacion(seccion.nombre).titulo, id: t.excepcionId });
         }
       });
@@ -386,6 +389,10 @@ function renderStatsFestivos_(statsEl, grupos) {
 }
 
 function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
+  // En la vista de columnas el scroll va dentro de cada día (ver
+  // .festivos-con-columnas en styles.css), no en toda la lista.
+  listaEl.classList.toggle('festivos-con-columnas', !!grupos.length);
+  if (!grupos.length) listaEl.style.height = '';
   if (!grupos.length) {
     listaEl.innerHTML = hayFiltrosDeContenido
       ? '<div class="festivos-vacio">' +
@@ -422,6 +429,14 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
             ? '<button type="button" class="festivos-edit festivos-mover-agrp" data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '" title="Cambiar de sitio en el conteo">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>'
             : '';
+          // Lápiz para modificar una tienda puntual o una agrupación puntual.
+          const editPuntualBtn = (it.agrPuntual || it.tiendaPuntual)
+            ? '<button type="button" class="festivos-edit festivos-edit-puntual" data-id="' + escapeAttr(it.id || '') + '" data-fecha="' + escapeAttr(it.fecha) + '"' +
+              ' data-agrupacion="' + escapeAttr(it.agrupacion || '') + '" data-tipo-puntual="' + (it.agrPuntual ? 'agrupacion' : 'tienda') + '"' +
+              (it.tiendaPuntual ? ' data-tienda="' + escapeAttr(it.tienda || '') + '" data-limite="' + escapeAttr(it.limite != null ? it.limite : '') + '" data-grupo="' + escapeAttr(it.grupoId || '') + '"' : '') +
+              ' title="Modificar">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
+            : '';
           // Lápiz para editar el texto: solo notas y bloqueos (los cambios
           // puntuales se editan volviendo a crearlos, su texto es automático).
           const editBtn = (it.id && it.tipo !== 'cambio')
@@ -433,7 +448,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
             '<div class="festivos-item-body">' +
               '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
               '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
-            '</div>' + moverBtn + editBtn + delBtn + '</div>';
+            '</div>' + moverBtn + editPuntualBtn + editBtn + delBtn + '</div>';
         }).join('')
       : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
     col.innerHTML =
@@ -453,6 +468,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
 
   listaEl.innerHTML = '';
   listaEl.appendChild(semana);
+  if (typeof ajustarAlturaListaScrollable_ === 'function') ajustarAlturaListaScrollable_('festivos-lista');
 
   listaEl.querySelectorAll('.festivos-dia-col-add').forEach(function (btn) {
     btn.onclick = function (e) {
@@ -465,7 +481,24 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     btn.onclick = function () { moverAgrupacionPuntualDesdeFestivos_(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrp')); };
   });
 
-  listaEl.querySelectorAll('.festivos-edit:not(.festivos-mover-agrp)').forEach(function (btn) {
+  listaEl.querySelectorAll('.festivos-edit-puntual').forEach(function (btn) {
+    btn.onclick = function () {
+      if (btn.getAttribute('data-tipo-puntual') === 'agrupacion') {
+        abrirEditarAgrupacionPuntual(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrupacion'));
+      } else {
+        editarTiendaPuntualDesdeFestivos_({
+          id: btn.getAttribute('data-id'),
+          fecha: btn.getAttribute('data-fecha'),
+          agrupacion: btn.getAttribute('data-agrupacion'),
+          tienda: btn.getAttribute('data-tienda'),
+          limite: btn.getAttribute('data-limite'),
+          grupoId: btn.getAttribute('data-grupo')
+        });
+      }
+    };
+  });
+
+  listaEl.querySelectorAll('.festivos-edit:not(.festivos-mover-agrp):not(.festivos-edit-puntual)').forEach(function (btn) {
     btn.onclick = function () {
       const cont = btn.closest('.festivos-item');
       const actual = cont ? cont.querySelector('.festivos-item-texto').textContent : '';
@@ -763,6 +796,111 @@ function cambiarTextoEnCacheFestivos_(id, texto) {
       (seccion.tiendas || []).forEach(function (t) { if (t.cierreId === id) t.motivoCierre = texto; });
     });
   });
+}
+
+/** Modificar una tienda puntual: agrupación por la que sale, límite y
+ *  grupo de palets (en vez de borrarla y volver a crearla). */
+function editarTiendaPuntualDesdeFestivos_(it) {
+  const datos = (FESTIVOS_ESTADO.datosCache || []).filter(function (d) { return d && d.fecha === it.fecha; })[0] || {};
+  const secciones = (datos.secciones || []).filter(function (s) { return s.estado !== 'enviado' || s.nombre === it.agrupacion; });
+
+  const caja = document.getElementById('modal-box');
+  caja.classList.remove('ancho', 'medio', 'peligro', 'usuario-form', 'gestor-obs', 'gestor-ancho');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Modificar tienda puntual';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p class="confirm-puntual-intro"><b>' + escapeHtml(it.tienda) + '</b> · ' + escapeHtml(formatearFechaLarga(it.fecha)) + '</p>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-tp-agr">Agrupación por la que sale</label>' +
+      '<select id="modal-tp-agr">' + secciones.map(function (s) {
+        return '<option value="' + escapeAttr(s.nombre) + '"' + (s.nombre === it.agrupacion ? ' selected' : '') + '>' + escapeHtml(s.nombre) + '</option>';
+      }).join('') + '</select>' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-tp-lim">Límite de palets</label>' +
+      '<input type="text" id="modal-tp-lim" inputmode="numeric" value="' + escapeAttr(it.limite || '') + '" placeholder="Vacío = el general de la tienda (GIDT)">' +
+      '<span class="modal-campo-ayuda">Vacío = el límite general de la tienda. Si la tienda tiene en GIDT un límite especial para ese día, manda ese.</span>' +
+    '</div>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-tp-grupo">Grupo de palets</label>' +
+      '<select id="modal-tp-grupo"></select>' +
+    '</div>' +
+    '<div class="plantilla-anadir-colocar" id="modal-tp-gn" style="display:none;">' +
+      '<div class="modal-campo"><label for="modal-tp-gn-texto">Nombre del grupo nuevo</label><input type="text" id="modal-tp-gn-texto" autocomplete="off"></div>' +
+      '<div class="modal-campo"><label for="modal-tp-gn-limite">Límite de palets del grupo</label><input type="text" id="modal-tp-gn-limite" inputmode="numeric" autocomplete="off"></div>' +
+    '</div>';
+  document.getElementById('modal-actions').innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Guardar cambios</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+
+  const selAgr = document.getElementById('modal-tp-agr');
+  const selGrupo = document.getElementById('modal-tp-grupo');
+  const cajaNuevo = document.getElementById('modal-tp-gn');
+  // Grupos de palets que tiene ese día la agrupación elegida.
+  function pintarGrupos() {
+    const s = secciones.filter(function (x) { return x.nombre === selAgr.value; })[0];
+    const vistos = {};
+    const grupos = [];
+    ((s && s.tiendas) || []).forEach(function (t) {
+      if (!t.notaGrupoId || vistos[t.notaGrupoId]) return;
+      vistos[t.notaGrupoId] = true;
+      grupos.push({ id: t.notaGrupoId, texto: t.nota || 'Grupo', limite: t.notaLimite });
+    });
+    const mismo = selAgr.value === it.agrupacion;
+    selGrupo.innerHTML = '<option value="__ninguno__">Sin grupo</option>' +
+      grupos.map(function (g) {
+        return '<option value="' + escapeAttr(g.id) + '">' + escapeHtml(g.texto) + (g.limite != null ? ' (' + escapeHtml(String(g.limite)) + ' palets)' : '') + '</option>';
+      }).join('') +
+      '<option value="__nuevo__">+ Crear grupo nuevo solo para este día…</option>';
+    selGrupo.value = (mismo && it.grupoId && selGrupo.querySelector('option[value="' + CSS.escape(it.grupoId) + '"]')) ? it.grupoId : '__ninguno__';
+    cajaNuevo.style.display = 'none';
+  }
+  pintarGrupos();
+  selAgr.onchange = pintarGrupos;
+  selGrupo.onchange = function () { cajaNuevo.style.display = selGrupo.value === '__nuevo__' ? '' : 'none'; };
+  document.getElementById('modal-tp-gn-texto').oninput = function (e) { e.target.value = e.target.value.toUpperCase(); };
+  document.getElementById('modal-tp-gn-limite').oninput = function (e) { e.target.value = e.target.value.replace(/[^0-9]/g, ''); };
+  document.getElementById('modal-tp-lim').oninput = function (e) { e.target.value = e.target.value.replace(/[^0-9.,]/g, ''); };
+
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.onclick = function () {
+    const grupo = selGrupo.value;
+    const gnTexto = document.getElementById('modal-tp-gn-texto').value.trim();
+    const gnLimite = document.getElementById('modal-tp-gn-limite').value.trim();
+    if (grupo === '__nuevo__' && (!gnTexto || !/^\d+$/.test(gnLimite) || Number(gnLimite) < 1)) {
+      mostrarToast('Pon el nombre y el límite de palets del grupo nuevo', true);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    llamarApi_('editarTiendaPuntual', [{
+      id: it.id,
+      agrupacion: selAgr.value,
+      // Solo se manda si se ha cambiado (el que se ve puede ser el general
+      // o un límite especial de GIDT).
+      limite: document.getElementById('modal-tp-lim').value.trim() === String(it.limite || '') ? null : document.getElementById('modal-tp-lim').value.trim(),
+      grupo: grupo,
+      grupoNuevoTexto: gnTexto,
+      grupoNuevoLimite: gnLimite
+    }])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Tienda puntual modificada');
+        cargarFestivos();
+        if (it.fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar cambios';
+        mostrarErrorServidor(err);
+      });
+  };
 }
 
 /** Cambia de sitio una agrupación puntual en el conteo de ese día. */

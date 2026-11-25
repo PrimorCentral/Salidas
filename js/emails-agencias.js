@@ -33,6 +33,9 @@ function ajustarAlturaListaScrollable_(idLista) {
   if (top <= 0) return; // sección no visible ahora mismo
   const disponible = window.innerHeight - top - 50; // 50px = padding inferior de la tarjeta (22) + borde (1) + padding inferior de main (24) + margen
   listaEl.style.maxHeight = Math.max(160, Math.round(disponible)) + 'px';
+  // Bloqueos y cambios en columnas: la lista ocupa todo el alto disponible y
+  // cada día hace scroll por su cuenta.
+  listaEl.style.height = listaEl.classList.contains('festivos-con-columnas') ? listaEl.style.maxHeight : '';
 }
 let _timerAjusteAlturasConfig = null;
 function ajustarAlturasListasConfig_debounced_() {

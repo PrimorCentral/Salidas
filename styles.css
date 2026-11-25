@@ -978,6 +978,12 @@
     overflow-y: auto; min-height: 160px;
     padding-right: 6px; margin-right: -6px;
   }
+  /* Vista en columnas: no se desplaza toda la lista, sino cada día por su
+     cuenta (la cabecera de cada día se queda fija arriba). */
+  #festivos-lista.festivos-con-columnas { overflow: hidden; display: flex; flex-direction: column; padding-right: 0; margin-right: 0; }
+  #festivos-lista.festivos-con-columnas .festivos-semana { flex: 1 1 auto; min-height: 0; }
+  #festivos-lista.festivos-con-columnas .festivos-dia-col { min-height: 0; }
+  #festivos-lista.festivos-con-columnas .festivos-dia-col-items { overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
 
   @media (max-width: 700px) {
     .festivos-filtros-fila { flex-direction: column; align-items: stretch; }

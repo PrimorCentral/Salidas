@@ -747,6 +747,34 @@ const SUPABASE_ACCIONES_ = {
       p_grupo_nuevo_limite: (c.grupo === '__nuevo__' && c.grupoNuevoLimite) ? Number(c.grupoNuevoLimite) : null
     });
   },
+  // Modificar una tienda puntual. args: [{ id, agrupacion, limite, grupo,
+  // grupoNuevoTexto, grupoNuevoLimite }] — grupo: '' no tocar, '__ninguno__',
+  // '__nuevo__' o el id de un grupo de la agrupación.
+  editarTiendaPuntual: function (args) {
+    const c = args[0];
+    return llamarRpcSupabase_('editar_tienda_puntual', {
+      p_id: c.id,
+      p_agrupacion: c.agrupacion,
+      // null = no tocar el límite; '' = el general de la tienda.
+      p_limite: c.limite == null ? null : String(c.limite),
+      p_grupo: c.grupo || null,
+      p_grupo_nuevo_texto: c.grupo === '__nuevo__' ? (c.grupoNuevoTexto || null) : null,
+      p_grupo_nuevo_limite: (c.grupo === '__nuevo__' && c.grupoNuevoLimite) ? Number(c.grupoNuevoLimite) : null
+    });
+  },
+  // Modificar una agrupación puntual (tiendas, grupo, posición).
+  editarAgrupacionPuntual: function (args) {
+    const c = args[0];
+    return llamarRpcSupabase_('editar_agrupacion_puntual', {
+      p_fecha: c.fecha,
+      p_agrupacion: c.agrupacion,
+      p_tiendas: c.tiendas || [],
+      p_debajo: c.debajo == null ? null : c.debajo,
+      p_grupo: c.grupo || null,
+      p_grupo_nuevo_texto: c.grupo === '__nuevo__' ? (c.grupoNuevoTexto || null) : null,
+      p_grupo_nuevo_limite: (c.grupo === '__nuevo__' && c.grupoNuevoLimite) ? Number(c.grupoNuevoLimite) : null
+    });
+  },
   // args: [fecha, agrupacion, debajo]
   moverAgrupacionPuntual: function (args) {
     return llamarRpcSupabase_('mover_agrupacion_puntual', { p_fecha: args[0], p_agrupacion: args[1], p_debajo: args[2] || null });
