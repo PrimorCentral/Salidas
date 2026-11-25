@@ -8,6 +8,20 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.23',
+    fecha: '2026-11-25',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: nueva opción «Agrupación puntual» para añadir solo un día una agrupación que ese día no sale, sin tener que crear un conteo especial. Se copia la de otro día (agencia, notas de carga y grupos de palets) y se eligen sus tiendas. Si una tienda ya sale ese día por otra agrupación, se elige si sale solo por la nueva o por las dos' },
+      { tipo: 'nuevo',      texto: 'Agrupación puntual: al crearla se elige su posición en el conteo (al principio, al final o debajo de otra agrupación) y el grupo de palets de sus tiendas. En el conteo sale con la etiqueta «SOLO ESTE DÍA»' },
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: las agrupaciones puntuales se pueden cambiar de sitio (flechas), modificar (lápiz: tiendas, grupo de palets y posición) o quitar enteras (papelera)' },
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: las tiendas puntuales tienen un lápiz para cambiar la agrupación por la que salen, el límite o el grupo de palets, sin tener que borrarlas y volver a crearlas' },
+      { tipo: 'nuevo',      texto: 'Tienda puntual y Agrupación puntual: se puede crear un grupo de palets nuevo solo para ese día (nombre y límite). No aparece en Rutas y tiendas' },
+      { tipo: 'nuevo',      texto: 'Rutas y tiendas: al crear un conteo especial en un día que ya tiene notas, bloqueos o cambios, se avisa y se elige si pasarlos al conteo especial, borrarlos o cancelar. Antes se quedaban en el día normal y dejaban de verse' },
+      { tipo: 'mejora',     texto: 'Nueva ventana «Cargando…» igual que la de GIDT en todas las pantallas que cargan datos. Si tarda más de 10 segundos sale «Está tardando más de lo normal» con el botón «Cancelar consulta»' },
+      { tipo: 'mejora',     texto: 'Bloqueos y cambios: el scroll va dentro de cada día y no en toda la pantalla; la cabecera de cada día se queda fija' }
+    ]
+  },
+  {
     version: '2.1.22',
     fecha: '2026-11-25',
     cambios: [
