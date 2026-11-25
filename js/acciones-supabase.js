@@ -713,6 +713,25 @@ const SUPABASE_ACCIONES_ = {
   eliminarExcepcionTienda: function (args) {
     return llamarRpcSupabase_('eliminar_excepcion_tienda', { p_id: args[0] });
   },
+  // Agrupación puntual: una agrupación que ese día no sale se añade solo
+  // para esa fecha (copiada de la misma agrupación en otro día), con las
+  // tiendas que se elijan. args: [fecha]
+  getAgrupacionesPuntual: function (args) {
+    return llamarRpcSupabase_('get_agrupaciones_puntual', { p_fecha: args[0] });
+  },
+  // args: [{ fecha, agrupacion, tiendas: [{ tienda, modo: 'mover'|'doble'|null }] }]
+  crearAgrupacionPuntual: function (args) {
+    const c = args[0];
+    return llamarRpcSupabase_('crear_agrupacion_puntual', {
+      p_fecha: c.fecha,
+      p_agrupacion: c.agrupacion,
+      p_tiendas: c.tiendas || []
+    });
+  },
+  // args: [fecha, agrupacion]
+  eliminarAgrupacionPuntual: function (args) {
+    return llamarRpcSupabase_('eliminar_agrupacion_puntual', { p_fecha: args[0], p_agrupacion: args[1] });
+  },
   // -- Supabase: Administración: Registro de actividad (solo admin) --
   getRegistroActividad: function (args) {
     return llamarRpcSupabase_('get_registro_actividad', { p_desde: args[0], p_hasta: args[1] });

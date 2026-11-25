@@ -291,6 +291,8 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     '<div class="info"><div class="name-row">' +
     '<span class="name">' + escapeHtml(partes.titulo) + '</span>' +
     '<div class="name-row-datos">' + badgeUbicacion +
+    // Agrupación puntual: añadida solo para este día desde Bloqueos y cambios.
+    (seccion.puntual ? '<span class="badge-agr-puntual" title="Agrupación puntual: solo sale este día (se añadió desde Bloqueos y cambios)">SOLO ESTE DÍA</span>' : '') +
     '<span class="count">' + seccion.tiendas.filter(function (t) { return !t.salePorExcepcion; }).length + ' tienda(s)</span>' +
     badgeEstadoCabecera_(seccion) +
     '</div>' +

@@ -3619,7 +3619,7 @@
   .modal-box.gestor-obs { max-width: 760px; padding: 34px 38px; }
   .modal-box.gestor-obs .gestor-form { gap: 20px; }
   .modal-box.gestor-obs .gestor-tipo-pills { grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .modal-box.gestor-obs .gestor-tipo-pills.gestor-tipo-principal { grid-template-columns: repeat(5, 1fr); }
+  .modal-box.gestor-obs .gestor-tipo-pills.gestor-tipo-principal { grid-template-columns: repeat(6, 1fr); }
   .modal-box.gestor-obs .gestor-tipo-pill { padding: 14px 8px; font-size: 12.5px; }
   .modal-box.gestor-obs .gestor-campo input[type="date"],
   .modal-box.gestor-obs .gestor-campo input[type="text"],
@@ -3725,6 +3725,27 @@
   .gestor-puntual .gestor-puntual-lista .modal-plantilla-tienda-vacio { grid-column: 1 / -1; }
   .gestor-puntual .gestor-puntual-colocar { margin-top: 18px; }
   .gestor-puntual .plantilla-caja-limite { margin-top: 0; }
+  /* "Agrupación puntual": tiendas marcadas que ese día ya salen por otra
+     agrupación (hay que elegir, una a una, por dónde salen). */
+  .gestor-agrp-conflictos {
+    margin-top: 14px; border: 1px solid #f3d38a; background: #fffaf0; border-radius: 10px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .gestor-agrp-conf-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .gestor-agrp-conf-todas { font-weight: 600; color: var(--ink-soft); }
+  .gestor-agrp-conf-fila { display: grid; grid-template-columns: minmax(150px, 1fr) 2fr; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid #f1e3c0; }
+  .gestor-agrp-conf-tienda { display: flex; flex-direction: column; font-size: 12.5px; line-height: 1.3; }
+  .gestor-agrp-conf-tienda span { color: var(--ink-soft); font-size: 11.5px; }
+  .gestor-agrp-conf-fila.pendiente .gestor-agrp-conf-tienda b { color: var(--danger); }
+  .modal-box.gestor-obs .gestor-agrp-conf-fila .gestor-tipo-pill { padding: 8px 8px; font-size: 12px; }
+  .gestor-agrp-conf-falta { font-size: 12px; font-weight: 700; color: var(--danger); }
+  @media (max-width: 600px) { .gestor-agrp-conf-fila { grid-template-columns: 1fr; } }
+  /* Etiqueta "SOLO ESTE DÍA" en la cabecera de una agrupación puntual. */
+  .badge-agr-puntual {
+    display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+    background: #fff4e0; color: #b45309; border: 1px solid #f3d38a;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .3px; white-space: nowrap;
+  }
   .gestor-der-vacio {
     border: 1px dashed var(--line); border-radius: 10px; padding: 18px 16px;
     font-size: 12.5px; color: var(--ink-soft); text-align: center; line-height: 1.5;

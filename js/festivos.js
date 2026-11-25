@@ -285,6 +285,14 @@ function aplanarDatosFestivos_(datosDias) {
       lista.push({ fecha: data.fecha, tag: 'Nota del día', tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: '', automatica: !!n.excepcionId });
     });
     (data.secciones || []).forEach(function (seccion) {
+      // Agrupación puntual: añadida solo para este día. Cuenta como un
+      // cambio (filtro «Cambios») y se quita entera desde su tarjeta.
+      if (seccion.puntual) {
+        const nT = (seccion.tiendas || []).filter(function (t) { return !t.salePorExcepcion; }).length;
+        lista.push({ fecha: data.fecha, tag: 'Agrupación puntual', tipo: 'cambio', puntual: true, agrPuntual: true,
+          agrupacion: seccion.nombre, id: 'agrp:' + seccion.nombre,
+          texto: parsearNombreAgrupacion(seccion.nombre).titulo + ' sale solo este día (' + nT + (nT === 1 ? ' tienda)' : ' tiendas)') });
+      }
       (seccion.notas || []).forEach(function (n) {
         if (n.excepcionId) return;
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: seccion.nombre, automatica: !!n.excepcionId });
@@ -406,7 +414,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
           const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : (it.tipo === 'cambio' ? 'festivos-item cambio' + (it.puntual ? ' puntual' : '') : 'festivos-item');
           const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? (it.puntual ? ICONO_PUNTUAL_ : ICONO_CAMBIO_) : ICONO_NOTA_);
           const delBtn = it.id
-            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + ' title="Eliminar">' +
+            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + (it.agrPuntual ? ' data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '"' : '') + ' title="Eliminar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
           // Lápiz para editar el texto: solo notas y bloqueos (los cambios
@@ -463,7 +471,13 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
   });
 
   listaEl.querySelectorAll('.festivos-del').forEach(function (btn) {
-    btn.onclick = function () { eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo'), btn.getAttribute('data-puntual') === '1'); };
+    btn.onclick = function () {
+      if (btn.hasAttribute('data-agrp')) {
+        eliminarAgrupacionPuntualDesdeFestivos_(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrp'));
+        return;
+      }
+      eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo'), btn.getAttribute('data-puntual') === '1');
+    };
   });
 }
 
@@ -740,6 +754,29 @@ function cambiarTextoEnCacheFestivos_(id, texto) {
       (seccion.tiendas || []).forEach(function (t) { if (t.cierreId === id) t.motivoCierre = texto; });
     });
   });
+}
+
+/** Quita una agrupación puntual entera (sus tiendas y sus notas). Las
+ *  tiendas que entraron por cambio puntual vuelven a su agrupación. */
+function eliminarAgrupacionPuntualDesdeFestivos_(fecha, agrupacion) {
+  appConfirm(
+    'Quitar agrupación puntual',
+    '¿Seguro que quieres quitar ' + parsearNombreAgrupacion(agrupacion).titulo + ' del ' + formatearFechaLarga(fecha) + '? ' +
+      'Se quitan sus tiendas y sus notas de ese día, y las tiendas que salían por ella por un cambio puntual vuelven a su agrupación de siempre. ' +
+      'Si ya tiene palets contados, envíos o la carga ajustada, no se podrá quitar.',
+    function () {
+      llamarApi_('eliminarAgrupacionPuntual', [fecha, agrupacion])
+        .then(function () {
+          mostrarToast('Agrupación puntual quitada');
+          cargarFestivos();
+          if (document.getElementById('calendar-body')) cargarCalendario();
+          if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+        })
+        .catch(mostrarErrorServidor);
+    },
+    true,
+    'Quitar'
+  );
 }
 
 function eliminarObservacionDesdeFestivos_(id, tipo, esPuntual) {
