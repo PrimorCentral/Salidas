@@ -11,7 +11,7 @@ const ACCIONES_CON_CARGA_GLOBAL_ = {
   getCambiosPuntualesDiaEspecial: 1, getDiasEspeciales: 1, getDiasPlantilla: 1, getRutasFacturar: 1,
   getEmailsFacturacion: 1, getConfigAvisoTiendas: 1, getAvisosEnviadosTiendas: 1, getEstadoSobrestockTodas: 1,
   buscarPosiblesDuplicadosTiendas: 1, getAgrupacionesPuntual: 1, getTiendasConfig: 1, getAgrupacionesConfig: 1,
-  getUsuarios: 1, getRegistroActividad: 1, getPaletsForzadosAdmin: 1
+  getUsuarios: 1, getRegistroActividad: 1, getPaletsForzadosAdmin: 1, getAnotacionesDiaEspecial: 1
 };
 
 function llamarApi_(accion, args) {

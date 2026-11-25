@@ -505,11 +505,41 @@ function abrirModalNuevoDiaEspecial_() {
       return;
     }
     btnCrear.disabled = true;
-    btnCrear.textContent = 'Creando…';
-    llamarApi_('crearDiaEspecial', [fecha, selectBase.value])
+    btnCrear.textContent = 'Comprobando…';
+    // Antes de crearlo: si ese día ya tiene notas, bloqueos o cambios, se
+    // avisa y se elige qué hacer con ellos (si no, se quedarían colgados del
+    // día normal y no se verían en el conteo especial).
+    llamarApi_('getAnotacionesDiaEspecial', [fecha, selectBase.value])
+      .then(function (info) {
+        if (info && Number(info.total) > 0) {
+          pedirQueHacerConAnotacionesEspecial_(fecha, selectBase.value, info, crear, function () {
+            btnCrear.disabled = false;
+            btnCrear.textContent = 'Crear';
+          });
+        } else {
+          crear(null);
+        }
+      })
+      .catch(function (err) {
+        btnCrear.disabled = false;
+        btnCrear.textContent = 'Crear';
+        mostrarError((err && err.message) ? err.message : 'No se ha podido comprobar ese día.');
+      });
+  };
+
+  function crear(anotaciones) {
+    const fecha = inputFecha.value;
+    const btn = document.getElementById('modal-confirm-btn');
+    const textoBtn = anotaciones ? (btn ? btn.textContent : 'Crear') : 'Crear';
+    if (btn) { btn.disabled = true; btn.textContent = 'Creando…'; }
+    llamarApi_('crearDiaEspecial', [fecha, selectBase.value, anotaciones])
       .then(function (res) {
         cerrarModal();
-        mostrarToast('Conteo especial creado');
+        const nP = (res && res.pasadas) || 0;
+        const nB = (res && res.borradas) || 0;
+        mostrarToast('Conteo especial creado' +
+          (anotaciones === 'pasar' ? ' · ' + nP + (nP === 1 ? ' anotación pasada' : ' anotaciones pasadas') + (nB ? ' (' + nB + ' sin sitio, borradas)' : '') : '') +
+          (anotaciones === 'borrar' ? ' · ' + nB + (nB === 1 ? ' anotación borrada' : ' anotaciones borradas') : ''));
         PLANTILLA_ESTADO.dia = res && res.nombre ? res.nombre : PLANTILLA_ESTADO.dia;
         return llamarApi_('getDiasEspeciales', []).then(function (lista) {
           PLANTILLA_ESTADO.especiales = lista || [];
@@ -518,12 +548,58 @@ function abrirModalNuevoDiaEspecial_() {
         });
       })
       .catch(function (err) {
-        btnCrear.disabled = false;
-        btnCrear.textContent = 'Crear';
-        mostrarError((err && err.message) ? err.message : 'No se ha podido crear el conteo especial.');
+        const b = document.getElementById('modal-confirm-btn');
+        if (b) { b.disabled = false; b.textContent = textoBtn; }
+        const bb = document.getElementById('modal-borrar-anot-btn');
+        if (bb) bb.disabled = false;
+        mostrarErrorServidor(err);
       });
-  };
+  }
   setTimeout(function () { inputFecha.focus(); }, 50);
+}
+
+/** El día del conteo especial ya tiene anotaciones: se enseña qué hay y se
+ *  elige entre pasarlas al conteo especial, borrarlas o cancelar.
+ *  onElegir('pasar' | 'borrar') crea el conteo; onCancelar vuelve atrás. */
+function pedirQueHacerConAnotacionesEspecial_(fecha, diaBase, info, onElegir, onCancelar) {
+  const n = function (k) { return Number(info[k]) || 0; };
+  const lineas = [];
+  const add = function (k, uno, varios) { if (n(k)) lineas.push(n(k) + ' ' + (n(k) === 1 ? uno : varios)); };
+  add('notas', 'nota de agrupación', 'notas de agrupación');
+  add('bloqueos', 'bloqueo de conteo', 'bloqueos de conteo');
+  add('cambios', 'cambio puntual', 'cambios puntuales');
+  add('tiendasPuntuales', 'tienda puntual', 'tiendas puntuales');
+  add('forzados', 'palet forzado', 'palets forzados');
+  add('agrupacionesPuntuales', 'agrupación puntual', 'agrupaciones puntuales');
+  const sin = n('sinSitio');
+
+  document.getElementById('modal-box').classList.remove('peligro');
+  document.getElementById('modal-title').textContent = 'Ese día ya tiene anotaciones';
+  const custom = document.getElementById('modal-custom');
+  custom.innerHTML =
+    '<p class="confirm-puntual-intro">El <b>' + escapeHtml(formatearFechaLarga(fecha)) + '</b> ya tiene:</p>' +
+    '<ul class="confirm-puntual-lista">' + lineas.map(function (l) { return '<li>' + escapeHtml(l) + '</li>'; }).join('') + '</ul>' +
+    '<p>Están puestas sobre la plantilla normal de ' + escapeHtml(diaNormalDeFecha_(fecha)) + '. Si creas el conteo especial sin hacer nada, <b>dejarían de verse</b>. ¿Qué quieres hacer con ellas?</p>' +
+    (sin
+      ? '<p class="confirm-puntual-nota" style="color:var(--danger);font-weight:600;">' + sin + (sin === 1 ? ' no tiene' : ' no tienen') +
+        ' sitio en el conteo especial (esa agrupación o tienda no está en ' + escapeHtml(diaBase || 'un conteo vacío') + '): si las pasas, ' + (sin === 1 ? 'esa se borrará' : 'esas se borrarán') + '.</p>'
+      : '') +
+    '<p class="confirm-puntual-nota">Las notas del día (las generales) no cambian: se siguen viendo igual.</p>';
+
+  const actions = document.getElementById('modal-actions');
+  actions.innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm danger" id="modal-borrar-anot-btn">Borrarlas</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Pasarlas al conteo especial</button>';
+  document.getElementById('modal-cancel-btn').onclick = function () { cerrarModal(); if (onCancelar) onCancelar(); };
+  document.getElementById('modal-borrar-anot-btn').onclick = function () {
+    document.getElementById('modal-borrar-anot-btn').disabled = true;
+    onElegir('borrar');
+  };
+  document.getElementById('modal-confirm-btn').onclick = function () {
+    document.getElementById('modal-borrar-anot-btn').disabled = true;
+    onElegir('pasar');
+  };
 }
 
 function confirmarEliminarDiaEspecial_(nombre) {

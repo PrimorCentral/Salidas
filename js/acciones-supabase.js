@@ -248,9 +248,17 @@ const SUPABASE_ACCIONES_ = {
   getDiasEspeciales: function () {
     return llamarRpcSupabase_('get_dias_especiales', {});
   },
+  // args: [fecha, diaBase, anotaciones] — anotaciones: qué hacer con las
+  // notas, bloqueos y cambios que ya tenga ese día ('pasar' al conteo
+  // especial o 'borrar'); sin nada, si las hay, el servidor no lo crea.
   crearDiaEspecial: function (args) {
     const fecha = args[0], diaBase = args[1];
-    return llamarRpcSupabase_('crear_dia_especial', { p_fecha: fecha, p_dia_base: diaBase });
+    return llamarRpcSupabase_('crear_dia_especial', { p_fecha: fecha, p_dia_base: diaBase, p_anotaciones: args[2] || null });
+  },
+  // Qué anotaciones tiene ya esa fecha (y cuántas no tendrían sitio en el
+  // conteo especial con el día base elegido). args: [fecha, diaBase]
+  getAnotacionesDiaEspecial: function (args) {
+    return llamarRpcSupabase_('get_anotaciones_dia_especial', { p_fecha: args[0], p_dia_base: args[1] || '' });
   },
   eliminarDiaEspecial: function (args) {
     const nombre = args[0];
