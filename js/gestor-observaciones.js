@@ -197,6 +197,18 @@ function crearFormularioGestorObs_() {
           '<div class="gestor-agrp-conflictos" id="gestor-agrp-conflictos" style="display:none;"></div>' +
           '<label for="gestor-agrp-pos" class="gestor-puntual-sublabel">Posición en el conteo</label>' +
           '<select id="gestor-agrp-pos"></select>' +
+          '<label for="gestor-agrp-grupo" class="gestor-puntual-sublabel">Grupo de palets de las tiendas</label>' +
+          '<select id="gestor-agrp-grupo"></select>' +
+          '<div class="plantilla-anadir-colocar gestor-puntual-grupo-nuevo" id="gestor-agrp-grupo-nuevo" style="display:none;">' +
+            '<div class="modal-campo">' +
+              '<label for="gestor-agrp-gn-texto">Nombre del grupo nuevo</label>' +
+              '<input type="text" id="gestor-agrp-gn-texto" placeholder="Ej. 1 CAMIÓN 8 PALETS" autocomplete="off">' +
+            '</div>' +
+            '<div class="modal-campo">' +
+              '<label for="gestor-agrp-gn-limite">Límite de palets del grupo</label>' +
+              '<input type="text" id="gestor-agrp-gn-limite" inputmode="numeric" placeholder="Ej. 8" autocomplete="off">' +
+            '</div>' +
+          '</div>' +
           '<div class="gestor-campo-ayuda">Solo para este día: la plantilla de Rutas y tiendas no cambia. Se copian de la agrupación su agencia, notas de carga y grupos de palets, y el límite de cada tienda.</div>' +
         '</div>' +
       '</div>' +
@@ -1790,7 +1802,13 @@ function agrpCompletoGestorObs_() {
   const a = GESTOR_OBS.agrp || {};
   if (!GESTOR_OBS.datosDia || esDiaEspecialGestorObs_() || !a.agrupacion || !(a.seleccionadas && a.seleccionadas.length)) return false;
   const enOtra = GESTOR_OBS.agrpEnOtra || {};
-  return a.seleccionadas.every(function (k) { return !enOtra[k] || !!a.modos[k]; });
+  if (!a.seleccionadas.every(function (k) { return !enOtra[k] || !!a.modos[k]; })) return false;
+  if (((document.getElementById('gestor-agrp-grupo') || {}).value || '') === '__nuevo__') {
+    const t = ((document.getElementById('gestor-agrp-gn-texto') || {}).value || '').trim();
+    const l = ((document.getElementById('gestor-agrp-gn-limite') || {}).value || '').trim();
+    if (!t || !/^\d+$/.test(l) || Number(l) < 1) return false;
+  }
+  return true;
 }
 
 function pintarAgrpGestorObs_() {
@@ -1852,7 +1870,28 @@ function pintarAgrpGestorObs_() {
   resto.style.display = '';
   pintarListaAgrpGestorObs_();
   pintarPosicionAgrpGestorObs_();
+  pintarGrupoAgrpGestorObs_();
   actualizarBotonGuardarGestor_();
+}
+
+/** Desplegable "Grupo de palets de las tiendas": como en la agrupación
+ *  copiada, sin grupo, uno de sus grupos, o uno nuevo solo para ese día. */
+function pintarGrupoAgrpGestorObs_() {
+  const sel = document.getElementById('gestor-agrp-grupo');
+  if (!sel) return;
+  const elegida = agrpElegidaGestorObs_();
+  const previa = sel.value;
+  const grupos = (elegida && elegida.grupos) || [];
+  sel.innerHTML =
+    '<option value="">' + (grupos.length ? 'Cada tienda con su grupo de siempre (como el ' + escapeHtml(String((elegida && elegida.dia) || '').toLowerCase()) + ')' : 'Sin grupo') + '</option>' +
+    (grupos.length ? '<option value="__ninguno__">Sin grupo</option>' : '') +
+    grupos.map(function (g) {
+      return '<option value="' + escapeAttr(g.texto) + '">Todas en: ' + escapeHtml(g.texto) + (g.limite != null ? ' (' + escapeHtml(String(g.limite)) + ' palets)' : '') + '</option>';
+    }).join('') +
+    '<option value="__nuevo__">+ Crear grupo nuevo solo para este día…</option>';
+  if (previa && sel.querySelector('option[value="' + CSS.escape(previa) + '"]')) sel.value = previa;
+  const caja = document.getElementById('gestor-agrp-grupo-nuevo');
+  if (caja) caja.style.display = sel.value === '__nuevo__' ? '' : 'none';
 }
 
 /** Opciones de "Posición en el conteo": al final, al principio o debajo de
@@ -2011,7 +2050,24 @@ function conectarControlesAgrpGestorObs_(wrap) {
     a.filtro = '';
     const buscar = document.getElementById('gestor-agrp-buscar');
     if (buscar) buscar.value = '';
+    const selGrupo = document.getElementById('gestor-agrp-grupo');
+    if (selGrupo) selGrupo.value = '';
     pintarAgrpGestorObs_();
+  });
+  wrap.querySelector('#gestor-agrp-grupo').addEventListener('change', function (e) {
+    const caja = document.getElementById('gestor-agrp-grupo-nuevo');
+    const nuevo = e.target.value === '__nuevo__';
+    if (caja) caja.style.display = nuevo ? '' : 'none';
+    if (nuevo) setTimeout(function () { const i = document.getElementById('gestor-agrp-gn-texto'); if (i) i.focus(); }, 0);
+  });
+  wrap.querySelector('#gestor-agrp-gn-texto').addEventListener('input', function (e) {
+    const el = e.target;
+    const ini = el.selectionStart, fin = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    el.setSelectionRange(ini, fin);
+  });
+  wrap.querySelector('#gestor-agrp-gn-limite').addEventListener('input', function (e) {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
   });
   let temporizador = null;
   wrap.querySelector('#gestor-agrp-buscar').addEventListener('input', function (e) {
@@ -2060,6 +2116,9 @@ function guardarAgrpDesdeGestor_() {
     fecha: fecha,
     agrupacion: a.agrupacion,
     debajo: (document.getElementById('gestor-agrp-pos') || {}).value || null,
+    grupo: (document.getElementById('gestor-agrp-grupo') || {}).value || null,
+    grupoNuevoTexto: ((document.getElementById('gestor-agrp-gn-texto') || {}).value || '').trim() || null,
+    grupoNuevoLimite: ((document.getElementById('gestor-agrp-gn-limite') || {}).value || '').trim() || null,
     tiendas: a.seleccionadas.map(function (k) { return { tienda: k, modo: enOtra[k] ? a.modos[k] : null }; })
   }])
     .then(function (res) {

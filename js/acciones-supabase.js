@@ -739,7 +739,12 @@ const SUPABASE_ACCIONES_ = {
       p_tiendas: c.tiendas || [],
       // Posición en el conteo: '__inicio__', nombre de la agrupación de
       // encima, o vacío = al final.
-      p_debajo: c.debajo || null
+      p_debajo: c.debajo || null,
+      // Grupo de palets: vacío = cada tienda con el suyo de siempre;
+      // '__ninguno__', el nombre de un grupo, o '__nuevo__' (+ nombre y límite).
+      p_grupo: c.grupo || null,
+      p_grupo_nuevo_texto: c.grupo === '__nuevo__' ? (c.grupoNuevoTexto || null) : null,
+      p_grupo_nuevo_limite: (c.grupo === '__nuevo__' && c.grupoNuevoLimite) ? Number(c.grupoNuevoLimite) : null
     });
   },
   // args: [fecha, agrupacion, debajo]
