@@ -1,8 +1,24 @@
 /* SALIDAS · js/sesion.js — llamarApi_, volver al login, cerrar sesión y réplica de google.script.run */
 
+// Consultas que se lanzan al pulsar algo (abrir una ventana, una pantalla,
+// un desplegable...) y que enseñan la ventana "Cargando…" global mientras
+// tardan (js/carga-global.js). Las que se repiten solas de fondo (refresco
+// del conteo, avisos de verificación, cola de correos...) no van aquí: esas
+// pantallas ya enseñan su "Cargando…" solo la primera vez.
+const ACCIONES_CON_CARGA_GLOBAL_ = {
+  getGruposRutaDias: 1, getConteosEnEspera: 1, getConteosEliminarRuta: 1, aparicionesTiendaConfig: 1,
+  otrasAparicionesTiendaPlantilla: 1, diasRutaMismoNombre: 1, simularMoverTiendaAgrupacionDias: 1,
+  getCambiosPuntualesDiaEspecial: 1, getDiasEspeciales: 1, getDiasPlantilla: 1, getRutasFacturar: 1,
+  getEmailsFacturacion: 1, getConfigAvisoTiendas: 1, getAvisosEnviadosTiendas: 1, getEstadoSobrestockTodas: 1,
+  buscarPosiblesDuplicadosTiendas: 1, getAgrupacionesPuntual: 1, getTiendasConfig: 1, getAgrupacionesConfig: 1,
+  getUsuarios: 1, getRegistroActividad: 1, getPaletsForzadosAdmin: 1
+};
+
 function llamarApi_(accion, args) {
   if (Object.prototype.hasOwnProperty.call(SUPABASE_ACCIONES_, accion)) {
-    return Promise.resolve().then(function () { return SUPABASE_ACCIONES_[accion](args || []); });
+    const llamada = function () { return SUPABASE_ACCIONES_[accion](args || []); };
+    if (ACCIONES_CON_CARGA_GLOBAL_[accion] && typeof conCargaGlobal === 'function') return conCargaGlobal(llamada);
+    return Promise.resolve().then(llamada);
   }
   return Promise.reject(new Error('"' + accion + '" no configurado aún con Supabase'));
 }

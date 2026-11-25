@@ -21,7 +21,16 @@ const SUPABASE_URL = 'https://plqcnqjlxfxjvxyktqbx.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_O7FxndlZ08NVAbZeGx6jYw_HKdqLqFr';
 
 const supabaseClient = (window.supabase && SUPABASE_URL.indexOf('TU_SUPABASE_URL') === -1)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      // Todas las consultas pasan por fetchCancelable (js/carga-global.js)
+      // para que el botón "Cancelar consulta" de la ventana "Cargando…"
+      // pueda cortarlas.
+      global: {
+        fetch: function (url, opciones) {
+          return typeof fetchCancelable === 'function' ? fetchCancelable(url, opciones) : fetch(url, opciones);
+        }
+      }
+    })
   : null;
 if (!supabaseClient) {
   console.warn('[Supabase] cliente NO inicializado -- window.supabase =', typeof window.supabase, '(¿ha cargado el <script> del CDN? revisa la pestaña Network). No se intentará el login en paralelo.');

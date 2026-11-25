@@ -3599,6 +3599,42 @@
     margin-right: 7px; flex-shrink: 0;
   }
   .cargando-linea { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+
+  /* ---------- Ventana de carga global (igual que la de GIDT) ----------
+     Tarjeta "Cargando…" centrada con el fondo difuminado (js/carga-global.js).
+     A los 10 s se le añade la clase "lento": aviso + botón "Cancelar consulta".
+     Los "Cargando…" de cada pantalla siguen ahí guardando el hueco, pero no se
+     ven: en su lugar sale esta ventana. */
+  .loader, .cargando-linea { visibility: hidden; }
+  .gestor-loading-overlay { background: transparent; }
+  .gestor-loading-overlay > * { visibility: hidden; }
+  .carga-global-overlay {
+    position: fixed; inset: 0; z-index: 450; padding: 20px;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(18,24,31,.28);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .carga-global-overlay.show { display: flex; }
+  .carga-global-box {
+    background: #fff; border-radius: 14px; box-shadow: 0 18px 50px -12px rgba(15,23,42,.35);
+    min-width: 220px; max-width: 280px; padding: 26px 28px 24px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+  }
+  .carga-global-spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3.5px solid #F4F6F8; border-top-color: #FF7A1A;
+    animation: carga-global-girar .7s linear infinite;
+  }
+  @keyframes carga-global-girar { to { transform: rotate(360deg); } }
+  .carga-global-texto { margin: 0; font-size: 14.5px; font-weight: 600; color: #12181F; }
+  .carga-global-lento { display: none; flex-direction: column; align-items: center; gap: 10px; margin-top: -2px; }
+  .carga-global-box.lento .carga-global-lento { display: flex; }
+  .carga-global-lento p { margin: 0; font-size: 13px; color: #5B6572; }
+  .btn-cancelar-consulta {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 16px; border-radius: 99px;
+    border: 1px solid #F5B5A8; background: #fff; color: #D12B0D; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-cancelar-consulta:hover { background: #FDE7E2; }
   /* Aviso si una carga pasa de 15 s (ver revisarCargasLentas_ en utilidades.js). */
   .carga-lenta { flex-basis: 100%; font-size: 12px; color: var(--amber-dark); margin-top: 8px; text-align: center; }
   .carga-lenta-btn {

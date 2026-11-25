@@ -242,6 +242,21 @@
 
   <div id="toast"></div>
 
+  <!-- Ventana de carga global (igual que la de GIDT): aparece centrada en
+       pantalla mientras se están cargando datos. La controlan
+       mostrarCargandoGlobal()/ocultarCargandoGlobal() y el vigía de los
+       "Cargando…" de la pantalla (js/carga-global.js). -->
+  <div class="carga-global-overlay" id="cargaGlobalOverlay" aria-hidden="true">
+    <div class="carga-global-box" id="cargaGlobalBox" role="status" aria-live="polite">
+      <div class="carga-global-spinner"></div>
+      <p class="carga-global-texto">Cargando…</p>
+      <div class="carga-global-lento">
+        <p>Está tardando más de lo normal</p>
+        <button type="button" class="btn-cancelar-consulta" id="btnCancelarConsulta">✕ Cancelar consulta</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Modal de actualización disponible (no se cierra clicando fuera: la actualización no es opcional) -->
 <div class="actualizacion-overlay" id="actualizacionModalOverlay">
   <div class="actualizacion-modal-box" role="alertdialog" aria-modal="true" aria-labelledby="actualizacionModalTitulo">
@@ -359,6 +374,7 @@
      Al añadir un .js nuevo: ponlo aquí en su sitio Y en APP_SHELL de service-worker.js. -->
 <script src="js/modal-scroll.js"></script>
 <script src="js/config.js"></script>
+<script src="js/carga-global.js"></script>
 <script src="js/supabase-client.js"></script>
 <script src="js/instalar-app.js"></script>
 <script src="js/permisos.js"></script>

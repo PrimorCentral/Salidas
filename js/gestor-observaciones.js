@@ -1374,17 +1374,20 @@ function pintarPuntualGestorObs_() {
 
   if (!GESTOR_OBS.fecha || !GESTOR_OBS.datosDia) {
     aviso.textContent = GESTOR_OBS.fecha ? 'Cargando las agrupaciones de ese día…' : 'Elige primero la fecha.';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
   }
   if (esDiaEspecialGestorObs_()) {
     aviso.textContent = 'Ese día es un conteo especial: las tiendas se añaden desde Rutas y tiendas (botón «Añadir tienda» de cada ruta).';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
   }
   aviso.style.display = 'none';
+  aviso.classList.remove('cargando-linea');
   cuerpo.style.display = '';
   cargarTiendasConfigPuntualGestorObs_();
 
@@ -1418,7 +1421,7 @@ function pintarListaPuntualGestorObs_() {
   btnVer.textContent = p.verTodas ? ('Ver solo las de ' + titulo) : 'Ver todas las tiendas';
 
   if (!GESTOR_OBS.tiendasConfig) {
-    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio"><span class="spinner-mini"></span> Cargando tiendas…</div>';
+    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio cargando-linea"><span class="spinner-mini"></span> Cargando tiendas…</div>';
     ayudaEl.textContent = '';
     return;
   }
@@ -1753,18 +1756,21 @@ function pintarAgrpGestorObs_() {
 
   if (!GESTOR_OBS.fecha || !GESTOR_OBS.datosDia) {
     aviso.textContent = GESTOR_OBS.fecha ? 'Cargando las agrupaciones de ese día…' : 'Elige primero la fecha.';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
   }
   if (esDiaEspecialGestorObs_()) {
     aviso.textContent = 'Ese día es un conteo especial: las agrupaciones se añaden desde Rutas y tiendas.';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
   }
   if (GESTOR_OBS.fecha < fechaHoyIsoGestorObs_()) {
     aviso.textContent = 'No se puede añadir una agrupación puntual a un día que ya ha pasado.';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
@@ -1773,11 +1779,13 @@ function pintarAgrpGestorObs_() {
   cargarTiendasConfigPuntualGestorObs_();
   if (!a.lista) {
     aviso.textContent = 'Cargando las agrupaciones que se pueden añadir…';
+    aviso.classList.toggle('cargando-linea', /^Cargando/.test(aviso.textContent));
     aviso.style.display = '';
     cuerpo.style.display = 'none';
     return;
   }
   aviso.style.display = 'none';
+  aviso.classList.remove('cargando-linea');
   cuerpo.style.display = '';
 
   const selAgr = document.getElementById('gestor-agrp-agrupacion');
@@ -1809,7 +1817,7 @@ function pintarListaAgrpGestorObs_() {
   btnVer.textContent = a.verTodas ? ('Ver solo las de ' + parsearNombreAgrupacion(a.agrupacion).titulo) : 'Ver todas las tiendas';
 
   if (!GESTOR_OBS.tiendasConfig) {
-    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio"><span class="spinner-mini"></span> Cargando tiendas…</div>';
+    listaEl.innerHTML = '<div class="modal-plantilla-tienda-vacio cargando-linea"><span class="spinner-mini"></span> Cargando tiendas…</div>';
     document.getElementById('gestor-agrp-ayuda-lista').textContent = '';
     pintarConflictosAgrpGestorObs_();
     return;

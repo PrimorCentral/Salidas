@@ -21,6 +21,8 @@ function mostrarToast(msg, esError) {
  *  } */
 function mostrarErrorFijo(opts) {
   opts = opts || {};
+  // Error provocado por "Cancelar consulta" (js/carga-global.js): no se avisa.
+  if (typeof consultaRecienCancelada === 'function' && consultaRecienCancelada()) return;
   let caja = document.getElementById('error-fijo');
   if (!caja) {
     caja = document.createElement('div');
@@ -90,6 +92,7 @@ function causaLegibleDeError_(err) {
   function avisar_(err) {
     const msg = textoDeError_(err);
     if (msg === '') return; // error ya avisado por su cuenta (p.ej. sesión caducada)
+    if (typeof consultaRecienCancelada === 'function' && consultaRecienCancelada()) return; // "Cancelar consulta"
     // Errores que no son de la app (extensiones del navegador, avisos
     // internos del navegador sin importancia): no se enseñan.
     if (/^Script error\.?$/i.test(msg) || /ResizeObserver loop/i.test(msg)) return;
@@ -116,6 +119,8 @@ function mostrarErrorServidor(err) {
   // (p.ej. "Sesión caducada" -- ver llamarRpcSupabase_/volverALogin_): no
   // pintamos un segundo toast encima sin contenido.
   if (err && err.message === '') return;
+  // Error provocado por "Cancelar consulta" (js/carga-global.js): no se avisa.
+  if (typeof consultaRecienCancelada === 'function' && consultaRecienCancelada()) return;
   mostrarToast('Error: ' + (err && err.message ? err.message : err), true);
 }
 
