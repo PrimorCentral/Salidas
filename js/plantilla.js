@@ -595,7 +595,9 @@ function cargarPlantilla_(opts) {
       ? llamarApi_('getCambiosPuntualesDiaEspecial', [diaPedido]).catch(function () { return []; })
       : Promise.resolve([]),
     // Palets "en espera" de agrupaciones eliminadas (si falla, se pinta igual).
-    llamarApi_('getConteosEnEspera', [diaPedido]).catch(function () { return []; })
+    llamarApi_('getConteosEnEspera', [diaPedido]).catch(function () { return []; }),
+    // Rutas con FACTURAR activo (si falla, el interruptor sale apagado).
+    llamarApi_('getRutasFacturar', [diaPedido]).catch(function () { return []; })
   ])
     .then(function (res) {
       const resultado = res[0];
@@ -604,6 +606,8 @@ function cargarPlantilla_(opts) {
       PLANTILLA_ESTADO.secciones = (resultado && resultado.secciones) || [];
       PLANTILLA_ESTADO.puntuales = res[1] || [];
       PLANTILLA_ESTADO.enEspera = res[2] || [];
+      const rutasFacturar = res[3] || [];
+      PLANTILLA_ESTADO.secciones.forEach(function (s) { s.tieneFacturar = rutasFacturar.indexOf(s.nombre) !== -1; });
       pintarPlantilla_();
       if (silencioso) {
         if (scroller === window) window.scrollTo(0, scrollY); else scroller.scrollTop = scrollY;
@@ -863,6 +867,9 @@ function opcionesRutaPlantillaHtml_(s) {
     chip('chip-viernes', 'viernes', s.tieneViernes, 'VIERNES', 'Quitar la casilla VIERNES de esta ruta', 'Activar la casilla VIERNES en el conteo de esta ruta (suma al total de la tienda, no a la carga)') +
     chip('chip-domingo', 'domingo', s.tieneCasillaDomingo, 'DOMINGO', 'Quitar la casilla DOMINGO de esta ruta', 'Activar la casilla DOMINGO en el conteo de esta ruta (suma al total de la tienda, no a la carga)') +
     chip('chip-azul', 'pdfespecial', s.tienePdfEspecial, 'PDF ESPECIAL', 'Quitar el PDF ESPECIAL de esta ruta', 'Activar el PDF ESPECIAL para esta ruta') +
+    // FACTURAR: opción «Facturar» en el sobre del conteo (email aparte a
+    // contabilidad). El estado viene de get_rutas_facturar (ver cargarPlantilla_).
+    chip('chip-facturar', 'facturar', s.tieneFacturar, 'FACTURAR', 'Quitar la opción Facturar de esta ruta', 'Activar la opción Facturar (en el sobre del conteo) para esta ruta') +
   '</div>';
 }
 
@@ -1208,6 +1215,9 @@ function pintarPlantilla_() {
   listaEl.querySelectorAll('[data-domingo-row]').forEach(function (btn) {
     btn.onclick = function () { toggleDomingoTiendaPlantilla_(btn.getAttribute('data-domingo-row'), btn.getAttribute('data-domingo-incluida') === '1'); };
   });
+  listaEl.querySelectorAll('[data-toggle-facturar]').forEach(function (btn) {
+    btn.onclick = function () { toggleFacturarRutaPlantilla_(btn.getAttribute('data-toggle-facturar'), btn.getAttribute('data-facturar-activo') === '1'); };
+  });
   listaEl.querySelectorAll('[data-toggle-pdfespecial]').forEach(function (btn) {
     btn.onclick = function () { togglePdfEspecialRutaPlantilla_(btn.getAttribute('data-toggle-pdfespecial'), btn.getAttribute('data-pdfespecial-activo') === '1'); };
   });
@@ -1419,6 +1429,17 @@ function togglePdfEspecialRutaPlantilla_(nombreRuta, activoActualmente) {
     if (s) s.tienePdfEspecial = !activoActualmente;
   };
   guardarPlantillaOptimista_(mutar, accion, [PLANTILLA_ESTADO.dia, nombreRuta], activoActualmente ? 'PDF ESPECIAL desactivado' : 'PDF ESPECIAL activado');
+}
+
+/** Activa/desactiva la opción «Facturar» de una ruta desde "Rutas y tiendas".
+ *  No borra nada: las facturaciones ya enviadas se quedan guardadas. */
+function toggleFacturarRutaPlantilla_(nombreRuta, activoActualmente) {
+  const accion = activoActualmente ? 'desactivarFacturarRuta' : 'activarFacturarRuta';
+  const mutar = function () {
+    const s = PLANTILLA_ESTADO.secciones.find(function (s) { return s.nombre === nombreRuta; });
+    if (s) s.tieneFacturar = !activoActualmente;
+  };
+  guardarPlantillaOptimista_(mutar, accion, [PLANTILLA_ESTADO.dia, nombreRuta], activoActualmente ? 'Facturar desactivado' : 'Facturar activado');
 }
 
 /** Bloquea o desbloquea la casilla 60/PTA/CART de una tienda concreta,

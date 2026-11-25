@@ -1631,6 +1631,7 @@
   }
   .plantilla-chip.chip-viernes { --chip-c: var(--viernes); --chip-bg: var(--viernes-suave); --chip-borde: var(--viernes-borde); }
   .plantilla-chip.chip-domingo { --chip-c: var(--domingo); --chip-bg: var(--domingo-suave); --chip-borde: var(--domingo-borde); }
+  .plantilla-chip.chip-facturar { --chip-c: #6a3fc4; --chip-bg: #f1ebfc; --chip-borde: #cdbdf3; }
   .plantilla-chip:hover:not(:disabled) { border-color: var(--chip-borde); color: var(--chip-c); }
   .plantilla-chip.activo { background: var(--chip-bg); border-color: var(--chip-borde); color: var(--chip-c); }
   .plantilla-chip:disabled { cursor: default; }
@@ -2462,6 +2463,28 @@
   .menu-envios .btn-header-definitivo:hover { background: #fdf6ea; color: var(--ink); }
   .menu-envios .btn-header-informatica:hover { background: #eef1f5; }
   .menu-envios button:disabled { opacity: .45; cursor: not-allowed; background: none; }
+  /* «Facturar» (email aparte a contabilidad), debajo de los envíos a la agencia. */
+  .menu-envios-sep { height: 1px; background: var(--line); margin: 4px 6px; }
+  .menu-envios .btn-header-facturar {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: none; border: none; border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .menu-envios .btn-header-facturar svg { color: #6a3fc4; flex-shrink: 0; }
+  .menu-envios button.btn-header-facturar:hover { background: #f4effd; }
+  .menu-envios .btn-header-facturar .txt { display: flex; flex-direction: column; line-height: 1.2; }
+  .menu-envios .btn-header-facturar small { font-size: 11px; font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
+  .menu-envios .btn-header-facturar.sin-ajustar { color: var(--ink-soft); }
+  .menu-envios .btn-header-facturar.sin-ajustar svg { color: #b4a6d6; }
+  .menu-facturar-fila { display: flex; align-items: center; gap: 4px; }
+  .menu-envios .btn-header-facturar.enviada { cursor: default; flex: 1; }
+  .menu-envios .btn-header-facturar.enviada svg { color: var(--ok); }
+  .menu-envios .btn-header-facturar.enviada small { color: var(--ok); }
+  .menu-envios .btn-ver-facturacion {
+    flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--navy); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .menu-envios .btn-ver-facturacion:hover { background: #eef1f5; }
   .menu-envios-aviso {
     margin: 4px 6px 2px; padding: 6px 8px; border-radius: 7px; background: #f6f7f9;
     color: var(--ink-soft); font-size: 11.5px; font-weight: 600;
@@ -3028,6 +3051,48 @@
 
   /* ---------- Modal "Enviar Previsión / Enviar Definitivo" (versión amplia) ---------- */
   .modal-box.ancho { max-width: 680px; }
+  /* Ventana «Facturación» */
+  .modal-box.facturacion-modal.facturacion-dividida { max-width: 860px; }
+  .modal-envio-cabecera-icono.fact-icono { background: #f1ebfc; color: #6a3fc4; }
+  .modal-envio-cabecera-icono.fact-icono.fact-ok { background: #e3f3ec; color: var(--ok); }
+  .fact-para { display: flex; gap: 9px; align-items: flex-start; background: #f6f2fe; border: 1px solid #e4d9fb; color: #4b2d94; border-radius: 10px; padding: 9px 12px; font-size: 12.5px; line-height: 1.4; margin: 14px 0 10px; }
+  .fact-para svg { flex: none; margin-top: 1px; }
+  .fact-barra { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .fact-switch-mini { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); margin-right: auto; cursor: pointer; }
+  .fact-tog { width: 44px; height: 24px; border-radius: 12px; background: #cfd4dc; position: relative; flex: none; border: 0; cursor: pointer; padding: 0; }
+  .fact-tog::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .fact-tog.on { background: #6a3fc4; }
+  .fact-tog.on::after { left: 23px; }
+  .fact-anadir-col { border: 1px dashed #b9a2ea; background: #fff; border-radius: 8px; padding: 6px 11px; font-size: 12.5px; font-weight: 700; color: #6a3fc4; cursor: pointer; }
+  .fact-tabla-wrap { border: 1px solid var(--line); border-radius: 12px; overflow: auto; max-height: min(52vh, 520px); }
+  .fact-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .fact-tabla th { background: #f6f7f9; color: var(--ink-soft); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; padding: 7px 8px; text-align: center; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 1; }
+  .fact-tabla tr.sub th { top: 32px; padding-top: 0; font-size: 10.5px; color: #6a3fc4; }
+  .fact-tabla th.nom, .fact-tabla td.nom { text-align: left; padding-left: 12px; }
+  .fact-tabla td { padding: 4px 8px; border-bottom: 1px solid #f0f1f4; text-align: center; }
+  .fact-tabla td.nom { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .fact-tabla td.cont { color: var(--ink-soft); font-weight: 700; }
+  .fact-tabla td.tot, .fact-tabla th.tot { font-weight: 800; color: var(--ink); background: #fafbfc; }
+  .fact-tabla td.aviso, .fact-tabla th.aviso { width: 78px; text-align: left; }
+  .fact-tabla .fact-celda { width: 64px; height: 32px; text-align: center; font-weight: 800; font-size: 14px; border: 1px solid #d4d8e0; border-radius: 8px; color: var(--ink); background: #fff; }
+  .fact-tabla .fact-celda.cero { color: #b4b9c3; font-weight: 600; }
+  .fact-tabla .fact-fijo { display: inline-block; min-width: 40px; font-weight: 800; font-size: 15px; color: var(--ink); padding: 6px 0; }
+  .fact-tabla tr.dif td.nom { color: #c0392b; }
+  .fact-dif { display: inline-block; background: #fdecea; color: #c0392b; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+  .fact-tabla tfoot td { background: #f6f7f9; font-weight: 800; color: var(--ink); border-top: 2px solid #cfd4dc; padding: 8px; font-size: 14px; position: sticky; bottom: 0; }
+  .cab-fecha { display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .cab-fecha input { border: 1px solid #cdbdf3; background: #fff; border-radius: 7px; padding: 4px 6px; font: inherit; font-size: 12px; font-weight: 800; color: #4b2d94; }
+  .cab-fecha .quitar-fecha { border: 0; background: transparent; color: #b4b9c3; cursor: pointer; padding: 2px; display: flex; }
+  .cab-fecha .quitar-fecha:hover { color: #c0392b; }
+  .fact-cuadre { margin-top: 10px; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; }
+  .fact-cuadre.ok { background: #eefaf2; color: #16794a; }
+  .fact-cuadre.mal { background: #fdecea; color: #c0392b; }
+  .modal-confirm.fact-enviar { background: #6a3fc4; }
+  .modal-confirm.fact-enviar:disabled { background: #c9bce6; cursor: not-allowed; }
+  .fact-ver-datos { display: grid; gap: 4px; margin: 14px 0 10px; font-size: 12.5px; }
+  .fact-ver-datos div { display: flex; gap: 8px; }
+  .fact-ver-datos span { color: var(--ink-soft); min-width: 52px; }
+  .fact-ver-email { width: 100%; height: min(55vh, 520px); border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 
   /* ---------- Modal "Añadir/Editar usuario": mucho más ancho, con los
      datos básicos a la izquierda y los permisos a la derecha (5 grupos en

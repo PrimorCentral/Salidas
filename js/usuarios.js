@@ -38,6 +38,7 @@ const CATALOGO_PERMISOS = [
       { clave: 'enviar_prevision', etiqueta: 'Enviar previsión', desc: 'Enviar por email la previsión de una agrupación a la agencia de transporte (el conteo sigue siendo editable).' },
       { clave: 'enviar_definitivo', etiqueta: 'Enviar definitivo', desc: 'Enviar por email el definitivo de una agrupación a la agencia de transporte (queda bloqueada y archivada).' },
       { clave: 'enviar_informatica', etiqueta: 'Enviar a informática', desc: 'Enviar por email la previsión de carga de una agrupación solo a transporte@primor.eu (el conteo sigue siendo editable).' },
+      { clave: 'enviar_facturacion', etiqueta: 'Enviar facturación', desc: 'Enviar por email la facturación de una agrupación a contabilidad (opción «Facturar» del sobre, solo en las rutas que la tienen activada). Hace falta tener la carga ajustada y solo se puede enviar una vez.' },
       { clave: 'ajustar_carga', etiqueta: 'Ajustar carga', desc: 'Ajustar cuántos palets van en el camión por tienda (camioncito de la cabecera) sin enviar nada, y volver a verificar la carga cuando cambia el conteo. Sin este permiso la carga se puede ver, pero no modificar.' },
     ],
   },

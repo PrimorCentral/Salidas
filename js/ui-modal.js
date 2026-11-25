@@ -1858,6 +1858,227 @@ function compartirListaCargaWhatsApp_(titulo, fechaTexto, tipoTexto, filas, totC
   });
 }
 
+/* ---------------- FACTURACIÓN (email aparte a contabilidad) ---------------- */
+
+/** Suma días a una fecha 'YYYY-MM-DD' (sin líos de zona horaria). */
+function sumarDiasFechaFact_(f, n) {
+  const p = String(f).split('-').map(Number);
+  const d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n));
+  return d.toISOString().slice(0, 10);
+}
+function fechaCortaFact_(f) { const p = String(f).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+
+/**
+ * Modal «Facturación»: palets de la CARGA AJUSTADA por tienda y, si se
+ * quiere, repartidos en varias fechas de facturación (una columna por
+ * fecha). Cada tienda tiene que sumar exactamente su carga ajustada; si
+ * no, no deja enviar (el servidor lo vuelve a comprobar).
+ * datos = { nombre, fechaTexto, fecha: 'YYYY-MM-DD', emails: [], lista: [{tienda, cargar}] }
+ * onEnviar(fechas, lineas, callback): fechas = ['YYYY-MM-DD'...],
+ *   lineas = { 'TIENDA': [palets por fecha] }; callback(ok, mensaje).
+ */
+function mostrarModalFacturacion(datos, onEnviar) {
+  const tiendas = (datos.lista || []).map(function (t) { return { tienda: t.tienda, cargar: Number(t.cargar) || 0 }; });
+  const totalCarga = tiendas.reduce(function (a, t) { return a + t.cargar; }, 0);
+  const st = {
+    fechas: [datos.fecha],
+    // valores[tienda] = [palets por fecha]; al empezar, todo en la 1ª fecha.
+    valores: {}
+  };
+  tiendas.forEach(function (t) { st.valores[t.tienda] = [t.cargar]; });
+
+  const box = document.getElementById('modal-box');
+  box.classList.remove('medio', 'usuario-form', 'peligro');
+  box.classList.add('ancho', 'facturacion-modal');
+  document.getElementById('modal-title').style.display = 'none';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+
+  const SVG_DOC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>';
+  const SVG_X = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+  function suma_(t) { return st.valores[t.tienda].reduce(function (a, n) { return a + (Number(n) || 0); }, 0); }
+  function dividir_() { return st.fechas.length > 1; }
+
+  function pintar_() {
+    const div = dividir_();
+    box.classList.toggle('facturacion-dividida', div);
+    const cab = st.fechas.map(function (f, i) {
+      return '<th class="col-fecha"><div class="cab-fecha"><input type="date" data-fecha-i="' + i + '" value="' + f + '">' +
+        (div ? '<button type="button" class="quitar-fecha" data-quitar-i="' + i + '" title="Quitar esta fecha">' + SVG_X + '</button>' : '') + '</div></th>';
+    }).join('');
+    const filas = tiendas.map(function (t, ti) {
+      return '<tr data-ti="' + ti + '"><td class="nom">' + escapeHtml(t.tienda) + '</td><td class="cont">' + t.cargar + '</td>' +
+        st.fechas.map(function (f, i) {
+          const v = st.valores[t.tienda][i];
+          return div
+            ? '<td><input type="number" min="0" step="1" inputmode="numeric" class="fact-celda" data-ti="' + ti + '" data-i="' + i + '" value="' + v + '"></td>'
+            : '<td><span class="fact-fijo">' + v + '</span></td>';
+        }).join('') +
+        (div ? '<td class="tot"></td><td class="aviso"></td>' : '') + '</tr>';
+    }).join('');
+
+    custom.innerHTML =
+      '<div class="modal-envio-cabecera">' +
+        '<div class="modal-envio-cabecera-icono fact-icono">' + SVG_DOC + '</div>' +
+        '<div class="modal-envio-cabecera-texto"><div class="nombre">' + escapeHtml(datos.nombre) + ' · Facturación</div>' +
+        '<div class="fecha">Carga ajustada del ' + escapeHtml(datos.fechaTexto) + '</div></div>' +
+      '</div>' +
+      '<div class="fact-para"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>' +
+        '<span>Se envía a <b>' + escapeHtml(datos.emails.join(', ')) + '</b>. No va a la agencia, no hace falta haber mandado previsión ni definitivo y <b>solo se puede enviar una vez</b>.</span></div>' +
+      '<div class="fact-barra">' +
+        '<label class="fact-switch-mini"><button type="button" class="fact-tog' + (div ? ' on' : '') + '" id="fact-tog" aria-pressed="' + div + '"></button><b>Dividir en fechas</b></label>' +
+        (div ? '<button type="button" class="fact-anadir-col" id="fact-anadir">+ Añadir fecha</button>' : '') +
+      '</div>' +
+      '<div class="fact-tabla-wrap"><table class="fact-tabla">' +
+        '<thead><tr><th class="nom">Tienda</th><th class="cont">Carga</th>' + cab + (div ? '<th class="tot">Total</th><th class="aviso"></th>' : '') + '</tr>' +
+        (div ? '' : '<tr class="sub"><th></th><th></th><th>Palets a facturar</th></tr>') + '</thead>' +
+        '<tbody>' + filas + '</tbody>' +
+        '<tfoot><tr><td class="nom">TOTAL PALETS</td><td class="cont">' + totalCarga + '</td>' +
+          st.fechas.map(function (f, i) { return '<td data-tot-i="' + i + '"></td>'; }).join('') + (div ? '<td class="tot" id="fact-tot"></td><td></td>' : '') + '</tr></tfoot>' +
+      '</table></div>' +
+      '<div class="fact-cuadre" id="fact-cuadre"></div>';
+
+    document.getElementById('modal-actions').innerHTML =
+      '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+      '<button class="modal-confirm fact-enviar" id="modal-confirm-btn">Enviar a contabilidad</button>';
+    document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+    document.getElementById('modal-confirm-btn').onclick = enviar_;
+
+    document.getElementById('fact-tog').onclick = function () {
+      if (dividir_()) {
+        // Volver a una sola fecha: todo junto en la primera.
+        st.fechas = [st.fechas[0]];
+        tiendas.forEach(function (t) { st.valores[t.tienda] = [t.cargar]; });
+      } else {
+        st.fechas = [st.fechas[0], sumarDiasFechaFact_(st.fechas[0], 1)];
+        tiendas.forEach(function (t) { st.valores[t.tienda] = [t.cargar, 0]; });
+      }
+      pintar_();
+    };
+    const btnAnadir = document.getElementById('fact-anadir');
+    if (btnAnadir) btnAnadir.onclick = function () {
+      if (st.fechas.length >= 10) { mostrarToast('Como mucho 10 fechas', true); return; }
+      st.fechas.push(sumarDiasFechaFact_(st.fechas[st.fechas.length - 1], 1));
+      tiendas.forEach(function (t) { st.valores[t.tienda].push(0); });
+      pintar_();
+    };
+    custom.querySelectorAll('[data-quitar-i]').forEach(function (b) {
+      b.onclick = function () {
+        const i = Number(b.getAttribute('data-quitar-i'));
+        st.fechas.splice(i, 1);
+        // Lo que había en esa fecha pasa a la primera que quede.
+        tiendas.forEach(function (t) {
+          const quitado = Number(st.valores[t.tienda].splice(i, 1)[0]) || 0;
+          st.valores[t.tienda][0] = (Number(st.valores[t.tienda][0]) || 0) + quitado;
+        });
+        pintar_();
+      };
+    });
+    custom.querySelectorAll('[data-fecha-i]').forEach(function (inp) {
+      inp.onchange = function () { st.fechas[Number(inp.getAttribute('data-fecha-i'))] = inp.value; recalcular_(); };
+    });
+    custom.querySelectorAll('.fact-celda').forEach(function (inp) {
+      inp.oninput = function () {
+        const t = tiendas[Number(inp.getAttribute('data-ti'))];
+        const v = inp.value === '' ? 0 : Math.max(0, Math.floor(Number(inp.value) || 0));
+        st.valores[t.tienda][Number(inp.getAttribute('data-i'))] = v;
+        recalcular_();
+      };
+      inp.onfocus = function () { inp.select(); };
+    });
+    recalcular_();
+  }
+
+  // Totales, avisos por tienda y botón de enviar (sin repintar: no se pierde el foco).
+  function problemas_() {
+    const p = [];
+    const vistas = {};
+    st.fechas.forEach(function (f) {
+      if (!f) p.push('Falta poner alguna fecha.');
+      else if (vistas[f]) p.push('Hay fechas repetidas (' + fechaCortaFact_(f) + ').');
+      vistas[f] = true;
+    });
+    const mal = tiendas.filter(function (t) { return suma_(t) !== t.cargar; });
+    if (mal.length) p.push(mal.length + ' tienda(s) no suman lo que lleva la carga ajustada.');
+    return p;
+  }
+  function recalcular_() {
+    const div = dividir_();
+    let tot = 0;
+    st.fechas.forEach(function (f, i) {
+      const n = tiendas.reduce(function (a, t) { return a + (Number(st.valores[t.tienda][i]) || 0); }, 0);
+      tot += n;
+      const el = custom.querySelector('[data-tot-i="' + i + '"]');
+      if (el) el.textContent = n;
+    });
+    const elTot = document.getElementById('fact-tot');
+    if (elTot) elTot.textContent = tot;
+    if (div) {
+      custom.querySelectorAll('tbody tr').forEach(function (tr) {
+        const t = tiendas[Number(tr.getAttribute('data-ti'))];
+        const sm = suma_(t), d = sm - t.cargar;
+        tr.classList.toggle('dif', d !== 0);
+        tr.querySelector('td.tot').textContent = sm;
+        tr.querySelector('td.aviso').innerHTML = d ? '<span class="fact-dif">' + (d > 0 ? 'sobran ' : 'faltan ') + Math.abs(d) + '</span>' : '';
+      });
+      custom.querySelectorAll('.fact-celda').forEach(function (inp) { inp.classList.toggle('cero', !(Number(inp.value) > 0)); });
+    }
+    const p = problemas_();
+    const caja = document.getElementById('fact-cuadre');
+    caja.className = 'fact-cuadre ' + (p.length ? 'mal' : 'ok');
+    caja.textContent = p.length ? '⚠ ' + p.join(' ') : '✓ Cuadra con la carga ajustada: ' + tot + ' palets' + (div ? ' repartidos en ' + st.fechas.length + ' fechas' : ' con fecha ' + fechaCortaFact_(st.fechas[0]));
+    const btn = document.getElementById('modal-confirm-btn');
+    btn.disabled = p.length > 0;
+    btn.title = p.length ? 'El reparto tiene que cuadrar con la carga ajustada' : '';
+  }
+
+  function enviar_() {
+    if (problemas_().length) return;
+    const lineas = {};
+    tiendas.forEach(function (t) { lineas[t.tienda] = st.valores[t.tienda].map(function (n) { return Number(n) || 0; }); });
+    const fechas = st.fechas.slice();
+    mostrarModalCargando('Enviando la facturación a contabilidad, espere por favor…');
+    onEnviar(fechas, lineas, function (ok, mensaje) {
+      if (!ok && /permiso/i.test(mensaje || '')) { mostrarModalSinPermiso(); return; }
+      mostrarModalResultadoEnvio(ok, mensaje);
+    });
+  }
+
+  pintar_();
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+/** Ojo de «Facturar»: enseña lo que se envió a contabilidad (el mismo email). */
+function mostrarModalVerFacturacion(nombre, enviada) {
+  const box = document.getElementById('modal-box');
+  box.classList.remove('medio', 'usuario-form', 'peligro');
+  box.classList.add('ancho', 'facturacion-modal');
+  document.getElementById('modal-title').style.display = 'none';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<div class="modal-envio-cabecera">' +
+      '<div class="modal-envio-cabecera-icono fact-icono fact-ok"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg></div>' +
+      '<div class="modal-envio-cabecera-texto"><div class="nombre">' + escapeHtml(nombre) + ' · Facturación enviada</div>' +
+      '<div class="fecha">' + escapeHtml([enviada.dia, enviada.hora ? enviada.hora + ' h' : '', enviada.usuario ? 'por ' + enviada.usuario : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+    '</div>' +
+    '<div class="fact-ver-datos">' +
+      '<div><span>Para</span><b>' + escapeHtml((enviada.enviadoA || []).join(', ')) + '</b></div>' +
+      '<div><span>Asunto</span><b>' + escapeHtml(enviada.asunto || '') + '</b></div>' +
+    '</div>' +
+    '<iframe class="fact-ver-email" sandbox="" title="Email enviado"></iframe>';
+  // El HTML del email lo genera el servidor; va en un iframe sin permisos.
+  custom.querySelector('iframe').srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:14px;background:#fff">' + (enviada.html || '') + '</body></html>';
+  document.getElementById('modal-actions').innerHTML = '<button class="modal-cancel" id="modal-cancel-btn">Cerrar</button>';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
 /** Estado intermedio "Enviando…": sin botones, sin posibilidad de cerrar mientras dura. */
 function mostrarModalCargando(texto) {
   quitarLapizModal_();
@@ -1925,6 +2146,7 @@ function cerrarModal() {
   document.getElementById('modal-box').classList.remove('acerca-de');
   document.getElementById('modal-box').classList.remove('cambio-obligatorio');
   document.getElementById('modal-box').classList.remove('anadir-tienda-modal');
+  document.getElementById('modal-box').classList.remove('facturacion-modal', 'facturacion-dividida');
   document.getElementById('modal-title').style.display = '';
 }
 document.getElementById('modal-cerrar-x').onclick = cerrarModal;

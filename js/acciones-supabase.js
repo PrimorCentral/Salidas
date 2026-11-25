@@ -36,7 +36,9 @@ const SUPABASE_ACCIONES_ = {
     // Y quién está ajustando AHORA la carga de cada agrupación
     // (seccion.ajusteEnCurso = { por, desde, mio } o null): mientras otra
     // persona la ajusta, el conteo de esa agrupación está bloqueado.
-    function unir_(data, verifs, cambios, cargas, matriculas, ajustes) {
+    // Y la facturación de cada agrupación con FACTURAR activo
+    // (seccion.facturacion = { ajustada, lista, emails, enviada } o null).
+    function unir_(data, verifs, cambios, cargas, matriculas, ajustes, facturacion) {
       verifs = verifs || {};
       cambios = cambios || {};
       if (data && data.secciones) {
@@ -46,13 +48,14 @@ const SUPABASE_ACCIONES_ = {
           if (cargas) s.carga = cargas[s.nombre] || null;
           if (matriculas) s.matriculas = matriculas[s.nombre] || null;
           if (ajustes) s.ajusteEnCurso = ajustes[s.nombre] || null;
+          if (facturacion) s.facturacion = facturacion[s.nombre] || null;
         });
       }
       return data;
     }
     return llamarRpcSupabase_('get_conteo_dia_completo', { p_fecha: fecha })
       .then(function (res) {
-        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas, res && res.matriculas, res && res.ajustes);
+        return unir_(res && res.conteo, res && res.verificaciones, res && res.cambios, res && res.cargas, res && res.matriculas, res && res.ajustes, res && res.facturacion);
       })
       .catch(function (err) {
         if (!err || err.code !== 'PGRST202') throw err;
@@ -90,6 +93,26 @@ const SUPABASE_ACCIONES_ = {
   anularVerificacionConteo: function (args) {
     const dia = args[0], nombreAgrupacion = args[1], fecha = args[2], campo = args[3];
     return llamarRpcSupabase_('anular_verificacion_conteo', { p_dia: dia, p_nombre_agrupacion: nombreAgrupacion, p_fecha: fecha, p_campo: campo });
+  },
+  // -- Facturación (email aparte a contabilidad, opción «Facturar» del sobre) --
+  // fechas: ['2026-11-24', ...]  lineas: { 'NOMBRE TIENDA': [palets por fecha] }
+  enviarFacturacion: function (args) {
+    return llamarRpcSupabase_('enviar_facturacion', { p_dia: args[0], p_nombre_ruta: args[1], p_fecha: args[2], p_fechas: args[3], p_lineas: args[4] });
+  },
+  activarFacturarRuta: function (args) {
+    return llamarRpcSupabase_('activar_facturar_ruta', { p_dia: args[0], p_nombre_ruta: args[1] });
+  },
+  desactivarFacturarRuta: function (args) {
+    return llamarRpcSupabase_('desactivar_facturar_ruta', { p_dia: args[0], p_nombre_ruta: args[1] });
+  },
+  getRutasFacturar: function (args) {
+    return llamarRpcSupabase_('get_rutas_facturar', { p_dia: args[0] });
+  },
+  getEmailsFacturacion: function () {
+    return llamarRpcSupabase_('get_emails_facturacion', {});
+  },
+  guardarEmailsFacturacion: function (args) {
+    return llamarRpcSupabase_('guardar_emails_facturacion', { p_agrupacion: args[0], p_emails: args[1] });
   },
   // -- Supabase: enviarPrevisionAgencia / enviarDefinitivoAgencia --
   enviarPrevisionAgencia: function (args) {

@@ -124,6 +124,9 @@ const SVG_MENU_PREVISION_ ='<svg width="16" height="16" viewBox="0 0 24 24" fill
 const SVG_MENU_DEFINITIVO_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
 const SVG_MENU_INFORMATICA_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
 const SVG_MENU_CAMION_ = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h15v13H3z"/><path d="M18 8h3l3 3v5h-6"/><circle cx="7.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg>';
+const SVG_MENU_FACTURAR_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>';
+const SVG_OJO_FACTURA_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SVG_CHECK_FACTURA_ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>';
 const SVG_DESCARGA_ = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
 // Hojita de color con el tipo (PDF / XLS / PDF+) para el menú de descargas.
 function SVG_DOC_(color, texto, tam) {
@@ -232,16 +235,32 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
     ((seccion.puedeInformatica !== undefined ? seccion.puedeInformatica : seccion.editable) !== false
       ? '<button type="button" class="btn-header-informatica" title="Enviar la previsión de carga solo a transporte@primor.eu (no bloquea el conteo, se puede volver a enviar)">' + SVG_MENU_INFORMATICA_ + '<span>Enviar a informática</span></button>'
       : '');
+  // «Facturar» (email aparte a contabilidad): solo en las rutas con FACTURAR
+  // activo en Rutas y tiendas (o si ya se envió). Se envía una sola vez:
+  // después sale con el check verde y un ojo para ver lo que se mandó.
+  const fact = seccion.facturacion || null;
+  const htmlFacturar_ = !fact ? '' : (
+    '<div class="menu-envios-sep"></div>' +
+    (fact.enviada
+      ? '<div class="menu-facturar-fila">' +
+          '<span class="btn-header-facturar enviada" title="Facturación enviada a contabilidad">' + SVG_CHECK_FACTURA_ +
+            '<span class="txt"><span>Facturar</span><small>Enviada · ' + escapeHtml([nombreLegible_(fact.enviada.usuario || fact.enviada.por), fact.enviada.hora].filter(Boolean).join(' · ')) + '</small></span></span>' +
+          '<button type="button" class="btn-ver-facturacion" title="Ver lo que se envió a contabilidad" aria-label="Ver lo que se envió">' + SVG_OJO_FACTURA_ + '</button>' +
+        '</div>'
+      : '<button type="button" class="btn-header-facturar' + (fact.ajustada ? '' : ' sin-ajustar') + '" title="' + (fact.ajustada ? 'Enviar la facturación a contabilidad (palets por tienda, se puede repartir en fechas)' : 'Para facturar, primero hay que ajustar la carga') + '">' + SVG_MENU_FACTURAR_ +
+          '<span class="txt"><span>Facturar</span>' + (fact.ajustada ? '' : '<small>Primero ajusta la carga</small>') + '</span></button>')
+  );
   // El sobre también enseña lo que ya se ha enviado (previsión en azul,
   // definitivo en verde, con una marca ✓ y el detalle arriba del menú),
   // así que se pinta aunque ya no quede ningún envío por hacer.
-  const htmlMenuEnvios_ = (htmlBotonesEnvio_ || seccion.previsionEnviada || seccion.estado === 'enviado')
+  const htmlMenuEnvios_ = (htmlBotonesEnvio_ || htmlFacturar_ || seccion.previsionEnviada || seccion.estado === 'enviado')
     ? '<span class="envios-wrap">' +
         '<button type="button" class="btn-menu-envios btn-menu-email" title="Enviar por email" aria-label="Enviar por email" aria-haspopup="true" aria-expanded="false">' + SVG_SOBRE_ + '<span class="sobre-marca" hidden>✓</span></button>' +
         '<div class="menu-envios" role="menu" hidden>' +
           '<div class="menu-envios-estado" hidden></div>' +
           htmlBotonesEnvio_ +
           '<div class="menu-envios-aviso" hidden>Guardando el conteo…</div>' +
+          htmlFacturar_ +
         '</div>' +
       '</span>'
     : '';
@@ -1386,7 +1405,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       aviso.textContent = hayCambiosSinGuardar ? 'Guardando el conteo…' : 'Todavía no hay conteo guardado';
     }
     const hayEnviado = !!(seccion.previsionEnviada || seccion.estado === 'enviado');
-    wrap.hidden = botones.length === 0 && !hayEnviado;
+    wrap.hidden = botones.length === 0 && !hayEnviado && !menu.querySelector('.btn-header-facturar');
     if (wrap.hidden && MENU_ENVIOS_ABIERTO_ && MENU_ENVIOS_ABIERTO_.menu === menu) cerrarMenuEnvios_();
     pintarEstadoSobre_(menu);
   }
@@ -1950,6 +1969,46 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
       // (el backend lo vuelve a comprobar en enviar_prevision_agencia).
       if (!tienePermiso('enviar_prevision')) { mostrarModalSinPermiso(); return; }
       abrirEnvioConLimite_('prevision');
+    };
+  }
+
+  // Facturar: email aparte a contabilidad con los palets de la carga
+  // ajustada por tienda, repartidos (si se quiere) en varias fechas.
+  const btnHeaderFacturar = header.querySelector('button.btn-header-facturar');
+  if (btnHeaderFacturar) {
+    btnHeaderFacturar.onclick = function (e) {
+      e.stopPropagation();
+      if (!tienePermiso('enviar_facturacion')) { mostrarModalSinPermiso(); return; }
+      const f = seccion.facturacion || {};
+      if (!f.ajustada) {
+        mostrarModalSinPermiso('Para enviar la facturación primero hay que ajustar la carga (camioncito de la cabecera).');
+        document.getElementById('modal-title').textContent = 'Falta ajustar la carga';
+        return;
+      }
+      if (!f.emails || !f.emails.length) {
+        mostrarModalSinPermiso('Esta agrupación no tiene ningún email de facturación. Añádelo en Diseño › Configuración agencias (campo «Emails Facturación»).');
+        document.getElementById('modal-title').textContent = 'Falta el email de facturación';
+        return;
+      }
+      mostrarModalFacturacion({
+        nombre: parsearNombreAgrupacion(seccion.nombre).titulo,
+        fechaTexto: formatearFechaLarga(fecha),
+        fecha: fecha,
+        emails: f.emails,
+        lista: (f.lista || []).filter(function (t) { return !t.cerrada; })
+      }, function (fechas, lineas, callback) {
+        llamarApi_('enviarFacturacion', [dia, seccion.nombre, fecha, fechas, lineas])
+          .then(function () { callback(true, 'Facturación enviada a contabilidad'); refrescarConteoDiaTrasEnvio_(); })
+          .catch(function (err) { callback(false, (err && err.message) || String(err)); });
+      });
+    };
+  }
+  const btnVerFacturacion = header.querySelector('.btn-ver-facturacion');
+  if (btnVerFacturacion) {
+    btnVerFacturacion.onclick = function (e) {
+      e.stopPropagation();
+      const f = seccion.facturacion || {};
+      if (f.enviada) mostrarModalVerFacturacion(parsearNombreAgrupacion(seccion.nombre).titulo, f.enviada);
     };
   }
 

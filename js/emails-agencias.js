@@ -258,11 +258,18 @@ function cargarAgrupacionesConfig_() {
   if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
   Promise.all([
     llamarApi_('getAgrupacionesConfig', []),
-    llamarApi_('getTiendasConfig', [])
+    llamarApi_('getTiendasConfig', []),
+    // Emails de facturación (contabilidad): { CLAVE: [emails] }. Si fallara,
+    // la lista se pinta igual (el campo sale vacío).
+    llamarApi_('getEmailsFacturacion', []).catch(function () { return {}; })
   ])
     .then(function (resultados) {
       if (ESTADO.vista !== 'configuracion' || ESTADO_CONFIG.seccionActiva !== 'emails') return;
-      EMAILS_CONFIG_ESTADO.datos = resultados[0] || [];
+      const emailsFact = resultados[2] || {};
+      EMAILS_CONFIG_ESTADO.datos = (resultados[0] || []).map(function (it) {
+        it.emailsFacturacion = emailsFact[it.agrupacion] || [];
+        return it;
+      });
       TIENDAS_POR_AGRUPACION_CONFIG_ = calcularTiendasPorAgrupacion_(resultados[1] || []);
       pintarListaEmails_();
       actualizarTotalEmailsConfig_();
@@ -301,7 +308,7 @@ function obtenerAgrupacionesConfigFiltradas_() {
     if (EMAILS_CONFIG_ESTADO.soloNueva && !/^NUEVA/i.test(it.estado || '')) return false;
     if (EMAILS_CONFIG_ESTADO.soloSinEmail && !sinEmail) return false;
     if (!filtro) return true;
-    const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.emailsPrevision || []).join(' ') + ' ' + (it.notas || '')).toLowerCase();
+    const texto = (it.agrupacion + ' ' + it.emails.join(' ') + ' ' + (it.emailsPrevision || []).join(' ') + ' ' + (it.emailsFacturacion || []).join(' ') + ' ' + (it.notas || '')).toLowerCase();
     return texto.indexOf(filtro) !== -1;
   });
 }
@@ -374,6 +381,10 @@ function pintarListaEmails_() {
             '<input type="text" id="' + idSeguro + '_emailsPrevision" value="' + escapeAttr((it.emailsPrevision || []).join(', ')) + '" placeholder="agencia@ejemplo.com, otra@ejemplo.com" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
           '</div>' +
           '<div class="emails-config-campo">' +
+            '<label>Emails Facturación · contabilidad (separados por comas)</label>' +
+            '<input type="text" id="' + idSeguro + '_emailsFacturacion" value="' + escapeAttr((it.emailsFacturacion || []).join(', ')) + '" placeholder="contabilidad@ejemplo.com" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
+          '</div>' +
+          '<div class="emails-config-campo">' +
             '<label>Notas</label>' +
             '<input type="text" id="' + idSeguro + '_notas" value="' + escapeAttr(it.notas || '') + '" placeholder="Notas libres (opcional)" ' + (tienePermiso('agencias') ? '' : 'disabled') + '>' +
           '</div>' +
@@ -399,8 +410,18 @@ function guardarEmailAgrupacion_(agrupacion, idSeguro, btn) {
   const emailsTexto = document.getElementById(idSeguro + '_emails').value;
   const emailsPrevisionTexto = document.getElementById(idSeguro + '_emailsPrevision').value;
   const notas = document.getElementById(idSeguro + '_notas').value;
+  const elFact = document.getElementById(idSeguro + '_emailsFacturacion');
+  const emailsFacturacionTexto = elFact ? elFact.value : null;
+  const item = EMAILS_CONFIG_ESTADO.datos.find(function (it) { return it.agrupacion === agrupacion; });
+  const normalizar = function (t) { return String(t || '').split(',').map(function (e) { return e.trim(); }).filter(Boolean).join(','); };
+  // Los emails de facturación van en su propia función: solo se llama si
+  // han cambiado, así guardar el resto funciona igual que siempre.
+  const cambiaFact = emailsFacturacionTexto !== null && normalizar(emailsFacturacionTexto) !== normalizar((item && item.emailsFacturacion || []).join(','));
   btn.disabled = true;
   llamarApi_('guardarEmailsAgrupacion', [agrupacion, emailsTexto, notas, emailsPrevisionTexto])
+    .then(function () {
+      if (cambiaFact) return llamarApi_('guardarEmailsFacturacion', [agrupacion, emailsFacturacionTexto]);
+    })
     .then(function () {
       mostrarToast('Emails guardados');
       cargarAgrupacionesConfig_();
