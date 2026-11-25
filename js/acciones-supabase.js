@@ -715,7 +715,10 @@ const SUPABASE_ACCIONES_ = {
       p_limite: c.limite || null,
       p_posicion: c.posicion || 'final',
       p_debajo_tienda: c.debajoTienda || null,
-      p_grupo_id: c.grupoId || null
+      p_grupo_id: c.grupoId || null,
+      // Grupo de palets nuevo solo para este día (si se crea desde aquí).
+      p_grupo_nuevo_texto: c.grupoNuevoTexto || null,
+      p_grupo_nuevo_limite: (c.grupoNuevoLimite != null && c.grupoNuevoLimite !== '') ? Number(c.grupoNuevoLimite) : null
     });
   },
   eliminarExcepcionTienda: function (args) {
@@ -733,8 +736,15 @@ const SUPABASE_ACCIONES_ = {
     return llamarRpcSupabase_('crear_agrupacion_puntual', {
       p_fecha: c.fecha,
       p_agrupacion: c.agrupacion,
-      p_tiendas: c.tiendas || []
+      p_tiendas: c.tiendas || [],
+      // Posición en el conteo: '__inicio__', nombre de la agrupación de
+      // encima, o vacío = al final.
+      p_debajo: c.debajo || null
     });
+  },
+  // args: [fecha, agrupacion, debajo]
+  moverAgrupacionPuntual: function (args) {
+    return llamarRpcSupabase_('mover_agrupacion_puntual', { p_fecha: args[0], p_agrupacion: args[1], p_debajo: args[2] || null });
   },
   // args: [fecha, agrupacion]
   eliminarAgrupacionPuntual: function (args) {

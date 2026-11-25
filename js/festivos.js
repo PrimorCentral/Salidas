@@ -417,6 +417,11 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
             ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + (it.agrPuntual ? ' data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '"' : '') + ' title="Eliminar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
+          // Agrupación puntual: botón para cambiarla de sitio en el conteo.
+          const moverBtn = it.agrPuntual
+            ? '<button type="button" class="festivos-edit festivos-mover-agrp" data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '" title="Cambiar de sitio en el conteo">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>'
+            : '';
           // Lápiz para editar el texto: solo notas y bloqueos (los cambios
           // puntuales se editan volviendo a crearlos, su texto es automático).
           const editBtn = (it.id && it.tipo !== 'cambio')
@@ -428,7 +433,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
             '<div class="festivos-item-body">' +
               '<span class="festivos-item-tag">' + escapeHtml(it.tag) + '</span>' +
               '<span class="festivos-item-texto">' + escapeHtml(it.texto) + '</span>' +
-            '</div>' + editBtn + delBtn + '</div>';
+            '</div>' + moverBtn + editBtn + delBtn + '</div>';
         }).join('')
       : '<div class="festivos-item-vacio">Sin ninguna anotación</div>';
     col.innerHTML =
@@ -456,7 +461,11 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     };
   });
 
-  listaEl.querySelectorAll('.festivos-edit').forEach(function (btn) {
+  listaEl.querySelectorAll('.festivos-mover-agrp').forEach(function (btn) {
+    btn.onclick = function () { moverAgrupacionPuntualDesdeFestivos_(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrp')); };
+  });
+
+  listaEl.querySelectorAll('.festivos-edit:not(.festivos-mover-agrp)').forEach(function (btn) {
     btn.onclick = function () {
       const cont = btn.closest('.festivos-item');
       const actual = cont ? cont.querySelector('.festivos-item-texto').textContent : '';
@@ -754,6 +763,56 @@ function cambiarTextoEnCacheFestivos_(id, texto) {
       (seccion.tiendas || []).forEach(function (t) { if (t.cierreId === id) t.motivoCierre = texto; });
     });
   });
+}
+
+/** Cambia de sitio una agrupación puntual en el conteo de ese día. */
+function moverAgrupacionPuntualDesdeFestivos_(fecha, agrupacion) {
+  const datos = (FESTIVOS_ESTADO.datosCache || []).filter(function (d) { return d && d.fecha === fecha; })[0] || {};
+  const secciones = datos.secciones || [];
+  // Posición actual: debajo de la agrupación que tiene justo encima.
+  const i = secciones.map(function (s) { return s.nombre; }).indexOf(agrupacion);
+  let actual = '';
+  if (i === 0) actual = '__inicio__';
+  else if (i > 0 && i < secciones.length - 1) {
+    for (let k = i - 1; k >= 0; k--) { if (!secciones[k].puntual) { actual = secciones[k].nombre; break; } }
+  }
+
+  const caja = document.getElementById('modal-box');
+  caja.classList.remove('ancho', 'medio', 'peligro', 'usuario-form', 'gestor-obs', 'gestor-ancho');
+  document.getElementById('modal-title').style.display = '';
+  document.getElementById('modal-title').textContent = 'Cambiar de sitio';
+  document.getElementById('modal-text').style.display = 'none';
+  document.getElementById('modal-textarea').style.display = 'none';
+  const custom = document.getElementById('modal-custom');
+  custom.style.display = 'block';
+  custom.innerHTML =
+    '<p class="confirm-puntual-intro"><b>' + escapeHtml(agrupacion) + '</b> · ' + escapeHtml(formatearFechaLarga(fecha)) + '</p>' +
+    '<div class="modal-campo">' +
+      '<label for="modal-agrp-pos">Posición en el conteo</label>' +
+      '<select id="modal-agrp-pos">' + opcionesPosicionAgrupacionHtml_(secciones, agrupacion, actual) + '</select>' +
+    '</div>';
+  document.getElementById('modal-actions').innerHTML =
+    '<button class="modal-cancel" id="modal-cancel-btn">Cancelar</button>' +
+    '<button class="modal-confirm" id="modal-confirm-btn">Mover</button>';
+  document.getElementById('modal-overlay').style.display = 'flex';
+  document.getElementById('modal-cancel-btn').onclick = cerrarModal;
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.onclick = function () {
+    btn.disabled = true;
+    btn.textContent = 'Moviendo…';
+    llamarApi_('moverAgrupacionPuntual', [fecha, agrupacion, document.getElementById('modal-agrp-pos').value])
+      .then(function () {
+        cerrarModal();
+        mostrarToast('Agrupación movida');
+        cargarFestivos();
+        if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Mover';
+        mostrarErrorServidor(err);
+      });
+  };
 }
 
 /** Quita una agrupación puntual entera (sus tiendas y sus notas). Las
