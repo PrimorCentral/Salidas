@@ -8,6 +8,16 @@
  * Redacción en impersonal (la lee todo el equipo). */
 const CHANGELOG_SALIDAS = [
   {
+    version: '2.1.24',
+    fecha: '2026-11-26',
+    cambios: [
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: nueva opción «Grupos de palets» para cambiar los grupos de palets de una agrupación solo un día, sin tocar Rutas y tiendas. Se pueden crear o quitar grupos, cambiar el texto y el límite, y meter o sacar tiendas, también las tiendas puntuales y las que entran por un cambio puntual' },
+      { tipo: 'nuevo',      texto: 'Grupos de palets: lo que cambia respecto a lo de siempre sale marcado en naranja (por ejemplo «LÍMITE 8 → 10», «+ FARO» o «GRUPO NUEVO SOLO ESTE DÍA») y con «Volver a los grupos de siempre» se deshace todo' },
+      { tipo: 'nuevo',      texto: 'Bloqueos y cambios: los grupos de palets puntuales salen en su propia tarjeta, con lápiz para modificarlos y papelera para volver a los grupos de siempre. No se pueden cambiar en días pasados, ni si la agrupación ya envió el definitivo o tiene la carga ajustada' },
+      { tipo: 'mejora',     texto: 'Rutas y tiendas: al crear un conteo especial, los grupos de palets puntuales de ese día también se pueden pasar al conteo especial o borrar' }
+    ]
+  },
+  {
     version: '2.1.23',
     fecha: '2026-11-25',
     cambios: [
