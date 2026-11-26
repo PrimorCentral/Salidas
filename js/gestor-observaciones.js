@@ -32,7 +32,7 @@ function abrirGestorObservaciones(fechaInicial) {
   const fecha = (typeof fechaInicial === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaInicial))
     ? fechaInicial
     : null;
-  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: null, seleccion: null, cargaId: 0, guardando: false, puntual: nuevoEstadoPuntualGestorObs_(), agrp: nuevoEstadoAgrpGestorObs_(), tiendasConfig: null };
+  GESTOR_OBS = { fecha: fecha, datosDia: null, tipo: null, seleccion: null, cargaId: 0, guardando: false, puntual: nuevoEstadoPuntualGestorObs_(), agrp: nuevoEstadoAgrpGestorObs_(), gp: nuevoEstadoGpGestorObs_(), tiendasConfig: null };
 
   document.getElementById('modal-box').classList.remove('ancho');
   document.getElementById('modal-box').classList.remove('usuario-form');
@@ -110,6 +110,9 @@ function crearFormularioGestorObs_() {
         '<button type="button" class="gestor-tipo-pill" data-tipo="agrpuntual">' +
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg>' +
           'Agrupación puntual</button>' +
+        '<button type="button" class="gestor-tipo-pill" data-tipo="grupos">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/></svg>' +
+          'Grupos de palets</button>' +
       '</div>' +
       '<div class="gestor-aviso" id="gestor-aviso-dia" style="display:none;margin-top:8px;">Ese día de la semana no tiene hoja de conteo: solo se puede añadir una nota general.</div>' +
     '</div>' +
@@ -213,6 +216,15 @@ function crearFormularioGestorObs_() {
         '</div>' +
       '</div>' +
     '</div>' +
+    // "Grupos de palets": los grupos de palets de una agrupación cambiados
+    // solo para esa fecha (misma ventana que en Rutas y tiendas), sin tocar
+    // la plantilla. Incluye las tiendas puntuales y los cambios puntuales.
+    '<div class="gestor-campo gestor-gp" id="gestor-gp-campo" style="display:none;">' +
+      '<label for="gestor-gp-agrupacion">Agrupación</label>' +
+      '<select id="gestor-gp-agrupacion"></select>' +
+      '<div class="gestor-aviso" id="gestor-gp-aviso" style="display:none;margin-top:10px;"></div>' +
+      '<div id="gestor-gp-editor"></div>' +
+    '</div>' +
     '<div class="gestor-campo" id="gestor-aviso-error-campo">' +
       '<div class="gestor-aviso-error" id="gestor-aviso-error">' +
         '<span id="gestor-aviso-error-texto"></span>' +
@@ -278,6 +290,7 @@ function crearFormularioGestorObs_() {
     GESTOR_OBS.seleccion = GESTOR_OBS.tipo === 'cierre' ? [] : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
     GESTOR_OBS.puntual = nuevoEstadoPuntualGestorObs_();
     GESTOR_OBS.agrp = nuevoEstadoAgrpGestorObs_();
+    GESTOR_OBS.gp = nuevoEstadoGpGestorObs_();
     document.getElementById('gestor-busqueda').value = '';
     const btnLimpiar = document.getElementById('gestor-busqueda-clear');
     if (btnLimpiar) btnLimpiar.classList.remove('visible');
@@ -312,6 +325,8 @@ function crearFormularioGestorObs_() {
         : (GESTOR_OBS.tipo === 'cambio' ? nuevaSeleccionCambioGestorObs_() : null);
       GESTOR_OBS.puntual = nuevoEstadoPuntualGestorObs_();
       GESTOR_OBS.agrp = nuevoEstadoAgrpGestorObs_();
+      GESTOR_OBS.gp = nuevoEstadoGpGestorObs_(GESTOR_OBS.gpEditar);
+      GESTOR_OBS.gpEditar = null;
       document.getElementById('gestor-busqueda').value = '';
       const btnLimpiar = document.getElementById('gestor-busqueda-clear');
       if (btnLimpiar) btnLimpiar.classList.remove('visible');
@@ -432,6 +447,7 @@ function crearFormularioGestorObs_() {
 
   conectarControlesPuntualGestorObs_(wrap);
   conectarControlesAgrpGestorObs_(wrap);
+  conectarControlesGpGestorObs_(wrap);
 
   return wrap;
 }
@@ -469,6 +485,12 @@ function actualizarFormularioSegunTipo_() {
   if (caja && esAgrp) caja.classList.add('gestor-ancho');
   const campoAgrp = document.getElementById('gestor-agrp-campo');
   if (campoAgrp) campoAgrp.style.display = esAgrp ? '' : 'none';
+  // "Grupos de palets": modal más ancho (dos columnas: grupos y tiendas sin grupo).
+  const esGp = GESTOR_OBS.tipo === 'grupos';
+  if (caja && esGp) caja.classList.add('gestor-ancho');
+  if (caja) caja.classList.toggle('gestor-gp-ancho', esGp);
+  const campoGp = document.getElementById('gestor-gp-campo');
+  if (campoGp) campoGp.style.display = esGp ? '' : 'none';
 
   if (!GESTOR_OBS.tipo) {
     // Aún no se ha elegido tipo: solo se ven Fecha y Tipo.
@@ -497,6 +519,11 @@ function actualizarFormularioSegunTipo_() {
     ayuda.style.display = 'none';
     if (campoTexto) campoTexto.style.display = 'none';
     pintarAgrpGestorObs_();
+  } else if (GESTOR_OBS.tipo === 'grupos') {
+    campoBusqueda.style.display = 'none';
+    ayuda.style.display = 'none';
+    if (campoTexto) campoTexto.style.display = 'none';
+    pintarGpGestorObs_();
   } else if (GESTOR_OBS.tipo === 'cambio') {
     campoBusqueda.style.display = 'block';
     ayuda.style.display = 'block';
@@ -716,6 +743,7 @@ function formularioGestorObsCompleto_() {
     return true;
   }
   if (GESTOR_OBS.tipo === 'agrpuntual') return agrpCompletoGestorObs_();
+  if (GESTOR_OBS.tipo === 'grupos') return gpCompletoGestorObs_();
   if (GESTOR_OBS.tipo === 'cambio') {
     if (!sel || !(sel.origenes && sel.origenes.length) || !sel.destino) return false;
     if (sel.modo === 'doble' && !(sel.campos && sel.campos.length)) return false;
@@ -742,6 +770,10 @@ function actualizarBotonGuardarGestor_() {
   if (GESTOR_OBS.tipo === 'puntual') {
     const np = GESTOR_OBS.puntual && GESTOR_OBS.puntual.seleccionadas ? GESTOR_OBS.puntual.seleccionadas.length : 0;
     btn.textContent = np > 1 ? 'Guardar ' + np + ' tiendas' : 'Guardar';
+    return;
+  }
+  if (GESTOR_OBS.tipo === 'grupos') {
+    btn.textContent = (GESTOR_OBS.gp && GESTOR_OBS.gp.datos && GESTOR_OBS.gp.datos.puntual) ? 'Guardar cambios' : 'Guardar';
     return;
   }
   if (GESTOR_OBS.tipo === 'agrpuntual') {
@@ -885,6 +917,8 @@ function cargarDatosDiaGestorObs_(fecha) {
       if (pillPuntual) pillPuntual.disabled = sinDia;
       const pillAgrp = document.querySelector('.gestor-tipo-pill[data-tipo="agrpuntual"]');
       if (pillAgrp) pillAgrp.disabled = sinDia;
+      const pillGp = document.querySelector('.gestor-tipo-pill[data-tipo="grupos"]');
+      if (pillGp) pillGp.disabled = sinDia;
       if (aviso) aviso.style.display = sinDia ? 'block' : 'none';
 
       if (sinDia && GESTOR_OBS.tipo && GESTOR_OBS.tipo !== 'general') {
@@ -1181,6 +1215,10 @@ function guardarDesdeGestorObs_() {
   }
   if (GESTOR_OBS.tipo === 'agrpuntual') {
     guardarAgrpDesdeGestor_();
+    return;
+  }
+  if (GESTOR_OBS.tipo === 'grupos') {
+    guardarGpDesdeGestor_();
     return;
   }
 
@@ -2207,6 +2245,421 @@ function guardarAgrpDesdeGestor_() {
       if (btnGuardar) { btnGuardar.disabled = false; actualizarBotonGuardarGestor_(); }
       mostrarErrorServidor(err);
     });
+}
+
+/* ---------------- GRUPOS DE PALETS PUNTUALES ----------------
+ * Tipo «Grupos de palets» de Añadir observación: los grupos de palets de
+ * una agrupación cambiados solo para una fecha (crear, borrar, cambiar
+ * texto o límite y meter o sacar tiendas, también las tiendas puntuales y
+ * las que entran por un cambio puntual). La plantilla de Rutas y tiendas no
+ * cambia. Supabase: get_grupos_puntuales / guardar_grupos_puntuales /
+ * quitar_grupos_puntuales.
+ */
+function nuevoEstadoGpGestorObs_(agrupacion) {
+  return { agrupacion: agrupacion || null, datos: null, cargando: false, error: null, grupos: [], activo: -1, cargaId: 0 };
+}
+
+/** Abre la ventana en «Grupos de palets» con la agrupación ya elegida
+ *  (lápiz de su tarjeta en Bloqueos y cambios). */
+function abrirEditarGruposPuntuales(fecha, agrupacion) {
+  abrirGestorObservaciones(fecha);
+  GESTOR_OBS.gpEditar = agrupacion;
+  document.getElementById('modal-title').textContent = 'Modificar grupos de palets puntuales';
+  const pill = document.querySelector('.gestor-tipo-pill[data-tipo="grupos"]');
+  if (pill) { pill.disabled = false; pill.click(); }
+}
+
+function nombreTiendaGpGestorObs_(t) {
+  return quitarCodigoTienda(quitarMarcadorNombre(t.nombre || ''));
+}
+
+/** Pasa lo que devuelve el servidor al estado editable de la ventana. */
+function prepararGruposGpGestorObs_(datos) {
+  const porId = {};
+  const grupos = (datos.grupos || []).map(function (g) {
+    const x = { id: g.id, origenId: g.origenId || null, texto: g.texto || '', limite: g.limite != null ? String(g.limite) : '', tipo: g.tipo || '', tiendas: [], excs: [] };
+    porId[g.id] = x;
+    return x;
+  });
+  (datos.tiendas || []).forEach(function (t) {
+    const g = t.grupoId && porId[t.grupoId];
+    if (!g) return;
+    if (t.tipo === 'normal') g.tiendas.push(t.id); else g.excs.push(t.id);
+  });
+  return grupos;
+}
+
+function cargarGpGestorObs_() {
+  const gp = GESTOR_OBS.gp;
+  const fecha = GESTOR_OBS.fecha;
+  if (!gp || !gp.agrupacion || !fecha) return;
+  const miId = gp.cargaId + 1;
+  gp.cargaId = miId;
+  gp.cargando = true;
+  gp.error = null;
+  gp.datos = null;
+  pintarGpGestorObs_();
+  llamarApi_('getGruposPuntuales', [fecha, gp.agrupacion])
+    .then(function (datos) {
+      if (GESTOR_OBS.gp !== gp || gp.cargaId !== miId || GESTOR_OBS.fecha !== fecha) return;
+      gp.cargando = false;
+      gp.datos = datos || {};
+      gp.grupos = prepararGruposGpGestorObs_(gp.datos);
+      gp.activo = gp.grupos.length ? 0 : -1;
+      pintarGpGestorObs_();
+      actualizarBotonGuardarGestor_();
+    })
+    .catch(function (err) {
+      if (GESTOR_OBS.gp !== gp || gp.cargaId !== miId) return;
+      gp.cargando = false;
+      gp.error = (err && err.message) ? err.message : String(err);
+      pintarGpGestorObs_();
+    });
+}
+
+function gpBloqueoGestorObs_() {
+  const gp = GESTOR_OBS.gp || {};
+  if (GESTOR_OBS.fecha && GESTOR_OBS.fecha < fechaHoyIsoGestorObs_()) return 'Ese día ya ha pasado: los grupos de palets puntuales solo se pueden cambiar para hoy o días que vienen.';
+  return (gp.datos && gp.datos.bloqueo) || null;
+}
+
+function gpCompletoGestorObs_() {
+  const gp = GESTOR_OBS.gp || {};
+  if (!GESTOR_OBS.datosDia || !gp.datos || gp.cargando || gpBloqueoGestorObs_()) return false;
+  return gp.grupos.every(function (g) {
+    return g.texto.trim() && (g.tiendas.length + g.excs.length) > 0 && (g.limite === '' || Number(g.limite) >= 1);
+  });
+}
+
+/** Marcas naranjas de lo que cambia respecto a los grupos de siempre. */
+function cambiosGrupoGpGestorObs_(g) {
+  const gp = GESTOR_OBS.gp;
+  const datos = gp.datos || {};
+  if (!g.origenId) return ['GRUPO NUEVO SOLO ESTE DÍA'];
+  const s = (datos.siempre || []).filter(function (x) { return x.id === g.origenId; })[0];
+  if (!s) return ['SOLO ESTE DÍA'];
+  const marcas = [];
+  if ((g.texto || '').trim().toUpperCase() !== (s.texto || '').trim().toUpperCase()) marcas.push('ANTES: ' + (s.texto || ''));
+  const limS = s.limite != null ? String(s.limite) : '';
+  if (String(g.limite || '') !== limS) marcas.push('LÍMITE ' + (limS || 'SIN LÍMITE') + ' → ' + (g.limite || 'SIN LÍMITE'));
+  if ((g.tipo || '') !== (s.tipo || '')) marcas.push(g.tipo === 'total' ? 'SOLO INFORMATIVO' : 'YA NO ES SOLO INFORMATIVO');
+  (datos.tiendas || []).forEach(function (t) {
+    if (t.tipo !== 'normal') return;
+    const antes = t.grupoSiempre === g.origenId;
+    const ahora = g.tiendas.indexOf(t.id) !== -1;
+    if (ahora && !antes) marcas.push('+ ' + nombreTiendaGpGestorObs_(t));
+    if (antes && !ahora) marcas.push('− ' + nombreTiendaGpGestorObs_(t));
+  });
+  return marcas;
+}
+
+function pintarGpGestorObs_() {
+  const campo = document.getElementById('gestor-gp-campo');
+  if (!campo || GESTOR_OBS.tipo !== 'grupos') return;
+  const gp = GESTOR_OBS.gp = GESTOR_OBS.gp || nuevoEstadoGpGestorObs_();
+  const sel = document.getElementById('gestor-gp-agrupacion');
+  const aviso = document.getElementById('gestor-gp-aviso');
+  const editor = document.getElementById('gestor-gp-editor');
+
+  function avisar(texto, cargando) {
+    aviso.textContent = texto;
+    aviso.classList.toggle('cargando-linea', !!cargando);
+    aviso.style.display = texto ? '' : 'none';
+  }
+
+  if (!GESTOR_OBS.fecha || !GESTOR_OBS.datosDia) {
+    sel.style.display = 'none';
+    sel.previousElementSibling.style.display = 'none';
+    avisar(GESTOR_OBS.fecha ? 'Cargando las agrupaciones de ese día…' : 'Elige primero la fecha.', !!GESTOR_OBS.fecha);
+    editor.innerHTML = '';
+    return;
+  }
+  sel.style.display = '';
+  sel.previousElementSibling.style.display = '';
+
+  const nombres = (GESTOR_OBS.datosDia.secciones || []).map(function (x) { return x.nombre; });
+  if (gp.agrupacion && nombres.indexOf(gp.agrupacion) === -1) nombres.unshift(gp.agrupacion);
+  sel.innerHTML = '<option value="">Elige la agrupación…</option>' + nombres.map(function (n) {
+    return '<option value="' + escapeAttr(n) + '"' + (n === gp.agrupacion ? ' selected' : '') + '>' + escapeHtml(n) + '</option>';
+  }).join('');
+
+  const pasado = GESTOR_OBS.fecha < fechaHoyIsoGestorObs_();
+  if (pasado) {
+    avisar('Ese día ya ha pasado: los grupos de palets puntuales solo se pueden cambiar para hoy o días que vienen.');
+    editor.innerHTML = '';
+    return;
+  }
+  if (!gp.agrupacion) { avisar(''); editor.innerHTML = ''; return; }
+  if (!gp.datos && !gp.cargando && !gp.error) { cargarGpGestorObs_(); return; }
+  if (gp.cargando) { avisar('Cargando los grupos de palets…', true); editor.innerHTML = ''; return; }
+  if (gp.error) { avisar('No se han podido cargar los grupos: ' + gp.error); editor.innerHTML = ''; return; }
+  if (gp.datos.bloqueo) { avisar(gp.datos.bloqueo); editor.innerHTML = ''; return; }
+  avisar('');
+  pintarEditorGpGestorObs_();
+}
+
+function pintarEditorGpGestorObs_() {
+  const gp = GESTOR_OBS.gp;
+  const datos = gp.datos;
+  const editor = document.getElementById('gestor-gp-editor');
+  const listaPrevia = editor.querySelector('.grupos2-lista');
+  const scrollPrevio = listaPrevia ? listaPrevia.scrollTop : 0;
+
+  const tiendaPorId = {};
+  (datos.tiendas || []).forEach(function (t) { tiendaPorId[t.id] = t; });
+  const enGrupo = {};
+  gp.grupos.forEach(function (g) {
+    g.tiendas.forEach(function (id) { enGrupo[id] = true; });
+    g.excs.forEach(function (id) { enGrupo[id] = true; });
+  });
+  const sinGrupo = (datos.tiendas || []).filter(function (t) { return !enGrupo[t.id]; });
+  if (gp.activo >= gp.grupos.length) gp.activo = gp.grupos.length - 1;
+
+  function chip(t, miembro) {
+    const etiqueta = t.tipo === 'normal' ? '' : (t.puntual ? 'puntual' : (t.doble ? 'doble salida' : 'cambio puntual'));
+    const titulo = t.tipo === 'normal' ? '' : (t.puntual ? 'Tienda puntual (solo este día)' : 'Entra este día por un cambio puntual');
+    return '<button type="button" class="grupos2-chip ' + (miembro ? 'miembro' : 'libre') + (etiqueta ? ' puntual' : '') + '" ' +
+      (miembro ? 'data-gp-quitar' : 'data-gp-anadir') + '="' + escapeAttr(t.id) + '"' +
+      ' title="' + escapeAttr((titulo ? titulo + '. ' : '') + (miembro ? 'Quitar del grupo' : '')) + '">' +
+      (miembro ? '' : '+ ') + escapeHtml(nombreTiendaGpGestorObs_(t)) +
+      (etiqueta ? ' <span class="grupos2-chip-puntual">' + escapeHtml(etiqueta) + '</span>' : '') +
+      (miembro ? '<span class="x">×</span>' : '') + '</button>';
+  }
+
+  const tarjetas = gp.grupos.map(function (g, idx) {
+    const miembros = g.tiendas.concat(g.excs).map(function (id) { return tiendaPorId[id]; }).filter(Boolean)
+      .sort(function (a, b) { return (datos.tiendas || []).indexOf(a) - (datos.tiendas || []).indexOf(b); });
+    const marcas = cambiosGrupoGpGestorObs_(g);
+    return '<div class="grupos2-card' + (idx === gp.activo ? ' activo' : '') + '" data-gp-card="' + idx + '">' +
+      '<div class="grupos2-card-cab">' +
+        '<span class="grupos2-radio" title="Grupo al que se añaden las tiendas"></span>' +
+        '<input type="text" class="grupos2-texto" data-gp-texto="' + idx + '" value="' + escapeAttr(g.texto) + '" placeholder="Texto del grupo (ej: TOTAL LISBOA)">' +
+        '<input type="text" class="grupos2-limite" inputmode="numeric" data-gp-limite="' + idx + '" value="' + escapeAttr(g.limite) + '" placeholder="Sin límite" title="Límite de palets del grupo">' +
+        '<label class="grupos2-tipo" title="Solo suma y muestra el total, sin avisar aunque se pase">' +
+          '<input type="checkbox" data-gp-tipo="' + idx + '"' + (g.tipo === 'total' ? ' checked' : '') + '>Solo informativo' +
+        '</label>' +
+        '<span class="grupos2-contador">' + miembros.length + '</span>' +
+        '<button type="button" class="modal-grupo-eliminar" data-gp-eliminar="' + idx + '" title="Quitar este grupo solo este día">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>' +
+        '</button>' +
+      '</div>' +
+      (marcas.length ? '<div class="gp-cambios">' + (g.origenId ? '<span class="gp-cambios-txt">Cambiado este día</span>' : '') +
+        marcas.map(function (m) { return '<span class="gp-marca">' + escapeHtml(m) + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="grupos2-chips">' +
+        (miembros.length ? miembros.map(function (t) { return chip(t, true); }).join('')
+          : '<span class="grupos2-vacio">Sin tiendas: pulsa las de la derecha para añadirlas.</span>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Grupos de siempre que este día no están.
+  const usados = {};
+  gp.grupos.forEach(function (g) { if (g.origenId) usados[g.origenId] = true; });
+  const quitados = (datos.siempre || []).filter(function (s) { return !usados[s.id]; });
+  const gActivo = gp.grupos[gp.activo];
+
+  editor.innerHTML =
+    '<div class="gp-aviso-info">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+      '<span><b>Solo para el ' + escapeHtml(formatearFechaLarga(GESTOR_OBS.fecha)) + '.</b> La plantilla de Rutas y tiendas no cambia: los demás días siguen con sus grupos de siempre.' +
+      (datos.puntual ? ' Este día ya tiene grupos puntuales: estás modificándolos.' : '') + '</span>' +
+    '</div>' +
+    '<div class="grupos2">' +
+      '<div class="grupos2-col">' +
+        '<div class="modal-orden-col-titulo">Grupos (' + gp.grupos.length + ')</div>' +
+        '<div class="grupos2-lista">' + (tarjetas || '<div class="festivos-item-vacio">Este día la agrupación no tiene grupos.</div>') + '</div>' +
+        (quitados.length ? '<div class="gp-quitados">Quitados este día: ' + quitados.map(function (q) {
+          return '<b>' + escapeHtml(q.texto) + (q.limite != null ? ' (' + q.limite + 'P)' : '') + '</b>';
+        }).join(', ') + '</div>' : '') +
+        '<button type="button" class="plantilla-anadir-notacarga" id="gestor-gp-anadir" style="margin-top:10px;">' +
+          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Añadir grupo</button>' +
+      '</div>' +
+      '<div class="grupos2-col">' +
+        '<div class="modal-orden-col-titulo">Tiendas sin grupo <span class="modal-orden-col-contador">(' + sinGrupo.length + ')</span></div>' +
+        '<div class="grupos2-pool">' +
+          (sinGrupo.length ? '<div class="grupos2-destino">' + (gActivo
+            ? 'Pulsa una tienda para añadirla a <b>' + escapeHtml(gActivo.texto.trim() || ('Grupo ' + (gp.activo + 1))) + '</b>'
+            : 'Crea o elige un grupo a la izquierda para poder añadirle tiendas') + '</div>' : '') +
+          '<div class="grupos2-chips">' +
+            (sinGrupo.length ? sinGrupo.map(function (t) { return chip(t, false); }).join('')
+              : '<span class="grupos2-vacio">Todas las tiendas de la agrupación están en algún grupo.</span>') +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="gp-volver" id="gestor-gp-volver" title="Deja los grupos como en Rutas y tiendas">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>' +
+          'Volver a los grupos de siempre</button>' +
+      '</div>' +
+    '</div>';
+
+  const listaNueva = editor.querySelector('.grupos2-lista');
+  if (listaNueva) listaNueva.scrollTop = scrollPrevio;
+  conectarEditorGpGestorObs_(editor);
+}
+
+function conectarEditorGpGestorObs_(editor) {
+  const gp = GESTOR_OBS.gp;
+  const repintar = function () { pintarEditorGpGestorObs_(); actualizarBotonGuardarGestor_(); };
+  function marcarActivo(idx) {
+    gp.activo = idx;
+    editor.querySelectorAll('[data-gp-card]').forEach(function (c) {
+      c.classList.toggle('activo', Number(c.getAttribute('data-gp-card')) === idx);
+    });
+    const destino = editor.querySelector('.grupos2-destino');
+    const g = gp.grupos[idx];
+    if (destino) {
+      destino.innerHTML = g
+        ? 'Pulsa una tienda para añadirla a <b>' + escapeHtml(g.texto.trim() || ('Grupo ' + (idx + 1))) + '</b>'
+        : 'Crea o elige un grupo a la izquierda para poder añadirle tiendas';
+    }
+  }
+  editor.querySelectorAll('[data-gp-card]').forEach(function (card) {
+    const idx = Number(card.getAttribute('data-gp-card'));
+    card.addEventListener('mousedown', function () { marcarActivo(idx); });
+    card.addEventListener('focusin', function () { marcarActivo(idx); });
+  });
+  editor.querySelectorAll('[data-gp-texto]').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      const ini = inp.selectionStart, fin = inp.selectionEnd;
+      inp.value = inp.value.toUpperCase();
+      inp.setSelectionRange(ini, fin);
+      gp.grupos[Number(inp.getAttribute('data-gp-texto'))].texto = inp.value;
+      marcarActivo(Number(inp.getAttribute('data-gp-texto')));
+      actualizarBotonGuardarGestor_();
+    });
+    inp.addEventListener('change', repintar); // al salir, refresca las marcas naranjas
+  });
+  editor.querySelectorAll('[data-gp-limite]').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      inp.value = inp.value.replace(/\D/g, '').slice(0, 3);
+      gp.grupos[Number(inp.getAttribute('data-gp-limite'))].limite = inp.value;
+      actualizarBotonGuardarGestor_();
+    });
+    inp.addEventListener('change', repintar);
+  });
+  editor.querySelectorAll('[data-gp-tipo]').forEach(function (chk) {
+    chk.addEventListener('change', function () {
+      gp.grupos[Number(chk.getAttribute('data-gp-tipo'))].tipo = chk.checked ? 'total' : '';
+      repintar();
+    });
+  });
+  editor.querySelectorAll('[data-gp-eliminar]').forEach(function (btn) {
+    btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      gp.grupos.splice(Number(btn.getAttribute('data-gp-eliminar')), 1);
+      if (gp.activo >= gp.grupos.length) gp.activo = gp.grupos.length - 1;
+      repintar();
+    });
+  });
+  editor.querySelectorAll('[data-gp-quitar]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.getAttribute('data-gp-quitar');
+      gp.grupos.forEach(function (g) {
+        g.tiendas = g.tiendas.filter(function (x) { return x !== id; });
+        g.excs = g.excs.filter(function (x) { return x !== id; });
+      });
+      repintar();
+    });
+  });
+  editor.querySelectorAll('[data-gp-anadir]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const g = gp.grupos[gp.activo];
+      if (!g) { mostrarToast('Crea o elige primero un grupo', true); return; }
+      const id = btn.getAttribute('data-gp-anadir');
+      const t = (gp.datos.tiendas || []).filter(function (x) { return x.id === id; })[0];
+      if (!t) return;
+      if (t.tipo === 'normal') g.tiendas.push(id); else g.excs.push(id);
+      repintar();
+    });
+  });
+  const btnAnadir = editor.querySelector('#gestor-gp-anadir');
+  if (btnAnadir) btnAnadir.addEventListener('click', function () {
+    gp.grupos.push({ id: null, origenId: null, texto: '', limite: '', tipo: '', tiendas: [], excs: [] });
+    gp.activo = gp.grupos.length - 1;
+    repintar();
+    const inp = editor.querySelector('[data-gp-texto="' + gp.activo + '"]');
+    if (inp) inp.focus();
+  });
+  const btnVolver = editor.querySelector('#gestor-gp-volver');
+  if (btnVolver) btnVolver.addEventListener('click', function () {
+    // Deja los grupos como en Rutas y tiendas. Las tiendas puntuales y los
+    // cambios puntuales se quedan en el grupo de siempre del que salió el
+    // suyo (o sin grupo si estaban en uno nuevo).
+    const datos = gp.datos;
+    const excsPorOrigen = {};
+    gp.grupos.forEach(function (g) {
+      if (g.origenId) excsPorOrigen[g.origenId] = (excsPorOrigen[g.origenId] || []).concat(g.excs);
+    });
+    gp.grupos = (datos.siempre || []).map(function (s) {
+      return {
+        id: s.id, origenId: s.id, texto: s.texto || '', limite: s.limite != null ? String(s.limite) : '', tipo: s.tipo || '',
+        tiendas: (datos.tiendas || []).filter(function (t) { return t.tipo === 'normal' && t.grupoSiempre === s.id; }).map(function (t) { return t.id; }),
+        excs: excsPorOrigen[s.id] || []
+      };
+    }).filter(function (g) { return g.tiendas.length + g.excs.length > 0; });
+    gp.activo = gp.grupos.length ? 0 : -1;
+    repintar();
+    mostrarToast(datos.puntual ? 'Pulsa Guardar para volver a los grupos de siempre' : 'Grupos como los de siempre');
+  });
+}
+
+/** true si los grupos que hay en la ventana son los de siempre (sin cambios). */
+function gpIgualQueSiempreGestorObs_() {
+  const gp = GESTOR_OBS.gp;
+  const datos = gp.datos || {};
+  const siempre = (datos.siempre || []).filter(function (s) {
+    return (datos.tiendas || []).some(function (t) { return t.tipo === 'normal' && t.grupoSiempre === s.id; });
+  });
+  if (gp.grupos.length !== siempre.length) return false;
+  return gp.grupos.every(function (g) {
+    const s = siempre.filter(function (x) { return x.id === g.origenId; })[0];
+    if (!s) return false;
+    if (g.texto.trim().toUpperCase() !== (s.texto || '').trim().toUpperCase()) return false;
+    if (String(g.limite || '') !== (s.limite != null ? String(s.limite) : '')) return false;
+    if ((g.tipo || '') !== (s.tipo || '')) return false;
+    const deSiempre = (datos.tiendas || []).filter(function (t) { return t.tipo === 'normal' && t.grupoSiempre === s.id; }).map(function (t) { return t.id; });
+    return deSiempre.length === g.tiendas.length && deSiempre.every(function (id) { return g.tiendas.indexOf(id) !== -1; });
+  });
+}
+
+function guardarGpDesdeGestor_() {
+  const fecha = GESTOR_OBS.fecha;
+  const gp = GESTOR_OBS.gp || {};
+  if (!gpCompletoGestorObs_()) { mostrarToast('Cada grupo necesita texto y al menos una tienda', true); return; }
+  const btnGuardar = document.getElementById('modal-confirm-btn');
+
+  // Sin cambios respecto a los de siempre: si ya tenía grupos puntuales se
+  // quitan (vuelve a los de siempre); si no, no hay nada que guardar.
+  const igual = gpIgualQueSiempreGestorObs_();
+  if (igual && !gp.datos.puntual) { mostrarToast('Los grupos son los de siempre: no hay nada que guardar', true); return; }
+
+  GESTOR_OBS.guardando = true;
+  if (btnGuardar) { btnGuardar.disabled = true; btnGuardar.textContent = 'Guardando…'; }
+  const llamada = igual
+    ? llamarApi_('quitarGruposPuntuales', [fecha, gp.agrupacion])
+    : llamarApi_('guardarGruposPuntuales', [fecha, gp.agrupacion, gp.grupos.map(function (g) {
+        return { id: g.id || null, texto: g.texto.trim(), limite: g.limite || '', tipo: g.tipo || '', tiendas: g.tiendas, excepciones: g.excs };
+      })]);
+  llamada
+    .then(function () {
+      cerrarModal();
+      mostrarToast(igual ? 'Vuelve a los grupos de siempre' : 'Grupos de palets guardados solo para ese día');
+      if (document.getElementById('calendar-body')) cargarCalendario();
+      if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+      if (ESTADO.vista === 'administracion' && ESTADO_ADMIN.seccionActiva === 'festivos') cargarFestivos();
+    })
+    .catch(function (err) {
+      GESTOR_OBS.guardando = false;
+      if (btnGuardar) { btnGuardar.disabled = false; actualizarBotonGuardarGestor_(); }
+      mostrarErrorServidor(err);
+    });
+}
+
+function conectarControlesGpGestorObs_(wrap) {
+  wrap.querySelector('#gestor-gp-agrupacion').addEventListener('change', function (e) {
+    GESTOR_OBS.gp = nuevoEstadoGpGestorObs_(e.target.value || null);
+    pintarGpGestorObs_();
+    actualizarBotonGuardarGestor_();
+  });
 }
 
 /** Añade al caché local de "Gestión festivos" (FESTIVOS_ESTADO.datosCache)

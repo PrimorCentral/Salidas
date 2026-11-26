@@ -783,6 +783,17 @@ const SUPABASE_ACCIONES_ = {
   eliminarAgrupacionPuntual: function (args) {
     return llamarRpcSupabase_('eliminar_agrupacion_puntual', { p_fecha: args[0], p_agrupacion: args[1] });
   },
+  // Grupos de palets puntuales (Bloqueos y cambios): los grupos de una
+  // agrupación cambiados solo para una fecha, sin tocar la plantilla.
+  getGruposPuntuales: function (args) {
+    return llamarRpcSupabase_('get_grupos_puntuales', { p_fecha: args[0], p_agrupacion: args[1] });
+  },
+  guardarGruposPuntuales: function (args) {
+    return llamarRpcSupabase_('guardar_grupos_puntuales', { p_fecha: args[0], p_agrupacion: args[1], p_grupos: args[2] || [] });
+  },
+  quitarGruposPuntuales: function (args) {
+    return llamarRpcSupabase_('quitar_grupos_puntuales', { p_fecha: args[0], p_agrupacion: args[1] });
+  },
   // -- Supabase: Administración: Registro de actividad (solo admin) --
   getRegistroActividad: function (args) {
     return llamarRpcSupabase_('get_registro_actividad', { p_desde: args[0], p_hasta: args[1] });

@@ -571,6 +571,7 @@ function pedirQueHacerConAnotacionesEspecial_(fecha, diaBase, info, onElegir, on
   add('tiendasPuntuales', 'tienda puntual', 'tiendas puntuales');
   add('forzados', 'palet forzado', 'palets forzados');
   add('agrupacionesPuntuales', 'agrupación puntual', 'agrupaciones puntuales');
+  add('gruposPuntuales', 'agrupación con grupos de palets puntuales', 'agrupaciones con grupos de palets puntuales');
   const sin = n('sinSitio');
 
   document.getElementById('modal-box').classList.remove('peligro');

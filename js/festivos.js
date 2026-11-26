@@ -295,6 +295,26 @@ function aplanarDatosFestivos_(datosDias) {
           agrupacion: seccion.nombre, id: 'agrp:' + seccion.nombre,
           texto: parsearNombreAgrupacion(seccion.nombre).titulo + ' sale solo este día (' + nT + (nT === 1 ? ' tienda)' : ' tiendas)') });
       }
+      // Grupos de palets cambiados solo para este día (sin tocar la plantilla).
+      if (seccion.gruposPuntuales) {
+        const grupos = [];
+        const vistos = {};
+        (seccion.tiendas || []).forEach(function (t) {
+          if (!t.notaGrupoId || t.salePorExcepcion) return;
+          if (!vistos[t.notaGrupoId]) {
+            vistos[t.notaGrupoId] = { texto: t.nota || '', limite: t.notaLimite, n: 0 };
+            grupos.push(vistos[t.notaGrupoId]);
+          }
+          vistos[t.notaGrupoId].n++;
+        });
+        lista.push({ fecha: data.fecha, tag: 'Grupos de palets · ' + parsearNombreAgrupacion(seccion.nombre).titulo, tipo: 'cambio', puntual: true,
+          gruposPuntuales: true, agrupacion: seccion.nombre, id: 'gp:' + seccion.nombre,
+          texto: grupos.length
+            ? 'Solo este día: ' + grupos.map(function (g) {
+                return g.texto + (g.limite != null && g.limite !== '' ? ' (' + g.limite + 'P)' : '') + ' · ' + g.n + (g.n === 1 ? ' tienda' : ' tiendas');
+              }).join(' / ')
+            : 'Solo este día: sin grupos de palets' });
+      }
       (seccion.notas || []).forEach(function (n) {
         if (n.excepcionId) return;
         lista.push({ fecha: data.fecha, tag: parsearNombreAgrupacion(seccion.nombre).titulo, tipo: n.tipo, texto: n.texto, id: n.id, agrupacion: seccion.nombre, automatica: !!n.excepcionId });
@@ -419,9 +439,9 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     const itemsHtml = g.items.length
       ? g.items.map(function (it) {
           const clase = it.tipo === 'cierre' ? 'festivos-item cierre' : (it.tipo === 'cambio' ? 'festivos-item cambio' + (it.puntual ? ' puntual' : '') : 'festivos-item');
-          const icono = it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? (it.puntual ? ICONO_PUNTUAL_ : ICONO_CAMBIO_) : ICONO_NOTA_);
+          const icono = it.gruposPuntuales ? ICONO_GRUPOS_ : (it.tipo === 'cierre' ? ICONO_CIERRE_ : (it.tipo === 'cambio' ? (it.puntual ? ICONO_PUNTUAL_ : ICONO_CAMBIO_) : ICONO_NOTA_));
           const delBtn = it.id
-            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + (it.agrPuntual ? ' data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '"' : '') + ' title="Eliminar">' +
+            ? '<button type="button" class="festivos-del" data-id="' + escapeAttr(it.id) + '" data-tipo="' + escapeAttr(it.tipo) + '"' + (it.puntual ? ' data-puntual="1"' : '') + (it.agrPuntual ? ' data-agrp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '"' : '') + (it.gruposPuntuales ? ' data-gp="' + escapeAttr(it.agrupacion) + '" data-fecha="' + escapeAttr(it.fecha) + '"' : '') + ' title="' + (it.gruposPuntuales ? 'Volver a los grupos de siempre' : 'Eliminar') + '">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>'
             : '';
           // Agrupación puntual: botón para cambiarla de sitio en el conteo.
@@ -430,9 +450,9 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>'
             : '';
           // Lápiz para modificar una tienda puntual o una agrupación puntual.
-          const editPuntualBtn = (it.agrPuntual || it.tiendaPuntual)
+          const editPuntualBtn = (it.agrPuntual || it.tiendaPuntual || it.gruposPuntuales)
             ? '<button type="button" class="festivos-edit festivos-edit-puntual" data-id="' + escapeAttr(it.id || '') + '" data-fecha="' + escapeAttr(it.fecha) + '"' +
-              ' data-agrupacion="' + escapeAttr(it.agrupacion || '') + '" data-tipo-puntual="' + (it.agrPuntual ? 'agrupacion' : 'tienda') + '"' +
+              ' data-agrupacion="' + escapeAttr(it.agrupacion || '') + '" data-tipo-puntual="' + (it.agrPuntual ? 'agrupacion' : (it.gruposPuntuales ? 'grupos' : 'tienda')) + '"' +
               (it.tiendaPuntual ? ' data-tienda="' + escapeAttr(it.tienda || '') + '" data-limite="' + escapeAttr(it.limite != null ? it.limite : '') + '" data-grupo="' + escapeAttr(it.grupoId || '') + '"' : '') +
               ' title="Modificar">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>'
@@ -485,6 +505,8 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
     btn.onclick = function () {
       if (btn.getAttribute('data-tipo-puntual') === 'agrupacion') {
         abrirEditarAgrupacionPuntual(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrupacion'));
+      } else if (btn.getAttribute('data-tipo-puntual') === 'grupos') {
+        abrirEditarGruposPuntuales(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrupacion'));
       } else {
         editarTiendaPuntualDesdeFestivos_({
           id: btn.getAttribute('data-id'),
@@ -518,6 +540,10 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
         eliminarAgrupacionPuntualDesdeFestivos_(btn.getAttribute('data-fecha'), btn.getAttribute('data-agrp'));
         return;
       }
+      if (btn.hasAttribute('data-gp')) {
+        quitarGruposPuntualesDesdeFestivos_(btn.getAttribute('data-fecha'), btn.getAttribute('data-gp'));
+        return;
+      }
       eliminarObservacionDesdeFestivos_(btn.getAttribute('data-id'), btn.getAttribute('data-tipo'), btn.getAttribute('data-puntual') === '1');
     };
   });
@@ -526,6 +552,7 @@ function renderListaFestivos_(listaEl, grupos, hayFiltrosDeContenido) {
 const ICONO_NOTA_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>';
 const ICONO_CIERRE_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>';
 const ICONO_PUNTUAL_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-5h14.8L21 9"/><path d="M3 9h18"/><path d="M4.5 9v11h15V9"/><path d="M9.5 20v-6h5v6"/></svg>';
+const ICONO_GRUPOS_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/></svg>';
 const ICONO_CAMBIO_ = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
 
 // Quita del caché local (FESTIVOS_ESTADO.datosCache) el elemento con el id
@@ -965,6 +992,27 @@ function eliminarAgrupacionPuntualDesdeFestivos_(fecha, agrupacion) {
       llamarApi_('eliminarAgrupacionPuntual', [fecha, agrupacion])
         .then(function () {
           mostrarToast('Agrupación puntual quitada');
+          cargarFestivos();
+          if (document.getElementById('calendar-body')) cargarCalendario();
+          if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
+        })
+        .catch(mostrarErrorServidor);
+    },
+    true,
+    'Quitar'
+  );
+}
+
+/** Grupos de palets puntuales: vuelve a los grupos de siempre ese día. */
+function quitarGruposPuntualesDesdeFestivos_(fecha, agrupacion) {
+  appConfirm(
+    'Volver a los grupos de siempre',
+    '¿Quitar los grupos de palets puntuales de ' + parsearNombreAgrupacion(agrupacion).titulo + ' del ' + formatearFechaLarga(fecha) + '? ' +
+      'Ese día vuelve a tener los grupos de siempre (los de Rutas y tiendas). Las tiendas puntuales y los cambios puntuales vuelven al grupo del que salió su grupo puntual (o sin grupo si era nuevo).',
+    function () {
+      llamarApi_('quitarGruposPuntuales', [fecha, agrupacion])
+        .then(function () {
+          mostrarToast('Vuelve a los grupos de siempre');
           cargarFestivos();
           if (document.getElementById('calendar-body')) cargarCalendario();
           if (fecha === ESTADO.fecha && document.getElementById('dia-contenido')) cargarConteoDia();
