@@ -960,6 +960,7 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
         seccion.carga = carga || null;
         delete VISTA_CONTEO_REAL_[fecha + '|' + seccion.nombre];
         actualizarEstadoCarga_();
+        refrescarFacturacion_();
         cerrarModal();
         mostrarToast('Conteo desbloqueado: ya se ve el conteo real');
       })
@@ -1179,6 +1180,9 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
           panel._firma = '';
           pintarVerificaciones_();
           actualizarEstadoCarga_();
+          // «Facturar» depende de que haya carga ajustada: se refresca ya,
+          // sin tener que recargar el cuadrante.
+          refrescarFacturacion_();
           done(true);
         })
         .catch(function (err) {
@@ -1976,34 +1980,79 @@ function crearSeccionPanel(seccion, dia, fecha, esHoy) {
 
   // Facturar: email aparte a contabilidad con los palets de la carga
   // ajustada por tienda, repartidos (si se quiere) en varias fechas.
+  // El botón se pinta con los datos que llegaron al abrir el cuadrante; al
+  // ajustar o desbloquear la carga se vuelven a pedir al servidor
+  // (get_facturacion_dia) y se repinta aquí, sin recargar.
+  function pintarBotonFacturar_() {
+    const btn = header.querySelector('button.btn-header-facturar');
+    if (!btn) return;
+    const f = seccion.facturacion || {};
+    btn.classList.toggle('sin-ajustar', !f.ajustada);
+    btn.title = f.ajustada ? 'Enviar la facturación a contabilidad (palets por tienda, se puede repartir en fechas)' : 'Para facturar, primero hay que ajustar la carga';
+    const txt = btn.querySelector('.txt');
+    if (!txt) return;
+    let small = txt.querySelector('small');
+    if (f.ajustada) { if (small) small.remove(); }
+    else if (!small) { small = document.createElement('small'); small.textContent = 'Primero ajusta la carga'; txt.appendChild(small); }
+  }
+  function refrescarFacturacion_(done) {
+    if (!seccion.facturacion) { if (done) done(false); return; }
+    llamarApi_('getFacturacionDia', [fecha])
+      .then(function (res) {
+        if (res && Object.prototype.hasOwnProperty.call(res, seccion.nombre)) seccion.facturacion = res[seccion.nombre] || null;
+        pintarBotonFacturar_();
+        if (done) done(true);
+      })
+      .catch(function (err) {
+        console.error(err);
+        if (done) done(false);
+      });
+  }
+
   const btnHeaderFacturar = header.querySelector('button.btn-header-facturar');
   if (btnHeaderFacturar) {
     btnHeaderFacturar.onclick = function (e) {
       e.stopPropagation();
       if (!tienePermiso('enviar_facturacion')) { mostrarModalSinPermiso(); return; }
-      const f = seccion.facturacion || {};
-      if (!f.ajustada) {
-        mostrarModalSinPermiso('Para enviar la facturación primero hay que ajustar la carga (camioncito de la cabecera).');
-        document.getElementById('modal-title').textContent = 'Falta ajustar la carga';
-        return;
-      }
-      if (!f.emails || !f.emails.length) {
-        mostrarModalSinPermiso('Esta agrupación no tiene ningún email de facturación. Añádelo en Diseño › Configuración agencias (campo «Emails Facturación»).');
-        document.getElementById('modal-title').textContent = 'Falta el email de facturación';
-        return;
-      }
-      mostrarModalFacturacion({
-        nombre: parsearNombreAgrupacion(seccion.nombre).titulo,
-        fechaTexto: formatearFechaLarga(fecha),
-        fecha: fecha,
-        emails: f.emails,
-        lista: (f.lista || []).filter(function (t) { return !t.cerrada; })
-      }, function (fechas, lineas, callback) {
-        llamarApi_('enviarFacturacion', [dia, seccion.nombre, fecha, fechas, lineas])
-          .then(function () { callback(true, 'Facturación enviada a contabilidad'); refrescarConteoDiaTrasEnvio_(); })
-          .catch(function (err) { callback(false, (err && err.message) || String(err)); });
+      // Antes de decidir, se piden los datos al servidor: así vale lo que
+      // haya ahora (carga recién ajustada aquí o en otro ordenador) y los
+      // palets de la carga son los de verdad.
+      mostrarModalCargando('Cargando…');
+      refrescarFacturacion_(function () {
+        cerrarModal();
+        abrirFacturar_();
       });
     };
+  }
+  function abrirFacturar_() {
+    const f = seccion.facturacion || {};
+    if (f.enviada) {
+      mostrarModalSinPermiso('La facturación de esta agrupación ya se ha enviado a contabilidad.');
+      document.getElementById('modal-title').textContent = 'Facturación ya enviada';
+      refrescarConteoDiaTrasEnvio_();
+      return;
+    }
+    if (!f.ajustada) {
+      mostrarModalSinPermiso('Para enviar la facturación primero hay que ajustar la carga (camioncito de la cabecera).');
+      document.getElementById('modal-title').textContent = 'Falta ajustar la carga';
+      return;
+    }
+    if (!f.emails || !f.emails.length) {
+      mostrarModalSinPermiso('Esta agrupación no tiene ningún email de facturación. Añádelo en Diseño › Configuración agencias (campo «Emails Facturación»).');
+      document.getElementById('modal-title').textContent = 'Falta el email de facturación';
+      return;
+    }
+    mostrarModalFacturacion({
+      nombre: parsearNombreAgrupacion(seccion.nombre).titulo,
+      fechaTexto: formatearFechaLarga(fecha),
+      fecha: fecha,
+      emails: f.emails,
+      lista: (f.lista || []).filter(function (t) { return !t.cerrada; })
+    }, function (fechas, lineas, callback) {
+      llamarApi_('enviarFacturacion', [dia, seccion.nombre, fecha, fechas, lineas])
+        .then(function () { callback(true, 'Facturación enviada a contabilidad'); refrescarConteoDiaTrasEnvio_(); })
+        .catch(function (err) { callback(false, (err && err.message) || String(err)); });
+    });
   }
   const btnVerFacturacion = header.querySelector('.btn-ver-facturacion');
   if (btnVerFacturacion) {

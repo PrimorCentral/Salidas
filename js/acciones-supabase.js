@@ -96,6 +96,12 @@ const SUPABASE_ACCIONES_ = {
   },
   // -- Facturación (email aparte a contabilidad, opción «Facturar» del sobre) --
   // fechas: ['2026-11-24', ...]  lineas: { 'NOMBRE TIENDA': [palets por fecha] }
+  // Facturación de todas las agrupaciones de un día ({ 'AGRUPACIÓN': { ajustada,
+  // lista, emails, enviada } }): lo mismo que trae getConteoDia, pero solo
+  // esto, para refrescar «Facturar» al ajustar o desbloquear la carga.
+  getFacturacionDia: function (args) {
+    return llamarRpcSupabase_('get_facturacion_dia', { p_fecha: args[0] });
+  },
   enviarFacturacion: function (args) {
     return llamarRpcSupabase_('enviar_facturacion', { p_dia: args[0], p_nombre_ruta: args[1], p_fecha: args[2], p_fechas: args[3], p_lineas: args[4] });
   },
