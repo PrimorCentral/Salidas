@@ -2806,9 +2806,15 @@
      fila-cabecera propia justo encima del grupo, con los nombres de las
      tiendas que comparten esa ruta y el contador en vivo. */
   table.conteo tbody tr.fila-grupo-ruta td { border-bottom-color: transparent; position: relative; }
+  /* La barra va DENTRO de la celda (left: 0): con left: -6px quedaba fuera
+     del recorte de la tabla y no se veía, y la tienda suelta que va justo
+     debajo de un grupo parecía seguir dentro de él. */
   table.conteo tbody tr.fila-grupo-ruta td.nombre::before {
-    content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--amber);
   }
+  table.conteo tbody tr.fila-grupo-ruta td.nombre,
+  table.conteo tbody tr.fila-grupo-header td:first-child { padding-left: 16px; }
+  table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta td.nombre::before { background: var(--danger); }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td { border-bottom: 3px solid var(--amber-dark); }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-ultima td.nombre::before { bottom: -3px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
   table.conteo tbody tr.fila-grupo-ruta.fila-grupo-alerta.fila-grupo-ultima td { border-bottom-color: var(--danger); }
@@ -2818,8 +2824,8 @@
     border-top: 3px solid var(--amber-dark); border-bottom-color: transparent;
     padding: 7px 10px 6px; position: relative; background: #fff8ec;
   }
-  table.conteo tbody tr.fila-grupo-header td::before {
-    content: ''; position: absolute; left: -6px; top: 0; bottom: 0; width: 4px; background: var(--amber);
+  table.conteo tbody tr.fila-grupo-header td:first-child::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--amber);
     border-top-left-radius: 3px; border-top-right-radius: 3px;
   }
   table.conteo tbody tr.fila-grupo-header .grupo-header {
@@ -2833,7 +2839,7 @@
   table.conteo tbody tr.fila-grupo-header .grupo-header-chip.nota-grupo-aviso { background: #fbe6c4; }
   table.conteo tbody tr.fila-grupo-header .grupo-header-chip.nota-grupo-alerta { background: var(--danger); color: #fff; }
   table.conteo tbody tr.fila-grupo-header.fila-grupo-header-alerta td { background: #fbdada; border-top-color: var(--danger); }
-  table.conteo tbody tr.fila-grupo-header.fila-grupo-header-alerta td::before { background: var(--danger); }
+  table.conteo tbody tr.fila-grupo-header.fila-grupo-header-alerta td:first-child::before { background: var(--danger); }
   table.conteo tbody tr.fila-grupo-header.fila-grupo-header-aviso td { background: #fbe6c4; }
   table.conteo td.limite { font-family: var(--mono); color: var(--ink-soft); }
   table.conteo input.celda {
